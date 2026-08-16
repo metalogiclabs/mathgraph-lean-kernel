@@ -1,0 +1,119 @@
+name: V2 binder scaling separator
+on:
+  push:
+    branches: [mathgraph-v2-binder-scaling]
+  workflow_dispatch:
+
+jobs:
+  scale:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y time
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+      - name: Build MathGraph baseline
+        run: |
+          cargo build --release --locked
+          cp target/release/sokonanoda /tmp/mathgraph
+          cat > /tmp/mg.json <<'EOF'
+          {
+            "use_stdin": true,
+            "nat_extension": true,
+            "string_extension": true,
+            "unpermitted_axiom_hard_error": false,
+            "unsafe_permit_all_axioms": true,
+            "num_threads": 4,
+            "print_success_message": false
+          }
+          EOF
+      - name: Build pinned nanoclo
+        run: |
+          git clone https://github.com/sgraf812/nanoclo /tmp/nanoclo
+          cd /tmp/nanoclo
+          git checkout b27e4c5f788717c884020f1dde4bb7193bca2276
+          cargo build --release
+          cat > /tmp/nanoclo.json <<'EOF'
+          {
+            "use_stdin": true,
+            "nat_extension": true,
+            "string_extension": true,
+            "unpermitted_axiom_hard_error": false,
+            "unsafe_permit_all_axioms": true,
+            "num_threads": 4
+          }
+          EOF
+      - name: Generate beta-ladder scaling exports
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          for n in 250 500 1000 2000 4000 8000; do
+            cp tests/perf/beta-ladder.lean "tests/perf/beta-ladder-${n}.lean"
+            sed -i "s/let n := 2000/let n := ${n}/" "tests/perf/beta-ladder-${n}.lean"
+            cat > "tests/perf/beta-ladder-${n}.yaml" <<EOF
+          description: beta ladder scaling N=${n}
+          leanfile: tests/perf/beta-ladder-${n}.lean
+          export-decls: ["beta_ladder"]
+          outcome: accept
+          compare-perf: true
+          EOF
+            nix develop -c ./lka.py build-test "perf/beta-ladder-${n}"
+          done
+      - name: Paired scaling benchmark
+        run: |
+          set -euxo pipefail
+          printf 'n,checker,rep,wall_s,user_s,sys_s,maxrss_kb,exit\n' > /tmp/scaling.csv
+          cd /tmp/arena
+          for n in 250 500 1000 2000 4000 8000; do
+            f="_build/tests/perf/beta-ladder-${n}.ndjson"
+            test -s "$f"
+            for rep in 1 2 3 4 5; do
+              if [ $((rep % 2)) -eq 1 ]; then order='mathgraph nanoclo'; else order='nanoclo mathgraph'; fi
+              for checker in $order; do
+                if [ "$checker" = mathgraph ]; then bin=/tmp/mathgraph; cfg=/tmp/mg.json; else bin=/tmp/nanoclo/target/release/nanoclo; cfg=/tmp/nanoclo.json; fi
+                set +e
+                timeout 120 /usr/bin/time -q -f "$n,$checker,$rep,%e,%U,%S,%M,%x" -o /tmp/t.txt "$bin" "$cfg" < "$f" >/tmp/o.txt 2>/tmp/e.txt
+                rc=$?
+                set -e
+                if [ -s /tmp/t.txt ]; then tail -n1 /tmp/t.txt >> /tmp/scaling.csv; else echo "$n,$checker,$rep,120,0,0,0,$rc" >> /tmp/scaling.csv; fi
+              done
+            done
+          done
+          cat /tmp/scaling.csv
+      - name: Fit scaling exponents
+        run: |
+          python3 - <<'PY' | tee /tmp/scaling-summary.txt
+          import csv, math, statistics
+          rows=list(csv.DictReader(open('/tmp/scaling.csv')))
+          assert all(int(r['exit'])==0 for r in rows), 'semantic/operational failure'
+          ns=sorted({int(r['n']) for r in rows})
+          print('n,mg_wall,nanoclo_wall,ratio,mg_user,nanoclo_user')
+          series={}
+          for n in ns:
+            vals={}
+            for c in ('mathgraph','nanoclo'):
+              rr=[r for r in rows if int(r['n'])==n and r['checker']==c]
+              vals[c]=(statistics.median(float(r['wall_s']) for r in rr), statistics.median(float(r['user_s']) for r in rr))
+            series[n]=vals
+            mw,mu=vals['mathgraph']; nw,nu=vals['nanoclo']
+            print(f'{n},{mw:.6f},{nw:.6f},{mw/nw if nw else float("inf"):.3f},{mu:.6f},{nu:.6f}')
+          def slope(checker, metric_idx):
+            pts=[(math.log(n), math.log(series[n][checker][metric_idx])) for n in ns if series[n][checker][metric_idx]>0]
+            xm=sum(x for x,y in pts)/len(pts); ym=sum(y for x,y in pts)/len(pts)
+            return sum((x-xm)*(y-ym) for x,y in pts)/sum((x-xm)**2 for x,y in pts)
+          print(f'mathgraph_wall_exponent={slope("mathgraph",0):.3f}')
+          print(f'nanoclo_wall_exponent={slope("nanoclo",0):.3f}')
+          print(f'mathgraph_user_exponent={slope("mathgraph",1):.3f}')
+          print(f'nanoclo_user_exponent={slope("nanoclo",1):.3f}')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v2-binder-scaling
+          path: |
+            /tmp/scaling.csv
+            /tmp/scaling-summary.txt
