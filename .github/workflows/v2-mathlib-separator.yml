@@ -1,0 +1,150 @@
+name: V2 Mathlib Budget Separator
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [mathgraph-v2-mathlib-separator]
+
+jobs:
+  mathlib-separator:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: mathgraph-v2-mathlib-separator
+
+      - name: Toolchain
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y time linux-tools-common
+          sudo sysctl -w kernel.perf_event_paranoid=-1 || true
+
+      - name: Install Nix for Arena
+        uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build budget arms
+        run: |
+          set -euxo pipefail
+          cp src/tc.rs /tmp/tc.base.rs
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+          p=Path('src/tc.rs')
+          base=Path('/tmp/tc.base.rs').read_text()
+          old='const SESSION_BUDGET: usize = 2_621_440;'
+          assert old in base
+          arms={
+            'b2048': 2_097_152,
+            'b2560': 2_621_440,
+            'b3072': 3_145_728,
+            'b3584': 3_670_016,
+          }
+          for name,budget in arms.items():
+              p.write_text(base.replace(old, f'const SESSION_BUDGET: usize = {budget};', 1))
+              subprocess.run(['cargo','build','--release','--locked'], check=True)
+              subprocess.run(['cp','target/release/sokonanoda',f'/tmp/mathgraph-{name}'], check=True)
+          p.write_text(base)
+          PY
+
+      - name: Get exact Arena Mathlib export
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test mathlib
+          f="_build/tests/mathlib.ndjson"
+          test -s "$f"
+          cp "$f" /tmp/input.ndjson
+          sha256sum /tmp/input.ndjson | tee /tmp/input.sha256
+          ls -lh /tmp/input.ndjson
+
+      - name: Config
+        run: |
+          cat > /tmp/config.json <<'EOF'
+          {
+            "use_stdin": true,
+            "nat_extension": true,
+            "string_extension": true,
+            "unpermitted_axiom_hard_error": false,
+            "unsafe_permit_all_axioms": true,
+            "num_threads": 4,
+            "print_success_message": true
+          }
+          EOF
+
+      - name: Paired rotating Mathlib separator
+        run: |
+          set -euxo pipefail
+          printf 'arm,rep,wall_s,user_s,sys_s,maxrss_kb,exit,instructions\n' > /tmp/results.csv
+          orders=(
+            'b2048 b2560 b3072 b3584'
+            'b3584 b3072 b2560 b2048'
+            'b3072 b2048 b3584 b2560'
+          )
+          first=1
+          for rep in 1 2 3; do
+            order="${orders[$((rep-1))]}"
+            for arm in $order; do
+              out=/tmp/out.txt
+              t=/tmp/t.txt
+              p=/tmp/perf.txt
+              set +e
+              if perf stat -x, -e instructions -o "$p" true >/dev/null 2>&1; then
+                /usr/bin/time -f '%e,%U,%S,%M,%x' -o "$t" perf stat -x, -e instructions -o "$p" "/tmp/mathgraph-$arm" /tmp/config.json < /tmp/input.ndjson > "$out" 2>/dev/null
+                rc=$?
+                instr=$(awk -F, '$3=="instructions" {gsub(/ /,"",$1); print $1; exit}' "$p")
+                [ -n "$instr" ] || instr=NA
+              else
+                /usr/bin/time -f '%e,%U,%S,%M,%x' -o "$t" "/tmp/mathgraph-$arm" /tmp/config.json < /tmp/input.ndjson > "$out" 2>/dev/null
+                rc=$?
+                instr=NA
+              fi
+              set -e
+              vals=$(cat "$t")
+              echo "$arm,$rep,$vals,$instr" >> /tmp/results.csv
+              test "$rc" -eq 0
+              if [ "$first" -eq 1 ]; then
+                cp "$out" /tmp/declaration-count.txt
+                first=0
+              fi
+            done
+          done
+          cat /tmp/declaration-count.txt
+          cat /tmp/results.csv
+          python3 - <<'PY'
+          import csv, statistics
+          rows=list(csv.DictReader(open('/tmp/results.csv')))
+          arms=['b2048','b2560','b3072','b3584']
+          print('SUMMARY')
+          print('arm,wall_med,user_med,sys_med,rss_med,instr_med')
+          out=[]
+          for a in arms:
+              rr=[r for r in rows if r['arm']==a]
+              wall=statistics.median(float(r['wall_s']) for r in rr)
+              user=statistics.median(float(r['user_s']) for r in rr)
+              sys=statistics.median(float(r['sys_s']) for r in rr)
+              rss=statistics.median(float(r['maxrss_kb']) for r in rr)
+              ins=[int(r['instructions']) for r in rr if r['instructions']!='NA']
+              imed=statistics.median(ins) if ins else None
+              out.append((a,wall,user,sys,rss,imed))
+              print(a,wall,user,sys,rss,imed,sep=',')
+          base=next(x for x in out if x[0]=='b2560')
+          print('RELATIVE_TO_V1_B2560')
+          for x in out:
+              parts=[x[0], 'wall', x[1]/base[1], 'user', x[2]/base[2], 'rss', x[4]/base[4]]
+              if x[5] is not None and base[5] is not None:
+                  parts += ['instructions', x[5]/base[5]]
+              print(*parts)
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v2-mathlib-budget-separator
+          path: |
+            /tmp/results.csv
+            /tmp/input.sha256
+            /tmp/declaration-count.txt
