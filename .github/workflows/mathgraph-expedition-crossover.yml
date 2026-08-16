@@ -1,0 +1,128 @@
+name: MathGraph real-world crossover expedition
+
+on:
+  push:
+    branches: [mathgraph-expedition-crossover]
+  workflow_dispatch:
+
+jobs:
+  crossover:
+    strategy:
+      fail-fast: false
+      matrix:
+        test: [init, std, cedar, cslib]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: mathgraph-expedition-crossover
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build retained MathGraph
+        run: |
+          set -euxo pipefail
+          cargo test --locked
+          cargo build --release --locked
+          cp target/release/sokonanoda /tmp/mathgraph
+
+      - name: Build pinned nanoclo reference
+        run: |
+          set -euxo pipefail
+          git clone https://github.com/sgraf812/nanoclo /tmp/nanoclo
+          cd /tmp/nanoclo
+          git checkout b27e4c5f788717c884020f1dde4bb7193bca2276
+          cargo build --release --locked || cargo build --release
+          cp target/release/nanoclo /tmp/nanoclo-bin
+
+      - name: Build exact merged Arena test
+        run: |
+          set -euxo pipefail
+          git clone https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          git checkout af57ed5cd8bdc5fb5f9217d17b851086599faea7
+          nix develop -c ./lka.py build-test "${{ matrix.test }}"
+          find _build/tests -type f -name '*.ndjson' -printf '%p %s bytes\n' | sort
+
+      - name: Resolve test file
+        id: resolve
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          test_name='${{ matrix.test }}'
+          f="_build/tests/${test_name}.ndjson"
+          if [ ! -f "$f" ]; then
+            f=$(find _build/tests -type f -name "${test_name}.ndjson" | head -n1)
+          fi
+          test -n "$f"
+          test -f "$f"
+          realpath "$f" | tee /tmp/test-file.txt
+          bytes=$(stat -c %s "$f")
+          lines=$(wc -l < "$f")
+          echo "bytes=$bytes lines=$lines"
+
+      - name: Configure both checkers
+        run: |
+          cat > /tmp/config.json <<'EOF'
+          {
+            "use_stdin": true,
+            "nat_extension": true,
+            "string_extension": true,
+            "unpermitted_axiom_hard_error": false,
+            "unsafe_permit_all_axioms": true,
+            "num_threads": 4
+          }
+          EOF
+
+      - name: Paired real-world crossover measurement
+        run: |
+          set -euxo pipefail
+          f=$(cat /tmp/test-file.txt)
+          name='${{ matrix.test }}'
+          printf 'test,arm,rep,wall_s,maxrss_kb,exit,accepted\n' > /tmp/crossover.csv
+          for rep in 1 2; do
+            if (( rep % 2 )); then ARMS='mathgraph nanoclo'; else ARMS='nanoclo mathgraph'; fi
+            for arm in $ARMS; do
+              if [ "$arm" = mathgraph ]; then BIN=/tmp/mathgraph; else BIN=/tmp/nanoclo-bin; fi
+              set +e
+              /usr/bin/time -f "$name,$arm,$rep,%e,%M,%x" -o /tmp/time.txt timeout 3600 "$BIN" /tmp/config.json < "$f" >/dev/null 2>/tmp/${arm}.err
+              rc=$?
+              set -e
+              line=$(cat /tmp/time.txt)
+              if [ "$rc" -eq 0 ]; then accepted=1; else accepted=0; fi
+              echo "$line,$accepted" >> /tmp/crossover.csv
+              echo "$arm rep=$rep rc=$rc accepted=$accepted"
+              tail -n 20 /tmp/${arm}.err || true
+            done
+          done
+          cat /tmp/crossover.csv
+          python3 - <<'PY'
+          import csv, statistics
+          rows=list(csv.DictReader(open('/tmp/crossover.csv')))
+          print('CROSSOVER SUMMARY')
+          for arm in ('mathgraph','nanoclo'):
+              xs=[float(r['wall_s']) for r in rows if r['arm']==arm and r['exit']=='0']
+              rss=[int(r['maxrss_kb']) for r in rows if r['arm']==arm and r['exit']=='0']
+              print(arm, 'accepted=', [r['accepted'] for r in rows if r['arm']==arm],
+                    'median_s=', statistics.median(xs) if xs else None,
+                    'median_rss_kb=', statistics.median(rss) if rss else None)
+          mg=[float(r['wall_s']) for r in rows if r['arm']=='mathgraph' and r['exit']=='0']
+          nc=[float(r['wall_s']) for r in rows if r['arm']=='nanoclo' and r['exit']=='0']
+          if mg and nc:
+              m=statistics.median(mg); n=statistics.median(nc)
+              print('mathgraph_over_nanoclo=', m/n if n else 'inf')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: crossover-${{ matrix.test }}
+          path: |
+            /tmp/crossover.csv
+            /tmp/test-file.txt
+            /tmp/mathgraph.err
+            /tmp/nanoclo.err
