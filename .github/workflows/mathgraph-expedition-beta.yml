@@ -1,0 +1,139 @@
+name: MathGraph beta residual expedition
+
+on:
+  push:
+    branches: [mathgraph-expedition-beta]
+  workflow_dispatch:
+
+jobs:
+  beta-expedition:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: mathgraph-expedition-beta
+
+      - name: Toolchain
+        run: |
+          rustup show
+          sudo apt-get update
+          sudo apt-get install -y time
+
+      - name: Freeze baseline and build
+        run: |
+          set -euxo pipefail
+          git rev-parse HEAD | tee baseline.sha
+          cargo test --locked
+          cargo build --release --locked
+          cp target/release/sokonanoda /tmp/sokonanoda-baseline
+
+      - name: Intervention B1, retain full infer closure environment
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/infer.rs')
+          s = p.read_text()
+          old = 'let clo = Closure::mk_infer(self.key_env(env, e), ctx, body);'
+          new = 'let clo = Closure::mk_infer(env, ctx, body);'
+          assert old in s, 'expected infer Lambda closure construction not found'
+          s = s.replace(old, new, 1)
+          p.write_text(s)
+          PY
+          git diff -- src/infer.rs
+          cargo test --locked
+          cargo build --release --locked
+          cp target/release/sokonanoda /tmp/sokonanoda-b1
+
+      - name: Fetch frozen public Arena tests
+        run: |
+          set -euxo pipefail
+          mkdir -p /tmp/arena-tests
+          curl -L --fail --retry 3 https://arena.lean-lang.org/lean-arena-tests.tar.gz -o /tmp/arena-tests.tar.gz
+          tar -xzf /tmp/arena-tests.tar.gz -C /tmp/arena-tests
+          find /tmp/arena-tests -type f | sort > /tmp/test-files.txt
+          grep -i 'beta.*ladder\|beta-ladder' /tmp/test-files.txt | tee /tmp/beta-files.txt
+          test -s /tmp/beta-files.txt
+          head -n 1 /tmp/beta-files.txt > /tmp/beta-file.txt
+
+      - name: Configure checkers
+        run: |
+          cat > /tmp/config.json <<'EOF'
+          {
+            "use_stdin": true,
+            "nat_extension": true,
+            "string_extension": true,
+            "unpermitted_axiom_hard_error": false,
+            "unsafe_permit_all_axioms": true,
+            "num_threads": 4
+          }
+          EOF
+
+      - name: Paired beta-ladder benchmark
+        run: |
+          set -euxo pipefail
+          IN=$(cat /tmp/beta-file.txt)
+          echo "input=$IN"
+          printf 'arm,rep,wall_s,maxrss_kb,exit\n' | tee /tmp/results.csv
+          for rep in 1 2 3 4 5 6 7; do
+            if (( rep % 2 )); then ARMS='baseline b1'; else ARMS='b1 baseline'; fi
+            for arm in $ARMS; do
+              BIN=/tmp/sokonanoda-$arm
+              /usr/bin/time -f "$arm,$rep,%e,%M,%x" -o /tmp/time.txt "$BIN" /tmp/config.json < "$IN" >/tmp/out.txt
+              cat /tmp/time.txt | tee -a /tmp/results.csv
+            done
+          done
+          python3 - <<'PY'
+          import csv, statistics, math
+          rows=list(csv.DictReader(open('/tmp/results.csv')))
+          by={}
+          for r in rows:
+              by.setdefault(r['arm'],[]).append(float(r['wall_s']))
+          print('\nSUMMARY')
+          for arm,x in by.items():
+              print(arm, 'median_s=', statistics.median(x), 'runs=', x)
+          b=statistics.median(by['baseline']); i=statistics.median(by['b1'])
+          print('delta_pct=',100*(i/b-1),'speedup_x=',b/i)
+          PY
+
+      - name: Semantic smoke corpus
+        run: |
+          set -euxo pipefail
+          printf 'arm,file,exit\n' > /tmp/smoke.csv
+          count=0
+          while IFS= read -r f; do
+            case "$f" in
+              *beta-ladder*) continue ;;
+            esac
+            for arm in baseline b1; do
+              BIN=/tmp/sokonanoda-$arm
+              set +e
+              "$BIN" /tmp/config.json < "$f" >/dev/null 2>&1
+              rc=$?
+              set -e
+              echo "$arm,$f,$rc" >> /tmp/smoke.csv
+            done
+            count=$((count+1))
+            [ "$count" -ge 40 ] && break
+          done < /tmp/test-files.txt
+          python3 - <<'PY'
+          import csv, collections
+          rows=list(csv.DictReader(open('/tmp/smoke.csv')))
+          x=collections.defaultdict(dict)
+          for r in rows: x[r['file']][r['arm']]=r['exit']
+          bad=[(f,a.get('baseline'),a.get('b1')) for f,a in x.items() if a.get('baseline')!=a.get('b1')]
+          print('smoke_cases=',len(x),'disagreements=',len(bad))
+          for z in bad[:20]: print('DISAGREE',*z)
+          if bad: raise SystemExit(1)
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mathgraph-beta-expedition
+          path: |
+            /tmp/results.csv
+            /tmp/smoke.csv
+            /tmp/beta-files.txt
+            baseline.sha
