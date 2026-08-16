@@ -1,0 +1,213 @@
+name: V2 jump-indexed environment
+
+on:
+  push:
+    branches: [mathgraph-v2-jump-env]
+  workflow_dispatch:
+
+jobs:
+  experiment:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y time
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+      - name: Freeze baseline and make jump arms
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cp -a . /tmp/base-src
+          cp -a . /tmp/jump8-src
+          cp -a . /tmp/jump32-src
+          python3 - <<'PY'
+          from pathlib import Path
+          def patch(root, stride):
+              p=Path(root)/'src/value.rs'
+              s=p.read_text()
+              s=s.replace(
+'''    Cons {
+        v: V<'a>,
+        parent: E<'a>,
+        lsub: Option<&'a LevelSub<'a>>,
+        hash: u64,
+        len: u32,
+        prune: Cell<(u64, Option<E<'a>>)>,
+    },''',
+'''    Cons {
+        v: V<'a>,
+        parent: E<'a>,
+        jump: Option<E<'a>>,
+        lsub: Option<&'a LevelSub<'a>>,
+        hash: u64,
+        len: u32,
+        prune: Cell<(u64, Option<E<'a>>)>,
+    },''')
+              old='''                Env::Cons { v, parent, .. } => {
+                    if idx == 0 {
+                        return Some(*v);
+                    }
+                    idx -= 1;
+                    cur = parent;
+                }'''
+              new=f'''                Env::Cons {{ v, parent, jump, .. }} => {{
+                    if idx == 0 {{
+                        return Some(*v);
+                    }}
+                    if idx >= {stride} {{
+                        if let Some(j) = jump {{
+                            idx -= {stride};
+                            cur = j;
+                            continue;
+                        }}
+                    }}
+                    idx -= 1;
+                    cur = parent;
+                }}'''
+              if old not in s: raise SystemExit('lookup patch anchor missing')
+              s=s.replace(old,new)
+              old2='''pub fn env_extend<'a>(arena: &'a Bump, parent: E<'a>, v: V<'a>) -> E<'a> {
+    let v_hash = v as *const Value<'a> as usize as u64;
+    let parent_hash = parent.get_hash();
+    let hash = parent_hash.wrapping_mul(0x9E3779B97F4A7C15).wrapping_add(v_hash);
+    arena.alloc(Env::Cons {
+        v,
+        parent,
+        lsub: parent.lsub(),
+        hash,
+        len: parent.len() + 1,
+        prune: Cell::new((0, None)),
+    })
+}'''
+              new2=f'''pub fn env_extend<'a>(arena: &'a Bump, parent: E<'a>, v: V<'a>) -> E<'a> {{
+    let v_hash = v as *const Value<'a> as usize as u64;
+    let parent_hash = parent.get_hash();
+    let hash = parent_hash.wrapping_mul(0x9E3779B97F4A7C15).wrapping_add(v_hash);
+    let mut jump = Some(parent);
+    for _ in 1..{stride} {{
+        jump = match jump {{
+            Some(Env::Cons {{ parent, .. }}) => Some(*parent),
+            _ => None,
+        }};
+        if jump.is_none() {{ break; }}
+    }}
+    arena.alloc(Env::Cons {{
+        v,
+        parent,
+        jump,
+        lsub: parent.lsub(),
+        hash,
+        len: parent.len() + 1,
+        prune: Cell::new((0, None)),
+    }})
+}}'''
+              if old2 not in s: raise SystemExit('extend patch anchor missing')
+              s=s.replace(old2,new2)
+              p.write_text(s)
+          patch('/tmp/jump8-src',8)
+          patch('/tmp/jump32-src',32)
+          PY
+      - name: Build and semantic gate all arms
+        run: |
+          set -euxo pipefail
+          for arm in base jump8 jump32; do
+            cd /tmp/${arm}-src
+            cargo test --locked
+            cargo build --release --locked
+            cp target/release/sokonanoda /tmp/${arm}
+          done
+          cat > /tmp/checker.json <<'EOF'
+          {
+            "use_stdin": true,
+            "nat_extension": true,
+            "string_extension": true,
+            "unpermitted_axiom_hard_error": false,
+            "unsafe_permit_all_axioms": true,
+            "num_threads": 4,
+            "print_success_message": false
+          }
+          EOF
+      - name: Generate Arena scaling and control exports
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          for n in 1000 2000 4000 8000 16000; do
+            cp tests/perf/beta-ladder.lean tests/perf/beta-ladder-${n}.lean
+            sed -i "s/let n := 2000/let n := ${n}/" tests/perf/beta-ladder-${n}.lean
+            cat > tests/perf/beta-ladder-${n}.yaml <<EOF
+          description: beta ladder scaling N=${n}
+          leanfile: tests/perf/beta-ladder-${n}.lean
+          export-decls: ["beta_ladder"]
+          outcome: accept
+          compare-perf: true
+          EOF
+            nix develop -c ./lka.py build-test perf/beta-ladder-${n}
+          done
+          nix develop -c ./lka.py build-test perf/app-lam perf/grind-ring-5 perf/let-ladder perf/shift-cascade
+      - name: Paired benchmark
+        run: |
+          set -euxo pipefail
+          printf 'test,n,arm,rep,wall_s,user_s,sys_s,maxrss_kb,exit\n' > /tmp/results.csv
+          cd /tmp/arena
+          run_one () {
+            testname="$1"; n="$2"; f="$3"
+            for rep in 1 2 3 4 5 6 7; do
+              case $((rep % 3)) in
+                1) order='base jump8 jump32' ;;
+                2) order='jump8 jump32 base' ;;
+                0) order='jump32 base jump8' ;;
+              esac
+              for arm in $order; do
+                set +e
+                timeout 120 /usr/bin/time -q -f "${testname},${n},${arm},${rep},%e,%U,%S,%M,%x" -o /tmp/t.txt /tmp/${arm} /tmp/checker.json < "$f" >/tmp/o.txt 2>/tmp/e.txt
+                rc=$?
+                set -e
+                if [ -s /tmp/t.txt ]; then tail -n1 /tmp/t.txt >> /tmp/results.csv; else echo "${testname},${n},${arm},${rep},120,0,0,0,${rc}" >> /tmp/results.csv; fi
+              done
+            done
+          }
+          for n in 1000 2000 4000 8000 16000; do run_one beta-ladder "$n" "_build/tests/perf/beta-ladder-${n}.ndjson"; done
+          for t in app-lam grind-ring-5 let-ladder shift-cascade; do run_one "$t" 0 "_build/tests/perf/${t}.ndjson"; done
+          cat /tmp/results.csv
+      - name: Analyze causal effect
+        run: |
+          python3 - <<'PY' | tee /tmp/summary.txt
+          import csv, math, statistics
+          rows=list(csv.DictReader(open('/tmp/results.csv')))
+          bad=[r for r in rows if int(r['exit'])!=0]
+          assert not bad, bad[:3]
+          arms=('base','jump8','jump32')
+          print('test,n,arm,wall,user,rss_kb')
+          med={}
+          for key in sorted({(r['test'],int(r['n'])) for r in rows}):
+            t,n=key
+            for a in arms:
+              rr=[r for r in rows if r['test']==t and int(r['n'])==n and r['arm']==a]
+              v=(statistics.median(float(x['wall_s']) for x in rr),statistics.median(float(x['user_s']) for x in rr),statistics.median(float(x['maxrss_kb']) for x in rr))
+              med[(t,n,a)]=v
+              print(f'{t},{n},{a},{v[0]:.6f},{v[1]:.6f},{v[2]:.0f}')
+          ns=[1000,2000,4000,8000,16000]
+          def slope(a,metric):
+            pts=[]
+            for n in ns:
+              y=med[('beta-ladder',n,a)][metric]
+              if y>0: pts.append((math.log(n),math.log(y)))
+            xm=sum(x for x,y in pts)/len(pts); ym=sum(y for x,y in pts)/len(pts)
+            return sum((x-xm)*(y-ym) for x,y in pts)/sum((x-xm)**2 for x,y in pts)
+          for a in arms:
+            print(f'{a}_wall_exponent={slope(a,0):.3f}')
+            print(f'{a}_user_exponent={slope(a,1):.3f}')
+            b=med[('beta-ladder',16000,'base')][0]; x=med[('beta-ladder',16000,a)][0]
+            print(f'{a}_N16000_speedup={b/x if x else float("inf"):.3f}x')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v2-jump-env
+          path: |
+            /tmp/results.csv
+            /tmp/summary.txt
