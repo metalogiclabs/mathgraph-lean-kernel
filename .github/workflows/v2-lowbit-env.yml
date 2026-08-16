@@ -1,0 +1,126 @@
+name: V2 logarithmic lowbit environment
+
+on:
+  push:
+    branches: [mathgraph-v2-jump-env]
+  workflow_dispatch:
+
+jobs:
+  experiment:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y time
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+      - name: Freeze baseline and make intervention arms
+        run: |
+          set -euxo pipefail
+          cp -a . /tmp/base-src
+          cp -a . /tmp/jump32-src
+          cp -a . /tmp/lowbit-src
+          python3 scripts/v2_jump_patch.py /tmp/jump32-src 32
+          python3 scripts/v2_lowbit_jump_patch.py /tmp/lowbit-src
+      - name: Build and semantic gate all arms
+        run: |
+          set -euxo pipefail
+          for arm in base jump32 lowbit; do
+            cd /tmp/${arm}-src
+            cargo test --locked
+            cargo build --release --locked
+            cp target/release/sokonanoda /tmp/${arm}
+          done
+          cat > /tmp/checker.json <<'EOF'
+          {
+            "use_stdin": true,
+            "nat_extension": true,
+            "string_extension": true,
+            "unpermitted_axiom_hard_error": false,
+            "unsafe_permit_all_axioms": true,
+            "num_threads": 4,
+            "print_success_message": false
+          }
+          EOF
+      - name: Generate Arena scaling and control exports
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          for n in 1000 2000 4000 8000 16000 32000 64000; do
+            cp tests/perf/beta-ladder.lean tests/perf/beta-ladder-${n}.lean
+            sed -i "s/let n := 2000/let n := ${n}/" tests/perf/beta-ladder-${n}.lean
+            printf 'description: beta ladder scaling N=%s\nleanfile: tests/perf/beta-ladder-%s.lean\nexport-decls: ["beta_ladder"]\noutcome: accept\ncompare-perf: true\n' "$n" "$n" > tests/perf/beta-ladder-${n}.yaml
+            nix develop -c ./lka.py build-test perf/beta-ladder-${n}
+          done
+          for t in app-lam grind-ring-5 let-ladder shift-cascade; do
+            nix develop -c ./lka.py build-test perf/${t}
+          done
+      - name: Paired benchmark
+        run: |
+          set -euxo pipefail
+          printf 'test,n,arm,rep,wall_s,user_s,sys_s,maxrss_kb,exit\n' > /tmp/results.csv
+          cd /tmp/arena
+          run_one () {
+            testname="$1"; n="$2"; f="$3"
+            for rep in 1 2 3 4 5 6 7; do
+              case $((rep % 3)) in
+                1) order='base jump32 lowbit' ;;
+                2) order='jump32 lowbit base' ;;
+                0) order='lowbit base jump32' ;;
+              esac
+              for arm in $order; do
+                set +e
+                timeout 120 /usr/bin/time -q -f "${testname},${n},${arm},${rep},%e,%U,%S,%M,%x" -o /tmp/t.txt /tmp/${arm} /tmp/checker.json < "$f" >/tmp/o.txt 2>/tmp/e.txt
+                rc=$?
+                set -e
+                if [ -s /tmp/t.txt ]; then tail -n1 /tmp/t.txt >> /tmp/results.csv; else echo "${testname},${n},${arm},${rep},120,0,0,0,${rc}" >> /tmp/results.csv; fi
+              done
+            done
+          }
+          for n in 1000 2000 4000 8000 16000 32000 64000; do run_one beta-ladder "$n" "_build/tests/perf/beta-ladder-${n}.ndjson"; done
+          for t in app-lam grind-ring-5 let-ladder shift-cascade; do run_one "$t" 0 "_build/tests/perf/${t}.ndjson"; done
+          cat /tmp/results.csv
+      - name: Analyze causal effect
+        run: |
+          python3 - <<'PY' | tee /tmp/summary.txt
+          import csv, math, statistics
+          rows=list(csv.DictReader(open('/tmp/results.csv')))
+          bad=[r for r in rows if int(r['exit'])!=0]
+          assert not bad, bad[:3]
+          arms=('base','jump32','lowbit')
+          print('test,n,arm,wall,user,rss_kb')
+          med={}
+          for key in sorted({(r['test'],int(r['n'])) for r in rows}):
+              t,n=key
+              for a in arms:
+                  rr=[r for r in rows if r['test']==t and int(r['n'])==n and r['arm']==a]
+                  v=(statistics.median(float(x['wall_s']) for x in rr),statistics.median(float(x['user_s']) for x in rr),statistics.median(float(x['maxrss_kb']) for x in rr))
+                  med[(t,n,a)]=v
+                  print(f'{t},{n},{a},{v[0]:.6f},{v[1]:.6f},{v[2]:.0f}')
+          ns=[1000,2000,4000,8000,16000,32000,64000]
+          def slope(a,metric):
+              pts=[]
+              for n in ns:
+                  y=med[('beta-ladder',n,a)][metric]
+                  if y>0: pts.append((math.log(n),math.log(y)))
+              xm=sum(x for x,y in pts)/len(pts); ym=sum(y for x,y in pts)/len(pts)
+              return sum((x-xm)*(y-ym) for x,y in pts)/sum((x-xm)**2 for x,y in pts)
+          for a in arms:
+              print(f'{a}_wall_exponent={slope(a,0):.3f}')
+              print(f'{a}_user_exponent={slope(a,1):.3f}')
+              b=med[('beta-ladder',64000,'base')][0]; x=med[('beta-ladder',64000,a)][0]
+              print(f'{a}_N64000_speedup={b/x if x else float("inf"):.3f}x')
+          b=med[('beta-ladder',64000,'jump32')][0]
+          x=med[('beta-ladder',64000,'lowbit')][0]
+          print(f'lowbit_vs_jump32_N64000={b/x if x else float("inf"):.3f}x')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v2-lowbit-env
+          path: |
+            /tmp/results.csv
+            /tmp/summary.txt
