@@ -76,7 +76,7 @@ jobs:
       - name: Paired representation residual atlas
         run: |
           set -euxo pipefail
-          printf 'test,checker,rep,wall_s,user_s,sys_s,maxrss_kb,exit,input_bytes\n' > /tmp/results.csv
+          printf 'test,checker,rep,wall_s,user_s,sys_s,maxrss_kb,exit,input_bytes,outcome\n' > /tmp/results.csv
           cd /tmp/arena
           for y in tests/perf/*.yaml; do
             stem="$(basename "$y" .yaml)"
@@ -86,6 +86,11 @@ jobs:
             fi
             test -s "$f"
             bytes="$(stat -c %s "$f")"
+            outcome="$(python3 - "$y" <<'PY'
+          import sys, yaml
+          print(yaml.safe_load(open(sys.argv[1])).get('outcome','accept'))
+          PY
+          )"
             for rep in 1 2 3; do
               if [ $((rep % 2)) -eq 1 ]; then order='mathgraph nanoclo'; else order='nanoclo mathgraph'; fi
               for checker in $order; do
@@ -95,38 +100,41 @@ jobs:
                   bin=/tmp/nanoclo-bin; cfg=/tmp/nanoclo.json
                 fi
                 set +e
-                timeout 120 /usr/bin/time -f "$stem,$checker,$rep,%e,%U,%S,%M,%x,$bytes" -o /tmp/t.txt "$bin" "$cfg" < "$f" >/tmp/out.txt 2>/tmp/err.txt
+                timeout 120 /usr/bin/time -q -f "$stem,$checker,$rep,%e,%U,%S,%M,%x,$bytes,$outcome" -o /tmp/t.txt "$bin" "$cfg" < "$f" >/tmp/out.txt 2>/tmp/err.txt
                 rc=$?
                 set -e
-                if [ -s /tmp/t.txt ]; then cat /tmp/t.txt >> /tmp/results.csv; else echo "$stem,$checker,$rep,120,0,0,0,$rc,$bytes" >> /tmp/results.csv; fi
+                if [ -s /tmp/t.txt ]; then tail -n 1 /tmp/t.txt >> /tmp/results.csv; else echo "$stem,$checker,$rep,120,0,0,0,$rc,$bytes,$outcome" >> /tmp/results.csv; fi
               done
             done
           done
           cat /tmp/results.csv
           python3 - <<'PY' | tee /tmp/summary.csv
           import csv, statistics
-          rows=list(csv.DictReader(open('/tmp/results.csv')))
+          rows=[r for r in csv.DictReader(open('/tmp/results.csv')) if r.get('checker') in {'mathgraph','nanoclo'}]
           tests=sorted(set(r['test'] for r in rows))
-          print('test,mg_wall,nc_wall,mg_user,nc_user,mg_rss,nc_rss,wall_ratio_mg_over_nc,winner,all_clean')
+          print('test,outcome,mg_wall,nc_wall,mg_user,nc_user,mg_rss,nc_rss,wall_ratio_mg_over_nc,winner,semantic_ok')
           for t in tests:
               rr=[r for r in rows if r['test']==t]
               def med(c,k):
-                  xs=[float(r[k]) for r in rr if r['checker']==c]
-                  return statistics.median(xs)
+                  return statistics.median(float(r[k]) for r in rr if r['checker']==c)
               mgw,ncw=med('mathgraph','wall_s'),med('nanoclo','wall_s')
               mgu,ncu=med('mathgraph','user_s'),med('nanoclo','user_s')
               mgr,ncr=med('mathgraph','maxrss_kb'),med('nanoclo','maxrss_kb')
-              clean=all(r['exit']=='0' for r in rr)
+              outcome=rr[0]['outcome']
+              def ok(r):
+                  code=int(r['exit'])
+                  return (code==0) if outcome=='accept' else (code!=0 and code!=124)
+              semantic_ok=all(ok(r) for r in rr)
               winner='mathgraph' if mgw<ncw else 'nanoclo' if ncw<mgw else 'tie'
               ratio=mgw/ncw if ncw else float('inf')
-              print(f'{t},{mgw:.6f},{ncw:.6f},{mgu:.6f},{ncu:.6f},{mgr:.0f},{ncr:.0f},{ratio:.4f},{winner},{clean}')
+              print(f'{t},{outcome},{mgw:.6f},{ncw:.6f},{mgu:.6f},{ncu:.6f},{mgr:.0f},{ncr:.0f},{ratio:.4f},{winner},{semantic_ok}')
           PY
 
       - name: Portfolio upper bound
         run: |
           python3 - <<'PY' | tee /tmp/portfolio.txt
           import csv
-          rows=list(csv.DictReader(open('/tmp/summary.csv')))
+          rows=[r for r in csv.DictReader(open('/tmp/summary.csv')) if r['semantic_ok']=='True']
           mg=sum(float(r['mg_wall']) for r in rows)
           nc=sum(float(r['nc_wall']) for r in rows)
           oracle=sum(min(float(r['mg_wall']),float(r['nc_wall'])) for r in rows)
