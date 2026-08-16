@@ -59,12 +59,8 @@ jobs:
           set -euxo pipefail
           cd /tmp/arena
           nix develop -c ./lka.py build-test '${{ matrix.target }}'
-          find "_build/tests/${{ matrix.target }}" -type f -name '*.ndjson' | sort | head -100
-          f=$(find "_build/tests/${{ matrix.target }}" -maxdepth 1 -type f -name '*.ndjson' | sort | head -1)
-          if [ -z "$f" ]; then
-            f=$(find "_build/tests/${{ matrix.target }}" -type f -name '*.ndjson' | sort | head -1)
-          fi
-          test -n "$f"
+          f="_build/tests/${{ matrix.target }}.ndjson"
+          test -s "$f"
           cp "$f" /tmp/input.ndjson
           ls -lh /tmp/input.ndjson
           sha256sum /tmp/input.ndjson
