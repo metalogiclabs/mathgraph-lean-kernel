@@ -1,0 +1,276 @@
+name: MathGraph V2 exhaustive optimization expedition
+
+on:
+  push:
+    branches: [mathgraph-v2-expedition]
+  workflow_dispatch:
+
+jobs:
+  sweep:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: mathgraph-v2-expedition
+          fetch-depth: 0
+
+      - name: Tools
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y time valgrind
+          rustup show
+
+      - name: Fetch Arena corpus
+        run: |
+          set -euxo pipefail
+          mkdir -p /tmp/arena
+          curl -L --fail --retry 3 https://arena.lean-lang.org/lean-arena-tests.tar.gz -o /tmp/arena.tar.gz
+          tar -xzf /tmp/arena.tar.gz -C /tmp/arena
+          find /tmp/arena -type f -name '*.ndjson' | sort > /tmp/all-tests.txt
+          find /tmp/arena -type f -path '*/perf/*.ndjson' | sort > /tmp/perf-tests.txt
+          echo "tests=$(wc -l </tmp/all-tests.txt) perf=$(wc -l </tmp/perf-tests.txt)"
+          test "$(wc -l </tmp/all-tests.txt)" -ge 170
+
+      - name: Checker config
+        run: |
+          cat > /tmp/config.json <<'EOF'
+          {
+            "use_stdin": true,
+            "nat_extension": true,
+            "string_extension": true,
+            "unpermitted_axiom_hard_error": false,
+            "unsafe_permit_all_axioms": true,
+            "num_threads": 4
+          }
+          EOF
+
+      - name: Build candidate family
+        run: |
+          set -euxo pipefail
+          mkdir -p /tmp/bin
+          cp src/infer.rs /tmp/infer.orig
+          cp src/tc.rs /tmp/tc.orig
+
+          build_arm () {
+            arm="$1"
+            cargo build --release --locked
+            cp target/release/sokonanoda "/tmp/bin/$arm"
+          }
+
+          export RUSTFLAGS='-C target-cpu=native'
+
+          # A: exact retained V1
+          cp /tmp/infer.orig src/infer.rs
+          cp /tmp/tc.orig src/tc.rs
+          build_arm v1
+
+          # B: reuse the already-computed canonical environment for Lambda closure creation.
+          # This removes a duplicate key_env(env,e) on every nontrivial inferred Lambda.
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('src/infer.rs')
+          s=p.read_text()
+          old="""        let key = (self.key_env(env, e) as *const value::Env<'t> as usize, e);"""
+          new="""        let canonical_env = self.key_env(env, e);\n        let key = (canonical_env as *const value::Env<'t> as usize, e);"""
+          assert old in s
+          s=s.replace(old,new,1)
+          old2="""                let clo = Closure::mk_infer(self.key_env(env, e), ctx, body);"""
+          new2="""                let clo = Closure::mk_infer(canonical_env, ctx, body);"""
+          assert old2 in s
+          s=s.replace(old2,new2,1)
+          p.write_text(s)
+          PY
+          cargo test --locked
+          build_arm keyreuse
+          cp src/infer.rs /tmp/infer.keyreuse
+
+          # C..G: sweep the session/cache lifetime around the V1 optimum, retaining keyreuse.
+          for spec in b1572864:1572864 b2097152:2097152 b2359296:2359296 b2621440:2621440 b3145728:3145728 b4194304:4194304; do
+            arm=${spec%%:*}; budget=${spec##*:}
+            cp /tmp/infer.keyreuse src/infer.rs
+            cp /tmp/tc.orig src/tc.rs
+            python3 - "$budget" <<'PY'
+          from pathlib import Path
+          import sys,re
+          p=Path('src/tc.rs'); s=p.read_text(); budget=sys.argv[1]
+          s2,n=re.subn(r'const SESSION_BUDGET: usize = [0-9_]+;', f'const SESSION_BUDGET: usize = {budget};', s, count=1)
+          assert n==1
+          p.write_text(s2)
+          PY
+            build_arm "$arm"
+          done
+
+          # H: full-environment Lambda closure (prior B1 idea), composed with keyreuse.
+          cp /tmp/infer.keyreuse src/infer.rs
+          cp /tmp/tc.orig src/tc.rs
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('src/infer.rs'); s=p.read_text()
+          old='                let clo = Closure::mk_infer(canonical_env, ctx, body);'
+          new='                let clo = Closure::mk_infer(env, ctx, body);'
+          assert old in s
+          p.write_text(s.replace(old,new,1))
+          PY
+          build_arm fullenv
+
+          ls -lh /tmp/bin
+
+      - name: Full 178-case semantic equivalence gate
+        run: |
+          set -euxo pipefail
+          printf 'test,expected,arm,exit,accepted,semantic_ok,wall_s,maxrss_kb\n' > /tmp/semantic.csv
+          ARMS='v1 keyreuse b1572864 b2097152 b2359296 b2621440 b3145728 b4194304 fullenv'
+          while IFS= read -r f; do
+            case "$f" in */good/*) expected=1;; */bad/*) expected=0;; *) echo "bad path $f"; exit 1;; esac
+            name=${f#/tmp/arena/}
+            for arm in $ARMS; do
+              set +e
+              /usr/bin/time -f '%e,%M' -o /tmp/tm "/tmp/bin/$arm" /tmp/config.json < "$f" >/dev/null 2>&1
+              rc=$?
+              set -e
+              accepted=0; [ "$rc" -eq 0 ] && accepted=1
+              ok=0; [ "$accepted" -eq "$expected" ] && ok=1
+              IFS=, read -r wall rss < /tmp/tm
+              echo "$name,$expected,$arm,$rc,$accepted,$ok,$wall,$rss" >> /tmp/semantic.csv
+            done
+          done < /tmp/all-tests.txt
+          python3 - <<'PY'
+          import csv,collections,sys
+          rows=list(csv.DictReader(open('/tmp/semantic.csv')))
+          by=collections.defaultdict(list)
+          for r in rows: by[r['arm']].append(r)
+          print('SEMANTIC GATE')
+          failed=False
+          for arm,rs in sorted(by.items()):
+              bad=[r for r in rs if r['semantic_ok']!='1']
+              disag=[r for r in rs if r['accepted'] != next(x['accepted'] for x in by['v1'] if x['test']==r['test'])]
+              print(arm, 'cases=',len(rs),'wrong=',len(bad),'vs_v1_disagree=',len(disag))
+              if arm!='v1' and bad:
+                  failed=True
+                  for r in bad[:10]: print('BAD',r)
+          if failed: sys.exit(2)
+          PY
+
+      - name: Paired wall-time and peak-RSS perf sweep
+        run: |
+          set -euxo pipefail
+          ARMS='v1 keyreuse b1572864 b2097152 b2359296 b2621440 b3145728 b4194304 fullenv'
+          printf 'test,rep,arm,wall_s,maxrss_kb,exit\n' > /tmp/perf.csv
+          while IFS= read -r f; do
+            name=${f#/tmp/arena/}
+            for rep in 1 2 3 4 5 6 7; do
+              # rotate the arm order each repetition to reduce temporal bias
+              python3 - "$rep" $ARMS > /tmp/arms.txt <<'PY'
+          import sys
+          rep=int(sys.argv[1]); a=sys.argv[2:]
+          k=(rep-1)%len(a)
+          print(' '.join(a[k:]+a[:k]))
+          PY
+              for arm in $(cat /tmp/arms.txt); do
+                set +e
+                /usr/bin/time -f '%e,%M,%x' -o /tmp/tm "/tmp/bin/$arm" /tmp/config.json < "$f" >/dev/null 2>&1
+                rc=$?
+                set -e
+                IFS=, read -r wall rss x < /tmp/tm
+                echo "$name,$rep,$arm,$wall,$rss,$rc" >> /tmp/perf.csv
+              done
+            done
+          done < /tmp/perf-tests.txt
+
+          python3 - <<'PY'
+          import csv,statistics,math,collections
+          rows=list(csv.DictReader(open('/tmp/perf.csv')))
+          tests=sorted(set(r['test'] for r in rows)); arms=sorted(set(r['arm'] for r in rows))
+          med={}
+          for t in tests:
+              for a in arms:
+                  xs=[float(r['wall_s']) for r in rows if r['test']==t and r['arm']==a and r['exit']=='0']
+                  rs=[int(r['maxrss_kb']) for r in rows if r['test']==t and r['arm']==a and r['exit']=='0']
+                  if xs: med[t,a]=(statistics.median(xs),statistics.median(rs))
+          print('\nPER-TEST MEDIANS (ratio <1 faster than V1)')
+          print('test,arm,wall_s,ratio,rss_kb,rss_ratio')
+          for t in tests:
+              if (t,'v1') not in med: continue
+              bw,br=med[t,'v1']
+              for a in arms:
+                  if (t,a) not in med: continue
+                  w,r=med[t,a]
+                  wr=(w/bw if bw>0 else 1.0); rr=(r/br if br>0 else 1.0)
+                  print(f'{t},{a},{w:.6f},{wr:.4f},{r:.0f},{rr:.4f}')
+
+          # Score only tests above timer floor in V1; geometric mean avoids one big test dominating.
+          scores=[]
+          for a in arms:
+              ratios=[]; mem=[]
+              for t in tests:
+                  if (t,'v1') in med and (t,a) in med:
+                      bw,br=med[t,'v1']; w,r=med[t,a]
+                      if bw >= .02 and w>0: ratios.append(w/bw)
+                      if br>0: mem.append(r/br)
+              gm=math.exp(sum(math.log(x) for x in ratios)/len(ratios)) if ratios else 999
+              mg=statistics.median(mem) if mem else 999
+              scores.append((gm,mg,a,len(ratios)))
+          print('\nARM SCORE: lower wall_gmean is better')
+          for x in sorted(scores): print(f'arm={x[2]} wall_gmean_ratio={x[0]:.5f} median_rss_ratio={x[1]:.5f} scored_tests={x[3]}')
+          champion=min((x for x in scores if x[2]!='v1'), key=lambda x:x[0])
+          open('/tmp/champion.txt','w').write(champion[2])
+          print('CHAMPION',champion)
+          PY
+
+      - name: Deterministic instruction-reference cross-check with Callgrind
+        run: |
+          set -euxo pipefail
+          champion=$(cat /tmp/champion.txt)
+          printf 'test,arm,Ir\n' > /tmp/callgrind.csv
+          for rel in good/perf/app-lam.ndjson good/perf/beta-ladder.ndjson good/perf/grind-ring-5.ndjson good/perf/let-ladder.ndjson good/perf/shift-cascade.ndjson; do
+            f="/tmp/arena/$rel"
+            name=${rel%.ndjson}
+            for arm in v1 "$champion"; do
+              rm -f /tmp/cg.out
+              set +e
+              valgrind --tool=callgrind --callgrind-out-file=/tmp/cg.out --quiet "/tmp/bin/$arm" /tmp/config.json < "$f" >/dev/null 2>&1
+              rc=$?
+              set -e
+              test "$rc" -eq 0
+              Ir=$(grep '^summary:' /tmp/cg.out | awk '{print $2}')
+              echo "$name,$arm,$Ir" >> /tmp/callgrind.csv
+            done
+          done
+          python3 - <<'PY'
+          import csv
+          rows=list(csv.DictReader(open('/tmp/callgrind.csv')))
+          print('CALLGRIND Ir')
+          for t in sorted(set(r['test'] for r in rows)):
+              rs={r['arm']:int(r['Ir']) for r in rows if r['test']==t}
+              base=rs['v1']
+              for a,n in rs.items(): print(t,a,n,f'ratio={n/base:.5f}')
+          PY
+
+      - name: Try hardware instruction counts if PMU is available
+        continue-on-error: true
+        run: |
+          set -uxo pipefail
+          champion=$(cat /tmp/champion.txt)
+          printf 'test,arm,instructions\n' > /tmp/perf-instructions.csv
+          for rel in good/perf/beta-ladder.ndjson good/perf/grind-ring-5.ndjson; do
+            f="/tmp/arena/$rel"; name=${rel%.ndjson}
+            for arm in v1 "$champion"; do
+              perf stat -x, -e instructions:u -o /tmp/pi "/tmp/bin/$arm" /tmp/config.json < "$f" >/dev/null 2>&1 || true
+              n=$(awk -F, '$3=="instructions:u" {print $1}' /tmp/pi | tr -d ' ')
+              echo "$name,$arm,${n:-NA}" >> /tmp/perf-instructions.csv
+            done
+          done
+          cat /tmp/perf-instructions.csv
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mathgraph-v2-sweep
+          path: |
+            /tmp/semantic.csv
+            /tmp/perf.csv
+            /tmp/callgrind.csv
+            /tmp/perf-instructions.csv
+            /tmp/champion.txt
