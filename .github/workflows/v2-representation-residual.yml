@@ -1,0 +1,148 @@
+name: V2 Representation Residual Atlas
+
+on:
+  push:
+    branches: [mathgraph-v2-representation-residual]
+  workflow_dispatch:
+
+jobs:
+  residual-atlas:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y time
+
+      - name: Install Nix for Arena
+        uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build frozen MathGraph V1
+        run: |
+          set -euxo pipefail
+          cargo build --release --locked
+          cp target/release/sokonanoda /tmp/mathgraph
+
+      - name: Build pinned nanoclo representation rival
+        run: |
+          set -euxo pipefail
+          git clone https://github.com/sgraf812/nanoclo /tmp/nanoclo
+          cd /tmp/nanoclo
+          git checkout b27e4c5f788717c884020f1dde4bb7193bca2276
+          cargo build --release --locked
+          cp target/release/nanoclo /tmp/nanoclo-bin
+
+      - name: Configs
+        run: |
+          cat > /tmp/mathgraph.json <<'EOF'
+          {
+            "use_stdin": true,
+            "nat_extension": true,
+            "string_extension": true,
+            "unpermitted_axiom_hard_error": false,
+            "unsafe_permit_all_axioms": true,
+            "num_threads": 4,
+            "print_success_message": false
+          }
+          EOF
+          cat > /tmp/nanoclo.json <<'EOF'
+          {
+            "use_stdin": true,
+            "nat_extension": true,
+            "string_extension": true,
+            "unpermitted_axiom_hard_error": false,
+            "unsafe_permit_all_axioms": true,
+            "num_threads": 4
+          }
+          EOF
+
+      - name: Build exact Arena perf corpus
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          for y in tests/perf/*.yaml; do
+            t="perf/$(basename "$y" .yaml)"
+            nix develop -c ./lka.py build-test "$t"
+          done
+          find _build/tests -type f -name '*.ndjson' -printf '%p %s\n' | sort | tee /tmp/corpus-manifest.txt
+
+      - name: Paired representation residual atlas
+        run: |
+          set -euxo pipefail
+          printf 'test,checker,rep,wall_s,user_s,sys_s,maxrss_kb,exit,input_bytes\n' > /tmp/results.csv
+          cd /tmp/arena
+          for y in tests/perf/*.yaml; do
+            stem="$(basename "$y" .yaml)"
+            f="_build/tests/perf/${stem}.ndjson"
+            if [ ! -s "$f" ]; then
+              f="$(find _build/tests -type f -name "${stem}.ndjson" | head -1)"
+            fi
+            test -s "$f"
+            bytes="$(stat -c %s "$f")"
+            for rep in 1 2 3; do
+              if [ $((rep % 2)) -eq 1 ]; then order='mathgraph nanoclo'; else order='nanoclo mathgraph'; fi
+              for checker in $order; do
+                if [ "$checker" = mathgraph ]; then
+                  bin=/tmp/mathgraph; cfg=/tmp/mathgraph.json
+                else
+                  bin=/tmp/nanoclo-bin; cfg=/tmp/nanoclo.json
+                fi
+                set +e
+                timeout 120 /usr/bin/time -f "$stem,$checker,$rep,%e,%U,%S,%M,%x,$bytes" -o /tmp/t.txt "$bin" "$cfg" < "$f" >/tmp/out.txt 2>/tmp/err.txt
+                rc=$?
+                set -e
+                if [ -s /tmp/t.txt ]; then cat /tmp/t.txt >> /tmp/results.csv; else echo "$stem,$checker,$rep,120,0,0,0,$rc,$bytes" >> /tmp/results.csv; fi
+              done
+            done
+          done
+          cat /tmp/results.csv
+          python3 - <<'PY' | tee /tmp/summary.csv
+          import csv, statistics
+          rows=list(csv.DictReader(open('/tmp/results.csv')))
+          tests=sorted(set(r['test'] for r in rows))
+          print('test,mg_wall,nc_wall,mg_user,nc_user,mg_rss,nc_rss,wall_ratio_mg_over_nc,winner,all_clean')
+          for t in tests:
+              rr=[r for r in rows if r['test']==t]
+              def med(c,k):
+                  xs=[float(r[k]) for r in rr if r['checker']==c]
+                  return statistics.median(xs)
+              mgw,ncw=med('mathgraph','wall_s'),med('nanoclo','wall_s')
+              mgu,ncu=med('mathgraph','user_s'),med('nanoclo','user_s')
+              mgr,ncr=med('mathgraph','maxrss_kb'),med('nanoclo','maxrss_kb')
+              clean=all(r['exit']=='0' for r in rr)
+              winner='mathgraph' if mgw<ncw else 'nanoclo' if ncw<mgw else 'tie'
+              ratio=mgw/ncw if ncw else float('inf')
+              print(f'{t},{mgw:.6f},{ncw:.6f},{mgu:.6f},{ncu:.6f},{mgr:.0f},{ncr:.0f},{ratio:.4f},{winner},{clean}')
+          PY
+
+      - name: Portfolio upper bound
+        run: |
+          python3 - <<'PY' | tee /tmp/portfolio.txt
+          import csv
+          rows=list(csv.DictReader(open('/tmp/summary.csv')))
+          mg=sum(float(r['mg_wall']) for r in rows)
+          nc=sum(float(r['nc_wall']) for r in rows)
+          oracle=sum(min(float(r['mg_wall']),float(r['nc_wall'])) for r in rows)
+          print(f'mathgraph_total_wall={mg:.6f}')
+          print(f'nanoclo_total_wall={nc:.6f}')
+          print(f'oracle_portfolio_wall={oracle:.6f}')
+          print(f'oracle_gain_vs_mathgraph={(mg-oracle)/mg*100:.3f}%')
+          print(f'oracle_gain_vs_nanoclo={(nc-oracle)/nc*100:.3f}%')
+          print('NOTE: oracle is only an upper bound for a lawful intrinsic router, not a deployable checker.')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v2-representation-residual-atlas
+          path: |
+            /tmp/results.csv
+            /tmp/summary.csv
+            /tmp/portfolio.txt
+            /tmp/corpus-manifest.txt
