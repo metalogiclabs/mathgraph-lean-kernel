@@ -29,25 +29,14 @@ jobs:
           old = 'const SESSION_BUDGET: usize = 1 << 20;'
           new = 'const SESSION_BUDGET: usize = 2_621_440;'
           assert s.count(old) == 1, s.count(old)
-          s = s.replace(old, new, 1)
-          p.write_text(s)
+          p.write_text(s.replace(old, new, 1))
 
           p = Path('src/eval.rs')
           s = p.read_text()
-          old = '''                let Expr::Lambda { body: inner, .. } = self.ctx.read_expr(body) else { break };
-                  let pruned = self.key_env(env, body);
-                  env = value::env_extend(self.arena, pruned, args[i]);
-                  body = inner;
-                  i += 1;
-          '''
-          new = '''                let Expr::Lambda { body: inner, .. } = self.ctx.read_expr(body) else { break };
-                  env = value::env_extend(self.arena, env, args[i]);
-                  body = inner;
-                  i += 1;
-          '''
-          assert s.count(old) == 1, s.count(old)
-          s = s.replace(old, new, 1)
-          p.write_text(s)
+          needle = 'let pruned = self.key_env(env, body);\n                env = value::env_extend(self.arena, pruned, args[i]);'
+          repl = 'env = value::env_extend(self.arena, env, args[i]);'
+          assert s.count(needle) == 1, s.count(needle)
+          p.write_text(s.replace(needle, repl, 1))
           PY
 
       - name: Verify exact two-file delta
