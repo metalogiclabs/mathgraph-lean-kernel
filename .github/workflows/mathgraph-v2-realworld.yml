@@ -2,7 +2,7 @@ name: MathGraph V2 real-world gate
 
 on:
   push:
-    branches: [mathgraph-v2-realworld-fix]
+    branches: [mathgraph-v2-realworld-pathfix]
   workflow_dispatch:
 
 jobs:
@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: mathgraph-v2-realworld-fix
+          ref: mathgraph-v2-realworld-pathfix
 
       - name: Toolchain
         run: |
@@ -59,13 +59,10 @@ jobs:
           set -euxo pipefail
           cd /tmp/arena
           nix develop -c ./lka.py build-test '${{ matrix.target }}'
-          find _out -type f \( -name '${{ matrix.target }}.ndjson' -o -name '*.ndjson' \) | head -100
-          f=$(find _out -type f -name '${{ matrix.target }}.ndjson' | head -1)
+          find "_build/tests/${{ matrix.target }}" -type f -name '*.ndjson' | sort | head -100
+          f=$(find "_build/tests/${{ matrix.target }}" -maxdepth 1 -type f -name '*.ndjson' | sort | head -1)
           if [ -z "$f" ]; then
-            f=$(find _out -type f -path "*/${{ matrix.target }}/*.ndjson" | head -1)
-          fi
-          if [ -z "$f" ]; then
-            f=$(find _out -type f -name '*.ndjson' | head -1)
+            f=$(find "_build/tests/${{ matrix.target }}" -type f -name '*.ndjson' | sort | head -1)
           fi
           test -n "$f"
           cp "$f" /tmp/input.ndjson
