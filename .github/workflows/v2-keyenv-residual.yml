@@ -1,6 +1,8 @@
 name: V2 key_env residual
 
 on:
+  push:
+    branches: [mathgraph-v2-representation-residual]
   workflow_dispatch:
 
 jobs:
