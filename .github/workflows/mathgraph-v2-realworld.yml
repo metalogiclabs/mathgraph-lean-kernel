@@ -2,7 +2,7 @@ name: MathGraph V2 real-world gate
 
 on:
   push:
-    branches: [mathgraph-v2-expedition]
+    branches: [mathgraph-v2-realworld-fix]
   workflow_dispatch:
 
 jobs:
@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: mathgraph-v2-expedition
+          ref: mathgraph-v2-realworld-fix
 
       - name: Toolchain
         run: |
@@ -24,6 +24,11 @@ jobs:
           rustup show
           sudo apt-get update
           sudo apt-get install -y time linux-tools-common linux-tools-generic || true
+
+      - name: Install Nix for Arena
+        uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build V1 and V2 candidate
         run: |
@@ -48,22 +53,24 @@ jobs:
         run: |
           set -euxo pipefail
           git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
-          cd /tmp/arena
-          python3 -m pip install -q uv
 
       - name: Build exact target export
         run: |
           set -euxo pipefail
           cd /tmp/arena
-          uv run lka.py build-test '${{ matrix.target }}'
-          find _out -type f -name '${{ matrix.target }}.ndjson' -o -name '*.ndjson' | head -100
+          nix develop -c ./lka.py build-test '${{ matrix.target }}'
+          find _out -type f \( -name '${{ matrix.target }}.ndjson' -o -name '*.ndjson' \) | head -100
           f=$(find _out -type f -name '${{ matrix.target }}.ndjson' | head -1)
           if [ -z "$f" ]; then
             f=$(find _out -type f -path "*/${{ matrix.target }}/*.ndjson" | head -1)
           fi
+          if [ -z "$f" ]; then
+            f=$(find _out -type f -name '*.ndjson' | head -1)
+          fi
           test -n "$f"
           cp "$f" /tmp/input.ndjson
           ls -lh /tmp/input.ndjson
+          sha256sum /tmp/input.ndjson
 
       - name: Config
         run: |
