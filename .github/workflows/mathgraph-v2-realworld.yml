@@ -1,0 +1,125 @@
+name: MathGraph V2 real-world gate
+
+on:
+  push:
+    branches: [mathgraph-v2-expedition]
+  workflow_dispatch:
+
+jobs:
+  realworld:
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [init, std, cedar, cslib]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: mathgraph-v2-expedition
+
+      - name: Toolchain
+        run: |
+          set -euxo pipefail
+          rustup show
+          sudo apt-get update
+          sudo apt-get install -y time linux-tools-common linux-tools-generic || true
+
+      - name: Build V1 and V2 candidate
+        run: |
+          set -euxo pipefail
+          cp src/tc.rs /tmp/tc.v1.rs
+          cargo build --release --locked
+          cp target/release/sokonanoda /tmp/mathgraph-v1
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('src/tc.rs')
+          s=p.read_text()
+          old='const SESSION_BUDGET: usize = 2_621_440;'
+          new='const SESSION_BUDGET: usize = 1_572_864;'
+          assert old in s
+          p.write_text(s.replace(old,new,1))
+          PY
+          cargo build --release --locked
+          cp target/release/sokonanoda /tmp/mathgraph-v2
+          cp /tmp/tc.v1.rs src/tc.rs
+
+      - name: Get Arena source
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          python3 -m pip install -q uv
+
+      - name: Build exact target export
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          uv run lka.py build-test '${{ matrix.target }}'
+          find _out -type f -name '${{ matrix.target }}.ndjson' -o -name '*.ndjson' | head -100
+          f=$(find _out -type f -name '${{ matrix.target }}.ndjson' | head -1)
+          if [ -z "$f" ]; then
+            f=$(find _out -type f -path "*/${{ matrix.target }}/*.ndjson" | head -1)
+          fi
+          test -n "$f"
+          cp "$f" /tmp/input.ndjson
+          ls -lh /tmp/input.ndjson
+
+      - name: Config
+        run: |
+          cat > /tmp/config.json <<'EOF'
+          {
+            "use_stdin": true,
+            "nat_extension": true,
+            "string_extension": true,
+            "unpermitted_axiom_hard_error": false,
+            "unsafe_permit_all_axioms": true,
+            "num_threads": 4
+          }
+          EOF
+
+      - name: Paired wall and RSS
+        run: |
+          set -euxo pipefail
+          printf 'target,arm,rep,wall_s,user_s,sys_s,maxrss_kb,exit\n' > /tmp/results.csv
+          for rep in 1 2 3 4 5; do
+            if (( rep % 2 )); then ARMS='v1 v2'; else ARMS='v2 v1'; fi
+            for arm in $ARMS; do
+              bin=/tmp/mathgraph-$arm
+              set +e
+              /usr/bin/time -f '${{ matrix.target }},'"$arm,$rep"',%e,%U,%S,%M,%x' -o /tmp/t.txt "$bin" /tmp/config.json < /tmp/input.ndjson >/dev/null 2>&1
+              rc=$?
+              set -e
+              cat /tmp/t.txt >> /tmp/results.csv
+              test "$rc" -eq 0
+            done
+          done
+          cat /tmp/results.csv
+          python3 - <<'PY'
+          import csv, statistics
+          rows=list(csv.DictReader(open('/tmp/results.csv')))
+          for metric in ('wall_s','user_s','sys_s','maxrss_kb'):
+              vals={a:[float(r[metric]) for r in rows if r['arm']==a] for a in ('v1','v2')}
+              m={a:statistics.median(v) for a,v in vals.items()}
+              print(metric, m, 'v2/v1=', m['v2']/m['v1'] if m['v1'] else None)
+          PY
+
+      - name: Hardware instruction probe
+        continue-on-error: true
+        run: |
+          set -euxo pipefail
+          printf 'target,arm,instructions\n' > /tmp/instructions.csv
+          for arm in v1 v2; do
+            perf stat -x, -e instructions -o /tmp/perf.txt /tmp/mathgraph-$arm /tmp/config.json < /tmp/input.ndjson >/dev/null 2>&1
+            ins=$(awk -F, '$3=="instructions" {gsub(/ /,"",$1); print $1}' /tmp/perf.txt | head -1)
+            echo '${{ matrix.target }},'"$arm,$ins" >> /tmp/instructions.csv
+          done
+          cat /tmp/instructions.csv
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v2-realworld-${{ matrix.target }}
+          path: |
+            /tmp/results.csv
+            /tmp/instructions.csv
