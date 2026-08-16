@@ -1,0 +1,142 @@
+name: V2 delayed lambda argument separator
+
+on:
+  push:
+    branches: [mathgraph-v2-lazy-lambda-args]
+  workflow_dispatch:
+
+jobs:
+  lazy-args:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y time
+
+      - name: Install Nix for Arena
+        uses: cachix/install-nix-action@v31
+
+      - name: Build frozen baseline
+        run: |
+          set -euxo pipefail
+          cargo build --release --locked
+          cp target/release/sokonanoda /tmp/mg-base
+
+      - name: Build lazy full-env arm
+        run: |
+          set -euxo pipefail
+          cp -a . /tmp/mg-lazy-full
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/mg-lazy-full/src/eval.rs')
+          s=p.read_text()
+          old='''            let f = self.eval(depth, env, fun);\n            let a = self.eval(depth, env, arg);\n            if let Value::Lam { body: clo, .. } = f {\n                let clo_env = clo.env;\n                let clo_body = clo.body;\n                let new_env = value::env_extend(self.arena, clo_env, a);\n                return self.eval(depth, new_env, clo_body);\n            }\n            return self.apply(depth, f, a);'''
+          new='''            let f = self.eval(depth, env, fun);\n            if let Value::Lam { body: clo, .. } = f {\n                let clo_env = clo.env;\n                let clo_body = clo.body;\n                let a = value::mk_thunk(self.arena, env, arg);\n                let new_env = value::env_extend(self.arena, clo_env, a);\n                return self.eval(depth, new_env, clo_body);\n            }\n            let a = self.eval(depth, env, arg);\n            return self.apply(depth, f, a);'''
+          assert old in s, 'application target not found'
+          p.write_text(s.replace(old,new,1))
+          PY
+          cd /tmp/mg-lazy-full
+          cargo test --locked
+          cargo build --release --locked
+          cp target/release/sokonanoda /tmp/mg-lazy-full-bin
+
+      - name: Build lazy keyed-env arm
+        run: |
+          set -euxo pipefail
+          cp -a . /tmp/mg-lazy-keyed
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/mg-lazy-keyed/src/eval.rs')
+          s=p.read_text()
+          old='''            let f = self.eval(depth, env, fun);\n            let a = self.eval(depth, env, arg);\n            if let Value::Lam { body: clo, .. } = f {\n                let clo_env = clo.env;\n                let clo_body = clo.body;\n                let new_env = value::env_extend(self.arena, clo_env, a);\n                return self.eval(depth, new_env, clo_body);\n            }\n            return self.apply(depth, f, a);'''
+          new='''            let f = self.eval(depth, env, fun);\n            if let Value::Lam { body: clo, .. } = f {\n                let clo_env = clo.env;\n                let clo_body = clo.body;\n                let arg_env = self.key_env(env, arg);\n                let a = value::mk_thunk(self.arena, arg_env, arg);\n                let new_env = value::env_extend(self.arena, clo_env, a);\n                return self.eval(depth, new_env, clo_body);\n            }\n            let a = self.eval(depth, env, arg);\n            return self.apply(depth, f, a);'''
+          assert old in s, 'application target not found'
+          p.write_text(s.replace(old,new,1))
+          PY
+          cd /tmp/mg-lazy-keyed
+          cargo test --locked
+          cargo build --release --locked
+          cp target/release/sokonanoda /tmp/mg-lazy-keyed-bin
+
+      - name: Config
+        run: |
+          cat > /tmp/mg.json <<'EOF'
+          {
+            "use_stdin": true,
+            "nat_extension": true,
+            "string_extension": true,
+            "unpermitted_axiom_hard_error": false,
+            "unsafe_permit_all_axioms": true,
+            "num_threads": 4,
+            "print_success_message": false
+          }
+          EOF
+
+      - name: Build deciding Arena tests
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          for t in perf/beta-ladder perf/app-lam perf/grind-ring-5 perf/let-ladder perf/shift-cascade; do
+            nix develop -c ./lka.py build-test "$t"
+          done
+
+      - name: Paired benchmark
+        run: |
+          set -euxo pipefail
+          printf 'test,arm,rep,wall_s,user_s,sys_s,maxrss_kb,exit\n' > /tmp/lazy-results.csv
+          cd /tmp/arena
+          for stem in beta-ladder app-lam grind-ring-5 let-ladder shift-cascade; do
+            f="_build/tests/perf/${stem}.ndjson"
+            test -s "$f"
+            for rep in 1 2 3 4 5 6 7; do
+              case $((rep % 3)) in
+                1) order='base full keyed' ;;
+                2) order='full keyed base' ;;
+                0) order='keyed base full' ;;
+              esac
+              for arm in $order; do
+                case "$arm" in
+                  base) bin=/tmp/mg-base ;;
+                  full) bin=/tmp/mg-lazy-full-bin ;;
+                  keyed) bin=/tmp/mg-lazy-keyed-bin ;;
+                esac
+                set +e
+                timeout 120 /usr/bin/time -q -f "$stem,$arm,$rep,%e,%U,%S,%M,%x" -o /tmp/t.txt "$bin" /tmp/mg.json < "$f" >/tmp/o.txt 2>/tmp/e.txt
+                rc=$?
+                set -e
+                if [ -s /tmp/t.txt ]; then tail -n1 /tmp/t.txt >> /tmp/lazy-results.csv; else echo "$stem,$arm,$rep,120,0,0,0,$rc" >> /tmp/lazy-results.csv; fi
+              done
+            done
+          done
+          cat /tmp/lazy-results.csv
+
+      - name: Decide
+        run: |
+          python3 - <<'PY' | tee /tmp/lazy-summary.csv
+          import csv, statistics
+          rows=list(csv.DictReader(open('/tmp/lazy-results.csv')))
+          assert all(int(r['exit'])==0 for r in rows), 'semantic/operational failure in accept corpus'
+          print('test,base_wall,full_wall,keyed_wall,base_user,full_user,keyed_user,full_delta_pct,keyed_delta_pct,winner')
+          for t in sorted({r['test'] for r in rows}):
+              rr=[r for r in rows if r['test']==t]
+              def med(a,k): return statistics.median(float(r[k]) for r in rr if r['arm']==a)
+              bw,fw,kw=[med(a,'wall_s') for a in ('base','full','keyed')]
+              bu,fu,ku=[med(a,'user_s') for a in ('base','full','keyed')]
+              fd=((fw-bw)/bw*100) if bw else 0
+              kd=((kw-bw)/bw*100) if bw else 0
+              winner=min((bw,'base'),(fw,'full'),(kw,'keyed'))[1]
+              print(f'{t},{bw:.6f},{fw:.6f},{kw:.6f},{bu:.6f},{fu:.6f},{ku:.6f},{fd:.3f},{kd:.3f},{winner}')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v2-lazy-lambda-args
+          path: |
+            /tmp/lazy-results.csv
+            /tmp/lazy-summary.csv
