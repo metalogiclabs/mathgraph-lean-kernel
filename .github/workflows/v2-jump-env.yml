@@ -18,99 +18,13 @@ jobs:
       - name: Install Nix
         uses: cachix/install-nix-action@v31
       - name: Freeze baseline and make jump arms
-        shell: bash
         run: |
           set -euxo pipefail
           cp -a . /tmp/base-src
           cp -a . /tmp/jump8-src
           cp -a . /tmp/jump32-src
-          python3 - <<'PY'
-          from pathlib import Path
-          def patch(root, stride):
-              p=Path(root)/'src/value.rs'
-              s=p.read_text()
-              s=s.replace(
-'''    Cons {
-        v: V<'a>,
-        parent: E<'a>,
-        lsub: Option<&'a LevelSub<'a>>,
-        hash: u64,
-        len: u32,
-        prune: Cell<(u64, Option<E<'a>>)>,
-    },''',
-'''    Cons {
-        v: V<'a>,
-        parent: E<'a>,
-        jump: Option<E<'a>>,
-        lsub: Option<&'a LevelSub<'a>>,
-        hash: u64,
-        len: u32,
-        prune: Cell<(u64, Option<E<'a>>)>,
-    },''')
-              old='''                Env::Cons { v, parent, .. } => {
-                    if idx == 0 {
-                        return Some(*v);
-                    }
-                    idx -= 1;
-                    cur = parent;
-                }'''
-              new=f'''                Env::Cons {{ v, parent, jump, .. }} => {{
-                    if idx == 0 {{
-                        return Some(*v);
-                    }}
-                    if idx >= {stride} {{
-                        if let Some(j) = jump {{
-                            idx -= {stride};
-                            cur = j;
-                            continue;
-                        }}
-                    }}
-                    idx -= 1;
-                    cur = parent;
-                }}'''
-              if old not in s: raise SystemExit('lookup patch anchor missing')
-              s=s.replace(old,new)
-              old2='''pub fn env_extend<'a>(arena: &'a Bump, parent: E<'a>, v: V<'a>) -> E<'a> {
-    let v_hash = v as *const Value<'a> as usize as u64;
-    let parent_hash = parent.get_hash();
-    let hash = parent_hash.wrapping_mul(0x9E3779B97F4A7C15).wrapping_add(v_hash);
-    arena.alloc(Env::Cons {
-        v,
-        parent,
-        lsub: parent.lsub(),
-        hash,
-        len: parent.len() + 1,
-        prune: Cell::new((0, None)),
-    })
-}'''
-              new2=f'''pub fn env_extend<'a>(arena: &'a Bump, parent: E<'a>, v: V<'a>) -> E<'a> {{
-    let v_hash = v as *const Value<'a> as usize as u64;
-    let parent_hash = parent.get_hash();
-    let hash = parent_hash.wrapping_mul(0x9E3779B97F4A7C15).wrapping_add(v_hash);
-    let mut jump = Some(parent);
-    for _ in 1..{stride} {{
-        jump = match jump {{
-            Some(Env::Cons {{ parent, .. }}) => Some(*parent),
-            _ => None,
-        }};
-        if jump.is_none() {{ break; }}
-    }}
-    arena.alloc(Env::Cons {{
-        v,
-        parent,
-        jump,
-        lsub: parent.lsub(),
-        hash,
-        len: parent.len() + 1,
-        prune: Cell::new((0, None)),
-    }})
-}}'''
-              if old2 not in s: raise SystemExit('extend patch anchor missing')
-              s=s.replace(old2,new2)
-              p.write_text(s)
-          patch('/tmp/jump8-src',8)
-          patch('/tmp/jump32-src',32)
-          PY
+          python3 scripts/v2_jump_patch.py /tmp/jump8-src 8
+          python3 scripts/v2_jump_patch.py /tmp/jump32-src 32
       - name: Build and semantic gate all arms
         run: |
           set -euxo pipefail
@@ -139,13 +53,7 @@ jobs:
           for n in 1000 2000 4000 8000 16000; do
             cp tests/perf/beta-ladder.lean tests/perf/beta-ladder-${n}.lean
             sed -i "s/let n := 2000/let n := ${n}/" tests/perf/beta-ladder-${n}.lean
-            cat > tests/perf/beta-ladder-${n}.yaml <<EOF
-          description: beta ladder scaling N=${n}
-          leanfile: tests/perf/beta-ladder-${n}.lean
-          export-decls: ["beta_ladder"]
-          outcome: accept
-          compare-perf: true
-          EOF
+            printf 'description: beta ladder scaling N=%s\nleanfile: tests/perf/beta-ladder-%s.lean\nexport-decls: ["beta_ladder"]\noutcome: accept\ncompare-perf: true\n' "$n" "$n" > tests/perf/beta-ladder-${n}.yaml
             nix develop -c ./lka.py build-test perf/beta-ladder-${n}
           done
           nix develop -c ./lka.py build-test perf/app-lam perf/grind-ring-5 perf/let-ladder perf/shift-cascade
@@ -185,25 +93,25 @@ jobs:
           print('test,n,arm,wall,user,rss_kb')
           med={}
           for key in sorted({(r['test'],int(r['n'])) for r in rows}):
-            t,n=key
-            for a in arms:
-              rr=[r for r in rows if r['test']==t and int(r['n'])==n and r['arm']==a]
-              v=(statistics.median(float(x['wall_s']) for x in rr),statistics.median(float(x['user_s']) for x in rr),statistics.median(float(x['maxrss_kb']) for x in rr))
-              med[(t,n,a)]=v
-              print(f'{t},{n},{a},{v[0]:.6f},{v[1]:.6f},{v[2]:.0f}')
+              t,n=key
+              for a in arms:
+                  rr=[r for r in rows if r['test']==t and int(r['n'])==n and r['arm']==a]
+                  v=(statistics.median(float(x['wall_s']) for x in rr),statistics.median(float(x['user_s']) for x in rr),statistics.median(float(x['maxrss_kb']) for x in rr))
+                  med[(t,n,a)]=v
+                  print(f'{t},{n},{a},{v[0]:.6f},{v[1]:.6f},{v[2]:.0f}')
           ns=[1000,2000,4000,8000,16000]
           def slope(a,metric):
-            pts=[]
-            for n in ns:
-              y=med[('beta-ladder',n,a)][metric]
-              if y>0: pts.append((math.log(n),math.log(y)))
-            xm=sum(x for x,y in pts)/len(pts); ym=sum(y for x,y in pts)/len(pts)
-            return sum((x-xm)*(y-ym) for x,y in pts)/sum((x-xm)**2 for x,y in pts)
+              pts=[]
+              for n in ns:
+                  y=med[('beta-ladder',n,a)][metric]
+                  if y>0: pts.append((math.log(n),math.log(y)))
+              xm=sum(x for x,y in pts)/len(pts); ym=sum(y for x,y in pts)/len(pts)
+              return sum((x-xm)*(y-ym) for x,y in pts)/sum((x-xm)**2 for x,y in pts)
           for a in arms:
-            print(f'{a}_wall_exponent={slope(a,0):.3f}')
-            print(f'{a}_user_exponent={slope(a,1):.3f}')
-            b=med[('beta-ladder',16000,'base')][0]; x=med[('beta-ladder',16000,a)][0]
-            print(f'{a}_N16000_speedup={b/x if x else float("inf"):.3f}x')
+              print(f'{a}_wall_exponent={slope(a,0):.3f}')
+              print(f'{a}_user_exponent={slope(a,1):.3f}')
+              b=med[('beta-ladder',16000,'base')][0]; x=med[('beta-ladder',16000,a)][0]
+              print(f'{a}_N16000_speedup={b/x if x else float("inf"):.3f}x')
           PY
       - uses: actions/upload-artifact@v4
         with:
