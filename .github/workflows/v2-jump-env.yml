@@ -56,7 +56,9 @@ jobs:
             printf 'description: beta ladder scaling N=%s\nleanfile: tests/perf/beta-ladder-%s.lean\nexport-decls: ["beta_ladder"]\noutcome: accept\ncompare-perf: true\n' "$n" "$n" > tests/perf/beta-ladder-${n}.yaml
             nix develop -c ./lka.py build-test perf/beta-ladder-${n}
           done
-          nix develop -c ./lka.py build-test perf/app-lam perf/grind-ring-5 perf/let-ladder perf/shift-cascade
+          for t in app-lam grind-ring-5 let-ladder shift-cascade; do
+            nix develop -c ./lka.py build-test perf/${t}
+          done
       - name: Paired benchmark
         run: |
           set -euxo pipefail
