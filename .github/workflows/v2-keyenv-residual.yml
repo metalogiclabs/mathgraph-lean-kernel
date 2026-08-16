@@ -1,0 +1,144 @@
+name: V2 key_env residual
+
+on:
+  workflow_dispatch:
+
+jobs:
+  keyenv-residual:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y time
+
+      - name: Install Nix for Arena
+        uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build frozen baseline
+        run: |
+          set -euxo pipefail
+          cargo build --release --locked
+          cp target/release/sokonanoda /tmp/mg-base
+
+      - name: Build Lambda no-rekey arm
+        run: |
+          set -euxo pipefail
+          cp -a . /tmp/mg-lam
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/mg-lam/src/eval.rs')
+          s=p.read_text()
+          old='''            Expr::Lambda { binder_name, binder_style, binder_type, body, .. } =>\n                {\n                let ce = self.key_env(env, e);\n                value::mk_lam(self.arena, binder_name, binder_style, binder_type, Closure::mk_eval(ce, body))\n            }'''
+          new='''            Expr::Lambda { binder_name, binder_style, binder_type, body, .. } =>\n                {\n                value::mk_lam(self.arena, binder_name, binder_style, binder_type, Closure::mk_eval(env, body))\n            }'''
+          assert old in s, 'Lambda target not found'
+          s=s.replace(old,new,1)
+          p.write_text(s)
+          PY
+          cd /tmp/mg-lam
+          cargo test --locked
+          cargo build --release --locked
+          cp target/release/sokonanoda /tmp/mg-lam-bin
+
+      - name: Build Lambda+Pi no-rekey arm
+        run: |
+          set -euxo pipefail
+          cp -a /tmp/mg-lam /tmp/mg-lampi
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/mg-lampi/src/eval.rs')
+          s=p.read_text()
+          old='''            Expr::Pi { binder_name, binder_style, binder_type, body, .. } => {\n                let dom = self.eval(depth, env, binder_type);\n                {\n                    let ce = self.key_env(env, e);\n                    value::mk_pi(self.arena, binder_name, binder_style, dom, Closure::mk_eval(ce, body))\n                }\n            }'''
+          new='''            Expr::Pi { binder_name, binder_style, binder_type, body, .. } => {\n                let dom = self.eval(depth, env, binder_type);\n                {\n                    value::mk_pi(self.arena, binder_name, binder_style, dom, Closure::mk_eval(env, body))\n                }\n            }'''
+          assert old in s, 'Pi target not found'
+          s=s.replace(old,new,1)
+          p.write_text(s)
+          PY
+          cd /tmp/mg-lampi
+          cargo test --locked
+          cargo build --release --locked
+          cp target/release/sokonanoda /tmp/mg-lampi-bin
+
+      - name: Config
+        run: |
+          cat > /tmp/mg.json <<'EOF'
+          {
+            "use_stdin": true,
+            "nat_extension": true,
+            "string_extension": true,
+            "unpermitted_axiom_hard_error": false,
+            "unsafe_permit_all_axioms": true,
+            "num_threads": 4,
+            "print_success_message": false
+          }
+          EOF
+
+      - name: Build deciding Arena tests
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          for t in perf/beta-ladder perf/app-lam perf/grind-ring-5 perf/let-ladder perf/shift-cascade; do
+            nix develop -c ./lka.py build-test "$t"
+          done
+
+      - name: Paired benchmark
+        run: |
+          set -euxo pipefail
+          printf 'test,arm,rep,wall_s,user_s,sys_s,maxrss_kb,exit\n' > /tmp/keyenv-results.csv
+          cd /tmp/arena
+          for stem in beta-ladder app-lam grind-ring-5 let-ladder shift-cascade; do
+            f="_build/tests/perf/${stem}.ndjson"
+            test -s "$f"
+            for rep in 1 2 3 4 5 6 7; do
+              case $((rep % 3)) in
+                1) order='base lam lampi' ;;
+                2) order='lam lampi base' ;;
+                0) order='lampi base lam' ;;
+              esac
+              for arm in $order; do
+                case "$arm" in
+                  base) bin=/tmp/mg-base ;;
+                  lam) bin=/tmp/mg-lam-bin ;;
+                  lampi) bin=/tmp/mg-lampi-bin ;;
+                esac
+                set +e
+                timeout 120 /usr/bin/time -q -f "$stem,$arm,$rep,%e,%U,%S,%M,%x" -o /tmp/t.txt "$bin" /tmp/mg.json < "$f" >/tmp/o.txt 2>/tmp/e.txt
+                rc=$?
+                set -e
+                if [ -s /tmp/t.txt ]; then tail -n1 /tmp/t.txt >> /tmp/keyenv-results.csv; else echo "$stem,$arm,$rep,120,0,0,0,$rc" >> /tmp/keyenv-results.csv; fi
+              done
+            done
+          done
+          cat /tmp/keyenv-results.csv
+
+      - name: Decide
+        run: |
+          python3 - <<'PY' | tee /tmp/keyenv-summary.csv
+          import csv, statistics
+          rows=list(csv.DictReader(open('/tmp/keyenv-results.csv')))
+          assert all(int(r['exit'])==0 for r in rows), 'semantic/operational failure in accept corpus'
+          print('test,base_wall,lam_wall,lampi_wall,base_user,lam_user,lampi_user,lam_wall_delta_pct,lampi_wall_delta_pct,winner')
+          for t in sorted({r['test'] for r in rows}):
+              rr=[r for r in rows if r['test']==t]
+              def med(a,k): return statistics.median(float(r[k]) for r in rr if r['arm']==a)
+              bw,lw,pw=[med(a,'wall_s') for a in ('base','lam','lampi')]
+              bu,lu,pu=[med(a,'user_s') for a in ('base','lam','lampi')]
+              ld=((lw-bw)/bw*100) if bw else 0
+              pd=((pw-bw)/bw*100) if bw else 0
+              winner=min((bw,'base'),(lw,'lam'),(pw,'lampi'))[1]
+              print(f'{t},{bw:.6f},{lw:.6f},{pw:.6f},{bu:.6f},{lu:.6f},{pu:.6f},{ld:.3f},{pd:.3f},{winner}')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v2-keyenv-residual
+          path: |
+            /tmp/keyenv-results.csv
+            /tmp/keyenv-summary.csv
