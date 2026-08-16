@@ -83,29 +83,36 @@ jobs:
           rows=list(csv.DictReader(open('/tmp/perf-map.csv')))
           tests=sorted(set(r['test'] for r in rows))
           print('REPRESENTATION MAP')
-          print('test,mathgraph_med,nanoclo_med,mg_over_nc,winner')
+          print('test,mathgraph_med,nanoclo_med,ratio,winner')
           for t in tests:
               by={a:[float(r['wall_s']) for r in rows if r['test']==t and r['arm']==a and r['exit']=='0'] for a in ('mathgraph','nanoclo')}
               if not by['mathgraph'] or not by['nanoclo']:
                   print(t,'INCOMPLETE',by)
                   continue
               mg=statistics.median(by['mathgraph']); nc=statistics.median(by['nanoclo'])
-              print(f'{t},{mg:.4f},{nc:.4f},{mg/nc:.3f},{"nanoclo" if nc<mg else "mathgraph"}')
+              if mg == 0 and nc == 0:
+                  ratio='timer-floor'; winner='tie'
+              elif nc == 0:
+                  ratio='inf'; winner='nanoclo'
+              elif mg == 0:
+                  ratio='0'; winner='mathgraph'
+              else:
+                  ratio=f'{mg/nc:.3f}'; winner='nanoclo' if nc < mg else ('mathgraph' if mg < nc else 'tie')
+              print(f'{t},{mg:.4f},{nc:.4f},{ratio},{winner}')
           PY
 
       - name: Full small semantic corpus agreement
+        if: always()
         run: |
           set -euxo pipefail
           find /tmp/arena-tests/good /tmp/arena-tests/bad -type f -name '*.ndjson' ! -path '*/perf/*' | sort > /tmp/semantic-files.txt
           printf 'file,mathgraph,nanoclo\n' > /tmp/semantic.csv
-          count=0
           while IFS= read -r f; do
             set +e
             /tmp/mathgraph /tmp/config.json < "$f" >/dev/null 2>&1; a=$?
             /tmp/nanoclo-bin /tmp/config.json < "$f" >/dev/null 2>&1; b=$?
             set -e
             echo "$f,$a,$b" >> /tmp/semantic.csv
-            count=$((count+1))
           done < /tmp/semantic-files.txt
           python3 - <<'PY'
           import csv
