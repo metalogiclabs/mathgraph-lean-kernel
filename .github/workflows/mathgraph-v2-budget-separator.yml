@@ -1,0 +1,128 @@
+name: MathGraph V2 session budget separator
+
+on:
+  push:
+    branches: [mathgraph-v2-budget-separator]
+  workflow_dispatch:
+
+jobs:
+  separator:
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [init, std, cedar, cslib]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: mathgraph-v2-budget-separator
+
+      - name: Toolchain
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y time
+
+      - name: Install Nix for Arena
+        uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build budget arms
+        run: |
+          set -euxo pipefail
+          cp src/tc.rs /tmp/tc.base.rs
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('src/tc.rs')
+          base=Path('/tmp/tc.base.rs').read_text()
+          old='const SESSION_BUDGET: usize = 2_621_440;'
+          assert old in base
+          arms={
+            'b1536': 1_572_864,
+            'b2048': 2_097_152,
+            'b2560': 2_621_440,
+            'b3072': 3_145_728,
+          }
+          Path('/tmp/arms.txt').write_text('\n'.join(arms))
+          for name,budget in arms.items():
+              p.write_text(base.replace(old, f'const SESSION_BUDGET: usize = {budget};', 1))
+              import subprocess
+              subprocess.run(['cargo','build','--release','--locked'], check=True)
+              subprocess.run(['cp','target/release/sokonanoda',f'/tmp/mathgraph-{name}'], check=True)
+          p.write_text(base)
+          PY
+
+      - name: Get exact Arena export
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test '${{ matrix.target }}'
+          f="_build/tests/${{ matrix.target }}.ndjson"
+          test -s "$f"
+          cp "$f" /tmp/input.ndjson
+          sha256sum /tmp/input.ndjson | tee /tmp/input.sha256
+
+      - name: Config
+        run: |
+          cat > /tmp/config.json <<'EOF'
+          {
+            "use_stdin": true,
+            "nat_extension": true,
+            "string_extension": true,
+            "unpermitted_axiom_hard_error": false,
+            "unsafe_permit_all_axioms": true,
+            "num_threads": 4
+          }
+          EOF
+
+      - name: Paired rotating separator
+        run: |
+          set -euxo pipefail
+          printf 'target,arm,rep,wall_s,user_s,sys_s,maxrss_kb,exit\n' > /tmp/results.csv
+          orders=(
+            'b1536 b2048 b2560 b3072'
+            'b3072 b2560 b2048 b1536'
+            'b2048 b3072 b1536 b2560'
+          )
+          for rep in 1 2 3; do
+            order="${orders[$((rep-1))]}"
+            for arm in $order; do
+              set +e
+              /usr/bin/time -f '${{ matrix.target }},'"$arm,$rep"',%e,%U,%S,%M,%x' -o /tmp/t.txt "/tmp/mathgraph-$arm" /tmp/config.json < /tmp/input.ndjson >/dev/null 2>&1
+              rc=$?
+              set -e
+              cat /tmp/t.txt >> /tmp/results.csv
+              test "$rc" -eq 0
+            done
+          done
+          cat /tmp/results.csv
+          python3 - <<'PY'
+          import csv, statistics
+          rows=list(csv.DictReader(open('/tmp/results.csv')))
+          arms=['b1536','b2048','b2560','b3072']
+          print('SUMMARY')
+          print('arm,wall_med,user_med,sys_med,rss_med')
+          out=[]
+          for a in arms:
+              rr=[r for r in rows if r['arm']==a]
+              vals=[]
+              for k in ('wall_s','user_s','sys_s','maxrss_kb'):
+                  vals.append(statistics.median(float(r[k]) for r in rr))
+              out.append((a,*vals))
+              print(','.join([a]+[str(x) for x in vals]))
+          base=next(x for x in out if x[0]=='b2560')
+          print('RELATIVE_TO_V1_B2560')
+          for x in out:
+              print(x[0], 'wall', x[1]/base[1], 'user', x[2]/base[2], 'rss', x[4]/base[4])
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v2-budget-separator-${{ matrix.target }}
+          path: |
+            /tmp/results.csv
+            /tmp/input.sha256
