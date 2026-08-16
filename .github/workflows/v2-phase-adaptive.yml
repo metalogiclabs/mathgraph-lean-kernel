@@ -1,0 +1,127 @@
+name: V2 Phase Adaptive Retention
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [mathgraph-v2-phase-adaptive]
+
+jobs:
+  phase-gate:
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [init, std, cedar, cslib, mathlib]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: mathgraph-v2-phase-adaptive
+
+      - name: Toolchain
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y time
+
+      - name: Install Nix for Arena
+        uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build frozen V1 and intrinsic adaptive arms
+        run: |
+          set -euxo pipefail
+          cp src/tc.rs /tmp/tc.base.rs
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+          p=Path('src/tc.rs')
+          base=Path('/tmp/tc.base.rs').read_text()
+          needle='if sbump.allocated_bytes() > SESSION_BUDGET {'
+          assert needle in base
+          arms={
+            'v1': None,
+            't100k': 100_000,
+            't250k': 250_000,
+            't500k': 500_000,
+          }
+          for name,threshold in arms.items():
+              text=base
+              if threshold is not None:
+                  repl=f'if sbump.allocated_bytes() > if self.declars.len() >= {threshold} {{ 3_670_016 }} else {{ 2_097_152 }} {{'
+                  text=text.replace(needle,repl,1)
+              p.write_text(text)
+              subprocess.run(['cargo','build','--release','--locked'],check=True)
+              subprocess.run(['cp','target/release/sokonanoda',f'/tmp/mathgraph-{name}'],check=True)
+          p.write_text(base)
+          PY
+
+      - name: Get exact Arena export
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test '${{ matrix.target }}'
+          f="_build/tests/${{ matrix.target }}.ndjson"
+          test -s "$f"
+          cp "$f" /tmp/input.ndjson
+          sha256sum /tmp/input.ndjson | tee /tmp/input.sha256
+
+      - name: Config
+        run: |
+          cat > /tmp/config.json <<'EOF'
+          {
+            "use_stdin": true,
+            "nat_extension": true,
+            "string_extension": true,
+            "unpermitted_axiom_hard_error": false,
+            "unsafe_permit_all_axioms": true,
+            "num_threads": 4,
+            "print_success_message": true
+          }
+          EOF
+
+      - name: Paired rotating adaptive gate
+        run: |
+          set -euxo pipefail
+          printf 'target,arm,rep,wall_s,user_s,sys_s,maxrss_kb,exit\n' > /tmp/results.csv
+          orders=(
+            'v1 t100k t250k t500k'
+            't500k t250k t100k v1'
+          )
+          first=1
+          for rep in 1 2; do
+            order="${orders[$((rep-1))]}"
+            for arm in $order; do
+              set +e
+              /usr/bin/time -f '${{ matrix.target }},'"$arm,$rep"',%e,%U,%S,%M,%x' -o /tmp/t.txt "/tmp/mathgraph-$arm" /tmp/config.json < /tmp/input.ndjson > /tmp/out.txt 2>/dev/null
+              rc=$?
+              set -e
+              cat /tmp/t.txt >> /tmp/results.csv
+              test "$rc" -eq 0
+              if [ "$first" -eq 1 ]; then
+                cp /tmp/out.txt /tmp/declaration-count.txt
+                first=0
+              fi
+            done
+          done
+          cat /tmp/declaration-count.txt
+          cat /tmp/results.csv
+          python3 - <<'PY'
+          import csv, statistics
+          rows=list(csv.DictReader(open('/tmp/results.csv')))
+          print('SUMMARY')
+          for arm in ['v1','t100k','t250k','t500k']:
+              rr=[r for r in rows if r['arm']==arm]
+              vals=[statistics.median(float(r[k]) for r in rr) for k in ('wall_s','user_s','sys_s','maxrss_kb')]
+              print(arm,*vals,sep=',')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v2-phase-adaptive-${{ matrix.target }}
+          path: |
+            /tmp/results.csv
+            /tmp/input.sha256
+            /tmp/declaration-count.txt
