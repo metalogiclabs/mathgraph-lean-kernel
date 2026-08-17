@@ -1,0 +1,187 @@
+name: MathGraph V2 full Arena promotion gate
+
+on:
+  push:
+    branches:
+      - mathgraph-v2-leaderboard-gate
+  workflow_dispatch:
+
+jobs:
+  promotion-gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          enable_kvm: true
+          set_as_trusted_user: true
+
+      - name: Clone canonical Lean Kernel Arena
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          git rev-parse HEAD | tee /tmp/arena-rev.txt
+
+      - name: Define frozen public and jump32 checkers
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          cat > checkers/mathgraph-public.yaml <<'EOF'
+          description: Frozen currently-published MathGraph checker for V2 promotion comparison.
+          url: https://github.com/metalogiclabs/mathgraph-lean-kernel
+          ref: mathgraph
+          rev: 1e209dad266d59b4d43cdea189876bc6ea551339
+          build: |
+            cat > config.json <<__END__
+             {
+               "use_stdin": true,
+               "nat_extension": true,
+               "string_extension": true,
+               "unpermitted_axiom_hard_error": false,
+               "unsafe_permit_all_axioms": true,
+               "num_threads": 4
+             }
+            __END__
+            ROOT=$(cd ../../../.. && pwd)
+            "$ROOT/lka.py" build-test init-prelude
+            RUSTFLAGS="-C target-cpu=native -Cprofile-generate=$PWD/pgo" cargo build --release
+            target/release/sokonanoda config.json < "$ROOT/_build/tests/init-prelude.ndjson" >/dev/null
+            llvm-profdata merge -o "$PWD/pgo/merged.profdata" "$PWD/pgo"
+            RUSTFLAGS="-C target-cpu=native -Cprofile-use=$PWD/pgo/merged.profdata" cargo build --release
+          run: |
+            target/release/sokonanoda config.json < "$IN" || exit 1
+          EOF
+
+          cat > checkers/mathgraph-jump32.yaml <<'EOF'
+          description: Frozen V2 candidate: published MathGraph plus the single jump32 environment intervention.
+          url: https://github.com/metalogiclabs/mathgraph-lean-kernel
+          ref: mathgraph-v2-cost-separator
+          rev: cbd3d0902ae59fe0e38e7e40619355cb16290fa7
+          build: |
+            python3 scripts/v2_jump_patch.py . 32
+            cat > config.json <<__END__
+             {
+               "use_stdin": true,
+               "nat_extension": true,
+               "string_extension": true,
+               "unpermitted_axiom_hard_error": false,
+               "unsafe_permit_all_axioms": true,
+               "num_threads": 4
+             }
+            __END__
+            ROOT=$(cd ../../../.. && pwd)
+            "$ROOT/lka.py" build-test init-prelude
+            RUSTFLAGS="-C target-cpu=native -Cprofile-generate=$PWD/pgo" cargo build --release
+            target/release/sokonanoda config.json < "$ROOT/_build/tests/init-prelude.ndjson" >/dev/null
+            llvm-profdata merge -o "$PWD/pgo/merged.profdata" "$PWD/pgo"
+            RUSTFLAGS="-C target-cpu=native -Cprofile-use=$PWD/pgo/merged.profdata" cargo build --release
+          run: |
+            target/release/sokonanoda config.json < "$IN" || exit 1
+          EOF
+
+      - name: Build the full Arena test corpus
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test
+
+      - name: Build both checkers with the official MathGraph PGO recipe
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          nix develop -c ./lka.py build-checker mathgraph-public
+          nix develop -c ./lka.py build-checker mathgraph-jump32
+
+      - name: Run frozen public MathGraph on the full corpus
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          nix develop -c ./lka.py run --checker mathgraph-public
+
+      - name: Run jump32 candidate on the full corpus
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          nix develop -c ./lka.py run --checker mathgraph-jump32
+
+      - name: Emit machine-readable Arena results
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          nix develop -c ./lka.py write-results --out /tmp/promotion-results.json
+          cp /tmp/arena-rev.txt /tmp/
+
+      - name: Summarize the only promotion question
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY' | tee /tmp/promotion-summary.txt
+          import json, statistics
+          from collections import defaultdict
+
+          data=json.load(open('/tmp/promotion-results.json'))
+          wanted={'mathgraph-public','mathgraph-jump32'}
+          rows=[r for r in data.get('results',[]) if r.get('checker') in wanted]
+          print('result rows:', len(rows))
+          if rows:
+              print('result keys:', sorted(rows[0].keys()))
+
+          by=defaultdict(list)
+          for r in rows:
+              by[r.get('checker')].append(r)
+
+          for checker in sorted(wanted):
+              rs=by.get(checker,[])
+              corr=defaultdict(int)
+              for r in rs:
+                  corr[r.get('correctness','missing')]+=1
+              ins=sum(int(r.get('instructions') or 0) for r in rs)
+              wall=sum(float(r.get('wall_time') or 0) for r in rs)
+              cpu=sum(float(r.get('cpu_time') or 0) for r in rs)
+              maxrss=max((int(r.get('max_rss') or 0) for r in rs), default=0)
+              print(f'{checker}: rows={len(rs)} correctness={dict(corr)} instructions={ins} wall={wall:.6f} cpu={cpu:.6f} max_rss={maxrss}')
+
+          p={r.get('test'):r for r in by.get('mathgraph-public',[])}
+          j={r.get('test'):r for r in by.get('mathgraph-jump32',[])}
+          common=sorted(set(p)&set(j))
+          pi=sum(int(p[t].get('instructions') or 0) for t in common)
+          ji=sum(int(j[t].get('instructions') or 0) for t in common)
+          pw=sum(float(p[t].get('wall_time') or 0) for t in common)
+          jw=sum(float(j[t].get('wall_time') or 0) for t in common)
+          print('common tests:',len(common))
+          if pi and ji:
+              print(f'INSTRUCTION_RATIO jump32/public={ji/pi:.6f} delta={(ji/pi-1)*100:.3f}%')
+          if pw and jw:
+              print(f'WALL_RATIO jump32/public={jw/pw:.6f} delta={(jw/pw-1)*100:.3f}%')
+
+          mismatches=[]
+          for t in common:
+              if p[t].get('correctness') != j[t].get('correctness'):
+                  mismatches.append((t,p[t].get('correctness'),j[t].get('correctness')))
+          print('correctness mismatches:', mismatches)
+
+          # Fail closed on any semantic disagreement. Performance may win or lose;
+          # the point of this run is to let the official Arena measurement decide.
+          assert not mismatches, mismatches
+          PY
+
+      - name: Upload promotion evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: mathgraph-v2-full-arena-promotion-gate
+          path: |
+            /tmp/promotion-results.json
+            /tmp/promotion-summary.txt
+            /tmp/arena-rev.txt
+            /tmp/arena/_results/
