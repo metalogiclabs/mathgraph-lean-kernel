@@ -33,7 +33,7 @@ jobs:
           set -euxo pipefail
           cd /tmp/arena
           cat > checkers/mathgraph-public.yaml <<'EOF'
-          description: Frozen currently-published MathGraph checker for V2 promotion comparison.
+          description: "Frozen currently-published MathGraph checker for V2 promotion comparison."
           url: https://github.com/metalogiclabs/mathgraph-lean-kernel
           ref: mathgraph
           rev: 1e209dad266d59b4d43cdea189876bc6ea551339
@@ -59,7 +59,7 @@ jobs:
           EOF
 
           cat > checkers/mathgraph-jump32.yaml <<'EOF'
-          description: Frozen V2 candidate: published MathGraph plus the single jump32 environment intervention.
+          description: "Frozen V2 candidate: published MathGraph plus the single jump32 environment intervention."
           url: https://github.com/metalogiclabs/mathgraph-lean-kernel
           ref: mathgraph-v2-cost-separator
           rev: cbd3d0902ae59fe0e38e7e40619355cb16290fa7
@@ -127,7 +127,7 @@ jobs:
         run: |
           set -euxo pipefail
           python3 - <<'PY' | tee /tmp/promotion-summary.txt
-          import json, statistics
+          import json
           from collections import defaultdict
 
           data=json.load(open('/tmp/promotion-results.json'))
@@ -170,9 +170,6 @@ jobs:
               if p[t].get('correctness') != j[t].get('correctness'):
                   mismatches.append((t,p[t].get('correctness'),j[t].get('correctness')))
           print('correctness mismatches:', mismatches)
-
-          # Fail closed on any semantic disagreement. Performance may win or lose;
-          # the point of this run is to let the official Arena measurement decide.
           assert not mismatches, mismatches
           PY
 
