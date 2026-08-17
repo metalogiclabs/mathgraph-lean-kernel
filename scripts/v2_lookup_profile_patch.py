@@ -99,25 +99,29 @@ pub fn dump_lookup_profile() {
 '''
 s = s.replace(marker, marker + stats, 1)
 
-# Instrument the Env lookup only, regardless of whether this arm is baseline,
-# fixed-stride jump, or lowbit. All three retain this method signature shape.
-pos = s.index("impl<'a> Env<'a> {\n    pub fn lookup")
-body = s[pos:]
-needle1 = "    pub fn lookup(&self, mut idx: u16) -> Option<V<'a>> {\n"
-needle2 = "    pub fn lookup(&self, idx: u16) -> Option<V<'a>> {\n"
-if needle1 in body:
-    repl = needle1 + "        note_lookup(idx, self.len());\n"
-    body = body.replace(needle1, repl, 1)
-elif needle2 in body:
-    repl = needle2 + "        note_lookup(idx, self.len());\n"
-    body = body.replace(needle2, repl, 1)
+# Instrument Env::lookup only. The fixed-stride and lowbit variants use a
+# non-mut idx signature while baseline uses mut idx, and Ctx::lookup later in
+# the file also uses mut idx. Restrict the search to the Env impl so the latter
+# cannot be mistaken for the baseline Env method.
+env_start = s.index("impl<'a> Env<'a> {\n    pub fn lookup")
+env_end = s.index("impl<'a> Closure<'a>", env_start)
+prefix = s[:env_start]
+env_body = s[env_start:env_end]
+suffix = s[env_end:]
+
+needle_mut = "    pub fn lookup(&self, mut idx: u16) -> Option<V<'a>> {\n"
+needle_plain = "    pub fn lookup(&self, idx: u16) -> Option<V<'a>> {\n"
+if needle_mut in env_body:
+    env_body = env_body.replace(needle_mut, needle_mut + "        note_lookup(idx, self.len());\n", 1)
+elif needle_plain in env_body:
+    env_body = env_body.replace(needle_plain, needle_plain + "        note_lookup(idx, self.len());\n", 1)
 else:
     raise AssertionError("Env lookup signature not found")
 
 loop = "        loop {\n            match cur {"
-assert loop in body
-body = body.replace(loop, "        loop {\n            note_lookup_step();\n            match cur {", 1)
-s = s[:pos] + body
+assert loop in env_body
+env_body = env_body.replace(loop, "        loop {\n            note_lookup_step();\n            match cur {", 1)
+s = prefix + env_body + suffix
 p.write_text(s)
 
 m = root / "src/main.rs"
