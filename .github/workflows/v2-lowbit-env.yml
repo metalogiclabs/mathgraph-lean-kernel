@@ -50,7 +50,11 @@ jobs:
           set -euxo pipefail
           git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
           cd /tmp/arena
-          for n in 1000 2000 4000 8000 16000 32000 64000; do
+          # 32k+ currently overflows the upstream Lean/export apparatus before any
+          # checker is invoked. Keep the deciding lowbit experiment inside the
+          # independently demonstrated apparatus-valid range and record that
+          # boundary as an infrastructure residual, not an intervention result.
+          for n in 1000 2000 4000 8000 16000; do
             cp tests/perf/beta-ladder.lean tests/perf/beta-ladder-${n}.lean
             sed -i "s/let n := 2000/let n := ${n}/" tests/perf/beta-ladder-${n}.lean
             printf 'description: beta ladder scaling N=%s\nleanfile: tests/perf/beta-ladder-%s.lean\nexport-decls: ["beta_ladder"]\noutcome: accept\ncompare-perf: true\n' "$n" "$n" > tests/perf/beta-ladder-${n}.yaml
@@ -81,7 +85,7 @@ jobs:
               done
             done
           }
-          for n in 1000 2000 4000 8000 16000 32000 64000; do run_one beta-ladder "$n" "_build/tests/perf/beta-ladder-${n}.ndjson"; done
+          for n in 1000 2000 4000 8000 16000; do run_one beta-ladder "$n" "_build/tests/perf/beta-ladder-${n}.ndjson"; done
           for t in app-lam grind-ring-5 let-ladder shift-cascade; do run_one "$t" 0 "_build/tests/perf/${t}.ndjson"; done
           cat /tmp/results.csv
       - name: Analyze causal effect
@@ -92,6 +96,8 @@ jobs:
           bad=[r for r in rows if int(r['exit'])!=0]
           assert not bad, bad[:3]
           arms=('base','jump32','lowbit')
+          print('apparatus_valid_max_n=16000')
+          print('n_ge_32000_status=INFRASTRUCTURE_NULL_UPSTREAM_EXPORT_STACK_OVERFLOW')
           print('test,n,arm,wall,user,rss_kb')
           med={}
           for key in sorted({(r['test'],int(r['n'])) for r in rows}):
@@ -101,7 +107,7 @@ jobs:
                   v=(statistics.median(float(x['wall_s']) for x in rr),statistics.median(float(x['user_s']) for x in rr),statistics.median(float(x['maxrss_kb']) for x in rr))
                   med[(t,n,a)]=v
                   print(f'{t},{n},{a},{v[0]:.6f},{v[1]:.6f},{v[2]:.0f}')
-          ns=[1000,2000,4000,8000,16000,32000,64000]
+          ns=[1000,2000,4000,8000,16000]
           def slope(a,metric):
               pts=[]
               for n in ns:
@@ -112,11 +118,11 @@ jobs:
           for a in arms:
               print(f'{a}_wall_exponent={slope(a,0):.3f}')
               print(f'{a}_user_exponent={slope(a,1):.3f}')
-              b=med[('beta-ladder',64000,'base')][0]; x=med[('beta-ladder',64000,a)][0]
-              print(f'{a}_N64000_speedup={b/x if x else float("inf"):.3f}x')
-          b=med[('beta-ladder',64000,'jump32')][0]
-          x=med[('beta-ladder',64000,'lowbit')][0]
-          print(f'lowbit_vs_jump32_N64000={b/x if x else float("inf"):.3f}x')
+              b=med[('beta-ladder',16000,'base')][0]; x=med[('beta-ladder',16000,a)][0]
+              print(f'{a}_N16000_speedup={b/x if x else float("inf"):.3f}x')
+          b=med[('beta-ladder',16000,'jump32')][0]
+          x=med[('beta-ladder',16000,'lowbit')][0]
+          print(f'lowbit_vs_jump32_N16000={b/x if x else float("inf"):.3f}x')
           PY
       - uses: actions/upload-artifact@v4
         with:
