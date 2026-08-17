@@ -1,0 +1,171 @@
+name: V2 lookup unroll separator
+
+on:
+  push:
+    branches: [mathgraph-v2-lookup-unroll]
+  workflow_dispatch:
+
+jobs:
+  experiment:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+
+      - name: Freeze V1 and unroll arms
+        run: |
+          set -euxo pipefail
+          for arm in base u2 u4 u8 u16; do cp -a . /tmp/${arm}-src; done
+          python3 scripts/apply_lookup_unroll.py /tmp/u2-src 2
+          python3 scripts/apply_lookup_unroll.py /tmp/u4-src 4
+          python3 scripts/apply_lookup_unroll.py /tmp/u8-src 8
+          python3 scripts/apply_lookup_unroll.py /tmp/u16-src 16
+
+      - name: Build and semantic-gate all arms
+        run: |
+          set -euxo pipefail
+          for arm in base u2 u4 u8 u16; do
+            cd /tmp/${arm}-src
+            cargo test --locked
+            RUSTFLAGS='-C target-cpu=native' cargo build --release --locked
+            cp target/release/sokonanoda /tmp/${arm}-checker
+          done
+          cat >/tmp/checker.json <<'EOF'
+          {
+            "use_stdin": true,
+            "nat_extension": true,
+            "string_extension": true,
+            "unpermitted_axiom_hard_error": false,
+            "unsafe_permit_all_axioms": true,
+            "num_threads": 1,
+            "print_success_message": false
+          }
+          EOF
+
+      - name: Generate deciding Arena exports
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          for n in 2000 8000 16000; do
+            cp tests/perf/beta-ladder.lean tests/perf/beta-ladder-${n}.lean
+            sed -i "s/let n := 2000/let n := ${n}/" tests/perf/beta-ladder-${n}.lean
+            printf 'description: beta ladder lookup-unroll N=%s\nleanfile: tests/perf/beta-ladder-%s.lean\nexport-decls: ["beta_ladder"]\noutcome: accept\ncompare-perf: true\n' "$n" "$n" > tests/perf/beta-ladder-${n}.yaml
+            nix develop -c ./lka.py build-test perf/beta-ladder-${n}
+          done
+          for t in perf/grind-ring-5 perf/app-lam perf/let-ladder perf/shift-cascade; do
+            nix develop -c ./lka.py build-test "$t"
+          done
+
+      - name: Rotating wall-time comparison
+        run: |
+          set -euxo pipefail
+          printf 'test,n,rep,arm,wall,user,rss\n' >/tmp/timings.csv
+          cd /tmp/arena
+          run_one () {
+            testname="$1"; n="$2"; file="$3"; rep="$4"; arm="$5"
+            /usr/bin/time -f '%e,%U,%M' -o /tmp/time.txt timeout 300 /tmp/${arm}-checker /tmp/checker.json < "$file" >/dev/null 2>/dev/null
+            IFS=, read -r wall user rss </tmp/time.txt
+            printf '%s,%s,%s,%s,%s,%s,%s\n' "$testname" "$n" "$rep" "$arm" "$wall" "$user" "$rss" >>/tmp/timings.csv
+          }
+          specs=(
+            'beta-ladder,2000,_build/tests/perf/beta-ladder-2000.ndjson'
+            'beta-ladder,8000,_build/tests/perf/beta-ladder-8000.ndjson'
+            'beta-ladder,16000,_build/tests/perf/beta-ladder-16000.ndjson'
+            'grind-ring-5,0,_build/tests/perf/grind-ring-5.ndjson'
+            'app-lam,0,_build/tests/perf/app-lam.ndjson'
+            'let-ladder,0,_build/tests/perf/let-ladder.ndjson'
+            'shift-cascade,0,_build/tests/perf/shift-cascade.ndjson'
+          )
+          arms=(base u2 u4 u8 u16)
+          for spec in "${specs[@]}"; do
+            IFS=, read -r testname n file <<<"$spec"
+            for rep in 1 2 3 4 5; do
+              start=$(( (rep-1) % 5 ))
+              for k in 0 1 2 3 4; do
+                idx=$(( (start+k) % 5 ))
+                run_one "$testname" "$n" "$file" "$rep" "${arms[$idx]}"
+              done
+            done
+          done
+          cat /tmp/timings.csv
+
+      - name: Callgrind instruction proxy on decisive tests
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y valgrind
+          printf 'test,n,arm,Ir\n' >/tmp/callgrind.csv
+          cd /tmp/arena
+          profile () {
+            testname="$1"; n="$2"; file="$3"; arm="$4"
+            out="/tmp/cg-${testname}-${n}-${arm}.out"
+            timeout 900 valgrind --tool=callgrind --callgrind-out-file="$out" /tmp/${arm}-checker /tmp/checker.json < "$file" >/dev/null 2>/dev/null
+            ir=$(awk '/^summary:/ {print $2}' "$out")
+            test -n "$ir"
+            printf '%s,%s,%s,%s\n' "$testname" "$n" "$arm" "$ir" >>/tmp/callgrind.csv
+          }
+          for arm in base u2 u4 u8 u16; do
+            profile beta-ladder 8000 _build/tests/perf/beta-ladder-8000.ndjson "$arm"
+            profile grind-ring-5 0 _build/tests/perf/grind-ring-5.ndjson "$arm"
+            profile app-lam 0 _build/tests/perf/app-lam.ndjson "$arm"
+          done
+          cat /tmp/callgrind.csv
+
+      - name: Analyze and select only a V1-beating candidate
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY' | tee /tmp/summary.txt
+          import csv, statistics
+          rows=list(csv.DictReader(open('/tmp/timings.csv')))
+          g={}
+          for r in rows:
+              g.setdefault((r['test'],int(r['n']),r['arm']),[]).append(float(r['wall']))
+          print('WALL MEDIANS')
+          for k,v in sorted(g.items()):
+              print(k, statistics.median(v))
+
+          cg=list(csv.DictReader(open('/tmp/callgrind.csv')))
+          C={(r['test'],int(r['n']),r['arm']):int(r['Ir']) for r in cg}
+          print('\nCALLGRIND RATIOS vs V1')
+          candidates=['u2','u4','u8','u16']
+          scores={a:[] for a in candidates}
+          for test,n in [('beta-ladder',8000),('grind-ring-5',0),('app-lam',0)]:
+              b=C[(test,n,'base')]
+              print(test,n,'base',b)
+              for a in candidates:
+                  r=C[(test,n,a)]/b
+                  scores[a].append(r)
+                  print(' ',a,C[(test,n,a)],f'{r:.6f}',f'{(r-1)*100:+.3f}%')
+          print('\nGEOMEAN IR RATIO')
+          import math
+          best=None
+          for a,rs in scores.items():
+              gm=math.exp(sum(math.log(r) for r in rs)/len(rs))
+              print(a,f'{gm:.6f}',f'{(gm-1)*100:+.3f}%')
+              if best is None or gm<best[1]: best=(a,gm)
+          a,gm=best
+          # Fail closed: only call this a candidate if proxy instructions improve and no protected wall median regresses >5%.
+          protected=[('grind-ring-5',0),('app-lam',0),('let-ladder',0),('shift-cascade',0)]
+          bad=[]
+          for test,n in protected:
+              b=statistics.median(g[(test,n,'base')]); x=statistics.median(g[(test,n,a)])
+              if b>0 and x/b>1.05: bad.append((test,x/b))
+          print('BEST',a,'IR_GEOMEAN',gm,'PROTECTED_WALL_REGRESSIONS',bad)
+          if gm < 0.995 and not bad:
+              print('DECISION=RETAIN_FOR_OFFICIAL_INSTRUCTION_GATE')
+          else:
+              print('DECISION=NO_PROMOTION_CANDIDATE')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v2-lookup-unroll
+          path: |
+            /tmp/timings.csv
+            /tmp/callgrind.csv
+            /tmp/summary.txt
