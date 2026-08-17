@@ -1,0 +1,196 @@
+name: V2 causal cost separator
+
+on:
+  push:
+    branches: [mathgraph-v2-cost-separator]
+  workflow_dispatch:
+
+jobs:
+  experiment:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+
+      - name: Freeze baseline, jump32 and lowbit arms
+        run: |
+          set -euxo pipefail
+          cp -a . /tmp/base-src
+          cp -a . /tmp/jump32-src
+          cp -a . /tmp/lowbit-src
+          python3 scripts/v2_jump_patch.py /tmp/jump32-src 32
+          python3 scripts/v2_lowbit_jump_patch.py /tmp/lowbit-src
+
+      - name: Build uninstrumented timing binaries and semantic gate
+        run: |
+          set -euxo pipefail
+          for arm in base jump32 lowbit; do
+            cd /tmp/${arm}-src
+            cargo test --locked
+            cargo build --release --locked
+            cp target/release/sokonanoda /tmp/${arm}-fast
+          done
+          cat > /tmp/checker.json <<'EOF'
+          {
+            "use_stdin": true,
+            "nat_extension": true,
+            "string_extension": true,
+            "unpermitted_axiom_hard_error": false,
+            "unsafe_permit_all_axioms": true,
+            "num_threads": 1,
+            "print_success_message": false
+          }
+          EOF
+
+      - name: Build separately instrumented causal-profile binaries
+        run: |
+          set -euxo pipefail
+          for arm in base jump32 lowbit; do
+            cp -a /tmp/${arm}-src /tmp/${arm}-prof-src
+            python3 scripts/v2_lookup_profile_patch.py /tmp/${arm}-prof-src
+            python3 scripts/v2_cost_profile_patch.py /tmp/${arm}-prof-src
+            cd /tmp/${arm}-prof-src
+            cargo build --release --locked
+            cp target/release/sokonanoda /tmp/${arm}-prof
+          done
+
+      - name: Generate deciding Arena exports
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          for n in 2000 8000 16000; do
+            cp tests/perf/beta-ladder.lean tests/perf/beta-ladder-${n}.lean
+            sed -i "s/let n := 2000/let n := ${n}/" tests/perf/beta-ladder-${n}.lean
+            printf 'description: beta ladder causal cost separator N=%s\nleanfile: tests/perf/beta-ladder-%s.lean\nexport-decls: ["beta_ladder"]\noutcome: accept\ncompare-perf: true\n' "$n" "$n" > tests/perf/beta-ladder-${n}.yaml
+            nix develop -c ./lka.py build-test perf/beta-ladder-${n}
+          done
+          nix develop -c ./lka.py build-test perf/grind-ring-5
+
+      - name: Measure uninstrumented timing in rotating order
+        run: |
+          set -euxo pipefail
+          printf 'test,n,rep,arm,wall,user,rss\n' > /tmp/timings.csv
+          cd /tmp/arena
+          run_timed () {
+            testname="$1"; n="$2"; f="$3"; rep="$4"; arm="$5"
+            /usr/bin/time -f '%e,%U,%M' -o /tmp/time.txt \
+              timeout 240 /tmp/${arm}-fast /tmp/checker.json < "$f" >/dev/null 2>/dev/null
+            IFS=, read -r wall user rss < /tmp/time.txt
+            printf '%s,%s,%s,%s,%s,%s,%s\n' "$testname" "$n" "$rep" "$arm" "$wall" "$user" "$rss" >> /tmp/timings.csv
+          }
+          for spec in 'beta-ladder,2000,_build/tests/perf/beta-ladder-2000.ndjson' 'beta-ladder,8000,_build/tests/perf/beta-ladder-8000.ndjson' 'beta-ladder,16000,_build/tests/perf/beta-ladder-16000.ndjson' 'grind-ring-5,0,_build/tests/perf/grind-ring-5.ndjson'; do
+            IFS=, read -r testname n f <<< "$spec"
+            for rep in 1 2 3 4 5 6 7; do
+              if (( rep % 3 == 1 )); then order='base jump32 lowbit'; fi
+              if (( rep % 3 == 2 )); then order='jump32 lowbit base'; fi
+              if (( rep % 3 == 0 )); then order='lowbit base jump32'; fi
+              for arm in $order; do run_timed "$testname" "$n" "$f" "$rep" "$arm"; done
+            done
+          done
+          cat /tmp/timings.csv
+
+      - name: Collect structural cost profiles
+        run: |
+          set -euxo pipefail
+          printf 'test,n,arm,lookup_profile,cost_profile\n' > /tmp/profiles.csv
+          cd /tmp/arena
+          run_profile () {
+            testname="$1"; n="$2"; f="$3"
+            for arm in base jump32 lowbit; do
+              timeout 240 /tmp/${arm}-prof /tmp/checker.json < "$f" >/tmp/${arm}.out 2>/tmp/${arm}.err
+              lookup=$(grep '^LOOKUP_PROFILE ' /tmp/${arm}.err | tail -n1)
+              cost=$(grep '^COST_PROFILE ' /tmp/${arm}.err | tail -n1)
+              test -n "$lookup"
+              test -n "$cost"
+              printf '%s,%s,%s,"%s","%s"\n' "$testname" "$n" "$arm" "$lookup" "$cost" >> /tmp/profiles.csv
+            done
+          }
+          for n in 2000 8000 16000; do run_profile beta-ladder "$n" "_build/tests/perf/beta-ladder-${n}.ndjson"; done
+          run_profile grind-ring-5 0 _build/tests/perf/grind-ring-5.ndjson
+          cat /tmp/profiles.csv
+
+      - name: Analyze causal separator and fail closed
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY' | tee /tmp/summary.txt
+          import csv, re, statistics
+
+          timing=list(csv.DictReader(open('/tmp/timings.csv')))
+          groups={}
+          for r in timing:
+              k=(r['test'],int(r['n']),r['arm'])
+              groups.setdefault(k,[]).append(r)
+
+          print('UNINSTRUMENTED MEDIANS')
+          print('test,n,arm,wall,user,rss')
+          med={}
+          for k,rs in sorted(groups.items()):
+              wall=statistics.median(float(r['wall']) for r in rs)
+              user=statistics.median(float(r['user']) for r in rs)
+              rss=statistics.median(int(r['rss']) for r in rs)
+              med[k]=(wall,user,rss)
+              print(f'{k[0]},{k[1]},{k[2]},{wall:.6f},{user:.6f},{rss:.0f}')
+
+          pat=re.compile(r'(\w+)=([0-9.]+)')
+          prof=[]
+          for r in csv.DictReader(open('/tmp/profiles.csv')):
+              ld={k:(float(v) if '.' in v else int(v)) for k,v in pat.findall(r['lookup_profile'])}
+              cd={k:(float(v) if '.' in v else int(v)) for k,v in pat.findall(r['cost_profile'])}
+              prof.append((r['test'],int(r['n']),r['arm'],ld,cd))
+
+          print('\nSTRUCTURAL PROFILE')
+          print('test,n,arm,lookup_calls,lookup_steps,steps_per_call,env_extends,extend_walk_steps,walk_per_extend,env_size')
+          P={}
+          for t,n,a,ld,cd in prof:
+              P[(t,n,a)]=(ld,cd)
+              print(f"{t},{n},{a},{ld['calls']},{ld['steps']},{ld['steps_per_call']:.6f},{cd['env_extends']},{cd['extend_walk_steps']},{cd['walk_per_extend']:.6f},{cd['env_size']}")
+
+          print('\nCAUSAL RATIOS')
+          for n in (2000,8000,16000):
+              b=P[('beta-ladder',n,'base')]
+              j=P[('beta-ladder',n,'jump32')]
+              l=P[('beta-ladder',n,'lowbit')]
+              # The beta-ladder request stream is the causal invariant.
+              calls=[x[0]['calls'] for x in (b,j,l)]
+              maxidx=[x[0]['max_idx'] for x in (b,j,l)]
+              assert max(calls)==min(calls), (n,'beta lookup call divergence',calls)
+              assert max(maxidx)==min(maxidx), (n,'beta max-index divergence',maxidx)
+              bw=med[('beta-ladder',n,'base')][0]
+              jw=med[('beta-ladder',n,'jump32')][0]
+              lw=med[('beta-ladder',n,'lowbit')][0]
+              print(
+                  f'N={n} wall base/jump32/lowbit={bw:.4f}/{jw:.4f}/{lw:.4f} '
+                  f'lookup_steps={b[0]["steps"]}/{j[0]["steps"]}/{l[0]["steps"]} '
+                  f'extend_walk={b[1]["extend_walk_steps"]}/{j[1]["extend_walk_steps"]}/{l[1]["extend_walk_steps"]} '
+                  f'env_size={b[1]["env_size"]}/{j[1]["env_size"]}/{l[1]["env_size"]}'
+              )
+
+          print('\nINTERPRETATION GATE')
+          n=16000
+          j=P[('beta-ladder',n,'jump32')]
+          l=P[('beta-ladder',n,'lowbit')]
+          jw=med[('beta-ladder',n,'jump32')][0]
+          lw=med[('beta-ladder',n,'lowbit')][0]
+          print(f'At N=16000 lowbit/jump32 wall={lw/jw:.3f}x, lookup-step ratio={l[0]["steps"]/j[0]["steps"]:.3f}x, construction-walk ratio={(l[1]["extend_walk_steps"] / j[1]["extend_walk_steps"] if j[1]["extend_walk_steps"] else float("inf")):.3f}x, env-size ratio={l[1]["env_size"]/j[1]["env_size"]:.3f}x')
+          if lw > jw and l[0]['steps'] < j[0]['steps']:
+              if l[1]['extend_walk_steps'] > j[1]['extend_walk_steps'] * 1.25:
+                  print('DECISION: construction overhead is the leading separator; isolate env_extend next.')
+              elif l[1]['env_size'] > j[1]['env_size']:
+                  print('DECISION: representation footprint is a live separator; test compact metadata/layout next.')
+              else:
+                  print('DECISION: neither construction walk nor node size explains the loss; isolate lookup-step microcost/branch/cache effects next.')
+          else:
+              print('DECISION: timing relation changed; do not reuse the previous lowbit-overhead narrative.')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v2-causal-cost-separator
+          path: |
+            /tmp/timings.csv
+            /tmp/profiles.csv
+            /tmp/summary.txt
