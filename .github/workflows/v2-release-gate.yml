@@ -1,0 +1,25 @@
+name: MathGraph V2 release gate
+
+on:
+  push:
+    branches: [mathgraph-v2-release]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply frozen jump32 intervention
+        run: |
+          set -euxo pipefail
+          python3 scripts/apply_jump32.py
+          git diff -- src/value.rs
+      - name: Unit tests
+        run: cargo test --locked
+      - name: Release build
+        run: cargo build --release --locked
