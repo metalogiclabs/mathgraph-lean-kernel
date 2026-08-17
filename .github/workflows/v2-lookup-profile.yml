@@ -1,0 +1,116 @@
+name: V2 lookup-pattern separator
+
+on:
+  push:
+    branches: [mathgraph-v2-lookup-profile]
+  workflow_dispatch:
+
+jobs:
+  experiment:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+      - name: Freeze arms and add instrumentation
+        run: |
+          set -euxo pipefail
+          cp -a . /tmp/base-src
+          cp -a . /tmp/jump32-src
+          cp -a . /tmp/lowbit-src
+          python3 scripts/v2_jump_patch.py /tmp/jump32-src 32
+          python3 scripts/v2_lowbit_jump_patch.py /tmp/lowbit-src
+          for arm in base jump32 lowbit; do
+            python3 scripts/v2_lookup_profile_patch.py /tmp/${arm}-src
+          done
+      - name: Build and semantic gate all arms
+        run: |
+          set -euxo pipefail
+          for arm in base jump32 lowbit; do
+            cd /tmp/${arm}-src
+            cargo test --locked
+            cargo build --release --locked
+            cp target/release/sokonanoda /tmp/${arm}
+          done
+          cat > /tmp/checker.json <<'EOF'
+          {
+            "use_stdin": true,
+            "nat_extension": true,
+            "string_extension": true,
+            "unpermitted_axiom_hard_error": false,
+            "unsafe_permit_all_axioms": true,
+            "num_threads": 1,
+            "print_success_message": false
+          }
+          EOF
+      - name: Generate deciding Arena exports
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          for n in 2000 8000 16000; do
+            cp tests/perf/beta-ladder.lean tests/perf/beta-ladder-${n}.lean
+            sed -i "s/let n := 2000/let n := ${n}/" tests/perf/beta-ladder-${n}.lean
+            printf 'description: beta ladder lookup profile N=%s\nleanfile: tests/perf/beta-ladder-%s.lean\nexport-decls: ["beta_ladder"]\noutcome: accept\ncompare-perf: true\n' "$n" "$n" > tests/perf/beta-ladder-${n}.yaml
+            nix develop -c ./lka.py build-test perf/beta-ladder-${n}
+          done
+          for t in app-lam grind-ring-5 let-ladder shift-cascade; do
+            nix develop -c ./lka.py build-test perf/${t}
+          done
+      - name: Collect deterministic lookup profiles
+        run: |
+          set -euxo pipefail
+          printf 'test,n,arm,exit,profile\n' > /tmp/profiles.csv
+          cd /tmp/arena
+          run_one () {
+            testname="$1"; n="$2"; f="$3"
+            for arm in base jump32 lowbit; do
+              set +e
+              timeout 180 /tmp/${arm} /tmp/checker.json < "$f" >/tmp/${arm}.out 2>/tmp/${arm}.err
+              rc=$?
+              set -e
+              profile=$(grep '^LOOKUP_PROFILE ' /tmp/${arm}.err | tail -n1 || true)
+              test "$rc" -eq 0
+              test -n "$profile"
+              printf '%s,%s,%s,%s,"%s"\n' "$testname" "$n" "$arm" "$rc" "$profile" >> /tmp/profiles.csv
+            done
+          }
+          for n in 2000 8000 16000; do run_one beta-ladder "$n" "_build/tests/perf/beta-ladder-${n}.ndjson"; done
+          for t in app-lam grind-ring-5 let-ladder shift-cascade; do run_one "$t" 0 "_build/tests/perf/${t}.ndjson"; done
+          cat /tmp/profiles.csv
+      - name: Analyze separator
+        run: |
+          python3 - <<'PY' | tee /tmp/summary.txt
+          import csv, re
+          rows=list(csv.DictReader(open('/tmp/profiles.csv')))
+          pat=re.compile(r'(\w+)=([0-9.]+)')
+          parsed=[]
+          for r in rows:
+              d={k:(float(v) if '.' in v else int(v)) for k,v in pat.findall(r['profile'])}
+              parsed.append((r['test'],int(r['n']),r['arm'],d))
+          print('test,n,arm,calls,steps,steps_per_call,avg_idx,max_idx,avg_env,max_env,idx128_fraction,env1024_fraction')
+          for t,n,a,d in parsed:
+              calls=d['calls']
+              print(f"{t},{n},{a},{calls},{d['steps']},{d['steps_per_call']:.6f},{d['avg_idx']:.3f},{d['max_idx']},{d['avg_env_len']:.3f},{d['max_env_len']},{d['idx128p']/calls if calls else 0:.6f},{d['env1024p']/calls if calls else 0:.6f}")
+          print('\nDECISION RATIOS (lower steps_per_call is structurally better)')
+          keys=sorted({(t,n) for t,n,a,d in parsed})
+          for key in keys:
+              rr={a:d for t,n,a,d in parsed if (t,n)==key}
+              b=rr['base']['steps_per_call']; j=rr['jump32']['steps_per_call']; l=rr['lowbit']['steps_per_call']
+              print(f'{key[0]} N={key[1]} base={b:.3f} jump32={j:.3f} lowbit={l:.3f} jump32_vs_base={b/j if j else float("inf"):.3f}x lowbit_vs_base={b/l if l else float("inf"):.3f}x lowbit_vs_jump32={j/l if l else float("inf"):.3f}x')
+          # Access requests should be representation invariant. Fail closed if
+          # instrumentation sees a materially different call/index distribution.
+          for key in keys:
+              rr={a:d for t,n,a,d in parsed if (t,n)==key}
+              calls=[rr[a]['calls'] for a in ('base','jump32','lowbit')]
+              maxidx=[rr[a]['max_idx'] for a in ('base','jump32','lowbit')]
+              assert max(calls)==min(calls), (key,'lookup call divergence',calls)
+              assert max(maxidx)==min(maxidx), (key,'max idx divergence',maxidx)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v2-lookup-profile
+          path: |
+            /tmp/profiles.csv
+            /tmp/summary.txt
