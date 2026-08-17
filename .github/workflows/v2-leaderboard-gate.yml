@@ -120,9 +120,8 @@ jobs:
           set -euxo pipefail
           cd /tmp/arena
           nix develop -c ./lka.py write-results --out /tmp/promotion-results.json
-          cp /tmp/arena-rev.txt /tmp/
 
-      - name: Summarize the only promotion question
+      - name: Summarize the promotion decision
         shell: bash
         run: |
           set -euxo pipefail
@@ -134,8 +133,8 @@ jobs:
           wanted={'mathgraph-public','mathgraph-jump32'}
           rows=[r for r in data.get('results',[]) if r.get('checker') in wanted]
           print('result rows:', len(rows))
-          if rows:
-              print('result keys:', sorted(rows[0].keys()))
+          assert rows, 'no result rows'
+          print('result keys:', sorted(rows[0].keys()))
 
           by=defaultdict(list)
           for r in rows:
@@ -155,15 +154,7 @@ jobs:
           p={r.get('test'):r for r in by.get('mathgraph-public',[])}
           j={r.get('test'):r for r in by.get('mathgraph-jump32',[])}
           common=sorted(set(p)&set(j))
-          pi=sum(int(p[t].get('instructions') or 0) for t in common)
-          ji=sum(int(j[t].get('instructions') or 0) for t in common)
-          pw=sum(float(p[t].get('wall_time') or 0) for t in common)
-          jw=sum(float(j[t].get('wall_time') or 0) for t in common)
-          print('common tests:',len(common))
-          if pi and ji:
-              print(f'INSTRUCTION_RATIO jump32/public={ji/pi:.6f} delta={(ji/pi-1)*100:.3f}%')
-          if pw and jw:
-              print(f'WALL_RATIO jump32/public={jw/pw:.6f} delta={(jw/pw-1)*100:.3f}%')
+          assert common, 'no common tests'
 
           mismatches=[]
           for t in common:
@@ -171,12 +162,49 @@ jobs:
                   mismatches.append((t,p[t].get('correctness'),j[t].get('correctness')))
           print('correctness mismatches:', mismatches)
           assert not mismatches, mismatches
+
+          def ratio(metric, tests=common):
+              a=sum(float(p[t].get(metric) or 0) for t in tests)
+              b=sum(float(j[t].get(metric) or 0) for t in tests)
+              return a,b,(b/a if a else None)
+
+          for metric in ('instructions','wall_time','cpu_time'):
+              a,b,r=ratio(metric)
+              print(f'ALL {metric}: public={a:.6f} jump32={b:.6f} ratio={r:.6f} delta={(r-1)*100:.3f}%')
+
+          key_tests=['mathlib','cslib','cedar','std','perf/beta-ladder','perf/grind-ring-5','perf/app-lam']
+          print('\nKEY TESTS')
+          for t in key_tests:
+              if t not in p or t not in j: continue
+              print(t)
+              for metric in ('instructions','wall_time','cpu_time','max_rss'):
+                  a=float(p[t].get(metric) or 0); b=float(j[t].get(metric) or 0)
+                  rr=(b/a if a else None)
+                  print(f'  {metric}: public={a} jump32={b} ratio={rr}')
+
+          # Promotion policy: semantics must match; Mathlib instructions are the
+          # primary leaderboard signal. Do not auto-promote here; emit evidence.
+          mi_p=float(p['mathlib'].get('instructions') or 0)
+          mi_j=float(j['mathlib'].get('instructions') or 0)
+          if mi_p and mi_j:
+              mr=mi_j/mi_p
+              print(f'\nMATHLIB_INSTRUCTION_RATIO={mr:.6f} delta={(mr-1)*100:.3f}%')
+              if mr < 0.995:
+                  print('DECISION: PROMOTION_CANDIDATE')
+              elif mr <= 1.005:
+                  print('DECISION: MATHLIB_NEUTRAL')
+              else:
+                  print('DECISION: DO_NOT_PROMOTE')
+          else:
+              print('DECISION: INCONCLUSIVE_NO_MATHLIB_INSTRUCTIONS')
           PY
 
       - name: Upload promotion evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: mathgraph-v2-full-arena-promotion-gate
+          if-no-files-found: warn
           path: |
             /tmp/promotion-results.json
             /tmp/promotion-summary.txt
