@@ -5,6 +5,7 @@ on:
     branches: [master]
     paths:
       - 'experiments/producer-side-projection-fusion.trigger'
+      - 'experiments/infer-projection-fusion.trigger'
       - '.github/workflows/producer-side-projection-fusion.yml'
   workflow_dispatch:
 
@@ -18,37 +19,26 @@ jobs:
           fetch-depth: 0
       - uses: cachix/install-nix-action@v31
 
-      - name: Build exact V1 baseline and isolated candidate
+      - name: Build exact V1 baseline and isolated inference candidate
         run: |
           set -euxo pipefail
           V1=1e209dad266d59b4d43cdea189876bc6ea551339
           git worktree add /tmp/base "$V1"
           git worktree add /tmp/cand "$V1"
 
-          # Safety audit: freeze the exact V1 call graph before patching.
           python3 - <<'PY'
           from pathlib import Path
-          s=Path('/tmp/cand/src/eval.rs').read_text()
-          n=s.count('eval_no_cache(')
-          print('eval_no_cache_occurrences=', n)
-          assert n == 4, f'unexpected eval_no_cache call graph: {n}'
-          assert 'self.eval_no_cache(depth, env, e)' in s
-          assert 'self.eval_no_cache(depth, te, e)' in s
-          PY
-
-          # Candidate: eval() already key_env-projects open Lambda/Pi before entering
-          # eval_no_cache. Preserve that projected env instead of asking key_env again.
-          python3 - <<'PY'
-          from pathlib import Path
-          p=Path('/tmp/cand/src/eval.rs')
+          p=Path('/tmp/cand/src/infer.rs')
           s=p.read_text()
-          old_lam='''            Expr::Lambda { binder_name, binder_style, binder_type, body, .. } =>\n                {\n                let ce = self.key_env(env, e);\n                value::mk_lam(self.arena, binder_name, binder_style, binder_type, Closure::mk_eval(ce, body))\n            }'''
-          new_lam='''            Expr::Lambda { binder_name, binder_style, binder_type, body, .. } =>\n                value::mk_lam(self.arena, binder_name, binder_style, binder_type, Closure::mk_eval(env, body)),'''
-          old_pi='''                {\n                    let ce = self.key_env(env, e);\n                    value::mk_pi(self.arena, binder_name, binder_style, dom, Closure::mk_eval(ce, body))\n                }'''
-          new_pi='''                value::mk_pi(self.arena, binder_name, binder_style, dom, Closure::mk_eval(env, body))'''
-          assert old_lam in s
-          assert old_pi in s
-          s=s.replace(old_lam,new_lam,1).replace(old_pi,new_pi,1)
+          old="""        let key = (self.key_env(env, e) as *const value::Env<'t> as usize, e);"""
+          new="""        let key_env = self.key_env(env, e);
+        let key = (key_env as *const value::Env<'t> as usize, e);"""
+          assert s.count(old) == 1
+          s=s.replace(old,new,1)
+          old2="""                let clo = Closure::mk_infer(self.key_env(env, e), ctx, body);"""
+          new2="""                let clo = Closure::mk_infer(key_env, ctx, body);"""
+          assert s.count(old2) == 1
+          s=s.replace(old2,new2,1)
           p.write_text(s)
           PY
 
@@ -67,7 +57,7 @@ jobs:
         run: |
           git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
           cd /tmp/arena
-          for T in perf/grind-ring-5 perf/app-lam perf/beta-ladder; do
+          for T in perf/grind-ring-5 perf/app-lam perf/beta-ladder perf/let-ladder; do
             nix develop -c ./lka.py build-test "$T"
           done
 
@@ -75,7 +65,7 @@ jobs:
         run: |
           set -euxo pipefail
           cd /tmp/arena
-          for T in grind-ring-5 app-lam beta-ladder; do
+          for T in grind-ring-5 app-lam beta-ladder let-ladder; do
             /tmp/base-bin /tmp/checker.json < _build/tests/perf/$T.ndjson > /tmp/base-$T.out 2>/tmp/base-$T.err
             /tmp/cand-bin /tmp/checker.json < _build/tests/perf/$T.ndjson > /tmp/cand-$T.out 2>/tmp/cand-$T.err
             cmp /tmp/base-$T.out /tmp/cand-$T.out
@@ -86,7 +76,7 @@ jobs:
           set -euxo pipefail
           cd /tmp/arena
           nix shell nixpkgs#valgrind -c bash -lc '
-            for T in grind-ring-5 app-lam beta-ladder; do
+            for T in grind-ring-5 app-lam beta-ladder let-ladder; do
               valgrind --tool=callgrind --callgrind-out-file=/tmp/base-$T.cg /tmp/base-bin /tmp/checker.json < _build/tests/perf/$T.ndjson >/dev/null 2>/tmp/base-$T.vg
               valgrind --tool=callgrind --callgrind-out-file=/tmp/cand-$T.cg /tmp/cand-bin /tmp/checker.json < _build/tests/perf/$T.ndjson >/dev/null 2>/tmp/cand-$T.vg
             done
@@ -99,24 +89,26 @@ jobs:
                       return int(line.split()[1])
               raise RuntimeError(path)
           ratios={}
-          for t in ['grind-ring-5','app-lam','beta-ladder']:
+          for t in ['grind-ring-5','app-lam','beta-ladder','let-ladder']:
               b=ir(f'/tmp/base-{t}.cg'); c=ir(f'/tmp/cand-{t}.cg')
-              delta=(c-b)/b
-              ratios[t]=delta
-              print(f'{t} base={b} cand={c} delta={delta:.6%}')
-          if ratios['grind-ring-5'] <= -0.05 and ratios['app-lam'] <= 0.01 and ratios['beta-ladder'] <= 0.01:
-              d='PROMOTE__UPSTREAM_PROJECTION_DUPLICATION_DELETED'
-          elif ratios['grind-ring-5'] <= -0.01:
-              d='REAL_GAIN__MEASURE_REALWORLD_BEFORE_PROMOTION'
+              d=(c-b)/b
+              ratios[t]=d
+              print(f'{t} base={b} cand={c} delta={d:.6%}')
+          target=min(ratios['grind-ring-5'], ratios['app-lam'])
+          protected=max(ratios['beta-ladder'], ratios['let-ladder'])
+          if target <= -0.05 and protected <= 0.01:
+              decision='PROMOTE__INFER_PROJECTION_DUPLICATION_DELETED'
+          elif target <= -0.01 and protected <= 0.01:
+              decision='REAL_GAIN__ESCALATE_REALWORLD'
           else:
-              d='KILL__DUPLICATE_KEY_ENV_NOT_MATERIAL_COST'
-          print('DECISION='+d)
+              decision='KILL__INFER_DUPLICATE_PROJECTION_NOT_MATERIAL'
+          print('DECISION='+decision)
           PY
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: producer-side-projection-fusion
+          name: infer-projection-fusion
           path: |
             /tmp/decision.txt
             /tmp/*.cg
