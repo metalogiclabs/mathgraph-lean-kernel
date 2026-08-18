@@ -1,0 +1,104 @@
+name: Frame intern residual separator
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'experiments/frame-intern-residual.trigger'
+      - '.github/workflows/frame-intern-residual.yml'
+  workflow_dispatch:
+
+jobs:
+  separator:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Build exact V1 instrumented arm
+        run: |
+          set -euxo pipefail
+          V1=1e209dad266d59b4d43cdea189876bc6ea551339
+          git worktree add /tmp/v1 "$V1"
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/v1/src/eval.rs')
+          s=p.read_text()
+          anchor='use std::collections::hash_map::Entry;\n'
+          probe='''use std::sync::atomic::{AtomicU64, Ordering};
+static MG_FRAME_CALL: AtomicU64 = AtomicU64::new(0);
+static MG_FRAME_HIT: AtomicU64 = AtomicU64::new(0);
+static MG_FRAME_MISS: AtomicU64 = AtomicU64::new(0);
+static MG_FRAME_SLOTS: AtomicU64 = AtomicU64::new(0);
+static MG_FRAME_1: AtomicU64 = AtomicU64::new(0);
+static MG_FRAME_2: AtomicU64 = AtomicU64::new(0);
+static MG_FRAME_3: AtomicU64 = AtomicU64::new(0);
+static MG_FRAME_4P: AtomicU64 = AtomicU64::new(0);
+pub fn report_frame_stats() {
+    if std::env::var_os("MATHGRAPH_FRAME_CENSUS").is_none() { return; }
+    eprintln!("MATHGRAPH_FRAME calls={} hit={} miss={} slots={} n1={} n2={} n3={} n4p={}",
+      MG_FRAME_CALL.load(Ordering::Relaxed), MG_FRAME_HIT.load(Ordering::Relaxed), MG_FRAME_MISS.load(Ordering::Relaxed),
+      MG_FRAME_SLOTS.load(Ordering::Relaxed), MG_FRAME_1.load(Ordering::Relaxed), MG_FRAME_2.load(Ordering::Relaxed),
+      MG_FRAME_3.load(Ordering::Relaxed), MG_FRAME_4P.load(Ordering::Relaxed));
+}
+'''
+          assert anchor in s
+          s=s.replace(anchor,anchor+probe,1)
+          needle='''    fn intern_frame(\n        &mut self,\n        hash: u64,\n        mask: u64,\n        slots: &[V<'t>],\n        lsub: Option<&'t value::LevelSub<'t>>,\n    ) -> E<'t> {\n'''
+          repl=needle+'''        MG_FRAME_CALL.fetch_add(1, Ordering::Relaxed);\n        MG_FRAME_SLOTS.fetch_add(slots.len() as u64, Ordering::Relaxed);\n        match slots.len() { 1 => { MG_FRAME_1.fetch_add(1, Ordering::Relaxed); }, 2 => { MG_FRAME_2.fetch_add(1, Ordering::Relaxed); }, 3 => { MG_FRAME_3.fetch_add(1, Ordering::Relaxed); }, _ => { MG_FRAME_4P.fetch_add(1, Ordering::Relaxed); } }\n'''
+          assert needle in s
+          s=s.replace(needle,repl,1)
+          hit='''        }) {\n            return e;\n        }\n        let len = 64 - mask.leading_zeros();'''
+          hit_repl='''        }) {\n            MG_FRAME_HIT.fetch_add(1, Ordering::Relaxed);\n            return e;\n        }\n        MG_FRAME_MISS.fetch_add(1, Ordering::Relaxed);\n        let len = 64 - mask.leading_zeros();'''
+          assert hit in s
+          s=s.replace(hit,hit_repl,1)
+          p.write_text(s)
+          m=Path('/tmp/v1/src/main.rs')
+          t=m.read_text(); a='    match out {\n'; assert a in t
+          t=t.replace(a,'    sokonanoda::eval::report_frame_stats();\n    match out {\n',1); m.write_text(t)
+          PY
+          cd /tmp/v1
+          cargo test --locked
+          RUSTFLAGS='-C target-cpu=native' cargo build --release --locked
+          cp target/release/sokonanoda /tmp/v1-frame
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+      - name: Build grind export
+        run: |
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test perf/grind-ring-5
+      - name: Run and classify frame reuse
+        env:
+          MATHGRAPH_FRAME_CENSUS: "1"
+        run: |
+          cd /tmp/arena
+          /tmp/v1-frame /tmp/checker.json < _build/tests/perf/grind-ring-5.ndjson >/tmp/out 2>/tmp/err
+          grep '^MATHGRAPH_FRAME ' /tmp/err | tail -1 | tee /tmp/frame.txt
+          python3 - <<'PY' | tee /tmp/decision.txt
+          from pathlib import Path
+          d={k:int(v) for k,v in (x.split('=',1) for x in Path('/tmp/frame.txt').read_text().split()[1:])}
+          calls=max(d['calls'],1)
+          print('hit_share=',d['hit']/calls)
+          print('miss_share=',d['miss']/calls)
+          print('slots_per_call=',d['slots']/calls)
+          print('small_1_3_share=',(d['n1']+d['n2']+d['n3'])/calls)
+          if d['hit']/calls >= .70:
+              verdict='FRAME_EQUIVALENCE_HIGH__PRESERVE_PROJECTED_FRAME_EARLIER'
+          elif d['miss']/calls >= .70:
+              verdict='FRAME_CREATION_DOMINANT__TEST_INLINE_SMALL_FRAME_REPRESENTATION'
+          else:
+              verdict='MIXED_FRAME_COST__PROFILE_HASH_FIND_ALLOC_SEPARATELY'
+          print('DECISION='+verdict)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: frame-intern-residual
+          path: |
+            /tmp/frame.txt
+            /tmp/decision.txt
+            /tmp/err
