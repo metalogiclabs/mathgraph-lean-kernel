@@ -8,106 +8,102 @@ on:
 jobs:
   atlas:
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
 
-      - name: Install Nix
-        uses: cachix/install-nix-action@v31
-
-      - name: Build exact V1 diagnostic arm
+      - name: Build exact V1 and inference projection candidate
         run: |
           set -euxo pipefail
           V1=1e209dad266d59b4d43cdea189876bc6ea551339
-          git cat-file -e "$V1^{commit}"
-          git worktree add /tmp/v1 "$V1"
-          cp -a /tmp/v1 /tmp/probe-src
-          python3 scripts/apply_semantic_residual_probe.py /tmp/probe-src
-          cd /tmp/probe-src
-          cargo test --locked
-          RUSTFLAGS='-C target-cpu=native' cargo build --release --locked
-          cp target/release/sokonanoda /tmp/probe-checker
+          git worktree add /tmp/base "$V1"
+          git worktree add /tmp/cand "$V1"
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/cand/src/infer.rs')
+          s=p.read_text()
+          old="""        let key = (self.key_env(env, e) as *const value::Env<'t> as usize, e);"""
+          new="""        let key_env = self.key_env(env, e);
+        let key = (key_env as *const value::Env<'t> as usize, e);"""
+          assert s.count(old) == 1
+          s=s.replace(old,new,1)
+          old2="""                let clo = Closure::mk_infer(self.key_env(env, e), ctx, body);"""
+          new2="""                let clo = Closure::mk_infer(key_env, ctx, body);"""
+          assert s.count(old2) == 1
+          s=s.replace(old2,new2,1)
+          p.write_text(s)
+          PY
+          for A in base cand; do
+            cd /tmp/$A
+            cargo test --locked
+            cargo build --release --locked
+            cp target/release/sokonanoda /tmp/$A-bin
+          done
           cat >/tmp/checker.json <<'EOF'
           {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
           EOF
 
-      - name: Build deciding Arena exports
+      - name: Build focused Arena tests
         run: |
-          set -euxo pipefail
           git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
           cd /tmp/arena
-          cp tests/perf/beta-ladder.lean tests/perf/beta-ladder-8000.lean
-          sed -i 's/let n := 2000/let n := 8000/' tests/perf/beta-ladder-8000.lean
-          printf 'description: beta ladder residual atlas N=8000\nleanfile: tests/perf/beta-ladder-8000.lean\nexport-decls: ["beta_ladder"]\noutcome: accept\ncompare-perf: true\n' > tests/perf/beta-ladder-8000.yaml
-          for t in perf/beta-ladder perf/beta-ladder-8000 perf/grind-ring-5 perf/app-lam perf/let-ladder perf/shift-cascade; do
-            nix develop -c ./lka.py build-test "$t"
+          for T in perf/grind-ring-5 perf/app-lam perf/beta-ladder perf/let-ladder; do
+            nix develop -c ./lka.py build-test "$T"
           done
 
-      - name: Collect residual atlas
-        env:
-          MATHGRAPH_RESIDUAL_PROBE: "1"
+      - name: Semantic equality gate
         run: |
           set -euxo pipefail
           cd /tmp/arena
-          printf 'test force_all_calls force_all_store_hits iota_calls iota_stuck_hits iota_cache_hits iota_fresh iota_recursor iota_quot iota_k_success iota_descend iota_fire_success iota_fire_fail\n' >/tmp/residual-atlas.txt
-          runone () {
-            test="$1"; file="$2"
-            /tmp/probe-checker /tmp/checker.json < "$file" >/tmp/${test}.out 2>/tmp/${test}.err
-            line=$(grep '^MATHGRAPH_RESIDUAL ' /tmp/${test}.err | tail -1)
-            test -n "$line"
-            vals=$(echo "$line" | sed 's/^MATHGRAPH_RESIDUAL //' | sed 's/[^ ]*=//g')
-            echo "$test $vals" >>/tmp/residual-atlas.txt
-          }
-          runone beta2000 _build/tests/perf/beta-ladder.ndjson
-          runone beta8000 _build/tests/perf/beta-ladder-8000.ndjson
-          runone grind _build/tests/perf/grind-ring-5.ndjson
-          runone app _build/tests/perf/app-lam.ndjson
-          runone let _build/tests/perf/let-ladder.ndjson
-          runone shift _build/tests/perf/shift-cascade.ndjson
-          cat /tmp/residual-atlas.txt
+          for T in grind-ring-5 app-lam beta-ladder let-ladder; do
+            /tmp/base-bin /tmp/checker.json < _build/tests/perf/$T.ndjson > /tmp/base-$T.out 2>/tmp/base-$T.err
+            /tmp/cand-bin /tmp/checker.json < _build/tests/perf/$T.ndjson > /tmp/cand-$T.out 2>/tmp/cand-$T.err
+            cmp /tmp/base-$T.out /tmp/cand-$T.out
+          done
 
-      - name: Diagnose residual class
+      - name: Callgrind instruction separator
         run: |
-          python3 - <<'PY' | tee /tmp/diagnosis.txt
-          import csv
+          set -euxo pipefail
+          cd /tmp/arena
+          nix shell nixpkgs#valgrind -c bash -lc '
+            for T in grind-ring-5 app-lam beta-ladder let-ladder; do
+              valgrind --tool=callgrind --callgrind-out-file=/tmp/base-$T.cg /tmp/base-bin /tmp/checker.json < _build/tests/perf/$T.ndjson >/dev/null 2>/tmp/base-$T.vg
+              valgrind --tool=callgrind --callgrind-out-file=/tmp/cand-$T.cg /tmp/cand-bin /tmp/checker.json < _build/tests/perf/$T.ndjson >/dev/null 2>/tmp/cand-$T.vg
+            done
+          '
+          python3 - <<'PY' | tee /tmp/decision.txt
           from pathlib import Path
-          lines=Path('/tmp/residual-atlas.txt').read_text().strip().splitlines()
-          hdr=lines[0].split()
-          rows=[]
-          for line in lines[1:]:
-              v=line.split(); rows.append(dict(zip(hdr,[v[0]]+list(map(int,v[1:])))))
-          for r in rows:
-              calls=r['iota_calls']; fresh=r['iota_fresh']; hits=r['iota_cache_hits']; stuck=r['iota_stuck_hits']
-              fire=r['iota_fire_success']; fail=r['iota_fire_fail']; desc=r['iota_descend']
-              f_calls=r['force_all_calls']; f_hits=r['force_all_store_hits']
-              print(r['test'],
-                    'iota_fresh_share=', f'{fresh/calls:.4f}' if calls else 'NA',
-                    'iota_cache_hit_share=', f'{hits/calls:.4f}' if calls else 'NA',
-                    'iota_stuck_hit_share=', f'{stuck/calls:.4f}' if calls else 'NA',
-                    'fresh_fire_success_share=', f'{fire/fresh:.4f}' if fresh else 'NA',
-                    'fresh_fire_fail_share=', f'{fail/fresh:.4f}' if fresh else 'NA',
-                    'fresh_descend_share=', f'{desc/fresh:.4f}' if fresh else 'NA',
-                    'force_store_hit_share=', f'{f_hits/f_calls:.4f}' if f_calls else 'NA')
-          # Decision-changing classification, not a promotion claim.
-          hot=max(rows,key=lambda r:r['iota_calls'])
-          calls=hot['iota_calls']; fresh=hot['iota_fresh']; fire=hot['iota_fire_success']
-          if calls and fresh/calls > .50 and fresh and fire/fresh > .25:
-              verdict='R3_FRESH_SUCCESS_DOMINANT__BUILD_STRUCTURAL_QUOTIENT_SEPARATOR'
-          elif calls and hot['iota_cache_hits']/calls > .30:
-              verdict='CACHE_REUSE_ALREADY_HIGH__MOVE_UPSTREAM_OF_IOTA'
+          def ir(path):
+              for line in Path(path).read_text(errors='ignore').splitlines():
+                  if line.startswith('summary:'):
+                      return int(line.split()[1])
+              raise RuntimeError(path)
+          ratios={}
+          for t in ['grind-ring-5','app-lam','beta-ladder','let-ladder']:
+              b=ir(f'/tmp/base-{t}.cg'); c=ir(f'/tmp/cand-{t}.cg')
+              d=(c-b)/b
+              ratios[t]=d
+              print(f'{t} base={b} cand={c} delta={d:.6%}')
+          target=min(ratios['grind-ring-5'], ratios['app-lam'])
+          protected=max(ratios['beta-ladder'], ratios['let-ladder'])
+          if target <= -0.05 and protected <= 0.01:
+              decision='PROMOTE__INFER_PROJECTION_DUPLICATION_DELETED'
+          elif target <= -0.01 and protected <= 0.01:
+              decision='REAL_GAIN__ESCALATE_REALWORLD'
           else:
-              verdict='IOTA_NOT_DOMINANT__PROFILE_NEXT_SEMANTIC_LAYER'
-          print('HOT_TEST=',hot['test'])
-          print('DECISION=',verdict)
+              decision='KILL__INFER_DUPLICATE_PROJECTION_NOT_MATERIAL'
+          print('DECISION='+decision)
           PY
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: semantic-residual-atlas
+          name: infer-projection-fusion
           path: |
-            /tmp/residual-atlas.txt
-            /tmp/diagnosis.txt
+            /tmp/decision.txt
+            /tmp/*.cg
+            /tmp/*.vg
             /tmp/*.err
