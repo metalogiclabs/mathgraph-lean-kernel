@@ -49,6 +49,14 @@ jobs:
           set -uxo pipefail
           cd /tmp/arena
           : >/tmp/correctness.tsv
+          cat >/tmp/normalize_stderr.py <<'PY'
+          import re, sys
+          s = sys.stdin.read()
+          # Strip nondeterministic thread IDs and source locations that shift when code is inserted.
+          s = re.sub(r"thread '([^']+)' \(\d+\)", r"thread '\1' (<tid>)", s)
+          s = re.sub(r"(src/[A-Za-z0-9_./-]+\.rs):\d+:\d+", r"\1:<loc>", s)
+          sys.stdout.write(s)
+          PY
           while IFS= read -r f; do
             set +e
             /tmp/base-bin /tmp/checker.json < "$f" >/tmp/base.out 2>/tmp/base.err
@@ -56,10 +64,14 @@ jobs:
             /tmp/fusion-bin /tmp/checker.json < "$f" >/tmp/fusion.out 2>/tmp/fusion.err
             fs=$?
             set -e
-            if [ "$bs" -ne "$fs" ] || ! cmp -s /tmp/base.out /tmp/fusion.out || ! cmp -s /tmp/base.err /tmp/fusion.err; then
+            python3 /tmp/normalize_stderr.py </tmp/base.err >/tmp/base.err.norm
+            python3 /tmp/normalize_stderr.py </tmp/fusion.err >/tmp/fusion.err.norm
+            if [ "$bs" -ne "$fs" ] || ! cmp -s /tmp/base.out /tmp/fusion.out || ! cmp -s /tmp/base.err.norm /tmp/fusion.err.norm; then
               echo "MISMATCH $f base_status=$bs fusion_status=$fs" | tee -a /tmp/correctness.tsv
+              echo '--- stdout diff ---'
               diff -u /tmp/base.out /tmp/fusion.out || true
-              diff -u /tmp/base.err /tmp/fusion.err || true
+              echo '--- normalized stderr diff ---'
+              diff -u /tmp/base.err.norm /tmp/fusion.err.norm || true
               exit 1
             fi
             printf 'MATCH\t%s\t%s\n' "$bs" "$f" >>/tmp/correctness.tsv
@@ -110,6 +122,7 @@ jobs:
           print('FINALIST', 'PASS' if not regress else 'REVIEW')
           PY
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: fusion-finalist-full-validation
           path: |
