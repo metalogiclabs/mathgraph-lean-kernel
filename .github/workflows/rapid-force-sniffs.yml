@@ -1,0 +1,151 @@
+name: Rapid force residual sniffs
+
+on:
+  pull_request:
+    paths:
+      - 'experiments/rapid-force-sniffs.trigger'
+
+jobs:
+  sniff:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+      - name: Build V1 and rapid arms
+        shell: bash
+        run: |
+          set -euxo pipefail
+          V1=1e209dad266d59b4d43cdea189876bc6ea551339
+          git worktree add /tmp/base "$V1"
+          for arm in nostore nolookup nonote probe; do cp -a /tmp/base /tmp/$arm; done
+          python3 scripts/apply_no_force_store.py /tmp/nostore
+          python3 scripts/apply_force_rapid_sniff.py /tmp/nolookup no_lookup
+          python3 scripts/apply_force_rapid_sniff.py /tmp/nonote no_note
+          python3 scripts/apply_force_rapid_sniff.py /tmp/probe probe
+          cp /tmp/probe/MATHGRAPH_FORCE_TAGMAP.txt /tmp/tagmap.txt
+          for arm in base nostore nolookup nonote probe; do
+            (cd /tmp/$arm && RUSTFLAGS='-C target-cpu=native' cargo build --release --locked)
+            cp /tmp/$arm/target/release/sokonanoda /tmp/$arm-bin
+          done
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+      - name: Build only two Arena exports
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          cp tests/perf/beta-ladder.lean tests/perf/beta-ladder-8000.lean
+          sed -i 's/let n := 2000/let n := 8000/' tests/perf/beta-ladder-8000.lean
+          printf 'description: beta ladder N=8000\nleanfile: tests/perf/beta-ladder-8000.lean\nexport-decls: ["beta_ladder"]\noutcome: accept\ncompare-perf: true\n' > tests/perf/beta-ladder-8000.yaml
+          nix develop -c ./lka.py build-test perf/beta-ladder
+          nix develop -c ./lka.py build-test perf/beta-ladder-8000
+      - name: Semantic gate all arms
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          for f in _build/tests/perf/beta-ladder.ndjson _build/tests/perf/beta-ladder-8000.ndjson; do
+            /tmp/base-bin /tmp/checker.json < "$f" >/tmp/base.out 2>/dev/null
+            for arm in nostore nolookup nonote probe; do
+              env MATHGRAPH_FORCE_RAPID_PROBE=1 /tmp/$arm-bin /tmp/checker.json < "$f" >/tmp/$arm.out 2>/tmp/$arm.err
+              cmp /tmp/base.out /tmp/$arm.out
+            done
+          done
+      - name: Sniff 1-2 wall and scaling
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          : >/tmp/wall.txt
+          for spec in 'beta2000 _build/tests/perf/beta-ladder.ndjson' 'beta8000 _build/tests/perf/beta-ladder-8000.ndjson'; do
+            set -- $spec; label=$1; f=$2
+            for arm in base nostore nolookup nonote; do
+              for r in 1 2 3; do
+                /usr/bin/time -f '%e' -o /tmp/t /tmp/$arm-bin /tmp/checker.json < "$f" >/dev/null 2>/dev/null
+                echo "$label $arm $(cat /tmp/t)" | tee -a /tmp/wall.txt
+              done
+            done
+          done
+      - name: Sniff 5-8 force zero-step, kind and complete call-site atlas
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          for spec in 'beta2000 _build/tests/perf/beta-ladder.ndjson' 'beta8000 _build/tests/perf/beta-ladder-8000.ndjson'; do
+            set -- $spec; label=$1; f=$2
+            MATHGRAPH_FORCE_RAPID_PROBE=1 /tmp/probe-bin /tmp/checker.json < "$f" >/dev/null 2>/tmp/probe-$label.txt
+            grep 'MATHGRAPH_FORCE_' /tmp/probe-$label.txt | tee /tmp/probe-$label.summary
+          done
+          cat /tmp/tagmap.txt
+      - name: Sniff 4 native perf counters if allowed
+        continue-on-error: true
+        shell: bash
+        run: |
+          cd /tmp/arena
+          f=_build/tests/perf/beta-ladder-8000.ndjson
+          perf stat -e instructions,cycles,branches,branch-misses -o /tmp/perf-base.txt /tmp/base-bin /tmp/checker.json < "$f" >/dev/null 2>/dev/null
+          perf stat -e instructions,cycles,branches,branch-misses -o /tmp/perf-nostore.txt /tmp/nostore-bin /tmp/checker.json < "$f" >/dev/null 2>/dev/null
+          cat /tmp/perf-base.txt /tmp/perf-nostore.txt
+      - name: Sniff 3 beta2000 Callgrind only
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          nix shell nixpkgs#valgrind -c bash -lc '
+            for arm in base nostore; do
+              valgrind --tool=callgrind --callgrind-out-file=/tmp/cg-$arm.out /tmp/$arm-bin /tmp/checker.json < _build/tests/perf/beta-ladder.ndjson >/dev/null 2>/tmp/cg-$arm.err
+              grep "^summary:" /tmp/cg-$arm.out | sed "s/^/$arm /"
+            done' | tee /tmp/callgrind.txt
+      - name: Sniff 10 zignodamus direct beta2000 comparison
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/intgrah/zignodamus /tmp/zignodamus
+          cd /tmp/zignodamus
+          zig build -Doptimize=ReleaseFast || nix shell nixpkgs#zig -c zig build -Doptimize=ReleaseFast
+          Z=$(find zig-out -type f -perm -111 | head -1)
+          cd /tmp/arena
+          /usr/bin/time -f 'zignodamus_beta2000 %e' "$Z" /tmp/checker.json < _build/tests/perf/beta-ladder.ndjson >/tmp/z.out 2>/tmp/z.time || true
+          cat /tmp/z.time || true
+      - name: Rapid decision summary
+        shell: bash
+        run: |
+          python3 - <<'PY' | tee /tmp/decision.txt
+          from pathlib import Path
+          from statistics import median
+          rows={}
+          for line in Path('/tmp/wall.txt').read_text().splitlines():
+              test,arm,t=line.split(); rows.setdefault((test,arm),[]).append(float(t))
+          print('WALL_MEDIANS')
+          for test in ('beta2000','beta8000'):
+              b=median(rows[(test,'base')])
+              for arm in ('nostore','nolookup','nonote'):
+                  x=median(rows[(test,arm)])
+                  print(test,arm,f'{x:.3f}',f'{(x/b-1)*100:+.2f}%')
+          for test in ('beta2000','beta8000'):
+              p=Path(f'/tmp/probe-{test}.summary').read_text().splitlines()
+              allrow=next((x for x in p if x.startswith('MATHGRAPH_FORCE_ALL')),None)
+              print(test,allrow)
+          if Path('/tmp/callgrind.txt').exists(): print(Path('/tmp/callgrind.txt').read_text())
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rapid-force-sniffs
+          path: |
+            /tmp/wall.txt
+            /tmp/probe-beta2000.summary
+            /tmp/probe-beta8000.summary
+            /tmp/tagmap.txt
+            /tmp/callgrind.txt
+            /tmp/perf-base.txt
+            /tmp/perf-nostore.txt
+            /tmp/z.time
+            /tmp/decision.txt
+          if-no-files-found: ignore
