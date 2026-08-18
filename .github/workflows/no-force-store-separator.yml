@@ -1,0 +1,129 @@
+name: No force-store separator
+
+on:
+  pull_request:
+    paths:
+      - 'experiments/no-force-store.trigger'
+
+jobs:
+  separator:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+      - name: Build exact V1 and ablation
+        shell: bash
+        run: |
+          set -euxo pipefail
+          V1=1e209dad266d59b4d43cdea189876bc6ea551339
+          git cat-file -e "$V1^{commit}"
+          git worktree add /tmp/base "$V1"
+          cp -a /tmp/base /tmp/cand
+          python3 scripts/apply_no_force_store.py /tmp/cand
+          for d in /tmp/base /tmp/cand; do
+            (cd "$d" && cargo test --locked)
+            (cd "$d" && RUSTFLAGS='-C target-cpu=native' cargo build --release --locked)
+          done
+          cp /tmp/base/target/release/sokonanoda /tmp/base-native
+          cp /tmp/cand/target/release/sokonanoda /tmp/cand-native
+          for d in /tmp/base /tmp/cand; do
+            rm -rf "$d/target"
+            (cd "$d" && RUSTFLAGS='-C target-cpu=x86-64' cargo build --release --locked)
+          done
+          cp /tmp/base/target/release/sokonanoda /tmp/base-generic
+          cp /tmp/cand/target/release/sokonanoda /tmp/cand-generic
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+      - name: Build Arena exports
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          cp tests/perf/beta-ladder.lean tests/perf/beta-ladder-8000.lean
+          sed -i 's/let n := 2000/let n := 8000/' tests/perf/beta-ladder-8000.lean
+          printf 'description: beta ladder N=8000\nleanfile: tests/perf/beta-ladder-8000.lean\nexport-decls: ["beta_ladder"]\noutcome: accept\ncompare-perf: true\n' > tests/perf/beta-ladder-8000.yaml
+          for t in perf/beta-ladder perf/beta-ladder-8000 perf/app-lam perf/grind-ring-5; do
+            nix develop -c ./lka.py build-test "$t"
+          done
+      - name: Semantic equality gate
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          for f in _build/tests/perf/beta-ladder.ndjson _build/tests/perf/beta-ladder-8000.ndjson _build/tests/perf/app-lam.ndjson _build/tests/perf/grind-ring-5.ndjson; do
+            /tmp/base-native /tmp/checker.json < "$f" > /tmp/base.out 2>/tmp/base.err
+            /tmp/cand-native /tmp/checker.json < "$f" > /tmp/cand.out 2>/tmp/cand.err
+            cmp /tmp/base.out /tmp/cand.out
+          done
+      - name: Install Valgrind
+        run: sudo apt-get update && sudo apt-get install -y valgrind
+      - name: Callgrind deciding instruction counts
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          : >/tmp/instructions.txt
+          measure () {
+            label="$1"; f="$2"
+            for arm in base cand; do
+              valgrind --tool=callgrind --callgrind-out-file=/tmp/cg-${label}-${arm}.out /tmp/${arm}-generic /tmp/checker.json < "$f" >/dev/null 2>/tmp/cg-${label}-${arm}.err
+              ir=$(grep '^summary:' /tmp/cg-${label}-${arm}.out | awk '{print $2}')
+              echo "$label $arm $ir" | tee -a /tmp/instructions.txt
+            done
+          }
+          measure beta2000 _build/tests/perf/beta-ladder.ndjson
+          measure beta8000 _build/tests/perf/beta-ladder-8000.ndjson
+          measure app _build/tests/perf/app-lam.ndjson
+          measure grind _build/tests/perf/grind-ring-5.ndjson
+      - name: Wall-time cross-check
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          : >/tmp/wall.txt
+          for spec in 'beta2000 _build/tests/perf/beta-ladder.ndjson' 'beta8000 _build/tests/perf/beta-ladder-8000.ndjson' 'app _build/tests/perf/app-lam.ndjson' 'grind _build/tests/perf/grind-ring-5.ndjson'; do
+            set -- $spec; label=$1; f=$2
+            for arm in base cand; do
+              for r in 1 2 3; do
+                /usr/bin/time -f '%e' -o /tmp/t /tmp/${arm}-native /tmp/checker.json < "$f" >/dev/null 2>/dev/null
+                echo "$label $arm $(cat /tmp/t)" >>/tmp/wall.txt
+              done
+            done
+          done
+          cat /tmp/wall.txt
+      - name: Decide
+        shell: bash
+        run: |
+          python3 - <<'PY' | tee /tmp/decision.txt
+          from pathlib import Path
+          d={}
+          for line in Path('/tmp/instructions.txt').read_text().splitlines():
+              test,arm,ir=line.split(); d.setdefault(test,{})[arm]=int(ir)
+          print('INSTRUCTION_RATIOS')
+          for t in ['beta2000','beta8000','app','grind']:
+              r=d[t]['cand']/d[t]['base']
+              print(t, f'{r:.6f}', f'{(r-1)*100:+.3f}%')
+          b2=d['beta2000']['cand']/d['beta2000']['base']
+          b8=d['beta8000']['cand']/d['beta8000']['base']
+          app=d['app']['cand']/d['app']['base']
+          grind=d['grind']['cand']/d['grind']['base']
+          if b8 <= .95 and app <= 1.01 and grind <= 1.01:
+              print('DECISION=PROMOTE_NO_FORCE_STORE')
+          elif b8 < .995 and app <= 1.01 and grind <= 1.01:
+              print('DECISION=SMALL_GAIN_RETAIN_AS_COMPONENT')
+          else:
+              print('DECISION=REJECT_OR_RETARGET')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: no-force-store-separator
+          path: |
+            /tmp/instructions.txt
+            /tmp/wall.txt
+            /tmp/decision.txt
