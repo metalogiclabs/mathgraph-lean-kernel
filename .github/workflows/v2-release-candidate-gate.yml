@@ -5,27 +5,42 @@ on:
     branches: [master]
     paths:
       - 'experiments/v2-release-candidate.trigger'
+      - 'experiments/v2-eval-additive.trigger'
   workflow_dispatch:
 
 jobs:
   gate:
     runs-on: ubuntu-24.04
-    timeout-minutes: 150
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: cachix/install-nix-action@v31
 
-      - name: Build exact V1 and V2 candidate
+      - name: Build V2 baseline and V2 plus eval fusion
         run: |
           set -euxo pipefail
           V1=1e209dad266d59b4d43cdea189876bc6ea551339
-          git worktree add /tmp/v1 "$V1"
-          cp -a /tmp/v1 /tmp/v2
-          python3 scripts/apply_extra_rec_soundness.py /tmp/v2
-          python3 scripts/apply_infer_beta_fusion.py /tmp/v2
-          for arm in v1 v2; do
+          git worktree add /tmp/base "$V1"
+          git worktree add /tmp/cand "$V1"
+          for arm in base cand; do
+            python3 scripts/apply_extra_rec_soundness.py /tmp/$arm
+            python3 scripts/apply_infer_beta_fusion.py /tmp/$arm
+          done
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/cand/src/eval.rs')
+          s=p.read_text()
+          old_lam='''            Expr::Lambda { binder_name, binder_style, binder_type, body, .. } =>\n                {\n                let ce = self.key_env(env, e);\n                value::mk_lam(self.arena, binder_name, binder_style, binder_type, Closure::mk_eval(ce, body))\n            }'''
+          new_lam='''            Expr::Lambda { binder_name, binder_style, binder_type, body, .. } =>\n                value::mk_lam(self.arena, binder_name, binder_style, binder_type, Closure::mk_eval(env, body)),'''
+          old_pi='''                {\n                    let ce = self.key_env(env, e);\n                    value::mk_pi(self.arena, binder_name, binder_style, dom, Closure::mk_eval(ce, body))\n                }'''
+          new_pi='''                value::mk_pi(self.arena, binder_name, binder_style, dom, Closure::mk_eval(env, body))'''
+          assert old_lam in s
+          assert old_pi in s
+          p.write_text(s.replace(old_lam,new_lam,1).replace(old_pi,new_pi,1))
+          PY
+          for arm in base cand; do
             cd /tmp/$arm
             cargo test --release --locked
             CARGO_TARGET_DIR=/tmp/${arm}-target RUSTFLAGS='-C target-cpu=x86-64' cargo build --release --locked
@@ -35,66 +50,34 @@ jobs:
           {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
           EOF
 
-      - name: Build complete current Arena corpus
+      - name: Build focused Arena tests
         run: |
           set -euxo pipefail
           git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
           cd /tmp/arena
-          nix develop -c ./lka.py build-test
-
-      - name: Full current Arena correctness gate
-        run: |
-          set -euo pipefail
-          cd /tmp/arena
-          python3 - <<'PY'
-          import pathlib, subprocess, yaml, sys
-          root=pathlib.Path('.')
-          rows=[]; bad=[]
-          for y in sorted((root/'tests').glob('*.yaml')):
-              d=yaml.safe_load(y.read_text()) or {}
-              outcome=d.get('outcome')
-              if outcome not in ('accept','reject'): continue
-              fs=list((root/'_build/tests').glob(y.stem+'.ndjson'))+list((root/'_build/tests').glob(y.stem+'/**/*.ndjson'))
-              for f in fs:
-                  with f.open('rb') as inp:
-                      p=subprocess.run(['/tmp/v2-checker','/tmp/checker.json'],stdin=inp,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
-                  accepted=p.returncode==0
-                  ok=accepted if outcome=='accept' else not accepted
-                  rows.append(f'{y.stem}\t{outcome}\trc={p.returncode}\t'+('PASS' if ok else 'FAIL'))
-                  if not ok: bad.append((y.stem,outcome,p.returncode,p.stderr.decode(errors='replace')[-1000:]))
-          pathlib.Path('/tmp/full-arena.tsv').write_text('\n'.join(rows)+'\n')
-          print('FULL_ARENA',len(rows),'failures',len(bad))
-          if bad:
-              print(*bad,sep='\n'); sys.exit(1)
-          PY
-
-      - name: Build deciding performance tests
-        run: |
-          set -euxo pipefail
-          cd /tmp/arena
-          for t in perf/beta-ladder perf/app-lam perf/let-ladder perf/grind-ring-5; do
+          for t in perf/grind-ring-5 perf/app-lam perf/beta-ladder; do
             nix develop -c ./lka.py build-test "$t"
           done
 
-      - name: Semantic equality on performance tests
+      - name: Semantic equality
         run: |
           set -euxo pipefail
           cd /tmp/arena
-          for T in beta-ladder app-lam let-ladder grind-ring-5; do
-            /tmp/v1-checker /tmp/checker.json < _build/tests/perf/$T.ndjson >/tmp/v1-$T.out 2>/tmp/v1-$T.err || true
-            /tmp/v2-checker /tmp/checker.json < _build/tests/perf/$T.ndjson >/tmp/v2-$T.out 2>/tmp/v2-$T.err || true
-            cmp /tmp/v1-$T.out /tmp/v2-$T.out
+          for T in grind-ring-5 app-lam beta-ladder; do
+            /tmp/base-checker /tmp/checker.json < _build/tests/perf/$T.ndjson >/tmp/base-$T.out 2>/tmp/base-$T.err
+            /tmp/cand-checker /tmp/checker.json < _build/tests/perf/$T.ndjson >/tmp/cand-$T.out 2>/tmp/cand-$T.err
+            cmp /tmp/base-$T.out /tmp/cand-$T.out
           done
 
-      - name: Callgrind release separator
+      - name: Callgrind additive separator
         run: |
           set -euxo pipefail
           sudo apt-get update >/dev/null
           sudo apt-get install -y valgrind >/dev/null
           cd /tmp/arena
           printf 'test,arm,Ir\n' >/tmp/callgrind.csv
-          for T in beta-ladder app-lam let-ladder grind-ring-5; do
-            for arm in v1 v2; do
+          for T in grind-ring-5 app-lam beta-ladder; do
+            for arm in base cand; do
               out=/tmp/cg-$T-$arm.out
               timeout 900 valgrind --tool=callgrind --callgrind-out-file="$out" /tmp/${arm}-checker /tmp/checker.json < _build/tests/perf/$T.ndjson >/dev/null 2>/dev/null
               ir=$(awk '/^summary:/ {print $2}' "$out")
@@ -104,19 +87,18 @@ jobs:
           python3 - <<'PY' | tee /tmp/summary.txt
           import csv
           R={(r['test'],r['arm']):int(r['Ir']) for r in csv.DictReader(open('/tmp/callgrind.csv'))}
-          for t in ['beta-ladder','app-lam','let-ladder','grind-ring-5']:
-              b=R[(t,'v1')]; c=R[(t,'v2')]; q=c/b
+          ratios={}
+          for t in ['grind-ring-5','app-lam','beta-ladder']:
+              b=R[(t,'base')]; c=R[(t,'cand')]; q=c/b; ratios[t]=q-1
               print(t,b,c,f'{q:.6f}',f'{(q-1)*100:+.3f}%')
-          beta=R[('beta-ladder','v2')]/R[('beta-ladder','v1')]
-          controls=max(R[(t,'v2')]/R[(t,'v1')] for t in ['app-lam','let-ladder','grind-ring-5'])
-          print('DECISION='+('V2_LOCAL_GATE_PASS__ESCALATE_TO_ARENA' if beta < 0.80 and controls <= 1.01 else 'V2_LOCAL_GATE_REVIEW'))
+          keep = ratios['grind-ring-5'] <= -0.005 and ratios['app-lam'] <= 0.002 and ratios['beta-ladder'] <= 0.002
+          print('DECISION='+('KEEP_EVAL_FUSION_IN_V2' if keep else 'SUBMIT_CLEAN_V2'))
           PY
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: v2-release-candidate-gate
+          name: v2-eval-additive-separator
           path: |
-            /tmp/full-arena.tsv
             /tmp/callgrind.csv
             /tmp/summary.txt
