@@ -1,0 +1,102 @@
+name: Fusion finalist full validation
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - '.github/workflows/fusion-finalist-gate.yml'
+      - 'experiments/fusion-finalist.trigger'
+
+jobs:
+  full-gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Build exact V1 and fusion-only candidate
+        run: |
+          set -euxo pipefail
+          V1=1e209dad266d59b4d43cdea189876bc6ea551339
+          git worktree add /tmp/base "$V1"
+          cp -a /tmp/base /tmp/fusion
+          python3 scripts/apply_infer_beta_fusion.py /tmp/fusion
+          for arm in base fusion; do
+            (cd /tmp/$arm && cargo test --release --locked)
+            (cd /tmp/$arm && RUSTFLAGS='-C target-cpu=x86-64-v3' cargo build --release --locked)
+            cp /tmp/$arm/target/release/sokonanoda /tmp/$arm-bin
+          done
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+      - name: Fetch official Arena and build public test corpus
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          nix develop -c ./lka.py build-tests
+      - name: Full correctness equivalence gate
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          : >/tmp/correctness.tsv
+          while IFS= read -r f; do
+            /tmp/base-bin /tmp/checker.json < "$f" >/tmp/base.out 2>/tmp/base.err; bs=$?
+            /tmp/fusion-bin /tmp/checker.json < "$f" >/tmp/fusion.out 2>/tmp/fusion.err; fs=$?
+            if [ "$bs" -ne "$fs" ] || ! cmp -s /tmp/base.out /tmp/fusion.out; then
+              echo "MISMATCH $f base_status=$bs fusion_status=$fs" | tee -a /tmp/correctness.tsv
+              exit 1
+            fi
+            printf 'MATCH\t%s\t%s\n' "$bs" "$f" >>/tmp/correctness.tsv
+          done < <(find _build/tests -type f -name '*.ndjson' | sort)
+          echo "matched $(wc -l </tmp/correctness.tsv) built Arena exports"
+      - name: Score-driving performance comparison
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          : >/tmp/perf.tsv
+          # Use all built perf exports plus representative large public exports if present.
+          mapfile -t files < <(find _build/tests/perf -type f -name '*.ndjson' 2>/dev/null | sort)
+          for name in init cedar cslib mathlib; do
+            f="_build/tests/$name.ndjson"
+            [ -f "$f" ] && files+=("$f") || true
+          done
+          for f in "${files[@]}"; do
+            label=${f#_build/tests/}; label=${label%.ndjson}
+            for arm in base fusion; do
+              for r in 1 2 3; do
+                /usr/bin/time -f '%e\t%M' -o /tmp/t /tmp/$arm-bin /tmp/checker.json < "$f" >/dev/null 2>/dev/null
+                read -r sec rss </tmp/t
+                printf '%s\t%s\t%s\t%s\t%s\n' "$label" "$arm" "$r" "$sec" "$rss" | tee -a /tmp/perf.tsv
+              done
+            done
+          done
+      - name: Finalist scorecard
+        run: |
+          python3 - <<'PY' | tee /tmp/finalist-scorecard.txt
+          from pathlib import Path
+          from statistics import median
+          rows={}
+          for line in Path('/tmp/perf.tsv').read_text().splitlines():
+              t,a,r,s,m=line.split('\t')
+              rows.setdefault((t,a),[]).append((float(s),int(m)))
+          regress=[]; gains=[]
+          for t in sorted({k[0] for k in rows}):
+              if (t,'base') not in rows or (t,'fusion') not in rows: continue
+              b=median(x[0] for x in rows[(t,'base')]); f=median(x[0] for x in rows[(t,'fusion')])
+              d=(f/b-1)*100 if b else 0
+              print(f'{t}\tbase={b:.4f}\tfusion={f:.4f}\tdelta_pct={d:.2f}\tspeedup={b/f if f else float("inf"):.3f}x')
+              (regress if d>2 else gains).append((d,t))
+          print('MAX_REGRESSION', max(regress, default=(0,'none')))
+          print('BEST_GAIN', min(gains, default=(0,'none')))
+          print('FINALIST', 'PASS' if not regress else 'REVIEW')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fusion-finalist-full-validation
+          path: |
+            /tmp/correctness.tsv
+            /tmp/perf.tsv
+            /tmp/finalist-scorecard.txt
