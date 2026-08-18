@@ -1,0 +1,87 @@
+name: Cold projection producer census
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'experiments/cold-projection-producer.trigger'
+  workflow_dispatch:
+
+jobs:
+  census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Build exact V1 producer census
+        run: |
+          set -euxo pipefail
+          V1=1e209dad266d59b4d43cdea189876bc6ea551339
+          git worktree add /tmp/v1 "$V1"
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/v1/src/eval.rs'); s=p.read_text()
+          anchor='use std::collections::hash_map::Entry;\n'
+          probe='''use std::sync::{LazyLock, Mutex};
+          use std::collections::HashMap;
+          static MG_COLD_PRODUCERS: LazyLock<Mutex<HashMap<(usize,u64,u8),u64>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
+          static MG_COLD_KIND: LazyLock<Mutex<[u64;10]>> = LazyLock::new(|| Mutex::new([0;10]));
+          fn mg_kind(e: ExprPtr<'_>) -> u8 { match e.as_ref() { Expr::Var{..}=>0, Expr::Sort{..}=>1, Expr::Const{..}=>2, Expr::App{..}=>3, Expr::Lambda{..}=>4, Expr::Pi{..}=>5, Expr::Let{..}=>6, Expr::Proj{..}=>7, Expr::NatLit{..}=>8, Expr::StringLit{..}=>9 } }
+          pub fn report_projection_producers() {
+              if std::env::var_os("MATHGRAPH_PRODUCER_CENSUS").is_none() { return; }
+              let m=MG_COLD_PRODUCERS.lock().unwrap();
+              let total:u64=m.values().sum();
+              let mut rows:Vec<_>=m.iter().map(|(k,v)|(*v,*k)).collect(); rows.sort_unstable_by(|a,b|b.0.cmp(&a.0));
+              let kinds=MG_COLD_KIND.lock().unwrap();
+              eprintln!("MG_PRODUCER_TOTAL {}",total);
+              eprintln!("MG_PRODUCER_KINDS {:?}",*kinds);
+              for (i,(n,(ep,mask,k))) in rows.iter().take(20).enumerate() { eprintln!("MG_PRODUCER rank={} count={} share={:.6} expr={} mask={:#x} bits={} kind={}",i+1,n,(*n as f64)/(total.max(1) as f64),ep,mask,mask.count_ones(),k); }
+          }
+          '''
+          assert anchor in s; s=s.replace(anchor,anchor+probe,1)
+          old='''    pub(crate) fn key_env(&mut self, env: E<'t>, e: ExprPtr<'t>) -> E<'t> {\n        let k = e.num_loose_bvars();\n        if k == 0 {\n            return self.lsub_base(env.lsub());\n        }\n        if k > 64 {\n            return env;\n        }\n        self.prune_env(env, e.as_ref().fv_mask())\n    }'''
+          new='''    pub(crate) fn key_env(&mut self, env: E<'t>, e: ExprPtr<'t>) -> E<'t> {\n        let k = e.num_loose_bvars();\n        if k == 0 { return self.lsub_base(env.lsub()); }\n        if k > 64 { return env; }\n        let mask=e.as_ref().fv_mask();\n        if std::env::var_os("MATHGRAPH_PRODUCER_CENSUS").is_some() {\n            let fast = match env {\n                value::Env::Nil { .. } => true,\n                value::Env::Framed { mask: m, prune, .. } => {\n                    if *m & mask == *m { true } else { let (pm,pr)=prune.get(); pm==mask && pr.is_some() }\n                },\n                value::Env::Cons { prune, .. } => { let (pm,pr)=prune.get(); pm==mask && pr.is_some() },\n            };\n            let slot = (((env as *const value::Env<'t> as usize as u64).wrapping_mul(0x9E3779B97F4A7C15) ^ mask.wrapping_mul(0xD6E8FEB86659FD93)) >> crate::util::PRUNE_DM_SHIFT) as usize;\n            let dm=self.tc_cache.prune_dm[slot];\n            let dmhit=dm.0==env as *const value::Env<'t> as usize && dm.1==mask && dm.2.is_some();\n            if !fast && !dmhit {\n                let kind=mg_kind(e); MG_COLD_KIND.lock().unwrap()[kind as usize]+=1;\n                *MG_COLD_PRODUCERS.lock().unwrap().entry((e as *const _ as usize,mask,kind)).or_insert(0)+=1;\n            }\n        }\n        self.prune_env(env, mask)\n    }'''
+          assert old in s; s=s.replace(old,new,1); p.write_text(s)
+          m=Path('/tmp/v1/src/main.rs'); t=m.read_text(); a='    match out {\n'; assert a in t; t=t.replace(a,'    sokonanoda::eval::report_projection_producers();\n    match out {\n',1); m.write_text(t)
+          PY
+          cd /tmp/v1
+          cargo test --locked
+          RUSTFLAGS='-C target-cpu=x86-64' cargo build --release --locked
+          cp target/release/sokonanoda /tmp/probe
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+      - name: Build and run grind-ring-5
+        env:
+          MATHGRAPH_PRODUCER_CENSUS: "1"
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test perf/grind-ring-5
+          /tmp/probe /tmp/checker.json < _build/tests/perf/grind-ring-5.ndjson >/tmp/out 2>/tmp/err
+          grep '^MG_PRODUCER' /tmp/err | tee /tmp/producers.txt
+          python3 - <<'PY' | tee /tmp/decision.txt
+          import re
+          s=open('/tmp/producers.txt').read().splitlines(); total=int(next(x for x in s if x.startswith('MG_PRODUCER_TOTAL')).split()[1]); rows=[]
+          for x in s:
+              if ' rank=' in x:
+                  n=int(re.search(r'count=(\d+)',x).group(1)); rows.append(n)
+          top1=(rows[0]/total if rows and total else 0); top10=(sum(rows[:10])/total if total else 0)
+          print('total_cold=',total,'top1_share=',top1,'top10_share=',top10)
+          if top1>=.30: d='DOMINANT_EXACT_FAMILY__BUILD_DIRECT_CAPTURE_SEPARATOR'
+          elif top10>=.60: d='SMALL_FAMILY_SET__BUILD_TOP_FAMILY_DIRECT_CAPTURE_SEPARATOR'
+          else: d='DIFFUSE__STOP_ENV_FOR_V2'
+          print('DECISION='+d)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cold-projection-producer-census
+          path: |
+            /tmp/producers.txt
+            /tmp/decision.txt
+            /tmp/err
