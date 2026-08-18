@@ -36,28 +36,40 @@ jobs:
           set -euxo pipefail
           git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
           cd /tmp/arena
-          nix develop -c ./lka.py build-tests
+          : >/tmp/build-tests.tsv
+          while IFS= read -r y; do
+            t=${y#tests/}; t=${t%.yaml}
+            echo "BUILD $t" | tee -a /tmp/build-tests.tsv
+            nix develop -c ./lka.py build-test "$t" | tee -a /tmp/build-tests.tsv
+          done < <(find tests -type f -name '*.yaml' | sort)
+          find _build/tests -type f -name '*.ndjson' | sort >/tmp/built-exports.txt
+          echo "built $(wc -l </tmp/built-exports.txt) Arena exports"
       - name: Full correctness equivalence gate
         run: |
-          set -euxo pipefail
+          set -uxo pipefail
           cd /tmp/arena
           : >/tmp/correctness.tsv
           while IFS= read -r f; do
-            /tmp/base-bin /tmp/checker.json < "$f" >/tmp/base.out 2>/tmp/base.err; bs=$?
-            /tmp/fusion-bin /tmp/checker.json < "$f" >/tmp/fusion.out 2>/tmp/fusion.err; fs=$?
-            if [ "$bs" -ne "$fs" ] || ! cmp -s /tmp/base.out /tmp/fusion.out; then
+            set +e
+            /tmp/base-bin /tmp/checker.json < "$f" >/tmp/base.out 2>/tmp/base.err
+            bs=$?
+            /tmp/fusion-bin /tmp/checker.json < "$f" >/tmp/fusion.out 2>/tmp/fusion.err
+            fs=$?
+            set -e
+            if [ "$bs" -ne "$fs" ] || ! cmp -s /tmp/base.out /tmp/fusion.out || ! cmp -s /tmp/base.err /tmp/fusion.err; then
               echo "MISMATCH $f base_status=$bs fusion_status=$fs" | tee -a /tmp/correctness.tsv
+              diff -u /tmp/base.out /tmp/fusion.out || true
+              diff -u /tmp/base.err /tmp/fusion.err || true
               exit 1
             fi
             printf 'MATCH\t%s\t%s\n' "$bs" "$f" >>/tmp/correctness.tsv
-          done < <(find _build/tests -type f -name '*.ndjson' | sort)
+          done </tmp/built-exports.txt
           echo "matched $(wc -l </tmp/correctness.tsv) built Arena exports"
       - name: Score-driving performance comparison
         run: |
           set -euxo pipefail
           cd /tmp/arena
           : >/tmp/perf.tsv
-          # Use all built perf exports plus representative large public exports if present.
           mapfile -t files < <(find _build/tests/perf -type f -name '*.ndjson' 2>/dev/null | sort)
           for name in init cedar cslib mathlib; do
             f="_build/tests/$name.ndjson"
@@ -83,12 +95,16 @@ jobs:
               t,a,r,s,m=line.split('\t')
               rows.setdefault((t,a),[]).append((float(s),int(m)))
           regress=[]; gains=[]
+          weighted_base=weighted_fusion=0.0
           for t in sorted({k[0] for k in rows}):
               if (t,'base') not in rows or (t,'fusion') not in rows: continue
               b=median(x[0] for x in rows[(t,'base')]); f=median(x[0] for x in rows[(t,'fusion')])
               d=(f/b-1)*100 if b else 0
+              weighted_base += b; weighted_fusion += f
               print(f'{t}\tbase={b:.4f}\tfusion={f:.4f}\tdelta_pct={d:.2f}\tspeedup={b/f if f else float("inf"):.3f}x')
               (regress if d>2 else gains).append((d,t))
+          total_delta=(weighted_fusion/weighted_base-1)*100 if weighted_base else 0
+          print('AGGREGATE_WALL', f'base={weighted_base:.4f}', f'fusion={weighted_fusion:.4f}', f'delta_pct={total_delta:.2f}', f'speedup={weighted_base/weighted_fusion if weighted_fusion else float("inf"):.3f}x')
           print('MAX_REGRESSION', max(regress, default=(0,'none')))
           print('BEST_GAIN', min(gains, default=(0,'none')))
           print('FINALIST', 'PASS' if not regress else 'REVIEW')
@@ -97,6 +113,8 @@ jobs:
         with:
           name: fusion-finalist-full-validation
           path: |
+            /tmp/build-tests.tsv
+            /tmp/built-exports.txt
             /tmp/correctness.tsv
             /tmp/perf.tsv
             /tmp/finalist-scorecard.txt
