@@ -61,8 +61,6 @@ jobs:
             /tmp/cand-native /tmp/checker.json < "$f" > /tmp/cand.out 2>/tmp/cand.err
             cmp /tmp/base.out /tmp/cand.out
           done
-      - name: Install Valgrind
-        run: sudo apt-get update && sudo apt-get install -y valgrind
       - name: Callgrind deciding instruction counts
         shell: bash
         run: |
@@ -72,7 +70,7 @@ jobs:
           measure () {
             label="$1"; f="$2"
             for arm in base cand; do
-              valgrind --tool=callgrind --callgrind-out-file=/tmp/cg-${label}-${arm}.out /tmp/${arm}-generic /tmp/checker.json < "$f" >/dev/null 2>/tmp/cg-${label}-${arm}.err
+              nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/cg-${label}-${arm}.out /tmp/${arm}-generic /tmp/checker.json < "$f" >/dev/null 2>/tmp/cg-${label}-${arm}.err
               ir=$(grep '^summary:' /tmp/cg-${label}-${arm}.out | awk '{print $2}')
               echo "$label $arm $ir" | tee -a /tmp/instructions.txt
             done
@@ -109,7 +107,6 @@ jobs:
           for t in ['beta2000','beta8000','app','grind']:
               r=d[t]['cand']/d[t]['base']
               print(t, f'{r:.6f}', f'{(r-1)*100:+.3f}%')
-          b2=d['beta2000']['cand']/d['beta2000']['base']
           b8=d['beta8000']['cand']/d['beta8000']['base']
           app=d['app']['cand']/d['app']['base']
           grind=d['grind']['cand']/d['grind']['base']
