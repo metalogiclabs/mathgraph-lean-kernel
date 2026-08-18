@@ -1,0 +1,98 @@
+name: Quotient census
+
+on:
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+      - name: Build exact V1 quotient probe
+        run: |
+          set -euxo pipefail
+          V1=1e209dad266d59b4d43cdea189876bc6ea551339
+          git worktree add /tmp/v1 "$V1"
+          cp -a /tmp/v1 /tmp/probe-src
+          python3 scripts/apply_quotient_census_probe.py /tmp/probe-src
+          cd /tmp/probe-src
+          cargo test --locked
+          RUSTFLAGS='-C target-cpu=native' cargo build --release --locked
+          cp target/release/sokonanoda /tmp/probe-checker
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+      - name: Build deciding exports
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          cp tests/perf/beta-ladder.lean tests/perf/beta-ladder-8000.lean
+          sed -i 's/let n := 2000/let n := 8000/' tests/perf/beta-ladder-8000.lean
+          printf 'description: beta ladder quotient census N=8000\nleanfile: tests/perf/beta-ladder-8000.lean\nexport-decls: ["beta_ladder"]\noutcome: accept\ncompare-perf: true\n' > tests/perf/beta-ladder-8000.yaml
+          for t in perf/beta-ladder perf/beta-ladder-8000 perf/grind-ring-5; do nix develop -c ./lka.py build-test "$t"; done
+      - name: Run quotient censuses
+        env:
+          MATHGRAPH_QUOTIENT_CENSUS: "1"
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          /tmp/probe-checker /tmp/checker.json < _build/tests/perf/grind-ring-5.ndjson >/tmp/grind.out 2>/tmp/grind.err
+          /tmp/probe-checker /tmp/checker.json < _build/tests/perf/beta-ladder.ndjson >/tmp/beta2000.out 2>/tmp/beta2000.err
+          /tmp/probe-checker /tmp/checker.json < _build/tests/perf/beta-ladder-8000.ndjson >/tmp/beta8000.out 2>/tmp/beta8000.err
+      - name: Analyze compression
+        run: |
+          python3 - <<'PY' | tee /tmp/quotient-census.txt
+          from pathlib import Path
+          from collections import Counter
+          def kv(line):
+              return dict(x.split('=',1) for x in line.split()[1:] if '=' in x)
+          # Iota behavioral quotient
+          rows=[kv(x) for x in Path('/tmp/grind.err').read_text().splitlines() if x.startswith('MG_IOTA_FIRE ')]
+          sigs={
+            'rec_ctor': lambda r:(r['rec'],r['ctor']),
+            'rec_ctor_shape': lambda r:(r['rec'],r['ctor'],r['ctor_args'],r['extra'],r['prefix'],r['tail'],r['major_idx']),
+            'rule_shape': lambda r:(r['rule'],r['ctor_args'],r['extra'],r['prefix'],r['tail'],r['major_idx']),
+          }
+          print('IOTA raw_fires',len(rows))
+          for name,f in sigs.items():
+              c=Counter(f(r) for r in rows); top=c.most_common(10)
+              print('IOTA',name,'classes',len(c),'compression',f'{len(rows)/max(1,len(c)):.2f}x','top10',top)
+          # Beta continuation quotient from 1/1024 samples
+          for test in ('beta2000','beta8000'):
+              rs=[kv(x) for x in Path('/tmp/'+test+'.err').read_text().splitlines() if x.startswith('MG_FORCE_SAMPLE ')]
+              def coarse(r):
+                  k=r['kind']
+                  if k in ('pi','lam'): return (k,r.get('body'),r.get('closed'))
+                  if k=='rigid': return (k,r.get('hk'),r.get('ha'),r.get('spine_len'),r.get('closed'))
+                  if k=='unfold': return (k,r.get('name'),r.get('spine_len'),r.get('closed'))
+                  if k=='thunk': return (k,r.get('expr'),r.get('closed'))
+                  return (k,r.get('closed'))
+              for name,f in [('kind',lambda r:(r['kind'],)),('coarse',coarse),('coarse_depth',lambda r:(coarse(r),r.get('depth'))),('exact',lambda r:(r.get('exact'),))]:
+                  c=Counter(f(r) for r in rs)
+                  print('BETA',test,'samples',len(rs),name,'classes',len(c),'compression',f'{len(rs)/max(1,len(c)):.2f}x','top10',c.most_common(10))
+          # Precommitted decision labels
+          iota_cls=len(set(sigs['rec_ctor_shape'](r) for r in rows)) if rows else 0
+          if rows and len(rows)/max(1,iota_cls) >= 5:
+              print('IOTA_DECISION=STRONG_QUOTIENT__BUILD_COMPILED_REDUCTION_PLAN')
+          elif rows and len(rows)/max(1,iota_cls) >= 2:
+              print('IOTA_DECISION=WEAK_QUOTIENT__ADD_RESULT_EQUIVALENCE_TEST')
+          else:
+              print('IOTA_DECISION=NO_USEFUL_COARSE_QUOTIENT')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: quotient-census
+          path: |
+            /tmp/quotient-census.txt
+            /tmp/grind.err
+            /tmp/beta2000.err
+            /tmp/beta8000.err
