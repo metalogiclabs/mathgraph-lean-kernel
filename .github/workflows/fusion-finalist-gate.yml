@@ -32,11 +32,6 @@ jobs:
           {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
           EOF
 
-      # Run 32112667599 already proved exact status/stdout/normalized-stderr equivalence
-      # on all 191 public Arena exports for this exact fusion patch.  Do not spend
-      # another ~30 minutes rebuilding unrelated correctness-only exports here.
-      # This continuation rebuilds only score-driving workloads and rechecks those
-      # workloads before timing them.
       - name: Fetch Arena and build score-driving corpus
         run: |
           set -euxo pipefail
@@ -103,10 +98,9 @@ jobs:
                 timeout --signal=TERM 900s /usr/bin/time -f '%e\t%M' -o /tmp/t /tmp/$arm-bin /tmp/checker.json < "$f" >/dev/null 2>/tmp/bench.err
                 status=$?
                 set -e
+                sec=NA; rss=NA
                 if [ -s /tmp/t ]; then
-                  read -r sec rss </tmp/t
-                else
-                  sec=NA; rss=NA
+                  read -r sec rss < <(tail -n 1 /tmp/t)
                 fi
                 printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$label" "$arm" "$r" "$status" "$sec" "$rss" | tee -a /tmp/perf.tsv
                 if [ "$status" -eq 124 ] || [ "$sec" = NA ]; then
@@ -122,47 +116,39 @@ jobs:
           python3 - <<'PY' | tee /tmp/finalist-scorecard.txt
           from pathlib import Path
           from statistics import median
-
-          rows = {}
-          malformed = []
-          p = Path('/tmp/perf.tsv')
+          rows={}; malformed=[]
+          p=Path('/tmp/perf.tsv')
           for line in p.read_text().splitlines() if p.exists() else []:
-              parts = line.split('\t')
-              if len(parts) != 6:
+              parts=line.split('\t')
+              if len(parts)!=6: malformed.append(line); continue
+              t,a,r,status,s,m=parts
+              try:
+                  sec=None if s=='NA' else float(s); rss=None if m=='NA' else int(m)
+              except ValueError:
                   malformed.append(line); continue
-              t,a,r,status,s,m = parts
-              if s == 'NA' or m == 'NA':
-                  rows.setdefault((t,a), []).append((int(status), None, None)); continue
-              rows.setdefault((t,a), []).append((int(status), float(s), int(m)))
-
-          regress=[]; gains=[]; invalid=[]
-          aggregate_base=aggregate_fusion=0.0
+              rows.setdefault((t,a),[]).append((int(status),sec,rss))
+          regress=[]; gains=[]; invalid=[]; aggregate_base=aggregate_fusion=0.0
           tests=sorted({k[0] for k in rows})
           for t in tests:
               b=rows.get((t,'base'),[]); f=rows.get((t,'fusion'),[])
-              if len(b)!=3 or len(f)!=3:
-                  invalid.append((t,'missing repetitions')); continue
+              if len(b)!=3 or len(f)!=3: invalid.append((t,'missing repetitions')); continue
               bs={x[0] for x in b}; fs={x[0] for x in f}
-              if len(bs)!=1 or len(fs)!=1 or bs!=fs:
-                  invalid.append((t,f'status mismatch base={sorted(bs)} fusion={sorted(fs)}')); continue
-              if any(x[1] is None for x in b+f):
-                  invalid.append((t,'missing timing')); continue
+              if len(bs)!=1 or len(fs)!=1 or bs!=fs: invalid.append((t,f'status mismatch base={sorted(bs)} fusion={sorted(fs)}')); continue
+              if any(x[1] is None for x in b+f): invalid.append((t,'missing timing')); continue
               bm=median(x[1] for x in b); fm=median(x[1] for x in f)
-              # Sub-10ms /usr/bin/time values quantize too coarsely for regression claims.
-              d=(fm/bm-1)*100 if bm >= 0.01 else 0.0
+              d=(fm/bm-1)*100 if bm>=0.01 else 0.0
               speed=(bm/fm) if fm else float('inf')
               print(f'{t}\tstatus={next(iter(bs))}\tbase={bm:.4f}\tfusion={fm:.4f}\tdelta_pct={d:.2f}\tspeedup={speed:.3f}x')
-              aggregate_base += bm; aggregate_fusion += fm
-              if bm >= 0.05:
-                  (regress if d>5 else gains).append((d,t))
+              aggregate_base+=bm; aggregate_fusion+=fm
+              if bm>=0.05: (regress if d>5 else gains).append((d,t))
           total_delta=(aggregate_fusion/aggregate_base-1)*100 if aggregate_base else 0
-          print('AGGREGATE_WALL', f'base={aggregate_base:.4f}', f'fusion={aggregate_fusion:.4f}', f'delta_pct={total_delta:.2f}', f'speedup={aggregate_base/aggregate_fusion if aggregate_fusion else float("inf"):.3f}x')
-          print('MAX_MATERIAL_REGRESSION', max(regress, default=(0,'none')))
-          print('BEST_GAIN', min(gains, default=(0,'none')))
-          print('INVALID', invalid)
-          print('MALFORMED_ROWS', len(malformed))
-          print('PRIOR_FULL_CORRECTNESS', 'PASS_191_OF_191_RUN_32112667599')
-          print('FINALIST', 'PASS' if not regress and not invalid and not malformed else 'REVIEW')
+          print('AGGREGATE_WALL',f'base={aggregate_base:.4f}',f'fusion={aggregate_fusion:.4f}',f'delta_pct={total_delta:.2f}',f'speedup={aggregate_base/aggregate_fusion if aggregate_fusion else float("inf"):.3f}x')
+          print('MAX_MATERIAL_REGRESSION',max(regress,default=(0,'none')))
+          print('BEST_GAIN',min(gains,default=(0,'none')))
+          print('INVALID',invalid)
+          print('MALFORMED_ROWS',len(malformed))
+          print('PRIOR_FULL_CORRECTNESS','PASS_191_OF_191_RUN_32112667599')
+          print('FINALIST','PASS' if not regress and not invalid and not malformed else 'REVIEW')
           PY
 
       - uses: actions/upload-artifact@v4
