@@ -1,0 +1,82 @@
+name: Extra-rec full Arena gate
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'experiments/extra-rec-full-arena.trigger'
+  workflow_dispatch:
+
+jobs:
+  full-arena:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Build exact V1 plus isolated repair
+        run: |
+          set -euxo pipefail
+          V1=1e209dad266d59b4d43cdea189876bc6ea551339
+          git worktree add /tmp/v1 "$V1"
+          cp -a /tmp/v1 /tmp/fix
+          python3 scripts/apply_extra_rec_soundness.py /tmp/fix
+          cd /tmp/fix
+          cargo test --release --locked
+          cargo build --release --locked
+          cp target/release/sokonanoda /tmp/mathgraph-fix
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+      - name: Fetch current Arena and build all tests
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test
+      - name: Run repaired checker over complete current Arena test corpus
+        run: |
+          set -euo pipefail
+          cd /tmp/arena
+          python3 - <<'PY'
+          import pathlib, subprocess, yaml, sys
+          root=pathlib.Path('.')
+          tests=[]
+          for y in sorted((root/'tests').glob('*.yaml')):
+              d=yaml.safe_load(y.read_text()) or {}
+              outcome=d.get('outcome')
+              if outcome not in ('accept','reject'):
+                  continue
+              name=y.stem
+              candidates=list((root/'_build/tests').glob(name+'.ndjson'))
+              candidates += list((root/'_build/tests').glob(name+'/**/*.ndjson'))
+              if not candidates:
+                  continue
+              for f in candidates:
+                  tests.append((name,outcome,f))
+          rows=[]; bad=[]
+          for name,outcome,f in tests:
+              with f.open('rb') as inp:
+                  p=subprocess.run(['/tmp/mathgraph-fix','/tmp/checker.json'],stdin=inp,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
+              accepted=(p.returncode==0)
+              ok=accepted if outcome=='accept' else not accepted
+              rows.append(f'{name}\t{outcome}\trc={p.returncode}\t'+('PASS' if ok else 'FAIL'))
+              if not ok: bad.append((name,outcome,p.returncode,p.stderr.decode(errors='replace')[-2000:]))
+          pathlib.Path('/tmp/full-arena-results.tsv').write_text('\n'.join(rows)+'\n')
+          pathlib.Path('/tmp/full-arena-decision.txt').write_text(f'tests={len(rows)}\nfailures={len(bad)}\nDECISION='+('FULL_ARENA_GREEN__READY_FOR_UPSTREAM' if not bad else 'FULL_ARENA_NOT_GREEN')+'\n')
+          if bad:
+              pathlib.Path('/tmp/full-arena-failures.txt').write_text('\n\n'.join(map(str,bad)))
+              print(*bad,sep='\n')
+              sys.exit(1)
+          print(f'FULL_ARENA_GREEN tests={len(rows)}')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: extra-rec-full-arena-gate
+          path: |
+            /tmp/full-arena-results.tsv
+            /tmp/full-arena-decision.txt
+            /tmp/full-arena-failures.txt
