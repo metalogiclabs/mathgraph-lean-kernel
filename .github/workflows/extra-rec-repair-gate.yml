@@ -1,0 +1,69 @@
+name: Extra-rec soundness repair gate
+
+on:
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  repair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Build exact V1 baseline and isolated repair
+        run: |
+          set -euxo pipefail
+          V1=1e209dad266d59b4d43cdea189876bc6ea551339
+          git worktree add /tmp/base "$V1"
+          cp -a /tmp/base /tmp/fix
+          python3 scripts/apply_extra_rec_soundness.py /tmp/fix
+          for arm in base fix; do
+            (cd /tmp/$arm && cargo test --release --locked)
+            (cd /tmp/$arm && cargo build --release --locked)
+            cp /tmp/$arm/target/release/sokonanoda /tmp/$arm-bin
+          done
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+      - name: Build four new Arena adversarial cases
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          for t in extra-rec rec-missing-ih proj-of-stuck-prop proj-of-subst-prop; do
+            nix develop -c ./lka.py build-test "$t"
+          done
+      - name: Frozen A/B soundness decision
+        run: |
+          set -uo pipefail
+          cd /tmp/arena
+          : >/tmp/results.tsv
+          failed=0
+          for t in extra-rec rec-missing-ih proj-of-stuck-prop proj-of-subst-prop; do
+            f="_build/tests/${t}.ndjson"
+            for arm in base fix; do
+              set +e
+              /tmp/$arm-bin /tmp/checker.json < "$f" >/tmp/${arm}-${t}.out 2>/tmp/${arm}-${t}.err
+              rc=$?
+              set -e
+              printf '%s\t%s\trc=%s\n' "$t" "$arm" "$rc" | tee -a /tmp/results.tsv
+              if [ "$arm" = fix ] && [ "$rc" -eq 0 ]; then failed=1; fi
+            done
+          done
+          base_extra=$(awk '$1=="extra-rec" && $2=="base" {print $3}' /tmp/results.tsv)
+          fix_extra=$(awk '$1=="extra-rec" && $2=="fix" {print $3}' /tmp/results.tsv)
+          if [ "$base_extra" != 'rc=0' ] || [ "$fix_extra" = 'rc=0' ]; then failed=1; fi
+          if [ "$failed" -eq 0 ]; then echo 'DECISION=REPAIR_CLOSES_66_OF_66_RESIDUAL' | tee /tmp/decision.txt; else echo 'DECISION=REPAIR_FAILED' | tee /tmp/decision.txt; fi
+          [ "$failed" -eq 0 ]
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: extra-rec-repair-gate
+          path: |
+            /tmp/results.tsv
+            /tmp/decision.txt
+            /tmp/*-extra-rec.err
