@@ -67,7 +67,9 @@ jobs:
         run: |
           git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
           cd /tmp/arena
-          nix develop -c ./lka.py build-test perf/grind-ring-5 perf/app-lam perf/beta-ladder
+          for T in perf/grind-ring-5 perf/app-lam perf/beta-ladder; do
+            nix develop -c ./lka.py build-test "$T"
+          done
 
       - name: Semantic equality gate
         run: |
