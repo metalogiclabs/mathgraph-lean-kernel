@@ -1,0 +1,79 @@
+name: Iota cost decomposition
+
+on:
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  decompose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+      - name: Build exact V1 diagnostic arm
+        run: |
+          set -euxo pipefail
+          V1=1e209dad266d59b4d43cdea189876bc6ea551339
+          git worktree add /tmp/v1 "$V1"
+          cp -a /tmp/v1 /tmp/probe-src
+          python3 scripts/apply_iota_cost_probe.py /tmp/probe-src
+          cd /tmp/probe-src
+          cargo test --locked
+          RUSTFLAGS='-C target-cpu=native' cargo build --release --locked
+          cp target/release/sokonanoda /tmp/probe-checker
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+      - name: Build grind-ring-5 export
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test perf/grind-ring-5
+      - name: Run decomposition
+        env:
+          MATHGRAPH_IOTA_COST_PROBE: "1"
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          /tmp/probe-checker /tmp/checker.json < _build/tests/perf/grind-ring-5.ndjson >/tmp/grind.out 2>/tmp/grind.err
+          grep '^MATHGRAPH_IOTA_COST ' /tmp/grind.err | tail -1 | tee /tmp/iota-cost.txt
+      - name: Classify residual
+        run: |
+          python3 - <<'PY' | tee /tmp/decision.txt
+          from pathlib import Path
+          line=Path('/tmp/iota-cost.txt').read_text().strip().split()[1:]
+          d={k:int(v) for k,v in (x.split('=',1) for x in line)}
+          fires=max(d['fire_calls'],1)
+          miss=d['rule_cache_miss']/fires
+          excess=d['lambda_excess_capture']/max(d['lambda_apply'],1)
+          post=d['post_fire_reduction']/fires
+          print('rule_cache_miss_per_fire=',miss)
+          print('lambda_excess_capture_share=',excess)
+          print('post_fire_reduction_per_fire=',post)
+          print('env_extend_per_fire=',d['env_extend']/fires)
+          if miss > .10:
+              verdict='RULE_EVAL_DOMINANT'
+          elif excess > .25 and d['lambda_excess_capture'] > 1000:
+              verdict='CLOSURE_CAPTURE_DOMINANT'
+          elif d['env_extend']/fires > 2.0:
+              verdict='ARGUMENT_APPLICATION_DOMINANT'
+          elif post > .25:
+              verdict='DOWNSTREAM_FORCE_DOMINANT'
+          else:
+              verdict='NO_SINGLE_IOTA_SUBLAYER__PROFILE_INSTRUCTIONS_BY_FUNCTION'
+          print('DECISION='+verdict)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: iota-cost-decomposition
+          path: |
+            /tmp/iota-cost.txt
+            /tmp/decision.txt
+            /tmp/grind.err
