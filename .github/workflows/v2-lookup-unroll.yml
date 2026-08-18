@@ -8,7 +8,7 @@ on:
 jobs:
   experiment:
     runs-on: ubuntu-24.04
-    timeout-minutes: 180
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
         with:
@@ -17,134 +17,97 @@ jobs:
       - name: Install Nix
         uses: cachix/install-nix-action@v31
 
-      - name: Freeze exact V1 and build unroll arms
+      - name: Build exact V1 and one inference-fusion candidate
         run: |
           set -euxo pipefail
           V1=1e209dad266d59b4d43cdea189876bc6ea551339
-          git cat-file -e "$V1^{commit}"
-          git worktree add /tmp/v1 "$V1"
-          for arm in base u2 u4 u8 u16; do cp -a /tmp/v1 /tmp/${arm}-src; done
-          for pair in 'u2 2' 'u4 4' 'u8 8' 'u16 16'; do
-            set -- $pair
-            python3 scripts/apply_lookup_unroll.py "/tmp/$1-src" "$2"
-          done
-          for arm in base u2 u4 u8 u16; do
+          git worktree add /tmp/base-src "$V1"
+          cp -a /tmp/base-src /tmp/cand-src
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/cand-src/src/infer.rs')
+          s=p.read_text()
+          old="        let key = (self.key_env(env, e) as *const value::Env<'t> as usize, e);"
+          new="        let key_env = self.key_env(env, e);\n        let key = (key_env as *const value::Env<'t> as usize, e);"
+          assert s.count(old) == 1, s.count(old)
+          s=s.replace(old,new,1)
+          old2="                let clo = Closure::mk_infer(self.key_env(env, e), ctx, body);"
+          new2="                let clo = Closure::mk_infer(key_env, ctx, body);"
+          assert s.count(old2) == 1, s.count(old2)
+          s=s.replace(old2,new2,1)
+          p.write_text(s)
+          PY
+          for arm in base cand; do
             cd /tmp/${arm}-src
             cargo test --locked
-            RUSTFLAGS='-C target-cpu=native' cargo build --release --locked
-            cp target/release/sokonanoda /tmp/${arm}-checker
+            CARGO_TARGET_DIR=/tmp/${arm}-target RUSTFLAGS='-C target-cpu=x86-64' cargo build --release --locked
+            cp /tmp/${arm}-target/release/sokonanoda /tmp/${arm}-checker
           done
           cat >/tmp/checker.json <<'EOF'
           {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
           EOF
 
-      - name: Build deciding Arena tests
+      - name: Build only deciding Arena tests
         run: |
           set -euxo pipefail
           git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
           cd /tmp/arena
-          for n in 8000 16000; do
-            cp tests/perf/beta-ladder.lean tests/perf/beta-ladder-${n}.lean
-            sed -i "s/let n := 2000/let n := ${n}/" tests/perf/beta-ladder-${n}.lean
-            printf 'description: beta ladder unroll N=%s\nleanfile: tests/perf/beta-ladder-%s.lean\nexport-decls: ["beta_ladder"]\noutcome: accept\ncompare-perf: true\n' "$n" "$n" > tests/perf/beta-ladder-${n}.yaml
-            nix develop -c ./lka.py build-test perf/beta-ladder-${n}
-          done
-          for t in perf/grind-ring-5 perf/app-lam perf/let-ladder perf/shift-cascade; do
-            nix develop -c ./lka.py build-test "$t"
-          done
+          nix develop -c ./lka.py build-test perf/grind-ring-5
+          nix develop -c ./lka.py build-test perf/app-lam
 
-      - name: Semantic smoke and rotating wall measurements
+      - name: Semantic equality smoke
         run: |
           set -euxo pipefail
           cd /tmp/arena
-          printf 'test,n,rep,arm,wall,rss\n' >/tmp/timings.csv
-          specs=(
-            'beta-ladder,8000,_build/tests/perf/beta-ladder-8000.ndjson'
-            'beta-ladder,16000,_build/tests/perf/beta-ladder-16000.ndjson'
-            'grind-ring-5,0,_build/tests/perf/grind-ring-5.ndjson'
-            'app-lam,0,_build/tests/perf/app-lam.ndjson'
-            'let-ladder,0,_build/tests/perf/let-ladder.ndjson'
-            'shift-cascade,0,_build/tests/perf/shift-cascade.ndjson'
-          )
-          arms=(base u2 u4 u8 u16)
-          run_one () {
-            testname="$1"; n="$2"; file="$3"; rep="$4"; arm="$5"
-            /usr/bin/time -f '%e,%M' -o /tmp/time.txt timeout 300 /tmp/${arm}-checker /tmp/checker.json < "$file" >/dev/null 2>/dev/null
-            IFS=, read -r wall rss </tmp/time.txt
-            printf '%s,%s,%s,%s,%s,%s\n' "$testname" "$n" "$rep" "$arm" "$wall" "$rss" >>/tmp/timings.csv
-          }
-          for spec in "${specs[@]}"; do
-            IFS=, read -r testname n file <<<"$spec"
-            for rep in 1 2 3 4 5; do
-              start=$(( (rep-1) % 5 ))
-              for k in 0 1 2 3 4; do
-                idx=$(( (start+k) % 5 ))
-                run_one "$testname" "$n" "$file" "$rep" "${arms[$idx]}"
-              done
-            done
+          for T in grind-ring-5 app-lam; do
+            /tmp/base-checker /tmp/checker.json < _build/tests/perf/$T.ndjson > /tmp/base-$T.out 2>/tmp/base-$T.err
+            /tmp/cand-checker /tmp/checker.json < _build/tests/perf/$T.ndjson > /tmp/cand-$T.out 2>/tmp/cand-$T.err
+            cmp /tmp/base-$T.out /tmp/cand-$T.out
           done
 
-      - name: Callgrind instruction proxy
+      - name: Callgrind first separator
         run: |
           set -euxo pipefail
           sudo apt-get update >/dev/null
           sudo apt-get install -y valgrind >/dev/null
           cd /tmp/arena
-          printf 'test,n,arm,Ir\n' >/tmp/callgrind.csv
-          profile () {
-            testname="$1"; n="$2"; file="$3"; arm="$4"
-            out="/tmp/cg-${testname}-${n}-${arm}.out"
-            timeout 900 valgrind --tool=callgrind --callgrind-out-file="$out" /tmp/${arm}-checker /tmp/checker.json < "$file" >/dev/null 2>/dev/null
-            ir=$(awk '/^summary:/ {print $2}' "$out")
-            test -n "$ir"
-            printf '%s,%s,%s,%s\n' "$testname" "$n" "$arm" "$ir" >>/tmp/callgrind.csv
-          }
-          for arm in base u2 u4 u8 u16; do
-            profile beta-ladder 8000 _build/tests/perf/beta-ladder-8000.ndjson "$arm"
-            profile grind-ring-5 0 _build/tests/perf/grind-ring-5.ndjson "$arm"
-            profile app-lam 0 _build/tests/perf/app-lam.ndjson "$arm"
+          printf 'test,arm,Ir\n' >/tmp/callgrind.csv
+          for T in grind-ring-5 app-lam; do
+            for arm in base cand; do
+              out=/tmp/cg-$T-$arm.out
+              timeout 900 valgrind --tool=callgrind --callgrind-out-file="$out" /tmp/${arm}-checker /tmp/checker.json < _build/tests/perf/$T.ndjson >/dev/null 2>/tmp/$T-$arm.vg
+              ir=$(awk '/^summary:/ {print $2}' "$out")
+              test -n "$ir"
+              printf '%s,%s,%s\n' "$T" "$arm" "$ir" >>/tmp/callgrind.csv
+            done
           done
-
-      - name: Analyze and fail closed
-        run: |
-          set -euxo pipefail
           python3 - <<'PY' | tee /tmp/summary.txt
-          import csv, statistics, math
-          rows=list(csv.DictReader(open('/tmp/timings.csv')))
-          wall={}
-          for r in rows:
-              wall.setdefault((r['test'],int(r['n']),r['arm']),[]).append(float(r['wall']))
-          C={(r['test'],int(r['n']),r['arm']):int(r['Ir']) for r in csv.DictReader(open('/tmp/callgrind.csv'))}
-          arms=['u2','u4','u8','u16']
-          scores={a:[] for a in arms}
-          print('CALLGRIND RATIOS VS V1')
-          for test,n in [('beta-ladder',8000),('grind-ring-5',0),('app-lam',0)]:
-              b=C[(test,n,'base')]
-              for a in arms:
-                  r=C[(test,n,a)]/b
-                  scores[a].append(r)
-                  print(test,a,f'{r:.6f}',f'{(r-1)*100:+.3f}%')
-          ranked=[]
-          for a,rs in scores.items():
-              gm=math.exp(sum(math.log(x) for x in rs)/len(rs))
-              ranked.append((gm,a))
-              print('GEOMEAN',a,f'{gm:.6f}',f'{(gm-1)*100:+.3f}%')
-          gm,best=min(ranked)
-          bad=[]
-          for test,n in [('grind-ring-5',0),('app-lam',0),('let-ladder',0),('shift-cascade',0)]:
-              b=statistics.median(wall[(test,n,'base')]); x=statistics.median(wall[(test,n,best)])
-              ratio=x/b if b else 1.0
-              print('WALL',test,best,f'{ratio:.6f}',f'{(ratio-1)*100:+.3f}%')
-              if ratio>1.05: bad.append((test,ratio))
-          print('BEST',best,'IR_GEOMEAN',gm,'BAD',bad)
-          print('DECISION=RETAIN_FOR_OFFICIAL_INSTRUCTION_GATE' if gm<0.995 and not bad else 'DECISION=NO_PROMOTION_CANDIDATE')
+          import csv, math
+          rows=list(csv.DictReader(open('/tmp/callgrind.csv')))
+          C={(r['test'],r['arm']):int(r['Ir']) for r in rows}
+          ratios=[]
+          for t in ['grind-ring-5','app-lam']:
+              b=C[(t,'base')]; c=C[(t,'cand')]
+              r=c/b
+              ratios.append(r)
+              print(t, 'base=',b,'cand=',c,'ratio=',f'{r:.6f}','delta=',f'{(r-1)*100:+.3f}%')
+          gm=math.sqrt(ratios[0]*ratios[1])
+          print('GEOMEAN=',f'{gm:.6f}',f'{(gm-1)*100:+.3f}%')
+          if min(ratios) <= 0.95 and max(ratios) <= 1.01:
+              d='PROMOTE__MATERIAL_INFER_PROJECTION_DELETION'
+          elif gm <= 0.99 and max(ratios) <= 1.01:
+              d='REAL_GAIN__ESCALATE'
+          else:
+              d='KILL__LOCAL_INFER_PROJECTION_DUPLICATION_NOT_MATERIAL'
+          print('DECISION='+d)
           PY
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: v2-lookup-unroll
+          name: two-arm-infer-projection-separator
           path: |
-            /tmp/timings.csv
             /tmp/callgrind.csv
             /tmp/summary.txt
+            /tmp/*.vg
+            /tmp/*.err
