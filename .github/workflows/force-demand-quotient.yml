@@ -1,0 +1,111 @@
+name: Force demand quotient
+
+on:
+  pull_request:
+    paths:
+      - 'experiments/force-demand.trigger'
+
+jobs:
+  quotient:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      MATHGRAPH_FORCE_DEMAND_PROBE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+      - name: Build exact V1 diagnostic arm
+        run: |
+          set -euxo pipefail
+          V1=1e209dad266d59b4d43cdea189876bc6ea551339
+          git cat-file -e "$V1^{commit}"
+          git worktree add /tmp/v1 "$V1"
+          cp -a /tmp/v1 /tmp/probe-src
+          python3 scripts/apply_force_demand_probe.py /tmp/probe-src
+          cd /tmp/probe-src
+          cargo test --locked
+          RUSTFLAGS='-C target-cpu=native' cargo build --release --locked
+          cp target/release/sokonanoda /tmp/probe-checker
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+      - name: Build deciding Arena exports
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          cp tests/perf/beta-ladder.lean tests/perf/beta-ladder-8000.lean
+          sed -i 's/let n := 2000/let n := 8000/' tests/perf/beta-ladder-8000.lean
+          printf 'description: beta ladder force demand N=8000\nleanfile: tests/perf/beta-ladder-8000.lean\nexport-decls: ["beta_ladder"]\noutcome: accept\ncompare-perf: true\n' > tests/perf/beta-ladder-8000.yaml
+          for t in perf/beta-ladder perf/beta-ladder-8000 perf/app-lam perf/let-ladder perf/grind-ring-5; do
+            nix develop -c ./lka.py build-test "$t"
+          done
+      - name: Collect force demand quotient
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          : >/tmp/force-demand.txt
+          runone () {
+            test="$1"; file="$2"
+            /tmp/probe-checker /tmp/checker.json < "$file" >/tmp/${test}.out 2>/tmp/${test}.err
+            echo "TEST $test" >>/tmp/force-demand.txt
+            grep '^MATHGRAPH_FORCE ' /tmp/${test}.err >>/tmp/force-demand.txt || true
+          }
+          runone beta2000 _build/tests/perf/beta-ladder.ndjson
+          runone beta8000 _build/tests/perf/beta-ladder-8000.ndjson
+          runone app _build/tests/perf/app-lam.ndjson
+          runone let _build/tests/perf/let-ladder.ndjson
+          runone grind _build/tests/perf/grind-ring-5.ndjson
+          cat /tmp/force-demand.txt
+      - name: Diagnose dominant demand class
+        run: |
+          python3 - <<'PY' | tee /tmp/force-diagnosis.txt
+          from pathlib import Path
+          data={}; test=None
+          for line in Path('/tmp/force-demand.txt').read_text().splitlines():
+              if line.startswith('TEST '):
+                  test=line.split()[1]; data[test]=[]
+              elif line.startswith('MATHGRAPH_FORCE '):
+                  d={}
+                  for tok in line.split()[1:]:
+                      k,v=tok.split('='); d[k]=int(v)
+                  data[test].append(d)
+          for test, rows in data.items():
+              total=sum(r['calls'] for r in rows)
+              print('TEST',test,'tagged_calls',total)
+              for r in sorted(rows,key=lambda x:x['calls'],reverse=True):
+                  share=r['calls']/total if total else 0
+                  same=r['same']/r['calls'] if r['calls'] else 0
+                  print(' tag',r['tag'],'calls',r['calls'],'share',f'{share:.4f}','same_share',f'{same:.4f}',
+                        'pi',r['pi'],'lam',r['lam'],'rigid',r['rigid'],'unfold',r['unfold'],'thunk',r['thunk'],'other',r['other'])
+          b2={r['tag']:r for r in data.get('beta2000',[])}
+          b8={r['tag']:r for r in data.get('beta8000',[])}
+          common=[]
+          for tag,r8 in b8.items():
+              r2=b2.get(tag,{'calls':0})
+              ratio=(r8['calls']/r2['calls']) if r2['calls'] else float('inf')
+              common.append((r8['calls'],tag,ratio,r8['same']/r8['calls'] if r8['calls'] else 0))
+          common.sort(reverse=True)
+          if common:
+              calls,tag,ratio,same=common[0]
+              print('DOMINANT_BETA_TAG=',tag)
+              print('DOMINANT_BETA_CALLS=',calls)
+              print('DEPTH_4X_CALL_RATIO=',f'{ratio:.4f}')
+              print('SAME_POINTER_SHARE=',f'{same:.4f}')
+              if ratio > 12 and same > .8:
+                  print('DECISION=QUADRATIC_REDUNDANT_FORCE__BUILD_BYPASS_SEPARATOR')
+              elif ratio > 12:
+                  print('DECISION=QUADRATIC_FORCE_DEMAND__TRACE_PRODUCER_STATE')
+              else:
+                  print('DECISION=NO_SINGLE_QUADRATIC_TAG__EXPAND_CALLSITE_ATLAS')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: force-demand-quotient
+          path: |
+            /tmp/force-demand.txt
+            /tmp/force-diagnosis.txt
+            /tmp/*.err
