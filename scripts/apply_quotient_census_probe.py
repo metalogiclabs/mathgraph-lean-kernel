@@ -29,3 +29,4 @@ s = s.replace(old, new, 1)
 
 p.write_text(s)
 print('quotient census probe applied')
+# workflow registration trigger
