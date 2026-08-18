@@ -1,0 +1,104 @@
+name: Direct iota structural separator
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'experiments/direct-iota.trigger'
+  workflow_dispatch:
+
+jobs:
+  separator:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+      - name: Build exact V1 and direct-iota arm
+        shell: bash
+        run: |
+          set -euxo pipefail
+          V1=1e209dad266d59b4d43cdea189876bc6ea551339
+          git worktree add /tmp/v1 "$V1"
+          cp -a /tmp/v1 /tmp/base-src
+          cp -a /tmp/v1 /tmp/direct-src
+          python3 scripts/apply_direct_iota_rule.py /tmp/direct-src
+          for arm in base direct; do
+            (cd /tmp/${arm}-src && cargo test --locked)
+            (cd /tmp/${arm}-src && RUSTFLAGS='-C target-cpu=x86-64' cargo build --release --locked)
+            cp /tmp/${arm}-src/target/release/sokonanoda /tmp/${arm}-checker
+          done
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+      - name: Build deciding Arena exports
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          for t in perf/grind-ring-5 perf/discarded-argument-match perf/app-lam; do
+            nix develop -c ./lka.py build-test "$t"
+          done
+      - name: Semantic equality gate
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          for f in _build/tests/perf/grind-ring-5.ndjson _build/tests/perf/discarded-argument-match.ndjson _build/tests/perf/app-lam.ndjson; do
+            /tmp/base-checker /tmp/checker.json < "$f" >/tmp/base.out 2>/tmp/base.err
+            /tmp/direct-checker /tmp/checker.json < "$f" >/tmp/direct.out 2>/tmp/direct.err
+            cmp /tmp/base.out /tmp/direct.out
+          done
+      - name: Callgrind instruction separator
+        shell: bash
+        run: |
+          set -euxo pipefail
+          sudo apt-get update >/dev/null
+          sudo apt-get install -y valgrind >/dev/null
+          printf 'test,arm,Ir\n' >/tmp/callgrind.csv
+          cd /tmp/arena
+          profile () {
+            test="$1"; file="$2"; arm="$3"
+            out=/tmp/cg-${test}-${arm}.out
+            timeout 600 valgrind --tool=callgrind --callgrind-out-file="$out" /tmp/${arm}-checker /tmp/checker.json < "$file" >/dev/null 2>/dev/null
+            ir=$(awk '/^summary:/ {print $2}' "$out")
+            test -n "$ir"
+            printf '%s,%s,%s\n' "$test" "$arm" "$ir" >>/tmp/callgrind.csv
+          }
+          for arm in base direct; do
+            profile grind _build/tests/perf/grind-ring-5.ndjson "$arm"
+            profile discarded _build/tests/perf/discarded-argument-match.ndjson "$arm"
+            profile app _build/tests/perf/app-lam.ndjson "$arm"
+          done
+          cat /tmp/callgrind.csv
+      - name: Decide
+        shell: bash
+        run: |
+          python3 - <<'PY' | tee /tmp/decision.txt
+          import csv
+          rows=list(csv.DictReader(open('/tmp/callgrind.csv')))
+          d={(r['test'],r['arm']):int(r['Ir']) for r in rows}
+          for t in ('grind','discarded','app'):
+              q=d[(t,'direct')]/d[(t,'base')]
+              print(t, f'{q:.6f}', f'{(q-1)*100:+.2f}%')
+          grind=d[('grind','direct')]/d[('grind','base')]
+          discarded=d[('discarded','direct')]/d[('discarded','base')]
+          app=d[('app','direct')]/d[('app','base')]
+          if grind < .97 and discarded < .95 and app <= 1.005:
+              print('DECISION=PROMOTE_DIRECT_RULE_INDEXING')
+          elif grind < .99 and app <= 1.005:
+              print('DECISION=WEAK_POSITIVE__PROFILE_RULE_LOOKUP_SHARE')
+          else:
+              print('DECISION=KILL_DIRECT_RULE_INDEXING')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: direct-iota-separator
+          path: |
+            /tmp/callgrind.csv
+            /tmp/decision.txt
