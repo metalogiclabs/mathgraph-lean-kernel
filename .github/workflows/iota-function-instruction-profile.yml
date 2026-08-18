@@ -1,0 +1,74 @@
+name: Iota function instruction profile
+
+on:
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  profile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+      - name: Build exact V1 with symbols
+        run: |
+          set -euxo pipefail
+          V1=1e209dad266d59b4d43cdea189876bc6ea551339
+          git worktree add /tmp/v1 "$V1"
+          cd /tmp/v1
+          RUSTFLAGS='-C target-cpu=native -C debuginfo=1' cargo build --release --locked
+          cp target/release/sokonanoda /tmp/v1-checker
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+      - name: Build grind-ring-5 export
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test perf/grind-ring-5
+      - name: Callgrind exact V1
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          nix develop -c bash -lc 'command -v valgrind >/dev/null || { echo "VALGRIND_MISSING"; exit 3; }; valgrind --tool=callgrind --callgrind-out-file=/tmp/callgrind.out --collect-jumps=yes /tmp/v1-checker /tmp/checker.json < _build/tests/perf/grind-ring-5.ndjson >/tmp/check.out 2>/tmp/callgrind.err'
+          nix develop -c bash -lc 'callgrind_annotate --inclusive=yes --threshold=0.05 /tmp/callgrind.out' > /tmp/callgrind-inclusive.txt
+          nix develop -c bash -lc 'callgrind_annotate --inclusive=no --threshold=0.05 /tmp/callgrind.out' > /tmp/callgrind-self.txt
+          grep -Ei 'apply_many|apply\(|force_all|iota_step|fire_recursor|eval_inst|eval\(|prune_env|prune_env_cold|key_env|mk_thunk_hc|spine_snoc_hc|mk_rigid_hc|mk_lam_hc|env_extend|canonicalize_for_spine' /tmp/callgrind-inclusive.txt | head -200 | tee /tmp/iota-hot-functions.txt || true
+      - name: Classify hot residual
+        run: |
+          python3 - <<'PY' | tee /tmp/decision.txt
+          from pathlib import Path
+          txt=Path('/tmp/iota-hot-functions.txt').read_text(errors='ignore')
+          groups={
+            'APPLICATION':['apply_many','TypeChecker::apply'],
+            'ENV_REPRESENTATION':['prune_env','key_env','mk_thunk_hc','env_extend'],
+            'FORCING':['force_all','iota_step'],
+            'RECURSOR':['fire_recursor','eval_inst'],
+            'CONSTRUCTION':['spine_snoc_hc','mk_rigid_hc','mk_lam_hc','canonicalize_for_spine'],
+          }
+          # Preserve raw attribution; textual grouping is only a routing hint.
+          lower=txt.lower()
+          hits={g:sum(lower.count(k.lower()) for k in ks) for g,ks in groups.items()}
+          print('ROUTING_HINT_COUNTS',hits)
+          if not txt.strip(): verdict='PROFILE_OUTPUT_EMPTY__FIX_PROFILER'
+          else: verdict=max(hits,key=hits.get) if max(hits.values()) else 'UNCLASSIFIED__READ_TOP_FUNCTIONS'
+          print('DECISION='+verdict)
+          print('\nTOP_MATCHED_FUNCTIONS\n'+txt[:12000])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: iota-function-instruction-profile
+          path: |
+            /tmp/callgrind.out
+            /tmp/callgrind-inclusive.txt
+            /tmp/callgrind-self.txt
+            /tmp/iota-hot-functions.txt
+            /tmp/decision.txt
+            /tmp/callgrind.err
