@@ -25,13 +25,15 @@ jobs:
           git worktree add /tmp/base "$V1"
           git worktree add /tmp/cand "$V1"
 
-          # Safety audit: eval_no_cache must only be entered through eval plus its own definition.
+          # Safety audit: freeze the exact V1 call graph before patching.
           python3 - <<'PY'
           from pathlib import Path
           s=Path('/tmp/cand/src/eval.rs').read_text()
           n=s.count('eval_no_cache(')
           print('eval_no_cache_occurrences=', n)
-          assert n == 3, f'unexpected eval_no_cache call graph: {n}'
+          assert n == 4, f'unexpected eval_no_cache call graph: {n}'
+          assert 'self.eval_no_cache(depth, env, e)' in s
+          assert 'self.eval_no_cache(depth, te, e)' in s
           PY
 
           # Candidate: eval() already key_env-projects open Lambda/Pi before entering
