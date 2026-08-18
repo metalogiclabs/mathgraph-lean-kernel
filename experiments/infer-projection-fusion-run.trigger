@@ -1,1 +1,1 @@
-run inference projection fusion 2026-08-19 rerun atlas
+run fast two-arm inference projection separator 2026-08-19
