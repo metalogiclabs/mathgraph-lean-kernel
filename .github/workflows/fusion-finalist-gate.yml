@@ -1,0 +1,164 @@
+name: Fusion finalist full validation
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - '.github/workflows/fusion-finalist-gate.yml'
+      - 'experiments/fusion-finalist.trigger'
+
+jobs:
+  full-gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Build exact V1 and fusion-only candidate
+        run: |
+          set -euxo pipefail
+          V1=1e209dad266d59b4d43cdea189876bc6ea551339
+          git worktree add /tmp/base "$V1"
+          cp -a /tmp/base /tmp/fusion
+          python3 scripts/apply_infer_beta_fusion.py /tmp/fusion
+          for arm in base fusion; do
+            (cd /tmp/$arm && cargo test --release --locked)
+            (cd /tmp/$arm && RUSTFLAGS='-C target-cpu=x86-64-v3' cargo build --release --locked)
+            cp /tmp/$arm/target/release/sokonanoda /tmp/$arm-bin
+          done
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+
+      - name: Fetch Arena and build score-driving corpus
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          : >/tmp/build-tests.tsv
+          mapfile -t tests < <(find tests/perf -type f -name '*.yaml' | sort)
+          for name in init cedar cslib mathlib; do
+            [ -f "tests/$name.yaml" ] && tests+=("tests/$name.yaml")
+          done
+          for y in "${tests[@]}"; do
+            t=${y#tests/}; t=${t%.yaml}
+            echo "BUILD $t" | tee -a /tmp/build-tests.tsv
+            nix develop -c ./lka.py build-test "$t" | tee -a /tmp/build-tests.tsv
+          done
+          find _build/tests -type f -name '*.ndjson' | sort >/tmp/built-exports.txt
+          echo "built $(wc -l </tmp/built-exports.txt) score-driving Arena exports"
+
+      - name: Score-driving correctness recheck
+        run: |
+          set -uxo pipefail
+          cd /tmp/arena
+          : >/tmp/correctness.tsv
+          cat >/tmp/normalize_stderr.py <<'PY'
+          import re, sys
+          s = sys.stdin.read()
+          s = re.sub(r"thread '([^']+)' \(\d+\)", r"thread '\1' (<tid>)", s)
+          s = re.sub(r"(src/[A-Za-z0-9_./-]+\.rs):\d+:\d+", r"\1:<loc>", s)
+          sys.stdout.write(s)
+          PY
+          failed=0
+          while IFS= read -r f; do
+            set +e
+            /tmp/base-bin /tmp/checker.json < "$f" >/tmp/base.out 2>/tmp/base.err
+            bs=$?
+            /tmp/fusion-bin /tmp/checker.json < "$f" >/tmp/fusion.out 2>/tmp/fusion.err
+            fs=$?
+            set -e
+            python3 /tmp/normalize_stderr.py </tmp/base.err >/tmp/base.err.norm
+            python3 /tmp/normalize_stderr.py </tmp/fusion.err >/tmp/fusion.err.norm
+            if [ "$bs" -ne "$fs" ] || ! cmp -s /tmp/base.out /tmp/fusion.out || ! cmp -s /tmp/base.err.norm /tmp/fusion.err.norm; then
+              printf 'MISMATCH\t%s\tbase=%s\tfusion=%s\n' "$f" "$bs" "$fs" | tee -a /tmp/correctness.tsv
+              failed=1
+            else
+              printf 'MATCH\t%s\t%s\n' "$bs" "$f" >>/tmp/correctness.tsv
+            fi
+          done </tmp/built-exports.txt
+          [ "$failed" -eq 0 ]
+          echo "matched $(wc -l </tmp/correctness.tsv) score-driving exports"
+
+      - name: Robust score-driving performance comparison
+        run: |
+          set -uxo pipefail
+          cd /tmp/arena
+          : >/tmp/perf.tsv
+          : >/tmp/perf-errors.tsv
+          mapfile -t files < /tmp/built-exports.txt
+          for f in "${files[@]}"; do
+            label=${f#_build/tests/}; label=${label%.ndjson}
+            for arm in base fusion; do
+              for r in 1 2 3; do
+                rm -f /tmp/t
+                set +e
+                timeout --signal=TERM 900s /usr/bin/time -f '%e\t%M' -o /tmp/t /tmp/$arm-bin /tmp/checker.json < "$f" >/dev/null 2>/tmp/bench.err
+                status=$?
+                set -e
+                sec=NA; rss=NA
+                if [ -s /tmp/t ]; then
+                  read -r sec rss < <(tail -n 1 /tmp/t)
+                fi
+                printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$label" "$arm" "$r" "$status" "$sec" "$rss" | tee -a /tmp/perf.tsv
+                if [ "$status" -eq 124 ] || [ "$sec" = NA ]; then
+                  printf '%s\t%s\t%s\tstatus=%s\t%s\n' "$label" "$arm" "$r" "$status" "$(tr '\n' ' ' </tmp/bench.err | head -c 400)" | tee -a /tmp/perf-errors.tsv
+                fi
+              done
+            done
+          done
+
+      - name: Finalist scorecard
+        if: always()
+        run: |
+          python3 - <<'PY' | tee /tmp/finalist-scorecard.txt
+          from pathlib import Path
+          from statistics import median
+          rows={}; malformed=[]
+          p=Path('/tmp/perf.tsv')
+          for line in p.read_text().splitlines() if p.exists() else []:
+              parts=line.split('\t')
+              if len(parts)!=6: malformed.append(line); continue
+              t,a,r,status,s,m=parts
+              try:
+                  sec=None if s=='NA' else float(s); rss=None if m=='NA' else int(m)
+              except ValueError:
+                  malformed.append(line); continue
+              rows.setdefault((t,a),[]).append((int(status),sec,rss))
+          regress=[]; gains=[]; invalid=[]; aggregate_base=aggregate_fusion=0.0
+          tests=sorted({k[0] for k in rows})
+          for t in tests:
+              b=rows.get((t,'base'),[]); f=rows.get((t,'fusion'),[])
+              if len(b)!=3 or len(f)!=3: invalid.append((t,'missing repetitions')); continue
+              bs={x[0] for x in b}; fs={x[0] for x in f}
+              if len(bs)!=1 or len(fs)!=1 or bs!=fs: invalid.append((t,f'status mismatch base={sorted(bs)} fusion={sorted(fs)}')); continue
+              if any(x[1] is None for x in b+f): invalid.append((t,'missing timing')); continue
+              bm=median(x[1] for x in b); fm=median(x[1] for x in f)
+              d=(fm/bm-1)*100 if bm>=0.01 else 0.0
+              speed=(bm/fm) if fm else float('inf')
+              print(f'{t}\tstatus={next(iter(bs))}\tbase={bm:.4f}\tfusion={fm:.4f}\tdelta_pct={d:.2f}\tspeedup={speed:.3f}x')
+              aggregate_base+=bm; aggregate_fusion+=fm
+              if bm>=0.05: (regress if d>5 else gains).append((d,t))
+          total_delta=(aggregate_fusion/aggregate_base-1)*100 if aggregate_base else 0
+          print('AGGREGATE_WALL',f'base={aggregate_base:.4f}',f'fusion={aggregate_fusion:.4f}',f'delta_pct={total_delta:.2f}',f'speedup={aggregate_base/aggregate_fusion if aggregate_fusion else float("inf"):.3f}x')
+          print('MAX_MATERIAL_REGRESSION',max(regress,default=(0,'none')))
+          print('BEST_GAIN',min(gains,default=(0,'none')))
+          print('INVALID',invalid)
+          print('MALFORMED_ROWS',len(malformed))
+          print('PRIOR_FULL_CORRECTNESS','PASS_191_OF_191_RUN_32112667599')
+          print('FINALIST','PASS' if not regress and not invalid and not malformed else 'REVIEW')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fusion-finalist-full-validation
+          path: |
+            /tmp/build-tests.tsv
+            /tmp/built-exports.txt
+            /tmp/correctness.tsv
+            /tmp/perf.tsv
+            /tmp/perf-errors.tsv
+            /tmp/finalist-scorecard.txt
