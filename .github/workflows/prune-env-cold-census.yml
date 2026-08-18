@@ -6,6 +6,7 @@ on:
   workflow_dispatch:
 
 # Frozen after full repo-history review: measure representation reconstruction, not lookup micro-cost.
+# Trigger after base workflow registration.
 jobs:
   census:
     runs-on: ubuntu-24.04
@@ -57,8 +58,7 @@ pub fn report_prune_stats() {
           s=s.replace('''                return hit;\n            }\n        }\n        self.prune_env_cold(e, mask, slot)''','''                MG_PRUNE_DM_HIT.fetch_add(1, Ordering::Relaxed);\n                return hit;\n            }\n        }\n        MG_PRUNE_COLD.fetch_add(1, Ordering::Relaxed);\n        self.prune_env_cold(e, mask, slot)''',1)
           s=s.replace('''    fn prune_env_cold(&mut self, e: E<'t>, mask: u64, slot: usize) -> E<'t> {\n        let mut buf''','''    fn prune_env_cold(&mut self, e: E<'t>, mask: u64, slot: usize) -> E<'t> {\n        MG_COLD_MASK_BITS.fetch_add(mask.count_ones() as u64, Ordering::Relaxed);\n        match e { value::Env::Cons { .. } => { MG_COLD_CONS_ROOT.fetch_add(1, Ordering::Relaxed); }, value::Env::Framed { .. } => { MG_COLD_FRAME_ROOT.fetch_add(1, Ordering::Relaxed); }, value::Env::Nil { .. } => {} }\n        let mut buf''',1)
           s=s.replace('''                value::Env::Cons { v, parent, .. } => {\n                    if rem & 1 != 0 {''','''                value::Env::Cons { v, parent, .. } => {\n                    MG_COLD_CONS_STEPS.fetch_add(1, Ordering::Relaxed);\n                    if rem & 1 != 0 {''',1)
-          s=s.replace('''        let slots: &[V<'t>] = unsafe { std::slice::from_raw_parts(buf.as_ptr().cast::<V<'t>>(), n) };''','''        MG_COLD_SELECTED.fetch_add(n as u64, Ordering::Relaxed);\n        let slots: &[V<'t>] = unsafe { std::slice::from_raw_parts(buf.as_ptr().cast::<V<'t>>(), n) };
-''',1)
+          s=s.replace('''        let slots: &[V<'t>] = unsafe { std::slice::from_raw_parts(buf.as_ptr().cast::<V<'t>>(), n) };''','''        MG_COLD_SELECTED.fetch_add(n as u64, Ordering::Relaxed);\n        let slots: &[V<'t>] = unsafe { std::slice::from_raw_parts(buf.as_ptr().cast::<V<'t>>(), n) };''',1)
           p.write_text(s)
           m=Path('/tmp/v1/src/main.rs')
           t=m.read_text()
