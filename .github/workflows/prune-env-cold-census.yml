@@ -1,0 +1,113 @@
+name: Prune env cold census
+
+on:
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Build exact V1 census arm
+        run: |
+          set -euxo pipefail
+          V1=1e209dad266d59b4d43cdea189876bc6ea551339
+          git worktree add /tmp/v1 "$V1"
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/v1/src/eval.rs')
+          s=p.read_text()
+          anchor='use std::collections::hash_map::Entry;\n'
+          probe='''use std::sync::atomic::{AtomicU64, Ordering};
+          static MG_PRUNE_CALL: AtomicU64 = AtomicU64::new(0);
+          static MG_PRUNE_ZERO: AtomicU64 = AtomicU64::new(0);
+          static MG_PRUNE_NIL: AtomicU64 = AtomicU64::new(0);
+          static MG_PRUNE_SUBSET: AtomicU64 = AtomicU64::new(0);
+          static MG_PRUNE_LOCAL_HIT: AtomicU64 = AtomicU64::new(0);
+          static MG_PRUNE_DM_HIT: AtomicU64 = AtomicU64::new(0);
+          static MG_PRUNE_COLD: AtomicU64 = AtomicU64::new(0);
+          static MG_COLD_CONS_ROOT: AtomicU64 = AtomicU64::new(0);
+          static MG_COLD_FRAME_ROOT: AtomicU64 = AtomicU64::new(0);
+          static MG_COLD_CONS_STEPS: AtomicU64 = AtomicU64::new(0);
+          static MG_COLD_SELECTED: AtomicU64 = AtomicU64::new(0);
+          static MG_COLD_MASK_BITS: AtomicU64 = AtomicU64::new(0);
+          pub fn report_prune_stats() {
+              if std::env::var_os("MATHGRAPH_PRUNE_CENSUS").is_none() { return; }
+              eprintln!("MATHGRAPH_PRUNE calls={} zero={} nil={} subset={} local_hit={} dm_hit={} cold={} cold_cons_root={} cold_frame_root={} cold_cons_steps={} cold_selected={} cold_mask_bits={}",
+                MG_PRUNE_CALL.load(Ordering::Relaxed), MG_PRUNE_ZERO.load(Ordering::Relaxed), MG_PRUNE_NIL.load(Ordering::Relaxed),
+                MG_PRUNE_SUBSET.load(Ordering::Relaxed), MG_PRUNE_LOCAL_HIT.load(Ordering::Relaxed), MG_PRUNE_DM_HIT.load(Ordering::Relaxed),
+                MG_PRUNE_COLD.load(Ordering::Relaxed), MG_COLD_CONS_ROOT.load(Ordering::Relaxed), MG_COLD_FRAME_ROOT.load(Ordering::Relaxed),
+                MG_COLD_CONS_STEPS.load(Ordering::Relaxed), MG_COLD_SELECTED.load(Ordering::Relaxed), MG_COLD_MASK_BITS.load(Ordering::Relaxed));
+          }
+          '''
+          assert anchor in s
+          s=s.replace(anchor,anchor+probe,1)
+          s=s.replace('''    fn prune_env(&mut self, e: E<'t>, mask: u64) -> E<'t> {\n        if mask == 0 {''','''    fn prune_env(&mut self, e: E<'t>, mask: u64) -> E<'t> {\n        MG_PRUNE_CALL.fetch_add(1, Ordering::Relaxed);\n        if mask == 0 {\n            MG_PRUNE_ZERO.fetch_add(1, Ordering::Relaxed);''',1)
+          s=s.replace('value::Env::Nil { .. } => return e,','value::Env::Nil { .. } => { MG_PRUNE_NIL.fetch_add(1, Ordering::Relaxed); return e },',1)
+          s=s.replace('''                if *m & mask == *m {\n                    return e\n                }''','''                if *m & mask == *m {\n                    MG_PRUNE_SUBSET.fetch_add(1, Ordering::Relaxed);\n                    return e\n                }''',1)
+          s=s.replace('''                    if let Some(r) = r {\n                        return r;\n                    }''','''                    if let Some(r) = r {\n                        MG_PRUNE_LOCAL_HIT.fetch_add(1, Ordering::Relaxed);\n                        return r;\n                    }''',2)
+          s=s.replace('''                return hit;\n            }\n        }\n        self.prune_env_cold(e, mask, slot)''','''                MG_PRUNE_DM_HIT.fetch_add(1, Ordering::Relaxed);\n                return hit;\n            }\n        }\n        MG_PRUNE_COLD.fetch_add(1, Ordering::Relaxed);\n        self.prune_env_cold(e, mask, slot)''',1)
+          s=s.replace('''    fn prune_env_cold(&mut self, e: E<'t>, mask: u64, slot: usize) -> E<'t> {\n        let mut buf''','''    fn prune_env_cold(&mut self, e: E<'t>, mask: u64, slot: usize) -> E<'t> {\n        MG_COLD_MASK_BITS.fetch_add(mask.count_ones() as u64, Ordering::Relaxed);\n        match e { value::Env::Cons { .. } => { MG_COLD_CONS_ROOT.fetch_add(1, Ordering::Relaxed); }, value::Env::Framed { .. } => { MG_COLD_FRAME_ROOT.fetch_add(1, Ordering::Relaxed); }, value::Env::Nil { .. } => {} }\n        let mut buf''',1)
+          s=s.replace('''                value::Env::Cons { v, parent, .. } => {\n                    if rem & 1 != 0 {''','''                value::Env::Cons { v, parent, .. } => {\n                    MG_COLD_CONS_STEPS.fetch_add(1, Ordering::Relaxed);\n                    if rem & 1 != 0 {''',1)
+          s=s.replace('''        let slots: &[V<'t>] = unsafe { std::slice::from_raw_parts(buf.as_ptr().cast::<V<'t>>(), n) };''','''        MG_COLD_SELECTED.fetch_add(n as u64, Ordering::Relaxed);\n        let slots: &[V<'t>] = unsafe { std::slice::from_raw_parts(buf.as_ptr().cast::<V<'t>>(), n) };''',1)
+          p.write_text(s)
+          m=Path('/tmp/v1/src/main.rs')
+          t=m.read_text()
+          a='    match out {\n'
+          assert a in t
+          t=t.replace(a,'    sokonanoda::eval::report_prune_stats();\n    match out {\n',1)
+          m.write_text(t)
+          PY
+          cd /tmp/v1
+          cargo test --locked
+          RUSTFLAGS='-C target-cpu=native' cargo build --release --locked
+          cp target/release/sokonanoda /tmp/v1-prune
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+      - name: Build grind export
+        run: |
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test perf/grind-ring-5
+      - name: Run census and classify
+        env:
+          MATHGRAPH_PRUNE_CENSUS: "1"
+        run: |
+          cd /tmp/arena
+          /tmp/v1-prune /tmp/checker.json < _build/tests/perf/grind-ring-5.ndjson >/tmp/out 2>/tmp/err
+          grep '^MATHGRAPH_PRUNE ' /tmp/err | tail -1 | tee /tmp/prune.txt
+          python3 - <<'PY' | tee /tmp/decision.txt
+          from pathlib import Path
+          xs=Path('/tmp/prune.txt').read_text().split()[1:]
+          d={k:int(v) for k,v in (x.split('=',1) for x in xs)}
+          cold=max(d['cold'],1)
+          print('cold_share=',d['cold']/max(d['calls'],1))
+          print('cons_steps_per_cold=',d['cold_cons_steps']/cold)
+          print('selected_per_cold=',d['cold_selected']/cold)
+          print('mask_bits_per_cold=',d['cold_mask_bits']/cold)
+          print('frame_root_share=',d['cold_frame_root']/cold)
+          if d['cold']/max(d['calls'],1) > .20 and d['cold_cons_steps']/cold > 4:
+              verdict='COLD_TRAVERSAL_DOMINANT__TEST_DIRECT_FRAME_CONSTRUCTION'
+          elif d['cold_frame_root']/cold > .5:
+              verdict='FRAME_REPRUNING_DOMINANT__TEST_FRAME_MASK_FASTPATH'
+          elif d['dm_hit']+d['local_hit'] < d['cold']:
+              verdict='MISS_REUSE_WEAK__DO_NOT_ADD_CACHE'
+          else:
+              verdict='REUSE_PRESENT__TEST_LARGER_EXACT_PRUNE_MEMO'
+          print('DECISION='+verdict)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: prune-env-cold-census
+          path: |
+            /tmp/prune.txt
+            /tmp/decision.txt
+            /tmp/err
