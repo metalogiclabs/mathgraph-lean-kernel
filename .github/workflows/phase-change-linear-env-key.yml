@@ -1,0 +1,132 @@
+name: Phase-change linear env key
+
+on:
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  separator:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+
+      - name: Build exact V1 and candidate
+        run: |
+          set -euxo pipefail
+          V1=1e209dad266d59b4d43cdea189876bc6ea551339
+          git cat-file -e "$V1^{commit}"
+          git worktree add /tmp/v1 "$V1"
+          cp -a /tmp/v1 /tmp/base-src
+          cp -a /tmp/v1 /tmp/linear-src
+          python3 scripts/apply_linear_env_key.py /tmp/linear-src
+          for arm in base linear; do
+            cd /tmp/${arm}-src
+            cargo test --locked
+            RUSTFLAGS='-C target-cpu=native' cargo build --release --locked
+            cp target/release/sokonanoda /tmp/${arm}-checker
+          done
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+
+      - name: Build compact deciding Arena exports
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          cp tests/perf/beta-ladder.lean tests/perf/beta-ladder-8000.lean
+          sed -i 's/let n := 2000/let n := 8000/' tests/perf/beta-ladder-8000.lean
+          printf 'description: beta ladder linear env key N=8000\nleanfile: tests/perf/beta-ladder-8000.lean\nexport-decls: ["beta_ladder"]\noutcome: accept\ncompare-perf: true\n' > tests/perf/beta-ladder-8000.yaml
+          for t in perf/beta-ladder perf/beta-ladder-8000 perf/grind-ring-5 perf/app-lam; do
+            nix develop -c ./lka.py build-test "$t"
+          done
+
+      - name: Semantic equality smoke
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          for file in \
+            _build/tests/perf/beta-ladder.ndjson \
+            _build/tests/perf/beta-ladder-8000.ndjson \
+            _build/tests/perf/grind-ring-5.ndjson \
+            _build/tests/perf/app-lam.ndjson; do
+            /tmp/base-checker /tmp/checker.json < "$file" >/tmp/base.out
+            /tmp/linear-checker /tmp/checker.json < "$file" >/tmp/linear.out
+            cmp /tmp/base.out /tmp/linear.out
+          done
+
+      - name: Callgrind first
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y valgrind
+          printf 'test,arm,Ir\n' >/tmp/callgrind.csv
+          cd /tmp/arena
+          profile () {
+            test="$1"; file="$2"; arm="$3"
+            out="/tmp/cg-${test}-${arm}.out"
+            timeout 900 valgrind --tool=callgrind --callgrind-out-file="$out" /tmp/${arm}-checker /tmp/checker.json < "$file" >/dev/null 2>/dev/null
+            ir=$(awk '/^summary:/ {print $2}' "$out")
+            test -n "$ir"
+            printf '%s,%s,%s\n' "$test" "$arm" "$ir" >>/tmp/callgrind.csv
+          }
+          for arm in base linear; do
+            profile beta2000 _build/tests/perf/beta-ladder.ndjson "$arm"
+            profile app-lam _build/tests/perf/app-lam.ndjson "$arm"
+          done
+
+      - name: Wall scaling
+        run: |
+          set -euxo pipefail
+          printf 'test,rep,arm,wall\n' >/tmp/timings.csv
+          cd /tmp/arena
+          for test in beta2000 beta8000 grind app; do
+            case "$test" in
+              beta2000) file=_build/tests/perf/beta-ladder.ndjson ;;
+              beta8000) file=_build/tests/perf/beta-ladder-8000.ndjson ;;
+              grind) file=_build/tests/perf/grind-ring-5.ndjson ;;
+              app) file=_build/tests/perf/app-lam.ndjson ;;
+            esac
+            for rep in 1 2 3; do
+              if (( rep % 2 )); then arms='base linear'; else arms='linear base'; fi
+              for arm in $arms; do
+                /usr/bin/time -f '%e' -o /tmp/t timeout 300 /tmp/${arm}-checker /tmp/checker.json < "$file" >/dev/null 2>/dev/null
+                printf '%s,%s,%s,%s\n' "$test" "$rep" "$arm" "$(cat /tmp/t)" >>/tmp/timings.csv
+              done
+            done
+          done
+
+      - name: Decide
+        run: |
+          python3 - <<'PY' | tee /tmp/summary.txt
+          import csv, statistics
+          C={}
+          for r in csv.DictReader(open('/tmp/callgrind.csv')): C[(r['test'],r['arm'])]=int(r['Ir'])
+          for t in ['beta2000','app-lam']:
+              q=C[(t,'linear')]/C[(t,'base')]
+              print('IR',t,f'{q:.6f}',f'{(q-1)*100:+.2f}%')
+          rows=list(csv.DictReader(open('/tmp/timings.csv')))
+          for t in ['beta2000','beta8000','grind','app']:
+              b=statistics.median(float(r['wall']) for r in rows if r['test']==t and r['arm']=='base')
+              x=statistics.median(float(r['wall']) for r in rows if r['test']==t and r['arm']=='linear')
+              print('WALL',t,b,x,f'{x/b:.6f}',f'{(x/b-1)*100:+.2f}%')
+          beta_ir=C[('beta2000','linear')]/C[('beta2000','base')]
+          app_ir=C[('app-lam','linear')]/C[('app-lam','base')]
+          print('DECISION=' + ('PHASE_CHANGE_CANDIDATE' if beta_ir < 0.90 and app_ir <= 1.01 else 'NOT_PHASE_CHANGE'))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: phase-change-linear-env-key
+          path: |
+            /tmp/callgrind.csv
+            /tmp/timings.csv
+            /tmp/summary.txt
