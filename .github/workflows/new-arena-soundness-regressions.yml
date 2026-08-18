@@ -1,0 +1,65 @@
+name: New Arena soundness regressions
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'experiments/new-arena-soundness.trigger'
+      - '.github/workflows/new-arena-soundness-regressions.yml'
+  workflow_dispatch:
+
+jobs:
+  four-new-cases:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Build exact public V1
+        run: |
+          set -euxo pipefail
+          V1=1e209dad266d59b4d43cdea189876bc6ea551339
+          git worktree add /tmp/v1 "$V1"
+          cd /tmp/v1
+          cargo build --release --locked
+          cp target/release/sokonanoda /tmp/v1-checker
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+      - name: Fetch current Arena and build four new adversarial tests
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          for t in extra-rec rec-missing-ih proj-of-stuck-prop proj-of-subst-prop; do
+            nix develop -c ./lka.py build-test "$t"
+          done
+      - name: Run exact V1 and classify
+        run: |
+          set -uo pipefail
+          cd /tmp/arena
+          : >/tmp/results.tsv
+          bad=0
+          for t in extra-rec rec-missing-ih proj-of-stuck-prop proj-of-subst-prop; do
+            f="_build/tests/${t}.ndjson"
+            if [ ! -s "$f" ]; then f="$(find _build/tests -name "${t}.ndjson" | head -1)"; fi
+            set +e
+            /tmp/v1-checker /tmp/checker.json < "$f" >/tmp/${t}.out 2>/tmp/${t}.err
+            rc=$?
+            set -e
+            # These are adversarial proofs and must be rejected; V1 returning 0 means the Arena red case.
+            if [ "$rc" -eq 0 ]; then verdict=WRONG_ACCEPT; bad=$((bad+1)); else verdict=REJECT; fi
+            printf '%s\t%s\trc=%s\n' "$t" "$verdict" "$rc" | tee -a /tmp/results.tsv
+          done
+          echo "wrong_accepts=$bad" | tee /tmp/decision.txt
+          if [ "$bad" -eq 1 ]; then echo 'DECISION=EXACTLY_ONE_NEW_SOUNDNESS_RESIDUAL' | tee -a /tmp/decision.txt; else echo 'DECISION=RECHECK_SITE_MAPPING' | tee -a /tmp/decision.txt; fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: new-arena-soundness-regressions
+          path: |
+            /tmp/results.tsv
+            /tmp/decision.txt
+            /tmp/*.err
