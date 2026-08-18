@@ -1,0 +1,120 @@
+name: Producer-side projection fusion separator
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'experiments/producer-side-projection-fusion.trigger'
+      - '.github/workflows/producer-side-projection-fusion.yml'
+  workflow_dispatch:
+
+jobs:
+  separator:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build exact V1 baseline and isolated candidate
+        run: |
+          set -euxo pipefail
+          V1=1e209dad266d59b4d43cdea189876bc6ea551339
+          git worktree add /tmp/base "$V1"
+          git worktree add /tmp/cand "$V1"
+
+          # Safety audit: eval_no_cache must only be entered through eval plus its own definition.
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('/tmp/cand/src/eval.rs').read_text()
+          n=s.count('eval_no_cache(')
+          print('eval_no_cache_occurrences=', n)
+          assert n == 3, f'unexpected eval_no_cache call graph: {n}'
+          PY
+
+          # Candidate: eval() already key_env-projects open Lambda/Pi before entering
+          # eval_no_cache. Preserve that projected env instead of asking key_env again.
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/cand/src/eval.rs')
+          s=p.read_text()
+          old_lam='''            Expr::Lambda { binder_name, binder_style, binder_type, body, .. } =>\n                {\n                let ce = self.key_env(env, e);\n                value::mk_lam(self.arena, binder_name, binder_style, binder_type, Closure::mk_eval(ce, body))\n            }'''
+          new_lam='''            Expr::Lambda { binder_name, binder_style, binder_type, body, .. } =>\n                value::mk_lam(self.arena, binder_name, binder_style, binder_type, Closure::mk_eval(env, body))'''
+          old_pi='''                {\n                    let ce = self.key_env(env, e);\n                    value::mk_pi(self.arena, binder_name, binder_style, dom, Closure::mk_eval(ce, body))\n                }'''
+          new_pi='''                value::mk_pi(self.arena, binder_name, binder_style, dom, Closure::mk_eval(env, body))'''
+          assert old_lam in s
+          assert old_pi in s
+          s=s.replace(old_lam,new_lam,1).replace(old_pi,new_pi,1)
+          p.write_text(s)
+          PY
+
+          for A in base cand; do
+            cd /tmp/$A
+            cargo test --locked
+            cargo build --release --locked
+            cp target/release/sokonanoda /tmp/$A-bin
+          done
+
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+
+      - name: Build focused Arena tests
+        run: |
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test perf/grind-ring-5 perf/app-lam perf/beta-ladder
+
+      - name: Semantic equality gate
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          for T in grind-ring-5 app-lam beta-ladder; do
+            /tmp/base-bin /tmp/checker.json < _build/tests/perf/$T.ndjson > /tmp/base-$T.out 2>/tmp/base-$T.err
+            /tmp/cand-bin /tmp/checker.json < _build/tests/perf/$T.ndjson > /tmp/cand-$T.out 2>/tmp/cand-$T.err
+            cmp /tmp/base-$T.out /tmp/cand-$T.out
+          done
+
+      - name: Callgrind instruction separator
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          nix shell nixpkgs#valgrind -c bash -lc '
+            for T in grind-ring-5 app-lam beta-ladder; do
+              valgrind --tool=callgrind --callgrind-out-file=/tmp/base-$T.cg /tmp/base-bin /tmp/checker.json < _build/tests/perf/$T.ndjson >/dev/null 2>/tmp/base-$T.vg
+              valgrind --tool=callgrind --callgrind-out-file=/tmp/cand-$T.cg /tmp/cand-bin /tmp/checker.json < _build/tests/perf/$T.ndjson >/dev/null 2>/tmp/cand-$T.vg
+            done
+          '
+          python3 - <<'PY' | tee /tmp/decision.txt
+          from pathlib import Path
+          def ir(path):
+              for line in Path(path).read_text(errors='ignore').splitlines():
+                  if line.startswith('summary:'):
+                      return int(line.split()[1])
+              raise RuntimeError(path)
+          ratios={}
+          for t in ['grind-ring-5','app-lam','beta-ladder']:
+              b=ir(f'/tmp/base-{t}.cg'); c=ir(f'/tmp/cand-{t}.cg')
+              delta=(c-b)/b
+              ratios[t]=delta
+              print(f'{t} base={b} cand={c} delta={delta:.6%}')
+          if ratios['grind-ring-5'] <= -0.05 and ratios['app-lam'] <= 0.01 and ratios['beta-ladder'] <= 0.01:
+              d='PROMOTE__UPSTREAM_PROJECTION_DUPLICATION_DELETED'
+          elif ratios['grind-ring-5'] <= -0.01:
+              d='REAL_GAIN__MEASURE_REALWORLD_BEFORE_PROMOTION'
+          else:
+              d='KILL__DUPLICATE_KEY_ENV_NOT_MATERIAL_COST'
+          print('DECISION='+d)
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: producer-side-projection-fusion
+          path: |
+            /tmp/decision.txt
+            /tmp/*.cg
+            /tmp/*.vg
+            /tmp/*.err
