@@ -3,10 +3,6 @@ name: Producer-side projection fusion separator
 on:
   pull_request:
     branches: [master]
-    paths:
-      - 'experiments/producer-side-projection-fusion.trigger'
-      - 'experiments/infer-projection-fusion.trigger'
-      - '.github/workflows/producer-side-projection-fusion.yml'
   workflow_dispatch:
 
 jobs:
