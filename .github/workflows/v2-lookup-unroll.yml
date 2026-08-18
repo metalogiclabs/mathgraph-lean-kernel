@@ -3,6 +3,8 @@ name: V2 lookup unroll separator
 on:
   push:
     branches: [mathgraph-experiment-lookup-unroll]
+  pull_request:
+    branches: [master]
   workflow_dispatch:
 
 jobs:
