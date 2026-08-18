@@ -36,9 +36,9 @@ jobs:
         run: |
           set -euxo pipefail
           cd /tmp/arena
-          nix develop -c bash -lc 'command -v valgrind >/dev/null || { echo "VALGRIND_MISSING"; exit 3; }; valgrind --tool=callgrind --callgrind-out-file=/tmp/callgrind.out --collect-jumps=yes /tmp/v1-checker /tmp/checker.json < _build/tests/perf/grind-ring-5.ndjson >/tmp/check.out 2>/tmp/callgrind.err'
-          nix develop -c bash -lc 'callgrind_annotate --inclusive=yes --threshold=0.05 /tmp/callgrind.out' > /tmp/callgrind-inclusive.txt
-          nix develop -c bash -lc 'callgrind_annotate --inclusive=no --threshold=0.05 /tmp/callgrind.out' > /tmp/callgrind-self.txt
+          nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/callgrind.out --collect-jumps=yes /tmp/v1-checker /tmp/checker.json < _build/tests/perf/grind-ring-5.ndjson >/tmp/check.out 2>/tmp/callgrind.err
+          nix shell nixpkgs#valgrind -c callgrind_annotate --inclusive=yes --threshold=0.05 /tmp/callgrind.out > /tmp/callgrind-inclusive.txt
+          nix shell nixpkgs#valgrind -c callgrind_annotate --inclusive=no --threshold=0.05 /tmp/callgrind.out > /tmp/callgrind-self.txt
           grep -Ei 'apply_many|apply\(|force_all|iota_step|fire_recursor|eval_inst|eval\(|prune_env|prune_env_cold|key_env|mk_thunk_hc|spine_snoc_hc|mk_rigid_hc|mk_lam_hc|env_extend|canonicalize_for_spine' /tmp/callgrind-inclusive.txt | head -200 | tee /tmp/iota-hot-functions.txt || true
       - name: Classify hot residual
         run: |
@@ -52,7 +52,6 @@ jobs:
             'RECURSOR':['fire_recursor','eval_inst'],
             'CONSTRUCTION':['spine_snoc_hc','mk_rigid_hc','mk_lam_hc','canonicalize_for_spine'],
           }
-          # Preserve raw attribution; textual grouping is only a routing hint.
           lower=txt.lower()
           hits={g:sum(lower.count(k.lower()) for k in ks) for g,ks in groups.items()}
           print('ROUTING_HINT_COUNTS',hits)
