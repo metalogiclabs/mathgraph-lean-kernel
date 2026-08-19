@@ -29,17 +29,38 @@ cp target/release/sokonanoda /tmp/mg-outcome-census-bin
 cd /tmp
 git clone --depth 1 https://github.com/leanprover/lean-kernel-arena arena-outcome
 cd arena-outcome
+nix develop -c ./lka.py build-test init-prelude
 nix develop -c ./lka.py build-test mathlib
-cat > /tmp/checker.json <<EOF
-{"input":"/tmp/arena-outcome/_build/tests/mathlib.ndjson","threads":4,"print_success_message":false,"permit_all_axioms":true,"nat_extension":true,"string_extension":true}
+cat > /tmp/checker.json <<'EOF'
+{
+  "use_stdin": true,
+  "nat_extension": true,
+  "string_extension": true,
+  "unpermitted_axiom_hard_error": false,
+  "unsafe_permit_all_axioms": true,
+  "num_threads": 4
+}
 EOF
+# Preflight the exact Arena invocation shape before spending a Mathlib run.
 set +e
-/usr/bin/time -f 'WALL_SECONDS=%e' /tmp/mg-outcome-census-bin /tmp/checker.json 2> /tmp/outcome-census.stderr
+/tmp/mg-outcome-census-bin /tmp/checker.json < /tmp/arena-outcome/_build/tests/init-prelude.ndjson >/dev/null 2>/tmp/preflight.stderr
+PRE_STATUS=$?
+set -e
+echo "PREFLIGHT_STATUS=$PRE_STATUS"
+if [ "$PRE_STATUS" -ne 0 ]; then
+  cat /tmp/preflight.stderr
+  exit 1
+fi
+
+set +e
+/usr/bin/time -f 'WALL_SECONDS=%e' /tmp/mg-outcome-census-bin /tmp/checker.json < /tmp/arena-outcome/_build/tests/mathlib.ndjson >/dev/null 2> /tmp/outcome-census.stderr
 CHECKER_STATUS=$?
 set -e
 {
   echo "CHECKER_STATUS=$CHECKER_STATUS"
   grep -E 'MG_CENSUS|WALL_SECONDS|Command exited' /tmp/outcome-census.stderr || true
 } | tee "$ROOT/unfold-outcome-census.txt"
-# Fail only if we failed to obtain the census itself.
-grep -q 'MG_CENSUS pair_calls=' "$ROOT/unfold-outcome-census.txt"
+# A valid census must actually process unfold pairs; zero means launch/instrumentation failure.
+PAIR_CALLS=$(sed -n 's/.*MG_CENSUS pair_calls=//p' "$ROOT/unfold-outcome-census.txt" | tail -1)
+[ -n "$PAIR_CALLS" ]
+[ "$PAIR_CALLS" -gt 0 ]
