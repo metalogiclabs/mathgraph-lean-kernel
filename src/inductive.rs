@@ -83,6 +83,21 @@ impl<'t, 'p: 't> ExportFile<'p> {
                 tc.mk_recursors(&st)
             });
 
+            // For ordinary (non-nested) inductives, the exported recursor set must be
+            // exactly the recursor set reconstructed from the inductive declaration.
+            if !st.is_nested() {
+                use std::collections::HashSet;
+                let (block_start, block_size) = self.mutual_block_sizes.get(&ind.info.name).unwrap();
+                let imported: HashSet<NamePtr<'t>> = (*block_start..(*block_start + *block_size))
+                    .filter_map(|idx| match self.declars.get_index(idx).map(|(_, d)| d) {
+                        Some(Declar::Recursor(r)) => Some(r.info.name),
+                        _ => None,
+                    })
+                    .collect();
+                let expected: HashSet<NamePtr<'t>> = recursors.iter().map(|r| r.info().name).collect();
+                assert_eq!(imported, expected, "exported recursor set differs from reconstructed recursor set");
+            }
+
             // The last temporary environment extension, which also includes the recursors.
             let recursor_extension = {
                 let mut out = ctor_extension;

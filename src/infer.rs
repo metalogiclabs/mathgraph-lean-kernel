@@ -164,6 +164,25 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         ctx: C<'t>,
         e: ExprPtr<'t>,
     ) -> V<'t> {
+        // Fuse the typing rule for an immediately-applied lambda. The generic
+        // path first infers the lambda as a Pi and then consumes that Pi, which
+        // re-infers nested beta-ladder suffixes. Check the binder and argument
+        // once, then infer the body under the actual argument substitution.
+        if let App { fun, arg, .. } = self.ctx.read_expr(e) {
+            if let Lambda { binder_type, body, .. } = self.ctx.read_expr(fun) {
+                let dom = self.arg_value(depth, env, binder_type);
+                if flag == Check {
+                    self.infer_sort_of_v(flag, depth, env, ctx, binder_type);
+                    let arg_ty = self.infer_value(flag, depth, env, ctx, arg);
+                    assert!(self.conv_types_at(depth, dom, arg_ty), "app arg def_eq failed");
+                }
+                let av = self.arg_value(depth, env, arg);
+                let env2 = value::env_extend(self.arena, env, av);
+                let ctx2 = value::ctx_extend(self.arena, ctx, dom);
+                return self.infer_value(flag, depth + 1, env2, ctx2, body);
+            }
+        }
+
         let (fun, mut args) = self.ctx.unfold_apps_stack(self.arena, e);
         let mut fty = self.infer_value(flag, depth, env, ctx, fun);
         while let Some(arg) = args.pop() {

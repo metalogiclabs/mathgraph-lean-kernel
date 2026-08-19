@@ -611,10 +611,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
             }
             Expr::App { .. } => unreachable!(),
             Expr::Lambda { binder_name, binder_style, binder_type, body, .. } =>
-                {
-                let ce = self.key_env(env, e);
-                value::mk_lam(self.arena, binder_name, binder_style, binder_type, Closure::mk_eval(ce, body))
-            }
+                value::mk_lam(self.arena, binder_name, binder_style, binder_type, Closure::mk_eval(env, body)),
             Expr::Pi { binder_name, binder_style, binder_type, body, .. } => {
                 let dom = match self.ctx.read_expr_ref(binder_type) {
                     Expr::Var { .. }
@@ -624,10 +621,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                     | Expr::StringLit { .. } => self.eval(depth, env, binder_type),
                     _ => self.mk_thunk_hc(env, binder_type),
                 };
-                {
-                    let ce = self.key_env(env, e);
-                    value::mk_pi(self.arena, binder_name, binder_style, dom, Closure::mk_eval(ce, body))
-                }
+                value::mk_pi(self.arena, binder_name, binder_style, dom, Closure::mk_eval(env, body))
             }
             Expr::Let { .. } => {
                 let mut env = env;
