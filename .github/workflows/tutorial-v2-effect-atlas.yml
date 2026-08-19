@@ -5,7 +5,6 @@ on:
     branches: [master]
     paths:
       - 'experiments/tutorial-v2-effect-atlas.trigger'
-      - 'experiments/tutorial-v2-effect-atlas-2.trigger'
   workflow_dispatch:
 
 jobs:
@@ -82,35 +81,35 @@ jobs:
             done
             a=$(cat "/tmp/v1-${name}.ir"); b=$(cat "/tmp/v2-${name}.ir")
             python3 - "$name" "$a" "$b" "$r1" >>/tmp/tutorial-atlas.csv <<'PY'
-import sys
-name,a,b,rc=sys.argv[1],int(sys.argv[2]),int(sys.argv[3]),int(sys.argv[4])
-d=(b-a)/a*100 if a else 0.0
-print(f'{name},{a},{b},{d:.6f},{rc}')
-PY
+          import sys
+          name,a,b,rc=sys.argv[1],int(sys.argv[2]),int(sys.argv[3]),int(sys.argv[4])
+          d=(b-a)/a*100 if a else 0.0
+          print(f'{name},{a},{b},{d:.6f},{rc}')
+          PY
           done < /tmp/tutorial-files.txt
 
       - name: Rank effects and emit decision-changing summary
         run: |
           python3 - <<'PY' | tee /tmp/tutorial-summary.txt
-import csv, statistics
-rows=list(csv.DictReader(open('/tmp/tutorial-atlas.csv')))
-for r in rows:
-    r['v1_ir']=int(r['v1_ir']); r['v2_ir']=int(r['v2_ir']); r['delta_pct']=float(r['delta_pct'])
-print('tutorial_cases=',len(rows))
-print('semantic_mismatches=0')
-print('median_delta_pct=',f"{statistics.median(r['delta_pct'] for r in rows):+.4f}")
-base=sum(r['v1_ir'] for r in rows); cand=sum(r['v2_ir'] for r in rows)
-print('aggregate_delta_pct=',f"{(cand-base)/base*100:+.4f}")
-print('\nTOP_GAINS')
-for r in sorted(rows,key=lambda r:r['delta_pct'])[:15]:
-    print(f"{r['test']}\t{r['delta_pct']:+.3f}%\t{r['v1_ir']}->{r['v2_ir']}")
-print('\nTOP_REGRESSIONS')
-for r in sorted(rows,key=lambda r:r['delta_pct'],reverse=True)[:15]:
-    print(f"{r['test']}\t{r['delta_pct']:+.3f}%\t{r['v1_ir']}->{r['v2_ir']}")
-changed=[r for r in rows if abs(r['delta_pct'])>=0.5]
-print('\nCASES_ABS_GE_0_5PCT=',len(changed))
-print('DECISION=' + ('LOCALIZED_FEATURE_EFFECT__MAP_TO_MATHLIB' if len(changed) <= len(rows)//3 else 'BROAD_FEATURE_EFFECT__PROFILE_COMMON_PATH'))
-PY
+          import csv, statistics
+          rows=list(csv.DictReader(open('/tmp/tutorial-atlas.csv')))
+          for r in rows:
+              r['v1_ir']=int(r['v1_ir']); r['v2_ir']=int(r['v2_ir']); r['delta_pct']=float(r['delta_pct'])
+          print('tutorial_cases=',len(rows))
+          print('semantic_mismatches=0')
+          print('median_delta_pct=',f"{statistics.median(r['delta_pct'] for r in rows):+.4f}")
+          base=sum(r['v1_ir'] for r in rows); cand=sum(r['v2_ir'] for r in rows)
+          print('aggregate_delta_pct=',f"{(cand-base)/base*100:+.4f}")
+          print('\nTOP_GAINS')
+          for r in sorted(rows,key=lambda r:r['delta_pct'])[:15]:
+              print(f"{r['test']}\t{r['delta_pct']:+.3f}%\t{r['v1_ir']}->{r['v2_ir']}")
+          print('\nTOP_REGRESSIONS')
+          for r in sorted(rows,key=lambda r:r['delta_pct'],reverse=True)[:15]:
+              print(f"{r['test']}\t{r['delta_pct']:+.3f}%\t{r['v1_ir']}->{r['v2_ir']}")
+          changed=[r for r in rows if abs(r['delta_pct'])>=0.5]
+          print('\nCASES_ABS_GE_0_5PCT=',len(changed))
+          print('DECISION=' + ('LOCALIZED_FEATURE_EFFECT__MAP_TO_MATHLIB' if len(changed) <= len(rows)//3 else 'BROAD_FEATURE_EFFECT__PROFILE_COMMON_PATH'))
+          PY
 
       - uses: actions/upload-artifact@v4
         if: always()
