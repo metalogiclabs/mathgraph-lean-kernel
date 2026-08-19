@@ -81,20 +81,21 @@ jobs:
             done
           done
 
-      - name: Arena-style instruction A/B
+      - name: Hosted-runner wall A/B
         run: |
           set -euxo pipefail
-          printf 'test,arm,rep,instructions\n' >/tmp/instructions.csv
+          printf 'test,arm,rep,seconds\n' >/tmp/timings.csv
           for t in std mathlib; do
             file="/tmp/arena/_build/tests/$t.ndjson"
-            for rep in 1 2; do
-              if [ "$rep" = 1 ]; then arms='base dm16k dm64k dm256k'; else arms='dm256k dm64k dm16k base'; fi
+            for rep in 1 2 3; do
+              case "$rep" in
+                1) arms='base dm16k dm64k dm256k' ;;
+                2) arms='dm256k dm64k dm16k base' ;;
+                3) arms='dm16k base dm256k dm64k' ;;
+              esac
               for arm in $arms; do
-                out="/tmp/perf-${t}-${arm}-${rep}.txt"
-                perf stat -x, -e instructions:u -o "$out" "/tmp/$arm-checker" /tmp/checker.json < "$file" >/dev/null 2>/tmp/${t}-${arm}-${rep}.err
-                inst=$(awk -F, '$3=="instructions:u" || $3=="instructions" {gsub(/ /,"",$1); print $1; exit}' "$out")
-                test -n "$inst"
-                printf '%s,%s,%s,%s\n' "$t" "$arm" "$rep" "$inst" >>/tmp/instructions.csv
+                /usr/bin/time -f '%e' -o /tmp/t timeout 600 "/tmp/$arm-checker" /tmp/checker.json < "$file" >/dev/null 2>/tmp/${t}-${arm}-${rep}.err
+                printf '%s,%s,%s,%s\n' "$t" "$arm" "$rep" "$(cat /tmp/t)" >>/tmp/timings.csv
               done
             done
           done
@@ -103,21 +104,24 @@ jobs:
         run: |
           python3 - <<'PY' | tee /tmp/summary.txt
           import csv, statistics
-          rows=list(csv.DictReader(open('/tmp/instructions.csv')))
-          def med(t,a): return statistics.median(int(r['instructions']) for r in rows if r['test']==t and r['arm']==a)
+          rows=list(csv.DictReader(open('/tmp/timings.csv')))
+          def vals(t,a): return [float(r['seconds']) for r in rows if r['test']==t and r['arm']==a]
+          def med(t,a): return statistics.median(vals(t,a))
           arms=['base','dm16k','dm64k','dm256k']
           for t in ['std','mathlib']:
               b=med(t,'base')
-              print(t,'base',b)
+              print(t,'base',b,'samples=',vals(t,'base'))
               for a in arms[1:]:
                   x=med(t,a); q=x/b
-                  print(t,a,x,f'ratio={q:.6f}',f'delta={(q-1)*100:+.3f}%')
+                  print(t,a,x,f'ratio={q:.6f}',f'delta={(q-1)*100:+.3f}%','samples=',vals(t,a))
           best=min(arms,key=lambda a: med('mathlib',a))
           q=med('mathlib',best)/med('mathlib','base')
+          # Wall time on hosted runners is noisier than PMU instructions. Only call a
+          # capacity effect when the Mathlib median is large enough to dominate that noise.
           if best!='base' and q <= .90:
-              d='CAPACITY_COLLISION_PHASE_CHANGE__PROMOTE_AND_TEST_FULL_ARENA'
-          elif best!='base' and q <= .97:
-              d='CAPACITY_MATTERS__BUILD_SET_ASSOCIATIVE_OR_EXACT_ENV_MASK_CACHE'
+              d='CAPACITY_COLLISION_PHASE_CHANGE__PROMOTE_TO_ARENA_PMU'
+          elif best!='base' and q <= .95:
+              d='CAPACITY_MATTERS__VERIFY_ON_ARENA_PMU_OR_SELF_HOSTED_PERF'
           else:
               d='CAPACITY_FLAT__COLD_MISSES_ARE_STRUCTURAL__CARRY_CANONICAL_ENV_IDENTITY_FORWARD'
           print('BEST='+best)
@@ -130,7 +134,7 @@ jobs:
         with:
           name: canonical-env-capacity-separator
           path: |
-            /tmp/instructions.csv
+            /tmp/timings.csv
             /tmp/summary.txt
             /tmp/*-mathlib.err
             /tmp/*-std.err
