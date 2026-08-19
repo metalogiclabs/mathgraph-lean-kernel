@@ -33,5 +33,13 @@ nix develop -c ./lka.py build-test mathlib
 cat > /tmp/checker.json <<EOF
 {"input":"/tmp/arena-outcome/_build/tests/mathlib.ndjson","threads":4,"print_success_message":false,"permit_all_axioms":true,"nat_extension":true,"string_extension":true}
 EOF
+set +e
 /usr/bin/time -f 'WALL_SECONDS=%e' /tmp/mg-outcome-census-bin /tmp/checker.json 2> /tmp/outcome-census.stderr
-cat /tmp/outcome-census.stderr | grep -E 'MG_CENSUS|WALL_SECONDS' | tee "$ROOT/unfold-outcome-census.txt"
+CHECKER_STATUS=$?
+set -e
+{
+  echo "CHECKER_STATUS=$CHECKER_STATUS"
+  grep -E 'MG_CENSUS|WALL_SECONDS|Command exited' /tmp/outcome-census.stderr || true
+} | tee "$ROOT/unfold-outcome-census.txt"
+# Fail only if we failed to obtain the census itself.
+grep -q 'MG_CENSUS pair_calls=' "$ROOT/unfold-outcome-census.txt"
