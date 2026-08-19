@@ -18,6 +18,20 @@ jobs:
           fetch-depth: 0
       - uses: cachix/install-nix-action@v31
 
+      - name: Create exact Arena config
+        run: |
+          cat >/tmp/checker.json <<'EOF'
+          {
+            "use_stdin": true,
+            "nat_extension": true,
+            "string_extension": true,
+            "unpermitted_axiom_hard_error": false,
+            "unsafe_permit_all_axioms": true,
+            "num_threads": 4,
+            "print_success_message": false
+          }
+          EOF
+
       - name: Build exact scored V2 cache-capacity arms with Arena PGO
         run: |
           set -euxo pipefail
@@ -55,27 +69,6 @@ jobs:
           done
         env:
           RUST_BACKTRACE: '1'
-
-      - name: Create exact Arena config
-        run: |
-          cat >/tmp/checker.json <<'EOF'
-          {
-            "use_stdin": true,
-            "nat_extension": true,
-            "string_extension": true,
-            "unpermitted_axiom_hard_error": false,
-            "unsafe_permit_all_axioms": true,
-            "num_threads": 4,
-            "print_success_message": false
-          }
-          EOF
-
-      - name: Rebuild arms after config ordering guard
-        run: |
-          # The build step needs config during PGO. If it was absent on a clean runner,
-          # create it and rebuild only when necessary.
-          test -s /tmp/checker.json
-          for arm in base dm16k dm64k dm256k; do test -x "/tmp/$arm-checker"; done
 
       - name: Acceptance smoke on real workloads
         run: |
