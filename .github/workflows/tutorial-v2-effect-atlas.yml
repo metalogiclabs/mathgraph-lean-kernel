@@ -1,0 +1,123 @@
+name: Tutorial V2 effect atlas
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'experiments/tutorial-v2-effect-atlas.trigger'
+  workflow_dispatch:
+
+jobs:
+  atlas:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Install Callgrind
+        run: |
+          sudo apt-get update >/dev/null
+          sudo apt-get install -y valgrind >/dev/null
+
+      - name: Build exact V1 and exact public V2
+        run: |
+          set -euxo pipefail
+          V1=1e209dad266d59b4d43cdea189876bc6ea551339
+          V2=3d7585c21242f29fdaa48ae9a16e16c6afe42238
+          git worktree add /tmp/v1 "$V1"
+          git worktree add /tmp/v2 "$V2"
+          for arm in v1 v2; do
+            cd /tmp/$arm
+            cargo test --release --locked
+            CARGO_TARGET_DIR=/tmp/${arm}-target RUSTFLAGS='-C target-cpu=x86-64' cargo build --release --locked
+            cp /tmp/${arm}-target/release/sokonanoda /tmp/${arm}-checker
+          done
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+
+      - name: Build current Arena tutorial corpus
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          git rev-parse HEAD | tee /tmp/arena-sha.txt
+          nix develop -c ./lka.py build-test
+          find _build/tests/tutorial -name '*.ndjson' -type f | sort > /tmp/tutorial-files.txt
+          wc -l /tmp/tutorial-files.txt
+          test "$(wc -l < /tmp/tutorial-files.txt)" -ge 130
+
+      - name: Semantic identity and per-tutorial Callgrind atlas
+        run: |
+          set -euxo pipefail
+          printf 'test,v1_ir,v2_ir,delta_pct,rc\n' >/tmp/tutorial-atlas.csv
+          : >/tmp/mismatches.txt
+          cd /tmp/arena
+          while IFS= read -r f; do
+            name="${f#_build/tests/tutorial/}"
+            name="${name%.ndjson}"
+            set +e
+            /tmp/v1-checker /tmp/checker.json < "$f" >/tmp/v1.out 2>/tmp/v1.err
+            r1=$?
+            /tmp/v2-checker /tmp/checker.json < "$f" >/tmp/v2.out 2>/tmp/v2.err
+            r2=$?
+            set -e
+            if [ "$r1" -ne "$r2" ] || ! cmp -s /tmp/v1.out /tmp/v2.out; then
+              printf '%s\tv1_rc=%s\tv2_rc=%s\n' "$name" "$r1" "$r2" | tee -a /tmp/mismatches.txt
+              exit 1
+            fi
+            for arm in v1 v2; do
+              out="/tmp/${arm}-${name}.cg"
+              set +e
+              timeout 120 valgrind --tool=callgrind --callgrind-out-file="$out" /tmp/${arm}-checker /tmp/checker.json < "$f" >/dev/null 2>/dev/null
+              rc=$?
+              set -e
+              test "$rc" -eq "$r1" || { echo "callgrind rc mismatch $name $arm rc=$rc expected=$r1"; exit 1; }
+              ir=$(awk '/^summary:/ {print $2}' "$out")
+              test -n "$ir"
+              printf '%s\n' "$ir" > "/tmp/${arm}-${name}.ir"
+            done
+            a=$(cat "/tmp/v1-${name}.ir"); b=$(cat "/tmp/v2-${name}.ir")
+            python3 - "$name" "$a" "$b" "$r1" >>/tmp/tutorial-atlas.csv <<'PY'
+import sys
+name,a,b,rc=sys.argv[1],int(sys.argv[2]),int(sys.argv[3]),int(sys.argv[4])
+d=(b-a)/a*100 if a else 0.0
+print(f'{name},{a},{b},{d:.6f},{rc}')
+PY
+          done < /tmp/tutorial-files.txt
+
+      - name: Rank effects and emit decision-changing summary
+        run: |
+          python3 - <<'PY' | tee /tmp/tutorial-summary.txt
+import csv, statistics
+rows=list(csv.DictReader(open('/tmp/tutorial-atlas.csv')))
+for r in rows:
+    r['v1_ir']=int(r['v1_ir']); r['v2_ir']=int(r['v2_ir']); r['delta_pct']=float(r['delta_pct'])
+print('tutorial_cases=',len(rows))
+print('semantic_mismatches=0')
+print('median_delta_pct=',f"{statistics.median(r['delta_pct'] for r in rows):+.4f}")
+base=sum(r['v1_ir'] for r in rows); cand=sum(r['v2_ir'] for r in rows)
+print('aggregate_delta_pct=',f"{(cand-base)/base*100:+.4f}")
+print('\nTOP_GAINS')
+for r in sorted(rows,key=lambda r:r['delta_pct'])[:15]:
+    print(f"{r['test']}\t{r['delta_pct']:+.3f}%\t{r['v1_ir']}->{r['v2_ir']}")
+print('\nTOP_REGRESSIONS')
+for r in sorted(rows,key=lambda r:r['delta_pct'],reverse=True)[:15]:
+    print(f"{r['test']}\t{r['delta_pct']:+.3f}%\t{r['v1_ir']}->{r['v2_ir']}")
+changed=[r for r in rows if abs(r['delta_pct'])>=0.5]
+print('\nCASES_ABS_GE_0_5PCT=',len(changed))
+print('DECISION=' + ('LOCALIZED_FEATURE_EFFECT__MAP_TO_MATHLIB' if len(changed) <= len(rows)//3 else 'BROAD_FEATURE_EFFECT__PROFILE_COMMON_PATH'))
+PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tutorial-v2-effect-atlas
+          path: |
+            /tmp/tutorial-atlas.csv
+            /tmp/tutorial-summary.txt
+            /tmp/tutorial-files.txt
+            /tmp/mismatches.txt
+            /tmp/arena-sha.txt
