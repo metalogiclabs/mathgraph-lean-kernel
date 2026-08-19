@@ -1,0 +1,141 @@
+name: V2 freeze Arena-native validation v2
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'experiments/v2-freeze.trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 70
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Materialize frozen V2 source revision
+        run: |
+          set -euxo pipefail
+          V1=1e209dad266d59b4d43cdea189876bc6ea551339
+          git worktree add /tmp/v2 "$V1"
+          python3 scripts/apply_extra_rec_soundness.py /tmp/v2
+          python3 scripts/apply_infer_beta_fusion.py /tmp/v2
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/v2/src/eval.rs')
+          s=p.read_text()
+          old_lam='''            Expr::Lambda { binder_name, binder_style, binder_type, body, .. } =>\n                {\n                let ce = self.key_env(env, e);\n                value::mk_lam(self.arena, binder_name, binder_style, binder_type, Closure::mk_eval(ce, body))\n            }'''
+          new_lam='''            Expr::Lambda { binder_name, binder_style, binder_type, body, .. } =>\n                value::mk_lam(self.arena, binder_name, binder_style, binder_type, Closure::mk_eval(env, body)),'''
+          old_pi='''                {\n                    let ce = self.key_env(env, e);\n                    value::mk_pi(self.arena, binder_name, binder_style, dom, Closure::mk_eval(ce, body))\n                }'''
+          new_pi='''                value::mk_pi(self.arena, binder_name, binder_style, dom, Closure::mk_eval(env, body))'''
+          assert old_lam in s and old_pi in s
+          p.write_text(s.replace(old_lam,new_lam,1).replace(old_pi,new_pi,1))
+          PY
+          cd /tmp/v2
+          cargo test --release --locked
+          git config user.name 'Metalogic Labs'
+          git config user.email 'actions@users.noreply.github.com'
+          git add src/inductive.rs src/infer.rs src/eval.rs
+          git commit -m 'V2: soundness repair and fused beta evaluation paths'
+          echo "V2_SHA=$(git rev-parse HEAD)" | tee /tmp/v2-sha.txt >> "$GITHUB_ENV"
+          git push --force origin HEAD:refs/heads/v2-arena-candidate
+
+      - name: Fetch current Arena and build discriminator corpus
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          git rev-parse HEAD | tee /tmp/arena-sha.txt
+          for t in init-prelude perf/beta-ladder perf/app-lam perf/let-ladder perf/grind-ring-5; do
+            nix develop -c ./lka.py build-test "$t"
+          done
+
+      - name: Build exact V1 and frozen V2 with current Arena PGO recipe
+        run: |
+          set -euxo pipefail
+          V1=1e209dad266d59b4d43cdea189876bc6ea551339
+          git worktree add /tmp/base "$V1"
+          for arm in base v2; do
+            cat >/tmp/$arm/config.json <<'EOF'
+          {
+            "use_stdin": true,
+            "nat_extension": true,
+            "string_extension": true,
+            "unpermitted_axiom_hard_error": false,
+            "unsafe_permit_all_axioms": true,
+            "num_threads": 4
+          }
+          EOF
+            rm -rf /tmp/$arm/pgo
+            mkdir -p /tmp/$arm/pgo
+            cd /tmp/arena
+            nix develop -c bash -lc "cd /tmp/$arm && RUSTFLAGS='-C target-cpu=native -Cprofile-generate=/tmp/$arm/pgo' cargo build --release"
+            /tmp/$arm/target/release/sokonanoda /tmp/$arm/config.json < /tmp/arena/_build/tests/init-prelude.ndjson >/dev/null
+            nix develop -c bash -lc "llvm-profdata merge -o /tmp/$arm/pgo/merged.profdata /tmp/$arm/pgo"
+            nix develop -c bash -lc "cd /tmp/$arm && RUSTFLAGS='-C target-cpu=native -Cprofile-use=/tmp/$arm/pgo/merged.profdata' cargo build --release"
+          done
+
+      - name: Semantic equality on Arena-native PGO binaries
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          for t in perf/beta-ladder perf/app-lam perf/let-ladder perf/grind-ring-5; do
+            f="_build/tests/${t}.ndjson"
+            slug="${t#perf/}"
+            /tmp/base/target/release/sokonanoda /tmp/base/config.json < "$f" >/tmp/base-$slug.out 2>/tmp/base-$slug.err
+            /tmp/v2/target/release/sokonanoda /tmp/v2/config.json < "$f" >/tmp/v2-$slug.out 2>/tmp/v2-$slug.err
+            cmp /tmp/base-$slug.out /tmp/v2-$slug.out
+          done
+          echo SEMANTIC_PGO_EQUAL=1 | tee /tmp/semantic.txt
+
+      - name: Attempt native perf instruction A/B without failing on unavailable PMU
+        run: |
+          set -u
+          : >/tmp/perf-results.tsv
+          cd /tmp/arena
+          if ! perf stat -e instructions -- true >/dev/null 2>/tmp/perf-probe.err; then
+            echo PMU_UNAVAILABLE | tee /tmp/perf-status.txt
+            exit 0
+          fi
+          echo PMU_AVAILABLE | tee /tmp/perf-status.txt
+          for t in perf/beta-ladder perf/app-lam perf/let-ladder perf/grind-ring-5; do
+            f="_build/tests/${t}.ndjson"
+            slug="${t#perf/}"
+            for arm in base v2; do
+              perf stat -x, -e instructions -o /tmp/perf-$arm-$slug.txt /tmp/$arm/target/release/sokonanoda /tmp/$arm/config.json < "$f" >/dev/null 2>/dev/null
+              ir=$(awk -F, '$3=="instructions" {gsub(/ /,"",$1); print $1}' /tmp/perf-$arm-$slug.txt)
+              test -n "$ir" || exit 1
+              printf '%s\t%s\t%s\n' "$slug" "$arm" "$ir" | tee -a /tmp/perf-results.tsv
+            done
+          done
+
+      - name: Frozen validation decision
+        run: |
+          set -euxo pipefail
+          test "$(cat /tmp/semantic.txt)" = 'SEMANTIC_PGO_EQUAL=1'
+          echo DECISION=V2_ARENA_PGO_SEMANTIC_PASS__NATIVE_PMU_FINAL_IN_ARENA | tee /tmp/decision.txt
+          cat /tmp/v2-sha.txt | tee -a /tmp/decision.txt
+          printf 'ARENA_SHA=' >>/tmp/decision.txt
+          cat /tmp/arena-sha.txt >>/tmp/decision.txt
+          cat /tmp/perf-status.txt | tee -a /tmp/decision.txt
+          if [ -s /tmp/perf-results.tsv ]; then cat /tmp/perf-results.tsv | tee -a /tmp/decision.txt; fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v2-freeze-arena-native-v2
+          path: |
+            /tmp/decision.txt
+            /tmp/v2-sha.txt
+            /tmp/arena-sha.txt
+            /tmp/semantic.txt
+            /tmp/perf-status.txt
+            /tmp/perf-results.tsv
+            /tmp/perf-probe.err
