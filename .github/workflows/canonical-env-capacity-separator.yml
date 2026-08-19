@@ -41,6 +41,8 @@ jobs:
           nix develop -c ./lka.py build-test init-prelude
           nix develop -c ./lka.py build-test std
           nix develop -c ./lka.py build-test mathlib
+          PROFDATA=$(nix develop -c bash -lc 'command -v llvm-profdata')
+          test -x "$PROFDATA"
           cd "$GITHUB_WORKSPACE"
           for spec in base:10 dm16k:14 dm64k:16 dm256k:18; do
             arm=${spec%%:*}; bits=${spec##*:}
@@ -63,7 +65,7 @@ jobs:
             rm -rf pgo target
             RUSTFLAGS="-C target-cpu=native -Cprofile-generate=$PWD/pgo" cargo build --release --locked
             target/release/sokonanoda /tmp/checker.json < /tmp/arena/_build/tests/init-prelude.ndjson >/dev/null
-            llvm-profdata merge -o "$PWD/pgo/merged.profdata" "$PWD/pgo"
+            "$PROFDATA" merge -o "$PWD/pgo/merged.profdata" "$PWD/pgo"
             RUSTFLAGS="-C target-cpu=native -Cprofile-use=$PWD/pgo/merged.profdata" cargo build --release --locked
             cp target/release/sokonanoda "/tmp/$arm-checker"
           done
