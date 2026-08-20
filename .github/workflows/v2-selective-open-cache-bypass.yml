@@ -1,0 +1,27 @@
+name: V2 selective open-cache bypass
+
+on:
+  pull_request:
+    branches: [mathgraph]
+    paths:
+      - 'scripts/run_v2_selective_open_cache_bypass.sh'
+      - '.github/workflows/v2-selective-open-cache-bypass.yml'
+  workflow_dispatch:
+
+jobs:
+  bypass-ab:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Run exact-V2 selective open-cache bypass A/B
+        run: bash scripts/run_v2_selective_open_cache_bypass.sh
+      - name: Upload selective bypass results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v2-selective-open-cache-bypass
+          path: /tmp/cache-bypass
