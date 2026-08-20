@@ -127,7 +127,8 @@ cp target/release/sokonanoda /tmp/mg-hint-census-bin
 cd /tmp
 git clone --depth 1 https://github.com/leanprover/lean-kernel-arena arena-hint
 cd arena-hint
-nix develop -c ./lka.py build-test init-prelude mathlib
+nix develop -c ./lka.py build-test init-prelude
+nix develop -c ./lka.py build-test mathlib
 cat >/tmp/mg-config.json <<EOF
 {
   "use_stdin": true,
