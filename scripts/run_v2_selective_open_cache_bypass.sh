@@ -23,10 +23,10 @@ for t in init-prelude init std mathlib; do
   nix develop -c ./lka.py build-test "$t"
 done
 PROFDATA=$(nix develop -c bash -lc 'command -v llvm-profdata')
-VALGRIND=$(nix develop -c bash -lc 'command -v valgrind')
 test -x "$PROFDATA"
-test -x "$VALGRIND"
-"$VALGRIND" --version
+# Arena's dev shell does not include valgrind. Resolve it explicitly through
+# nixpkgs so hosted runners do not depend on ambient packages/PATH.
+nix shell nixpkgs#valgrind --command valgrind --version
 
 cd "$GITHUB_WORKSPACE"
 for arm in base nolam nolet nolamlet; do
@@ -70,14 +70,14 @@ done
 
 # GitHub-hosted perf_event is unavailable. Use Callgrind Ir for deterministic
 # instruction attribution on the two smaller real workloads, then paired wall
-# time on full Mathlib. This is the same instruction-count substrate used by
-# the hotspot-atlas work and cannot silently fail due perf permissions.
+# time on full Mathlib. Valgrind is invoked through nixpkgs explicitly.
 printf 'test,arm,instructions\n' >/tmp/cache-bypass/callgrind.csv
 for t in init std; do
   f="/tmp/arena-bypass/_build/tests/$t.ndjson"
   for arm in base nolam nolet nolamlet; do
     cf="/tmp/cache-bypass/callgrind-$t-$arm.out"
-    timeout 1200 "$VALGRIND" --tool=callgrind --callgrind-out-file="$cf" \
+    timeout 1200 nix shell nixpkgs#valgrind --command valgrind \
+      --tool=callgrind --callgrind-out-file="$cf" \
       "/tmp/cache-bypass/$arm-checker" /tmp/cache-bypass/checker.json < "$f" >/dev/null \
       2>"/tmp/cache-bypass/callgrind-$t-$arm.err"
     inst=$(awk '/^summary:/ {print $2; exit}' "$cf")
