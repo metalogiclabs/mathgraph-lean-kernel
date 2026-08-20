@@ -20,11 +20,17 @@ nix develop -c ./lka.py build-test init-prelude
 nix develop -c ./lka.py build-test init
 nix develop -c ./lka.py build-test std
 
+# Fail early on the profiling toolchain boundary rather than after generating PGO data.
+# The runner image does not guarantee llvm-profdata on PATH, so use Nix explicitly.
+nix shell nixpkgs#llvmPackages_21.llvm -c llvm-profdata --version | tee /tmp/hotspot-atlas/llvm-profdata-version.txt
+nix shell nixpkgs#valgrind -c valgrind --version | tee /tmp/hotspot-atlas/valgrind-version.txt
+
 cd /tmp/v2-hot
 rm -rf pgo && mkdir pgo
 RUSTFLAGS="-C target-cpu=native -Cprofile-generate=$PWD/pgo -C debuginfo=1" cargo build --release --locked
 target/release/sokonanoda /tmp/hotspot-checker.json < /tmp/arena-hot/_build/tests/init-prelude.ndjson >/dev/null
-llvm-profdata merge -o "$PWD/pgo/merged.profdata" "$PWD/pgo"
+nix shell nixpkgs#llvmPackages_21.llvm -c llvm-profdata merge -o "$PWD/pgo/merged.profdata" "$PWD/pgo"
+test -s "$PWD/pgo/merged.profdata"
 RUSTFLAGS="-C target-cpu=native -Cprofile-use=$PWD/pgo/merged.profdata -C debuginfo=1" cargo build --release --locked
 cp target/release/sokonanoda /tmp/v2-hotspot-checker
 
