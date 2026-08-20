@@ -1,0 +1,27 @@
+name: V2 open eval cache economics
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/run_v2_open_eval_cache_economics.sh'
+      - '.github/workflows/v2-open-eval-cache-economics.yml'
+  workflow_dispatch:
+
+jobs:
+  cache-economics:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Run exact-V2 open eval cache economics census
+        run: bash scripts/run_v2_open_eval_cache_economics.sh
+      - name: Upload cache economics census
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v2-open-eval-cache-economics
+          path: /tmp/cache-econ
+          if-no-files-found: warn
