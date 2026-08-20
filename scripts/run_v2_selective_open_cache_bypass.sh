@@ -2,7 +2,7 @@
 set -euxo pipefail
 
 V2=3d7585c21242f29fdaa48ae9a16e16c6afe42238
-rm -rf /tmp/arena-bypass /tmp/cache-bypass /tmp/{base,nolam,nolamlet,noapp}
+rm -rf /tmp/arena-bypass /tmp/cache-bypass /tmp/{base,nolam,nolet,nolamlet}
 mkdir -p /tmp/cache-bypass
 
 cat >/tmp/cache-bypass/checker.json <<'EOF'
@@ -23,10 +23,13 @@ for t in init-prelude init std mathlib; do
   nix develop -c ./lka.py build-test "$t"
 done
 PROFDATA=$(nix develop -c bash -lc 'command -v llvm-profdata')
+VALGRIND=$(nix develop -c bash -lc 'command -v valgrind')
 test -x "$PROFDATA"
+test -x "$VALGRIND"
+"$VALGRIND" --version
 
 cd "$GITHUB_WORKSPACE"
-for arm in base nolam nolamlet noapp; do
+for arm in base nolam nolet nolamlet; do
   git worktree add "/tmp/$arm" "$V2"
   if [ "$arm" != base ]; then
     python3 - "$arm" <<'PY'
@@ -38,8 +41,8 @@ s=p.read_text()
 old='''            Expr::App { .. } | Expr::Proj { .. } | Expr::Let { .. } | Expr::Pi { .. } | Expr::Lambda { .. }\n'''
 repls={
  'nolam': '''            Expr::App { .. } | Expr::Proj { .. } | Expr::Let { .. } | Expr::Pi { .. }\n''',
+ 'nolet': '''            Expr::App { .. } | Expr::Proj { .. } | Expr::Pi { .. } | Expr::Lambda { .. }\n''',
  'nolamlet': '''            Expr::App { .. } | Expr::Proj { .. } | Expr::Pi { .. }\n''',
- 'noapp': '''            Expr::Proj { .. } | Expr::Let { .. } | Expr::Pi { .. } | Expr::Lambda { .. }\n''',
 }
 assert old in s, 'open-eval eligibility anchor not found'
 p.write_text(s.replace(old,repls[arm],1))
@@ -55,74 +58,89 @@ PY
   cp target/release/sokonanoda "/tmp/cache-bypass/$arm-checker"
 done
 
-# Semantic equality on all three real workloads before timing.
+# Semantic equality on all three real workloads before measurement.
 for t in init std mathlib; do
   f="/tmp/arena-bypass/_build/tests/$t.ndjson"
   timeout 900 /tmp/cache-bypass/base-checker /tmp/cache-bypass/checker.json < "$f" >"/tmp/cache-bypass/base-$t.out" 2>"/tmp/cache-bypass/base-$t.err"
-  for arm in nolam nolamlet noapp; do
+  for arm in nolam nolet nolamlet; do
     timeout 900 "/tmp/cache-bypass/$arm-checker" /tmp/cache-bypass/checker.json < "$f" >"/tmp/cache-bypass/$arm-$t.out" 2>"/tmp/cache-bypass/$arm-$t.err"
     cmp "/tmp/cache-bypass/base-$t.out" "/tmp/cache-bypass/$arm-$t.out"
   done
 done
 
-printf 'test,arm,rep,instructions,seconds\n' >/tmp/cache-bypass/measurements.csv
-for t in std mathlib; do
+# GitHub-hosted perf_event is unavailable. Use Callgrind Ir for deterministic
+# instruction attribution on the two smaller real workloads, then paired wall
+# time on full Mathlib. This is the same instruction-count substrate used by
+# the hotspot-atlas work and cannot silently fail due perf permissions.
+printf 'test,arm,instructions\n' >/tmp/cache-bypass/callgrind.csv
+for t in init std; do
   f="/tmp/arena-bypass/_build/tests/$t.ndjson"
-  for rep in 1 2; do
-    if [ "$rep" = 1 ]; then arms='base nolam nolamlet noapp'; else arms='noapp nolamlet nolam base'; fi
-    for arm in $arms; do
-      pf="/tmp/cache-bypass/perf-$t-$arm-$rep.csv"
-      tf="/tmp/cache-bypass/time-$t-$arm-$rep.txt"
-      set +e
-      /usr/bin/time -f '%e' -o "$tf" perf stat -x, -e instructions:u -o "$pf" "/tmp/cache-bypass/$arm-checker" /tmp/cache-bypass/checker.json < "$f" >/dev/null 2>"/tmp/cache-bypass/run-$t-$arm-$rep.err"
-      st=$?
-      set -e
-      test "$st" -eq 0
-      inst=$(awk -F, '$3=="instructions:u" || $3=="instructions" {gsub(/ /,"",$1); if ($1 !~ /not/) {print $1; exit}}' "$pf")
-      sec=$(cat "$tf")
-      test -n "$inst"
-      test -n "$sec"
-      printf '%s,%s,%s,%s,%s\n' "$t" "$arm" "$rep" "$inst" "$sec" >>/tmp/cache-bypass/measurements.csv
-    done
+  for arm in base nolam nolet nolamlet; do
+    cf="/tmp/cache-bypass/callgrind-$t-$arm.out"
+    timeout 1200 "$VALGRIND" --tool=callgrind --callgrind-out-file="$cf" \
+      "/tmp/cache-bypass/$arm-checker" /tmp/cache-bypass/checker.json < "$f" >/dev/null \
+      2>"/tmp/cache-bypass/callgrind-$t-$arm.err"
+    inst=$(awk '/^summary:/ {print $2; exit}' "$cf")
+    test -n "$inst"
+    printf '%s,%s,%s\n' "$t" "$arm" "$inst" >>/tmp/cache-bypass/callgrind.csv
+  done
+done
+
+printf 'test,arm,rep,seconds\n' >/tmp/cache-bypass/wall.csv
+f=/tmp/arena-bypass/_build/tests/mathlib.ndjson
+for rep in 1 2; do
+  if [ "$rep" = 1 ]; then arms='base nolam nolet nolamlet'; else arms='nolamlet nolet nolam base'; fi
+  for arm in $arms; do
+    tf="/tmp/cache-bypass/time-mathlib-$arm-$rep.txt"
+    timeout 900 /usr/bin/time -f '%e' -o "$tf" "/tmp/cache-bypass/$arm-checker" \
+      /tmp/cache-bypass/checker.json < "$f" >/dev/null \
+      2>"/tmp/cache-bypass/run-mathlib-$arm-$rep.err"
+    sec=$(cat "$tf")
+    test -n "$sec"
+    printf 'mathlib,%s,%s,%s\n' "$arm" "$rep" "$sec" >>/tmp/cache-bypass/wall.csv
   done
 done
 
 python3 - <<'PY' | tee /tmp/cache-bypass/summary.txt
 import csv, statistics
-rows=list(csv.DictReader(open('/tmp/cache-bypass/measurements.csv')))
-arms=['base','nolam','nolamlet','noapp']
-def vals(t,a,k):
-    typ=int if k=='instructions' else float
-    return [typ(r[k]) for r in rows if r['test']==t and r['arm']==a]
-def med(t,a,k): return statistics.median(vals(t,a,k))
-for t in ['std','mathlib']:
-    print('\nTEST',t)
-    bi=med(t,'base','instructions'); bw=med(t,'base','seconds')
-    print('base', 'instructions',bi,'seconds',bw)
+ir=list(csv.DictReader(open('/tmp/cache-bypass/callgrind.csv')))
+wall=list(csv.DictReader(open('/tmp/cache-bypass/wall.csv')))
+arms=['base','nolam','nolet','nolamlet']
+def I(t,a): return int(next(r['instructions'] for r in ir if r['test']==t and r['arm']==a))
+def W(a): return statistics.median(float(r['seconds']) for r in wall if r['arm']==a)
+for t in ['init','std']:
+    b=I(t,'base')
+    print('\nTEST',t,'CALLGRIND_IR')
+    print('base',b)
     for a in arms[1:]:
-        i=med(t,a,'instructions'); w=med(t,a,'seconds')
-        print(a,'instructions',i,f'ir_ratio={i/bi:.6f}',f'ir_delta={(i/bi-1)*100:+.3f}%',
-              'seconds',w,f'wall_ratio={w/bw:.6f}',f'wall_delta={(w/bw-1)*100:+.3f}%')
+        x=I(t,a); q=x/b
+        print(a,x,f'ratio={q:.6f}',f'delta={(q-1)*100:+.3f}%')
+print('\nTEST mathlib WALL_SECONDS')
+b=W('base'); print('base',b)
+for a in arms[1:]:
+    x=W(a); q=x/b
+    print(a,x,f'ratio={q:.6f}',f'delta={(q-1)*100:+.3f}%')
 
-# Promotion must improve deterministic instruction count on both workloads.
 qualified=[]
 for a in arms[1:]:
-    qs=med('std',a,'instructions')/med('std','base','instructions')
-    qm=med('mathlib',a,'instructions')/med('mathlib','base','instructions')
-    if qs < 1 and qm < 1:
-        qualified.append((qm,a,qs))
+    qi=I('init',a)/I('init','base')
+    qs=I('std',a)/I('std','base')
+    qw=W(a)/W('base')
+    if qi < 1 and qs < 1 and qw < 1:
+        qualified.append((qs,a,qi,qw))
 if not qualified:
-    print('\nDECISION=REJECT_SIMPLE_CLASS_BYPASS__OPTIMIZE_PRUNE_RECONSTRUCTION')
+    print('\nDECISION=REJECT_LAMBDA_LET_BYPASS__OPTIMIZE_PRUNE_RECONSTRUCTION')
 else:
-    qm,a,qs=min(qualified)
+    qs,a,qi,qw=min(qualified)
     print('\nBEST='+a)
-    print('BEST_STD_RATIO='+f'{qs:.6f}')
-    print('BEST_MATHLIB_RATIO='+f'{qm:.6f}')
-    if qm <= .90 and qs <= .95:
+    print('BEST_INIT_IR_RATIO='+f'{qi:.6f}')
+    print('BEST_STD_IR_RATIO='+f'{qs:.6f}')
+    print('BEST_MATHLIB_WALL_RATIO='+f'{qw:.6f}')
+    if qs <= .90 and qi <= .95 and qw <= .95:
         d='PHASE_CHANGE_CACHE_BYPASS__FULL_ARENA_GATE_NOW'
-    elif qm <= .95:
+    elif qs <= .95 and qw <= .97:
         d='MAJOR_CACHE_BYPASS_GAIN__FULL_ARENA_GATE_NOW'
-    elif qm <= .98:
+    elif qs <= .98:
         d='MATERIAL_CACHE_BYPASS_GAIN__EXPAND_SELECTIVE_POLICY'
     else:
         d='SMALL_CACHE_BYPASS_GAIN__DO_NOT_OVERFIT'
