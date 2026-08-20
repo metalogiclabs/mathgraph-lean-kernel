@@ -1,0 +1,27 @@
+name: V2 prune-cold structural census
+
+on:
+  pull_request:
+    branches: [mathgraph]
+    paths:
+      - 'scripts/run_v2_prune_cold_structural_census.sh'
+      - '.github/workflows/v2-prune-cold-structural-census.yml'
+  workflow_dispatch:
+
+jobs:
+  census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Run exact-V2 prune-cold structural census
+        run: bash scripts/run_v2_prune_cold_structural_census.sh
+      - name: Upload prune-cold census
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v2-prune-cold-structural-census
+          path: /tmp/prune-census
