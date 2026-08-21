@@ -1,0 +1,23 @@
+name: Semantic JOIN Test 2b blind emit
+on:
+  pull_request:
+    branches: [mathgraph]
+    paths:
+      - 'experiments/semantic_join_sealed_world/test2b_emit.py'
+      - '.github/workflows/semantic-join-test2b-emit.yml'
+  workflow_dispatch:
+jobs:
+  emit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Emit blind JOIN packets
+        run: |
+          set -euxo pipefail
+          cd experiments/semantic_join_sealed_world
+          python3 test2b_emit.py | tee /tmp/test2b_emit.txt
+          cp test2b_blind_packets.json /tmp/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: semantic-join-test2b-blind-packets
+          path: /tmp/test2b_blind_packets.json
