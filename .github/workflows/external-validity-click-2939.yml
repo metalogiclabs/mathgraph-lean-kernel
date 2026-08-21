@@ -18,6 +18,12 @@ jobs:
           bash experiments/external_validity_click_2939/run_external_test.sh | tee /tmp/external-validity-artifact/summary.txt
           cp /tmp/external_validity_result.json /tmp/external-validity-artifact/
           cp /tmp/baseline.txt /tmp/intervention.txt /tmp/transfer.txt /tmp/upstream_pytest.txt /tmp/ablation.txt /tmp/external-validity-artifact/
+      - name: K-to-O invariant witness gate
+        shell: bash
+        run: |
+          set -euxo pipefail
+          bash experiments/external_validity_click_2939/run_k_to_o_conformance.sh | tee /tmp/external-validity-artifact/k_to_o_conformance.txt
+          cp /tmp/k_conformance_pytest.txt /tmp/external-validity-artifact/
       - uses: actions/upload-artifact@v4
         if: always()
         with:
