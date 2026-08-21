@@ -6,7 +6,9 @@ WORK="/tmp/click-external-validity"
 rm -rf "$WORK"
 git clone --quiet --depth 1 --branch 8.2.1 https://github.com/pallets/click.git "$WORK"
 cd "$WORK"
-python -m pip install -q -e . pytest
+# Match the external report's contemporary pytest generation. Newer pytest versions
+# turn an unrelated upstream deprecation into a collection error under filterwarnings=error.
+python -m pip install -q -e . 'pytest==8.3.5'
 
 cat > /tmp/repro_click_2939.py <<'PY'
 import click
