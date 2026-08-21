@@ -1,0 +1,21 @@
+name: Invariant witness compilation - Click 2939
+on:
+  pull_request:
+    paths:
+      - 'experiments/invariant_witness_click_2939/**'
+      - '.github/workflows/invariant-witness-click-2939.yml'
+  workflow_dispatch:
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run K-to-W invariant witness assay
+        run: |
+          set -euxo pipefail
+          python experiments/invariant_witness_click_2939/run.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: invariant-witness-click-2939
+          path: experiments/invariant_witness_click_2939/results.json
