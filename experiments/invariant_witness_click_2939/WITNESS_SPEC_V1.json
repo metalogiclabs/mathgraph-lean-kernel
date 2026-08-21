@@ -1,0 +1,57 @@
+{
+  "protocol": "K_TO_W_CLICK_2939_V1",
+  "status": "retrospective_module_test_after_external_result",
+  "source_hypothesis": "experiments/external_validity_click_2939/FROZEN_HYPOTHESIS.json",
+  "purpose": "Compile every semantic clause in frozen K into an executable witness before operator admission.",
+  "clauses": [
+    {
+      "id": "R1_NATIVE_ITERATOR_EOF",
+      "kind": "required",
+      "k_clause": "Preserve normal Python iterator exhaustion semantics for the CliRunner synthetic stdin",
+      "witness": "click.File('-') consumed with readlines must terminate normally and return the supplied lines"
+    },
+    {
+      "id": "R2_TEXTIO_ITERATION",
+      "kind": "required",
+      "k_clause": "Preserve ordinary TextIOWrapper behavior for file iteration/readlines",
+      "witness": "the same stdin-backed file must work through for-iteration and list(file)"
+    },
+    {
+      "id": "R3_INTERACTIVE_EOF",
+      "kind": "required",
+      "k_clause": "Do not change click.File or command-level EOF handling",
+      "witness": "interactive click.prompt with exhausted CliRunner input must still produce Click's normal Abort/SystemExit behavior"
+    },
+    {
+      "id": "R4_NAME_MODE",
+      "kind": "required",
+      "k_clause": "Keep isolated stdin name/mode behavior intact",
+      "witness": "inside CliRunner isolation, sys.stdin.name must be <stdin> and sys.stdin.mode must be r"
+    },
+    {
+      "id": "F1_NO_FILE_SPECIAL_CASE",
+      "kind": "forbidden",
+      "k_clause": "Special-case click.File",
+      "witness": "operator diff is confined to testing.py stream semantics and contains no click.File-specific branch"
+    },
+    {
+      "id": "F2_NO_COMMAND_EOF_MASK",
+      "kind": "forbidden",
+      "k_clause": "Catch/suppress EOFError at command level",
+      "witness": "operator changes no command/core file and interactive EOF remains externally observable as Abort"
+    },
+    {
+      "id": "F3_NO_GLOBAL_EOF_CHANGE",
+      "kind": "forbidden",
+      "k_clause": "Change user-visible EOF handling globally",
+      "witness": "EOF translation is localized to interactive input call sites, not the generic TextIOWrapper iterator"
+    },
+    {
+      "id": "F4_NO_REPRO_PATCH",
+      "kind": "forbidden",
+      "k_clause": "Patch the reproducer",
+      "witness": "the exact external issue reproducer is held outside the Click checkout and is byte-identical across baseline/intervention/ablation"
+    }
+  ],
+  "promotion_rule": "An operator is admissible only if the headline residual closes and every required/forbidden K clause has at least one executable witness that passes."
+}
