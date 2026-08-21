@@ -1,0 +1,25 @@
+name: External validity - Click 2939
+on:
+  pull_request:
+    paths:
+      - 'experiments/external_validity_click_2939/**'
+      - '.github/workflows/external-validity-click-2939.yml'
+  workflow_dispatch:
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run external-domain causal test
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p /tmp/external-validity-artifact
+          bash experiments/external_validity_click_2939/run_external_test.sh | tee /tmp/external-validity-artifact/summary.txt
+          cp /tmp/external_validity_result.json /tmp/external-validity-artifact/
+          cp /tmp/baseline.txt /tmp/intervention.txt /tmp/transfer.txt /tmp/upstream_pytest.txt /tmp/ablation.txt /tmp/external-validity-artifact/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: external-validity-click-2939
+          path: /tmp/external-validity-artifact/
