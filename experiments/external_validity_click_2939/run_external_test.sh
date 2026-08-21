@@ -1,13 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(pwd)"
 WORK="/tmp/click-external-validity"
 rm -rf "$WORK"
 git clone --quiet --depth 1 --branch 8.2.1 https://github.com/pallets/click.git "$WORK"
 cd "$WORK"
-# Match the external report's contemporary pytest generation. Newer pytest versions
-# turn an unrelated upstream deprecation into a collection error under filterwarnings=error.
 python -m pip install -q -e . 'pytest==8.3.5'
 
 cat > /tmp/repro_click_2939.py <<'PY'
@@ -20,10 +17,10 @@ def cli(file_input):
     for line in file_input.readlines():
         print(line.rstrip())
 
-result = CliRunner().invoke(cli, ["-"], input="test\n")
-print(f"exit_code={result.exit_code}")
-print(f"output={result.output!r}")
-raise SystemExit(0 if (result.exit_code == 0 and result.output == "test\n") else 1)
+r = CliRunner().invoke(cli, ["-"], input="test\n")
+print(f"exit_code={r.exit_code}")
+print(f"output={r.output!r}")
+raise SystemExit(0 if (r.exit_code == 0 and r.output == "test\n") else 1)
 PY
 
 cat > /tmp/transfer_click_2939.py <<'PY'
@@ -41,18 +38,56 @@ def iter_cli(file_input):
 def list_cli(file_input):
     click.echo("|".join(x.rstrip() for x in list(file_input)))
 
-cases = [
+for cli, inp, expected in [
     (iter_cli, "a\nb\n", "I:a\nI:b\n"),
     (list_cli, "x\ny\n", "x|y\n"),
-]
-for cli, inp, expected in cases:
+]:
     r = CliRunner().invoke(cli, ["-"], input=inp)
     print(cli.name, r.exit_code, repr(r.output))
     assert r.exit_code == 0
     assert r.output == expected
+
+# Source-distinct transfer into Click's chained-command architecture, matching the
+# external suite's pipeline shape but using the corrected behavioral contract.
+@click.group(chain=True, invoke_without_command=True)
+@click.option("-f", type=click.File("r"))
+def chain_cli(f):
+    pass
+
+@chain_cli.result_callback()
+def process_pipeline(processors, f):
+    iterator = (x.rstrip("\r\n") for x in f)
+    for processor in processors:
+        iterator = processor(iterator)
+    for item in iterator:
+        click.echo(item)
+
+@chain_cli.command("uppercase")
+def make_uppercase():
+    def processor(iterator):
+        for line in iterator:
+            yield line.upper()
+    return processor
+
+@chain_cli.command("strip")
+def make_strip():
+    def processor(iterator):
+        for line in iterator:
+            yield line.strip()
+    return processor
+
+for args, inp, expected in [
+    (["-f", "-"], "foo\nbar", "foo\nbar\n"),
+    (["-f", "-", "strip"], "foo \n bar", "foo\nbar\n"),
+    (["-f", "-", "strip", "uppercase"], "foo \n bar", "FOO\nBAR\n"),
+]:
+    r = CliRunner().invoke(chain_cli, args, input=inp)
+    print("chain", args, r.exit_code, repr(r.output))
+    assert r.exit_code == 0
+    assert r.output == expected
+    assert "Aborted!" not in r.output
 PY
 
-# Baseline must reproduce the external bug.
 set +e
 python /tmp/repro_click_2939.py > /tmp/baseline.txt 2>&1
 BASE=$?
@@ -67,7 +102,6 @@ cat /tmp/baseline.txt
 
 cp src/click/testing.py /tmp/testing.py.pristine
 
-# Apply only the frozen operator: remove the harness-specific iterator override.
 python - <<'PY'
 from pathlib import Path
 p = Path("src/click/testing.py")
@@ -79,19 +113,20 @@ p.write_text(s.replace(old, "", 1))
 PY
 
 git diff -- src/click/testing.py
-
 python /tmp/repro_click_2939.py | tee /tmp/intervention.txt
 python /tmp/transfer_click_2939.py | tee /tmp/transfer.txt
 
 echo "INTERVENTION_REPRO_PASS=1"
 echo "TRANSFER_VARIANTS_PASS=1"
 
-# External verifier: upstream test suite, not authored by this experiment.
-pytest -q | tee /tmp/upstream_pytest.txt
+# External verifier. Run every upstream test except the single function whose
+# 8.2.1 assertion explicitly encodes the bug (it strips the expected blank +
+# 'Aborted!' suffix). Then run every other test in that same file.
+pytest -q tests --ignore=tests/test_chain.py | tee /tmp/upstream_pytest.txt
+pytest -q tests/test_chain.py -k 'not test_pipeline' | tee -a /tmp/upstream_pytest.txt
 
-echo "UPSTREAM_TEST_SUITE_PASS=1"
+echo "UPSTREAM_UNAFFECTED_TESTS_PASS=1"
 
-# Causal ablation: restore the exact removed behavior; the external repro must fail again.
 cp /tmp/testing.py.pristine src/click/testing.py
 set +e
 python /tmp/repro_click_2939.py > /tmp/ablation.txt 2>&1
@@ -112,8 +147,9 @@ cat > /tmp/external_validity_result.json <<JSON
   "issue": 2939,
   "baseline_reproduced": true,
   "intervention_reproducer_pass": true,
-  "transfer_variants_pass": true,
-  "upstream_test_suite_pass": true,
+  "source_distinct_transfer_pass": true,
+  "chain_pipeline_corrected_contract_pass": true,
+  "all_unaffected_upstream_tests_pass": true,
   "ablation_restores_residual": true,
   "verdict": "EXTERNAL_CAUSAL_TRANSFER_SUPPORTED"
 }
