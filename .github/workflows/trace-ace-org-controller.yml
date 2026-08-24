@@ -3,22 +3,22 @@ on:
   push:
     branches: [master]
     paths:
-      - '.trace-ace/V152_TRIGGER_MASTER.txt'
+      - '.trace-ace/V153_TRIGGER_MASTER.txt'
   workflow_dispatch:
 permissions:
   contents: write
 concurrency:
-  group: trace-ace-org-controller-v152
+  group: trace-ace-org-controller-v153
   cancel-in-progress: true
 env:
   SCIENCE_REPO: heathsanchez/mathgraph
-  SCIENCE_SHA: ae4799d856632062f16e223b075ab33a868ba4a4
+  SCIENCE_SHA: 51a4d6d76f6bd5bbcbe0fb4143299c1ff9407ea1
   TRANSCRIPT_ID: 1nOjremWhpZ_QKSLvZfGcNkS_C3kMMBUI
   TRANSCRIPT_SIZE: '603547640'
   TRANSCRIPT_SHA: e685b85b04694e130c25b17d09cdd1892fbda5e9fa685e98b2300114b915aa2d
   METADATA_ID: 1EpqoamY0vFI2qE57R6wdqU5HwuoVk3Zz
 jobs:
-  v152:
+  v153:
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
@@ -44,17 +44,12 @@ jobs:
           mkdir -p .trace-ace/results
           python - <<'PY'
           import json,os,pathlib
-          pathlib.Path('.trace-ace/results/V152_RUN_START.json').write_text(json.dumps({
-            'run_id':int(os.environ['GITHUB_RUN_ID']),
-            'status':'STARTED',
-            'science_repo':os.environ['SCIENCE_REPO'],
-            'science_sha':os.environ['SCIENCE_SHA']
-          },indent=2))
+          pathlib.Path('.trace-ace/results/V153_RUN_START.json').write_text(json.dumps({'run_id':int(os.environ['GITHUB_RUN_ID']),'status':'STARTED','science_repo':os.environ['SCIENCE_REPO'],'science_sha':os.environ['SCIENCE_SHA']},indent=2))
           PY
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add .trace-ace/results/V152_RUN_START.json
-          git commit -m "results: record org V152 start $GITHUB_RUN_ID" || true
+          git add .trace-ace/results/V153_RUN_START.json
+          git commit -m "results: record org V153 start $GITHUB_RUN_ID" || true
           git push origin HEAD:trace-ace-controller || true
       - name: Restore transcript cache
         id: txcache
@@ -62,22 +57,12 @@ jobs:
         with:
           path: data/transcripts.zip
           key: trace-ace-transcripts-v1-${{ env.TRANSCRIPT_SHA }}
-      - name: Download transcript archive on cache miss
-        if: steps.txcache.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p data
-          gdown "$TRANSCRIPT_ID" -O data/transcripts.zip
+          fail-on-cache-miss: true
       - name: Validate transcript archive
         run: |
           set -euo pipefail
           test "$(stat -c%s data/transcripts.zip)" = "$TRANSCRIPT_SIZE"
           echo "$TRANSCRIPT_SHA  data/transcripts.zip" | sha256sum -c -
-      - name: Save transcript cache
-        if: steps.txcache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: data/transcripts.zip
-          key: trace-ace-transcripts-v1-${{ env.TRANSCRIPT_SHA }}
       - name: Download metadata and extract
         run: |
           mkdir -p data/meta data/transcripts
@@ -91,21 +76,17 @@ jobs:
       - name: Verify frozen science
         run: |
           test "$(git -C mathgraph rev-parse HEAD)" = "$SCIENCE_SHA"
-          python -m py_compile mathgraph/competitions/trace_the_ace/v152_transition_law_discovery.py
-      - name: Run frozen V152 discovery
+          python -m py_compile mathgraph/competitions/trace_the_ace/v153_interaction_timing_discovery.py
+      - name: Run frozen V153 discovery
         run: |
           cd mathgraph/competitions/trace_the_ace
-          python v152_transition_law_discovery.py \
-            --features "../../../$FEATURES" \
-            --labels "../../../$LABELS" \
-            --transcripts "../../../$TRANSCRIPTS" \
-            --out ../../../v152_transition_law_discovery.json
+          python v153_interaction_timing_discovery.py --features "../../../$FEATURES" --labels "../../../$LABELS" --transcripts "../../../$TRANSCRIPTS" --out ../../../v153_interaction_timing_discovery.json
       - name: Upload result
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: trace-ace-v152-transition-law-discovery
-          path: v152_transition_law_discovery.json
+          name: trace-ace-v153-interaction-timing-discovery
+          path: v153_interaction_timing_discovery.json
           if-no-files-found: warn
           retention-days: 14
       - name: Record final marker
@@ -115,17 +96,14 @@ jobs:
           git pull --rebase origin trace-ace-controller || true
           python - <<'PY'
           import json,os,pathlib
-          p=pathlib.Path('../v152_transition_law_discovery.json')
+          p=pathlib.Path('../v153_interaction_timing_discovery.json')
           out={'run_id':int(os.environ['GITHUB_RUN_ID']),'status':'FINAL','result_exists':p.exists(),'science_sha':os.environ['SCIENCE_SHA']}
           if p.exists():
-              r=json.loads(p.read_text())
-              out['verdict']=r.get('decision',{}).get('verdict')
-              out['session_gain']=r.get('session_grouped',{}).get('gain_transition_vs_v135')
-              out['objective_gain']=r.get('objective_grouped',{}).get('gain_transition_vs_v135')
-          pathlib.Path('.trace-ace/results/V152_RUN_FINAL.json').write_text(json.dumps(out,indent=2))
+              r=json.loads(p.read_text());out['verdict']=r.get('decision',{}).get('verdict');out['session_gain']=r.get('session_grouped',{}).get('gain_vs_v135');out['objective_gain']=r.get('objective_grouped',{}).get('gain_vs_v135');out['timing_valid_fraction']=r.get('census',{}).get('mean_valid_gap_fraction')
+          pathlib.Path('.trace-ace/results/V153_RUN_FINAL.json').write_text(json.dumps(out,indent=2))
           PY
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add .trace-ace/results/V152_RUN_FINAL.json
-          git commit -m "results: record org V152 final $GITHUB_RUN_ID" || true
+          git add .trace-ace/results/V153_RUN_FINAL.json
+          git commit -m "results: record org V153 final $GITHUB_RUN_ID" || true
           git push origin HEAD:trace-ace-controller || true
