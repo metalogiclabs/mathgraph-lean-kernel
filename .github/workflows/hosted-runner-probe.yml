@@ -5,6 +5,10 @@ on:
     paths:
       - '.github/workflows/hosted-runner-probe.yml'
       - '.github/RUNNER_PROBE_TRIGGER.txt'
+  pull_request:
+    branches: [master]
+    paths:
+      - '.github/RUNNER_PROBE_PR.txt'
   workflow_dispatch:
 concurrency:
   group: org-hosted-runner-probe
