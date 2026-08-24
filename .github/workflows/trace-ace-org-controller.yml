@@ -1,0 +1,133 @@
+name: Trace Ace Org Controller
+on:
+  push:
+    branches: [trace-ace-controller]
+    paths:
+      - '.trace-ace/V152_TRIGGER.txt'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: trace-ace-org-controller-v152
+  cancel-in-progress: true
+env:
+  SCIENCE_REPO: heathsanchez/mathgraph
+  SCIENCE_SHA: ae4799d856632062f16e223b075ab33a868ba4a4
+  TRANSCRIPT_ID: 1nOjremWhpZ_QKSLvZfGcNkS_C3kMMBUI
+  TRANSCRIPT_SIZE: '603547640'
+  TRANSCRIPT_SHA: e685b85b04694e130c25b17d09cdd1892fbda5e9fa685e98b2300114b915aa2d
+  METADATA_ID: 1EpqoamY0vFI2qE57R6wdqU5HwuoVk3Zz
+jobs:
+  v152:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - name: Checkout controller
+        uses: actions/checkout@v4
+        with:
+          ref: trace-ace-controller
+          path: controller
+      - name: Checkout frozen science
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.SCIENCE_REPO }}
+          ref: ${{ env.SCIENCE_SHA }}
+          path: mathgraph
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: mathgraph/requirements.txt
+      - name: Install dependencies
+        run: python -m pip install --disable-pip-version-check numpy pandas scipy scikit-learn gdown
+      - name: Record start marker
+        working-directory: controller
+        run: |
+          mkdir -p .trace-ace/results
+          python - <<'PY'
+          import json,os,pathlib
+          pathlib.Path('.trace-ace/results/V152_RUN_START.json').write_text(json.dumps({
+            'run_id': int(os.environ['GITHUB_RUN_ID']),
+            'status':'STARTED',
+            'science_repo':os.environ['SCIENCE_REPO'],
+            'science_sha':os.environ['SCIENCE_SHA']
+          }, indent=2))
+          PY
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add .trace-ace/results/V152_RUN_START.json
+          git commit -m "results: record org V152 start $GITHUB_RUN_ID" || true
+          git push origin HEAD:trace-ace-controller || true
+      - name: Restore transcript cache
+        id: txcache
+        uses: actions/cache/restore@v4
+        with:
+          path: data/transcripts.zip
+          key: trace-ace-transcripts-v1-${{ env.TRANSCRIPT_SHA }}
+      - name: Download exact transcript archive on cache miss
+        if: steps.txcache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p data
+          gdown "$TRANSCRIPT_ID" -O data/transcripts.zip
+      - name: Validate transcript archive
+        run: |
+          set -euo pipefail
+          test "$(stat -c%s data/transcripts.zip)" = "$TRANSCRIPT_SIZE"
+          echo "$TRANSCRIPT_SHA  data/transcripts.zip" | sha256sum -c -
+      - name: Save transcript cache
+        if: steps.txcache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: data/transcripts.zip
+          key: trace-ace-transcripts-v1-${{ env.TRANSCRIPT_SHA }}
+      - name: Download metadata and extract
+        run: |
+          mkdir -p data/meta data/transcripts
+          gdown "$METADATA_ID" -O data/metadata.zip
+          unzip -q data/metadata.zip -d data/meta
+          unzip -q data/transcripts.zip -d data/transcripts
+          echo "FEATURES=$(find data/meta -type f -name 'train_features*.csv' -print -quit)" >> "$GITHUB_ENV"
+          echo "LABELS=$(find data/meta -type f -name 'train_labels*.csv' -print -quit)" >> "$GITHUB_ENV"
+          FIRST=$(find data/transcripts -type f -name '*.csv' -print -quit)
+          echo "TRANSCRIPTS=$(dirname "$FIRST")" >> "$GITHUB_ENV"
+      - name: Verify frozen science file
+        run: |
+          test "$(git -C mathgraph rev-parse HEAD)" = "$SCIENCE_SHA"
+          python -m py_compile mathgraph/competitions/trace_the_ace/v152_transition_law_discovery.py
+      - name: Run frozen V152 discovery
+        run: |
+          cd mathgraph/competitions/trace_the_ace
+          python v152_transition_law_discovery.py \
+            --features "../../../$FEATURES" \
+            --labels "../../../$LABELS" \
+            --transcripts "../../../$TRANSCRIPTS" \
+            --out ../../../v152_transition_law_discovery.json
+      - name: Upload result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trace-ace-v152-transition-law-discovery
+          path: v152_transition_law_discovery.json
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Record final marker
+        if: always()
+        working-directory: controller
+        run: |
+          python - <<'PY'
+          import json,os,pathlib
+          p=pathlib.Path('../v152_transition_law_discovery.json')
+          out={'run_id':int(os.environ['GITHUB_RUN_ID']),'status':'FINAL','result_exists':p.exists(),'science_sha':os.environ['SCIENCE_SHA']}
+          if p.exists():
+              r=json.loads(p.read_text())
+              out['verdict']=r.get('decision',{}).get('verdict')
+              out['session_gain']=r.get('session_grouped',{}).get('gain_transition_vs_v135')
+              out['objective_gain']=r.get('objective_grouped',{}).get('gain_transition_vs_v135')
+          pathlib.Path('.trace-ace/results/V152_RUN_FINAL.json').write_text(json.dumps(out,indent=2))
+          PY
+          git pull --rebase origin trace-ace-controller || true
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add .trace-ace/results/V152_RUN_FINAL.json
+          git commit -m "results: record org V152 final $GITHUB_RUN_ID" || true
+          git push origin HEAD:trace-ace-controller || true
