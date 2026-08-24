@@ -1,7 +1,6 @@
 use crate::env::{Declar, DeclarInfo, Env, EnvLimit};
-use crate::util::{
-    ExportFile, ExprPtr, TcCache, TcCtx
-};
+use crate::result_protocol::rejection_from_panic;
+use crate::util::{ExportFile, ExprPtr, TcCache, TcCtx};
 use crate::value::E;
 
 use InferFlag::*;
@@ -9,6 +8,23 @@ use InferFlag::*;
 const SESSION_BUDGET: usize = 2_621_440;
 
 const CHUNK_SIZE: usize = 64;
+
+type PanicPayload = Box<dyn std::any::Any + Send + 'static>;
+
+fn resume_preferred_panic(panics: Vec<PanicPayload>) {
+    let mut rejection = None;
+    let mut internal = None;
+    for payload in panics {
+        if rejection_from_panic(payload.as_ref()).is_some() {
+            rejection.get_or_insert(payload);
+        } else {
+            internal.get_or_insert(payload);
+        }
+    }
+    if let Some(payload) = internal.or(rejection) {
+        std::panic::resume_unwind(payload)
+    }
+}
 
 /// An enum for type safety and convenience; used during nat literal reduction, and also for testing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -158,7 +174,7 @@ impl<'p> ExportFile<'p> {
                 .spawn_scoped(sco, || self.run_session((0, total), || None))
                 .unwrap()
                 .join()
-                .expect("serial checker thread panicked");
+                .unwrap_or_else(|payload| std::panic::resume_unwind(payload));
         });
     }
 
@@ -191,9 +207,8 @@ impl<'p> ExportFile<'p> {
                         .unwrap(),
                 )
             }
-            for t in handles {
-                t.join().expect("A thread in `check_all_declars` panicked while being joined");
-            }
+            let panics = handles.into_iter().filter_map(|thread| thread.join().err()).collect();
+            resume_preferred_panic(panics);
         });
     }
 
@@ -253,5 +268,30 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
         let ctx = self.empty_ctx();
         let ty = self.infer_value(InferOnly, depth, env, ctx, e);
         self.is_prop_type(depth, ty)
+    }
+}
+
+#[cfg(test)]
+mod panic_tests {
+    use super::*;
+    use crate::result_protocol::{reject_proof, rejection_from_panic, ProofRejectionCode};
+
+    #[test]
+    fn checker_thread_preserves_typed_rejection() {
+        let payload =
+            std::thread::spawn(|| reject_proof(ProofRejectionCode::DeclarationTypeMismatch)).join().unwrap_err();
+        assert_eq!(rejection_from_panic(payload.as_ref()), Some(ProofRejectionCode::DeclarationTypeMismatch));
+    }
+
+    #[test]
+    fn concurrent_internal_failure_takes_precedence() {
+        let rejection =
+            std::panic::catch_unwind(|| reject_proof(ProofRejectionCode::DeclarationTypeMismatch)).unwrap_err();
+        let internal = std::panic::catch_unwind(|| panic!("internal checker bug")).unwrap_err();
+        let payload = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            resume_preferred_panic(vec![rejection, internal])
+        }))
+        .unwrap_err();
+        assert!(rejection_from_panic(payload.as_ref()).is_none());
     }
 }

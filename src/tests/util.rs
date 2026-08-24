@@ -112,16 +112,19 @@ fn check_sparse_name_index() -> Result<(), Box<dyn Error>> {
 }
 
 #[test]
-#[should_panic(expected = "def_eq failed")]
-fn check_k_reduce_depth_alias() {
-    test_export_file_should_panic(
-        Some(Path::new("test_resources/KReduceDepthAlias/config.json")),
-        |export| {
+fn check_k_reduce_depth_alias_is_typed_rejection() -> Result<(), Box<dyn Error>> {
+    use crate::result_protocol::{rejection_from_panic, ProofRejectionCode};
+
+    let rejection = std::panic::catch_unwind(|| {
+        test_export_file_should_panic(Some(Path::new("test_resources/KReduceDepthAlias/config.json")), |export| {
             for declar in export.declars.values() {
                 export.check_declar(declar);
             }
-        },
-    )
+        })
+    })
+    .unwrap_err();
+    assert_eq!(rejection_from_panic(rejection.as_ref()), Some(ProofRejectionCode::DeclarationTypeMismatch));
+    Ok(())
 }
 
 #[test]

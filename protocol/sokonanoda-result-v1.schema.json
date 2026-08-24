@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/metalogiclabs/mathgraph-lean-kernel/blob/v2-arena-candidate/protocol/sokonanoda-result-v1.schema.json",
+  "title": "sokonanoda_result_v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "protocol", "outcome", "reason_code"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "protocol": { "const": "sokonanoda_result_v1" },
+    "outcome": {
+      "enum": ["accepted", "rejected", "declined", "internal_failure"]
+    },
+    "reason_code": {
+      "enum": [
+        "checked",
+        "duplicate_universe_parameters",
+        "theorem_type_not_prop",
+        "declaration_type_mismatch",
+        "unsupported_input",
+        "checker_error"
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "outcome": { "const": "accepted" } } },
+      "then": { "properties": { "reason_code": { "const": "checked" } } }
+    },
+    {
+      "if": { "properties": { "outcome": { "const": "rejected" } } },
+      "then": {
+        "properties": {
+          "reason_code": {
+            "enum": [
+              "duplicate_universe_parameters",
+              "theorem_type_not_prop",
+              "declaration_type_mismatch"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "outcome": { "const": "declined" } } },
+      "then": { "properties": { "reason_code": { "const": "unsupported_input" } } }
+    },
+    {
+      "if": { "properties": { "outcome": { "const": "internal_failure" } } },
+      "then": { "properties": { "reason_code": { "const": "checker_error" } } }
+    }
+  ]
+}

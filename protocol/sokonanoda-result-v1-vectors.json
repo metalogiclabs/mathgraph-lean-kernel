@@ -1,0 +1,35 @@
+{
+  "protocol": "sokonanoda_result_v1",
+  "vectors": [
+    {
+      "name": "accepted",
+      "exit_code": 0,
+      "record_utf8": "{\"schema_version\":1,\"protocol\":\"sokonanoda_result_v1\",\"outcome\":\"accepted\",\"reason_code\":\"checked\"}\n"
+    },
+    {
+      "name": "rejected_duplicate_universe_parameters",
+      "exit_code": 1,
+      "record_utf8": "{\"schema_version\":1,\"protocol\":\"sokonanoda_result_v1\",\"outcome\":\"rejected\",\"reason_code\":\"duplicate_universe_parameters\"}\n"
+    },
+    {
+      "name": "rejected_theorem_type_not_prop",
+      "exit_code": 1,
+      "record_utf8": "{\"schema_version\":1,\"protocol\":\"sokonanoda_result_v1\",\"outcome\":\"rejected\",\"reason_code\":\"theorem_type_not_prop\"}\n"
+    },
+    {
+      "name": "rejected_declaration_type_mismatch",
+      "exit_code": 1,
+      "record_utf8": "{\"schema_version\":1,\"protocol\":\"sokonanoda_result_v1\",\"outcome\":\"rejected\",\"reason_code\":\"declaration_type_mismatch\"}\n"
+    },
+    {
+      "name": "declined",
+      "exit_code": 2,
+      "record_utf8": "{\"schema_version\":1,\"protocol\":\"sokonanoda_result_v1\",\"outcome\":\"declined\",\"reason_code\":\"unsupported_input\"}\n"
+    },
+    {
+      "name": "internal_failure",
+      "exit_code": 3,
+      "record_utf8": "{\"schema_version\":1,\"protocol\":\"sokonanoda_result_v1\",\"outcome\":\"internal_failure\",\"reason_code\":\"checker_error\"}\n"
+    }
+  ]
+}

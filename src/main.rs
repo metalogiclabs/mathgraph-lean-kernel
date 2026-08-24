@@ -1,52 +1,112 @@
-use sokonanoda::util::Config;
+use sokonanoda::result_protocol::{rejection_from_panic, write_result, ResultOutcome};
+use sokonanoda::util::{Config, Decline};
 use std::error::Error;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use stumpalo::Arena;
 
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 const EXIT_REJECT: i32 = 1;
-
 const EXIT_DECLINE: i32 = 2;
+const EXIT_INTERNAL: i32 = 3;
+
+enum Invocation {
+    Help,
+    Run { config: PathBuf, result: Option<PathBuf> },
+}
+
+fn parse_args() -> Result<Invocation, String> {
+    let args: Vec<_> = std::env::args_os().skip(1).collect();
+    match args.as_slice() {
+        [arg] if arg == "-h" || arg == "--help" => Ok(Invocation::Help),
+        [config] => Ok(Invocation::Run { config: config.into(), result: None }),
+        [flag, result, config] if flag == "--result-file" =>
+            Ok(Invocation::Run { config: config.into(), result: Some(result.into()) }),
+        _ => Err("expected CONFIG or --result-file RESULT CONFIG".to_string()),
+    }
+}
 
 fn main() {
-    let mut args = std::env::args();
-    let _ = args.next();
-    let out = match args.next().as_ref() {
-        None => Err(Box::from("This program expects a path to a configuration file.".to_string())),
-        Some(p) if p == "-h" || p == "--help" => {
+    let invocation = match parse_args() {
+        Ok(Invocation::Help) => {
             println!("{}", HELP_LONG);
             return
         }
-        Some(p) => {
-            let path = Path::new(p).to_path_buf();
-            match std::panic::catch_unwind(|| use_config(&path)) {
-                Ok(r) => r,
-                Err(_) => std::process::exit(EXIT_REJECT),
-            }
+        Ok(run @ Invocation::Run { .. }) => run,
+        Err(error) => {
+            eprintln!("{:?}", MainError(Box::from(error)));
+            std::process::exit(EXIT_REJECT)
         }
     };
+    let Invocation::Run { config, result } = invocation else { unreachable!() };
+    if let Some(result_path) = result {
+        run_structured(&config, &result_path)
+    } else {
+        run_legacy(&config)
+    }
+}
+
+fn run_legacy(config: &Path) {
+    let out = match std::panic::catch_unwind(|| use_config(config)) {
+        Ok(result) => result,
+        Err(_) => std::process::exit(EXIT_REJECT),
+    };
     match out {
-        Ok(Some(msg)) => println!("{}", msg),
-        Ok(None) => {}
-        Err(e) => {
-            let declined = e.downcast_ref::<sokonanoda::util::Decline>().is_some();
-            eprintln!("{:?}", MainError(e));
+        Ok(RunSuccess { message: Some(msg), .. }) => println!("{}", msg),
+        Ok(RunSuccess { message: None, .. }) => {}
+        Err(error) => {
+            let declined = error.downcast_ref::<Decline>().is_some();
+            eprintln!("{:?}", MainError(error));
             std::process::exit(if declined { EXIT_DECLINE } else { EXIT_REJECT })
         }
     }
 }
 
-// Returns an optional success message.
-fn use_config(config_path: &Path) -> Result<Option<String>, Box<dyn Error>> {
+fn run_structured(config: &Path, result_path: &Path) -> ! {
+    let execution = std::panic::catch_unwind(|| use_config(config));
+    let (outcome, exit, message) = match execution {
+        Ok(Ok(RunSuccess { message, checked: true })) => (ResultOutcome::Accepted, 0, message),
+        Ok(Ok(RunSuccess { checked: false, .. })) =>
+            (ResultOutcome::InternalFailure, EXIT_INTERNAL, Some("structured results require a full check".to_string())),
+        Ok(Err(error)) if error.downcast_ref::<Decline>().is_some() =>
+            (ResultOutcome::Declined, EXIT_DECLINE, Some(error.to_string())),
+        Ok(Err(error)) => (ResultOutcome::InternalFailure, EXIT_INTERNAL, Some(error.to_string())),
+        Err(payload) => match rejection_from_panic(payload.as_ref()) {
+            Some(code) => (ResultOutcome::Rejected(code), EXIT_REJECT, None),
+            None => (ResultOutcome::InternalFailure, EXIT_INTERNAL, None),
+        },
+    };
+    if let Err(error) = write_result(result_path, outcome) {
+        eprintln!("failed to publish structured result: {error}");
+        std::process::exit(EXIT_INTERNAL)
+    }
+    if let Some(message) = message {
+        if exit == 0 {
+            println!("{message}")
+        } else {
+            eprintln!("{message}")
+        }
+    }
+    std::process::exit(exit)
+}
+
+struct RunSuccess {
+    message: Option<String>,
+    checked: bool,
+}
+
+fn use_config(config_path: &Path) -> Result<RunSuccess, Box<dyn Error>> {
     let cfg = Config::try_from(config_path)?;
     // Make sure the target pretty printer destination is accessible before doing any real work.
     let mut pp_destination = cfg.get_pp_destination()?;
     let global_arena = Arena::new();
     let (export_file, skipped_axioms) = cfg.to_export_file(global_arena.as_arena_ref())?;
     if export_file.config.parse_only {
-        return Ok(Some(format!("Parsed {} declarations", export_file.declars.len())))
+        return Ok(RunSuccess {
+            message: Some(format!("Parsed {} declarations", export_file.declars.len())),
+            checked: false,
+        })
     }
     // Check the environment
     export_file.check_all_declars();
@@ -55,23 +115,38 @@ fn use_config(config_path: &Path) -> Result<Option<String>, Box<dyn Error>> {
     if export_file.config.print_success_message {
         if pp_errs.is_empty() {
             if skipped_axioms.is_empty() {
-                Ok(Some(format!("Checked {} declarations with no errors", export_file.declars.len())))
+                Ok(RunSuccess {
+                    message: Some(format!("Checked {} declarations with no errors", export_file.declars.len())),
+                    checked: true,
+                })
             } else {
-                Ok(Some(format!("Checked {} declarations with no errors, skipping exported but unpermitted axioms {:?}",
-                export_file.declars.len(), skipped_axioms)))
+                Ok(RunSuccess {
+                    message: Some(format!(
+                        "Checked {} declarations with no errors, skipping exported but unpermitted axioms {:?}",
+                        export_file.declars.len(),
+                        skipped_axioms
+                    )),
+                    checked: true,
+                })
             }
         } else {
-            Ok(Some(format!(
-                "Checked {} declarations with no typechecker errors, {} pretty printer errors: {:#?}",
-                export_file.declars.len(),
-                pp_errs.len(),
-                pp_errs
-            )))
+            Ok(RunSuccess {
+                message: Some(format!(
+                    "Checked {} declarations with no typechecker errors, {} pretty printer errors: {:#?}",
+                    export_file.declars.len(),
+                    pp_errs.len(),
+                    pp_errs
+                )),
+                checked: true,
+            })
         }
     } else if skipped_axioms.is_empty() {
-        Ok(None)
+        Ok(RunSuccess { message: None, checked: true })
     } else {
-        Ok(Some(format!("Skipped exported but unpermitted axioms {:?}", skipped_axioms)))
+        Ok(RunSuccess {
+            message: Some(format!("Skipped exported but unpermitted axioms {:?}", skipped_axioms)),
+            checked: true,
+        })
     }
 }
 

@@ -1,5 +1,6 @@
 use crate::env::Declar;
 use crate::expr::Expr;
+use crate::result_protocol::{reject_proof, ProofRejectionCode};
 use crate::tc::{InferFlag, TypeChecker};
 use crate::util::{ExprPtr, LevelPtr, LevelsPtr, NamePtr};
 use crate::value::{self, Closure, RigidHead, Value, C, E, V};
@@ -268,13 +269,17 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
 
     pub(crate) fn check_declar_info_v(&mut self, d: &Declar<'t>) {
         let info = d.info();
-        assert!(self.ctx.no_dupes_all_params(info.uparams), "duplicate universe parameters in declaration");
+        if !self.ctx.no_dupes_all_params(info.uparams) {
+            reject_proof(ProofRejectionCode::DuplicateUniverseParameters)
+        }
         let empty_env = self.empty_env();
         let empty_ctx = self.empty_ctx();
         let ty_ty = self.infer_value(Check, 0, empty_env, empty_ctx, info.ty);
         let sort = self.ensure_sort_v(0, ty_ty);
         if let Declar::Theorem { .. } = d {
-            assert!(self.ctx.is_zero(sort), "theorem type must be Prop (sort 0)");
+            if !self.ctx.is_zero(sort) {
+                reject_proof(ProofRejectionCode::TheoremTypeNotProp)
+            }
         }
     }
 
@@ -284,6 +289,8 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         let empty_ctx = self.empty_ctx();
         let val_ty = self.infer_value(Check, 0, empty_env, empty_ctx, val);
         let declared = self.eval(0, empty_env, d.info().ty);
-        assert!(self.def_eq_at(0, val_ty, declared), "def_eq failed");
+        if !self.def_eq_at(0, val_ty, declared) {
+            reject_proof(ProofRejectionCode::DeclarationTypeMismatch)
+        }
     }
 }

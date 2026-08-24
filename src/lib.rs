@@ -19,6 +19,7 @@ pub mod pretty_printer;
 pub mod quot;
 pub mod quote;
 pub mod relevance;
+pub mod result_protocol;
 pub mod tc;
 #[cfg(test)]
 mod tests;
@@ -27,6 +28,5 @@ pub mod util;
 pub mod value;
 
 pub(crate) const STACK_SIZE: usize = 2 * 1024 * 1024 * 1024;
-
 
 
