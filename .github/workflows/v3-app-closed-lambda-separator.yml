@@ -29,13 +29,12 @@ jobs:
           from pathlib import Path
           p=Path('/tmp/cand/src/eval.rs')
           s=p.read_text()
-          old="""            if let Value::Lam { body: clo, .. } = f {
-                let a = if trivial { self.eval(depth, env, arg) } else { self.mk_thunk_hc(env, arg) };
-                let clo_env = clo.env;
-                let clo_body = clo.body;
-                let new_env = value::env_extend(self.arena, clo_env, a);
-                return self.eval(depth, new_env, clo_body);
-            }"""
+
+          a0=s.index('            if let Value::Lam { body: clo, .. } = f {')
+          a1=s.index('            let a = if trivial', a0)
+          a2=s.index('            return self.apply(depth, f, a);', a1)
+          old=s[a0:a2]
+          assert 'let new_env = value::env_extend' in old
           new="""            if let Value::Lam { body: clo, .. } = f {
                 let clo_env = clo.env;
                 let clo_body = clo.body;
@@ -45,16 +44,14 @@ jobs:
                 let a = if trivial { self.eval(depth, env, arg) } else { self.mk_thunk_hc(env, arg) };
                 let new_env = value::env_extend(self.arena, clo_env, a);
                 return self.eval(depth, new_env, clo_body);
-            }"""
-          assert s.count(old) == 1, s.count(old)
-          s=s.replace(old,new,1)
+            }
+"""
+          s=s[:a0]+new+s[a2:]
 
-          old2="""            Value::Lam { body: clo, .. } => {
-                let clo_env = clo.env;
-                let clo_body = clo.body;
-                let env = value::env_extend(self.arena, clo_env, a);
-                self.eval(depth, env, clo_body)
-            }"""
+          b0=s.index('            Value::Lam { body: clo, .. } => {', s.index('pub(crate) fn apply('))
+          b1=s.index('            Value::Rigid {', b0)
+          old2=s[b0:b1]
+          assert 'value::env_extend' in old2
           new2="""            Value::Lam { body: clo, .. } => {
                 let clo_env = clo.env;
                 let clo_body = clo.body;
@@ -63,9 +60,9 @@ jobs:
                 }
                 let env = value::env_extend(self.arena, clo_env, a);
                 self.eval(depth, env, clo_body)
-            }"""
-          assert s.count(old2) == 1, s.count(old2)
-          s=s.replace(old2,new2,1)
+            }
+"""
+          s=s[:b0]+new2+s[b1:]
           p.write_text(s)
           PY
 
@@ -142,5 +139,3 @@ jobs:
             /tmp/*.cg
             /tmp/*.vg
             /tmp/*.err
-
-# registered on default branch; this branch edit triggers the frozen separator
