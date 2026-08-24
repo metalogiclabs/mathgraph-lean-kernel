@@ -3,22 +3,22 @@ on:
   push:
     branches: [master]
     paths:
-      - '.trace-ace/V153_TRIGGER_MASTER.txt'
+      - '.trace-ace/V154_TRIGGER_MASTER.txt'
   workflow_dispatch:
 permissions:
   contents: write
 concurrency:
-  group: trace-ace-org-controller-v153
+  group: trace-ace-org-controller-v154
   cancel-in-progress: true
 env:
   SCIENCE_REPO: heathsanchez/mathgraph
-  SCIENCE_SHA: 51a4d6d76f6bd5bbcbe0fb4143299c1ff9407ea1
+  SCIENCE_SHA: 98a7597d458841bdb2d6a5b40684c7da9150e739
   TRANSCRIPT_ID: 1nOjremWhpZ_QKSLvZfGcNkS_C3kMMBUI
   TRANSCRIPT_SIZE: '603547640'
   TRANSCRIPT_SHA: e685b85b04694e130c25b17d09cdd1892fbda5e9fa685e98b2300114b915aa2d
   METADATA_ID: 1EpqoamY0vFI2qE57R6wdqU5HwuoVk3Zz
 jobs:
-  v153:
+  v154:
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
@@ -44,15 +44,14 @@ jobs:
           mkdir -p .trace-ace/results
           python - <<'PY'
           import json,os,pathlib
-          pathlib.Path('.trace-ace/results/V153_RUN_START.json').write_text(json.dumps({'run_id':int(os.environ['GITHUB_RUN_ID']),'status':'STARTED','science_repo':os.environ['SCIENCE_REPO'],'science_sha':os.environ['SCIENCE_SHA']},indent=2))
+          pathlib.Path('.trace-ace/results/V154_RUN_START.json').write_text(json.dumps({'run_id':int(os.environ['GITHUB_RUN_ID']),'status':'STARTED','science_repo':os.environ['SCIENCE_REPO'],'science_sha':os.environ['SCIENCE_SHA'],'science_protocol':'V153_RESPONSE_FEEDBACK_BINDING','operational_label':'V154'},indent=2))
           PY
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add .trace-ace/results/V153_RUN_START.json
-          git commit -m "results: record org V153 start $GITHUB_RUN_ID" || true
+          git add .trace-ace/results/V154_RUN_START.json
+          git commit -m "results: record org V154 start $GITHUB_RUN_ID" || true
           git push origin HEAD:trace-ace-controller || true
       - name: Restore transcript cache
-        id: txcache
         uses: actions/cache/restore@v4
         with:
           path: data/transcripts.zip
@@ -76,17 +75,17 @@ jobs:
       - name: Verify frozen science
         run: |
           test "$(git -C mathgraph rev-parse HEAD)" = "$SCIENCE_SHA"
-          python -m py_compile mathgraph/competitions/trace_the_ace/v153_interaction_timing_discovery.py
-      - name: Run frozen V153 discovery
+          python -m py_compile mathgraph/competitions/trace_the_ace/v153_response_feedback_binding.py
+      - name: Run frozen V154 binding discovery
         run: |
           cd mathgraph/competitions/trace_the_ace
-          python v153_interaction_timing_discovery.py --features "../../../$FEATURES" --labels "../../../$LABELS" --transcripts "../../../$TRANSCRIPTS" --out ../../../v153_interaction_timing_discovery.json
+          python v153_response_feedback_binding.py --features "../../../$FEATURES" --labels "../../../$LABELS" --transcripts "../../../$TRANSCRIPTS" --out ../../../v154_response_feedback_binding.json
       - name: Upload result
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: trace-ace-v153-interaction-timing-discovery
-          path: v153_interaction_timing_discovery.json
+          name: trace-ace-v154-response-feedback-binding
+          path: v154_response_feedback_binding.json
           if-no-files-found: warn
           retention-days: 14
       - name: Record final marker
@@ -96,14 +95,14 @@ jobs:
           git pull --rebase origin trace-ace-controller || true
           python - <<'PY'
           import json,os,pathlib
-          p=pathlib.Path('../v153_interaction_timing_discovery.json')
-          out={'run_id':int(os.environ['GITHUB_RUN_ID']),'status':'FINAL','result_exists':p.exists(),'science_sha':os.environ['SCIENCE_SHA']}
+          p=pathlib.Path('../v154_response_feedback_binding.json')
+          out={'run_id':int(os.environ['GITHUB_RUN_ID']),'status':'FINAL','result_exists':p.exists(),'science_sha':os.environ['SCIENCE_SHA'],'operational_label':'V154'}
           if p.exists():
-              r=json.loads(p.read_text());out['verdict']=r.get('decision',{}).get('verdict');out['session_gain']=r.get('session_grouped',{}).get('gain_vs_v135');out['objective_gain']=r.get('objective_grouped',{}).get('gain_vs_v135');out['timing_valid_fraction']=r.get('census',{}).get('mean_valid_gap_fraction')
-          pathlib.Path('.trace-ace/results/V153_RUN_FINAL.json').write_text(json.dumps(out,indent=2))
+              r=json.loads(p.read_text());out['verdict']=r.get('decision',{}).get('verdict');out['session_gain']=r.get('session_grouped',{}).get('gain_bound_vs_v135');out['objective_gain']=r.get('objective_grouped',{}).get('gain_bound_vs_v135');out['session_vs_shuffle']=r.get('session_grouped',{}).get('gain_bound_vs_shuffle');out['objective_vs_shuffle']=r.get('objective_grouped',{}).get('gain_bound_vs_shuffle')
+          pathlib.Path('.trace-ace/results/V154_RUN_FINAL.json').write_text(json.dumps(out,indent=2))
           PY
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add .trace-ace/results/V153_RUN_FINAL.json
-          git commit -m "results: record org V153 final $GITHUB_RUN_ID" || true
+          git add .trace-ace/results/V154_RUN_FINAL.json
+          git commit -m "results: record org V154 final $GITHUB_RUN_ID" || true
           git push origin HEAD:trace-ace-controller || true
