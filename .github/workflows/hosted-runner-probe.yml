@@ -1,0 +1,19 @@
+name: Org Hosted Runner Probe
+on:
+  push:
+    branches: [master]
+    paths:
+      - '.github/workflows/hosted-runner-probe.yml'
+      - '.github/RUNNER_PROBE_TRIGGER.txt'
+  workflow_dispatch:
+concurrency:
+  group: org-hosted-runner-probe
+  cancel-in-progress: true
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - run: |
+          echo "ORG_RUNNER_OK"
+          uname -a
