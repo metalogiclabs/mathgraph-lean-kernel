@@ -36,8 +36,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          cache: pip
-          cache-dependency-path: mathgraph/requirements.txt
       - name: Install dependencies
         run: python -m pip install --disable-pip-version-check numpy pandas scipy scikit-learn gdown
       - name: Record start marker
