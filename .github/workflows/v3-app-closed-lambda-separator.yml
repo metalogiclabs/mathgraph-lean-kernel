@@ -13,10 +13,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           fetch-depth: 0
-      - uses: cachix/install-nix-action@v31
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24
 
       - name: Build frozen baseline and isolated candidate
         run: |
@@ -80,8 +80,9 @@ jobs:
       - name: Build focused Arena tests
         run: |
           set -euxo pipefail
-          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git clone https://github.com/leanprover/lean-kernel-arena /tmp/arena
           cd /tmp/arena
+          git checkout f0fe3b379dbce91537417b529140d0ca250f271c
           for T in perf/app-lam perf/beta-ladder perf/let-ladder perf/grind-ring-5; do
             nix develop -c ./lka.py build-test "$T"
           done
@@ -100,7 +101,7 @@ jobs:
         run: |
           set -euxo pipefail
           cd /tmp/arena
-          nix shell nixpkgs#valgrind -c bash -lc '
+          nix shell github:NixOS/nixpkgs/0ad6f47ea4fe188f4bc8f0380f93ae8523337c6c#valgrind -c bash -lc '
             for T in app-lam beta-ladder let-ladder grind-ring-5; do
               valgrind --tool=callgrind --callgrind-out-file=/tmp/base-$T.cg /tmp/base-bin /tmp/checker.json < _build/tests/perf/$T.ndjson >/dev/null 2>/tmp/base-$T.vg
               valgrind --tool=callgrind --callgrind-out-file=/tmp/cand-$T.cg /tmp/cand-bin /tmp/checker.json < _build/tests/perf/$T.ndjson >/dev/null 2>/tmp/cand-$T.vg
@@ -130,7 +131,7 @@ jobs:
           print('DECISION='+decision)
           PY
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
           name: v3-unused-lambda-application-separator
