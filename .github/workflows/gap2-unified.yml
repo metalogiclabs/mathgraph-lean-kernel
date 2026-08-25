@@ -1,0 +1,45 @@
+name: Gap2 unified census and jump
+
+on:
+  push:
+    branches:
+      - experiment/gap2-unified-workflow
+  workflow_dispatch:
+
+concurrency:
+  group: gap2-unified-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  census_then_jump:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+        with:
+          enable_kvm: true
+          set_as_trusted_user: true
+      - name: Run lightweight pair census
+        run: bash scripts/run_gap2_pair_census_lite.sh
+      - name: Upload census evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gap2-pair-census-lite
+          path: |
+            pair-census-summary.txt
+            pair-events.log
+      - name: Run frozen pair-band jump
+        run: bash scripts/run_gap2_pair_band_jump.sh
+      - name: Upload jump results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gap2-pair-band-jump
+          path: |
+            pair-times.tsv
+            pair-decision.txt
+            pair-semantic-gate.txt
