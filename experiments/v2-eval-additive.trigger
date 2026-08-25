@@ -1,1 +1,1 @@
-V2 eval-side projection fusion additive separator
+canonical env capacity separator 2026-08-19
