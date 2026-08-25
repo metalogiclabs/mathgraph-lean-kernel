@@ -6,20 +6,18 @@ arm = sys.argv[2]
 p = root / 'src' / 'eval.rs'
 s = p.read_text()
 
-# V6 boundary-validation run: deliberately narrow producer/consumer fusion probe.
-# We avoid memoizing key_env and instead test whether the consumer can directly
-# use the producer's already-pruned env when projection preserves full length.
-# This first run validates the boundary; a true pre-projection bypass is only
-# justified if this separator shows the boundary is semantically stable.
-# The exact splice points are guarded so a source drift fails loudly.
-needle = 'let key_env = self.key_env(env, e);'
+# V6 boundary-validation run against the actual frozen-V2 consumer site.
+# mk_thunk_hc computes the canonical key environment as `te` before using it
+# in the thunk hash-cons key and thunk payload. Keep the hypothesis unchanged:
+# test whether a full-mask environment can be consumed directly.
+needle = '        let te = self.key_env(env, e);\n        let key = (te as *const value::Env<\'t> as usize, e);'
 if needle not in s:
-    raise SystemExit('V6 splice point not found: key_env construction')
+    raise SystemExit('V6 splice point not found: mk_thunk_hc key_env boundary')
 
 if arm == 'ablate':
-    repl = '''let key_env = self.key_env(env, e);\n        // V6 ablation: pay a matched branch/check cost but preserve baseline consumer.\n        let _v6_fusion_probe = key_env.len();'''
+    repl = '''        let te = self.key_env(env, e);\n        // V6 ablation: matched cheap observation; preserve baseline consumer.\n        let _v6_fusion_probe = e.as_ref().fv_mask();\n        let key = (te as *const value::Env<'t> as usize, e);'''
 elif arm == 'fusion':
-    repl = '''// V6 fusion: if the incoming environment is already exactly the future-relative\n        // projection required by this expression, consume it directly instead of rebuilding.\n        let key_env = {\n            let projected = self.key_env(env, e);\n            if projected.len() == env.len() { env.clone() } else { projected }\n        };'''
+    repl = '''        // V6 fusion: when the expression needs every represented slot, the\n        // producer environment is already the exact projection. Bypass key_env.\n        let mask = e.as_ref().fv_mask();\n        let te = match env {\n            value::Env::Framed { mask: env_mask, .. } if *env_mask & mask == *env_mask => env,\n            _ => self.key_env(env, e),\n        };\n        let key = (te as *const value::Env<'t> as usize, e);'''
 else:
     raise SystemExit(f'unknown arm: {arm}')
 
