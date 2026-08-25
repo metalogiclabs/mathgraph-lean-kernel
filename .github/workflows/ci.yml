@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Install the reviewed Rust toolchain
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.95.0 --profile minimal
+          rustup default 1.95.0
+          rustc --version | grep -F 'rustc 1.95.0 '
+      - name: Run every library, CLI, and arena test target
+        run: cargo test --all-targets --locked

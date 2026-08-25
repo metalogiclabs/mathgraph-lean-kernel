@@ -53,3 +53,12 @@ failures produce `internal_failure`. When parallel checking sees both a typed
 rejection and any unexpected panic, the internal failure takes precedence.
 Structured mode also treats a `parse_only` configuration as an internal failure;
 only a completed declaration check may produce `accepted`.
+
+Version 1 deliberately types only the three rejection conditions in the table.
+Other ill-typed or unsupported export shapes may still reach an untyped checker
+assertion and therefore produce `internal_failure`; consumers must treat that
+outcome as an ambiguous failure, not as evidence that the checker itself is
+defective. With parallel checking, the outcome class is stable but, if multiple
+typed rejections occur, the selected narrow `reason_code` is not guaranteed to
+identify the earliest declaration. The result path must be on a filesystem that
+supports hard links.

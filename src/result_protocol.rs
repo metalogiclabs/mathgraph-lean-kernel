@@ -1,5 +1,6 @@
 use serde::Serialize;
 use std::any::Any;
+use std::ffi::OsString;
 use std::fs::{self, OpenOptions};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
@@ -77,7 +78,8 @@ fn temp_path(path: &Path) -> io::Result<PathBuf> {
     let name =
         path.file_name().ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "result path has no file name"))?;
     let serial = TEMP_COUNTER.fetch_add(1, Ordering::Relaxed);
-    let mut temp_name = name.to_os_string();
+    let mut temp_name = OsString::from(".");
+    temp_name.push(name);
     temp_name.push(format!(".tmp.{}.{}", std::process::id(), serial));
     Ok(path.with_file_name(temp_name))
 }
@@ -102,11 +104,17 @@ pub fn write_result(path: &Path, outcome: ResultOutcome) -> io::Result<()> {
         fs::hard_link(&temp, path)?;
         Ok(())
     })();
-    let cleanup = fs::remove_file(&temp);
-    match (result, cleanup) {
-        (Err(error), _) => Err(error),
-        (Ok(()), Err(error)) => Err(error),
-        (Ok(()), Ok(())) => Ok(()),
+    match result {
+        Err(error) => {
+            let _ = fs::remove_file(&temp);
+            Err(error)
+        }
+        Ok(()) => {
+            if let Err(error) = fs::remove_file(&temp) {
+                eprintln!("warning: failed to remove result temporary file {}: {error}", temp.display());
+            }
+            Ok(())
+        }
     }
 }
 
@@ -157,6 +165,58 @@ mod tests {
         assert_eq!(error.kind(), io::ErrorKind::AlreadyExists);
         assert_eq!(fs::read(&path).unwrap(), b"reserved\n");
         fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn result_publication_leaves_no_temporary_file() {
+        let directory = unique_path("cleanup-directory");
+        fs::create_dir(&directory).unwrap();
+        let path = directory.join("result.json");
+        write_result(&path, ResultOutcome::Accepted).unwrap();
+        assert_eq!(fs::read_dir(&directory).unwrap().count(), 1);
+        fs::remove_file(path).unwrap();
+        fs::remove_dir(directory).unwrap();
+    }
+
+    #[test]
+    fn concurrent_publication_has_exactly_one_winner() {
+        use std::sync::{Arc, Barrier};
+
+        let directory = unique_path("concurrent-directory");
+        fs::create_dir(&directory).unwrap();
+        let path = directory.join("result.json");
+        let barrier = Arc::new(Barrier::new(2));
+        let handles: Vec<_> = [ResultOutcome::Accepted, ResultOutcome::InternalFailure]
+            .into_iter()
+            .map(|outcome| {
+                let path = path.clone();
+                let barrier = Arc::clone(&barrier);
+                std::thread::spawn(move || {
+                    barrier.wait();
+                    write_result(&path, outcome)
+                })
+            })
+            .collect();
+        let results: Vec<_> = handles.into_iter().map(|handle| handle.join().unwrap()).collect();
+        assert_eq!(results.iter().filter(|result| result.is_ok()).count(), 1);
+        assert_eq!(
+            results
+                .iter()
+                .filter_map(|result| result.as_ref().err())
+                .filter(|error| error.kind() == io::ErrorKind::AlreadyExists)
+                .count(),
+            1
+        );
+        let record = fs::read_to_string(&path).unwrap();
+        assert!(
+            record
+                == "{\"schema_version\":1,\"protocol\":\"sokonanoda_result_v1\",\"outcome\":\"accepted\",\"reason_code\":\"checked\"}\n"
+                || record
+                    == "{\"schema_version\":1,\"protocol\":\"sokonanoda_result_v1\",\"outcome\":\"internal_failure\",\"reason_code\":\"checker_error\"}\n"
+        );
+        assert_eq!(fs::read_dir(&directory).unwrap().count(), 1);
+        fs::remove_file(path).unwrap();
+        fs::remove_dir(directory).unwrap();
     }
 
     #[test]

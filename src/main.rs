@@ -64,6 +64,12 @@ fn run_legacy(config: &Path) {
 }
 
 fn run_structured(config: &Path, result_path: &Path) -> ! {
+    let default_panic_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        if rejection_from_panic(info.payload()).is_none() {
+            default_panic_hook(info)
+        }
+    }));
     let execution = std::panic::catch_unwind(|| use_config(config));
     let (outcome, exit, message) = match execution {
         Ok(Ok(RunSuccess { message, checked: true })) => (ResultOutcome::Accepted, 0, message),
@@ -73,7 +79,11 @@ fn run_structured(config: &Path, result_path: &Path) -> ! {
             (ResultOutcome::Declined, EXIT_DECLINE, Some(error.to_string())),
         Ok(Err(error)) => (ResultOutcome::InternalFailure, EXIT_INTERNAL, Some(error.to_string())),
         Err(payload) => match rejection_from_panic(payload.as_ref()) {
-            Some(code) => (ResultOutcome::Rejected(code), EXIT_REJECT, None),
+            Some(code) => (
+                ResultOutcome::Rejected(code),
+                EXIT_REJECT,
+                Some(format!("proof rejected: {}", code.as_str())),
+            ),
             None => (ResultOutcome::InternalFailure, EXIT_INTERNAL, None),
         },
     };

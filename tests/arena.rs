@@ -83,6 +83,9 @@ fn run_case_inner(export: PathBuf) -> Outcome {
     match result {
         Ok(()) => Outcome::Accepted,
         Err(payload) => {
+            if let Some(code) = sokonanoda::result_protocol::rejection_from_panic(payload.as_ref()) {
+                return Outcome::KernelRejected(format!("typed rejection: {}", code.as_str()))
+            }
             let msg = if let Some(s) = payload.downcast_ref::<&str>() {
                 (*s).to_string()
             } else if let Some(s) = payload.downcast_ref::<String>() {
@@ -97,6 +100,12 @@ fn run_case_inner(export: PathBuf) -> Outcome {
             }
         }
     }
+}
+
+#[test]
+fn typed_rejection_remains_a_kernel_rejection() {
+    let export = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("test_resources/KReduceDepthAlias/export");
+    assert!(matches!(run_case_inner(export), Outcome::KernelRejected(_)));
 }
 
 #[test]
