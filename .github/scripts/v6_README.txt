@@ -1,0 +1,1 @@
+V6 tests producer-consumer elimination of repeated future-relative environment projection. It is a causal separator, not a promotion candidate. Exact output equality is mandatory before performance interpretation.
