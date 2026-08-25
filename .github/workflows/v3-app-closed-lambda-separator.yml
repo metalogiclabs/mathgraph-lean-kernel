@@ -1,11 +1,11 @@
 name: V3 unused-lambda application separator
 
-on:
+'on':
   push:
     branches:
       - experiment/v3-app-closed-lambda-separator
     paths:
-      - '.github/workflows/v3-app-closed-lambda-separator.yml'
+      - .github/workflows/v3-app-closed-lambda-separator.yml
   workflow_dispatch:
 
 jobs:
@@ -16,68 +16,27 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           fetch-depth: 0
+
       - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24
 
       - name: Build frozen baseline and isolated candidate
+        shell: bash
         run: |
           set -euxo pipefail
           BASE=3d7585c21242f29fdaa48ae9a16e16c6afe42238
           git worktree add /tmp/base "$BASE"
           git worktree add /tmp/cand "$BASE"
-
-          python3 - <<'PY'
-          from pathlib import Path
-          p=Path('/tmp/cand/src/eval.rs')
-          s=p.read_text()
-
-          a0=s.index('            if let Value::Lam { body: clo, .. } = f {')
-          a1=s.index('            let a = if trivial', a0)
-          a2=s.index('            return self.apply(depth, f, a);', a1)
-          old=s[a0:a2]
-          assert 'let new_env = value::env_extend' in old
-          new="""            if let Value::Lam { body: clo, .. } = f {
-                let clo_env = clo.env;
-                let clo_body = clo.body;
-                if crate::expr::ignores_binder(clo_body) {
-                    return self.eval(depth, clo_env, clo_body);
-                }
-                let a = if trivial { self.eval(depth, env, arg) } else { self.mk_thunk_hc(env, arg) };
-                let new_env = value::env_extend(self.arena, clo_env, a);
-                return self.eval(depth, new_env, clo_body);
-            }
-"""
-          s=s[:a0]+new+s[a2:]
-
-          b0=s.index('            Value::Lam { body: clo, .. } => {', s.index('pub(crate) fn apply('))
-          b1=s.index('            Value::Rigid {', b0)
-          old2=s[b0:b1]
-          assert 'value::env_extend' in old2
-          new2="""            Value::Lam { body: clo, .. } => {
-                let clo_env = clo.env;
-                let clo_body = clo.body;
-                if crate::expr::ignores_binder(clo_body) {
-                    return self.eval(depth, clo_env, clo_body);
-                }
-                let env = value::env_extend(self.arena, clo_env, a);
-                self.eval(depth, env, clo_body)
-            }
-"""
-          s=s[:b0]+new2+s[b1:]
-          p.write_text(s)
-          PY
-
+          python3 .github/scripts/v3_unused_lambda_separator_patch.py
           for A in base cand; do
-            cd /tmp/$A
+            cd "/tmp/$A"
             cargo test --locked
             cargo build --release --locked
-            cp target/release/sokonanoda /tmp/$A-bin
+            cp target/release/sokonanoda "/tmp/$A-bin"
           done
-
-          cat >/tmp/checker.json <<'EOF'
-          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
-          EOF
+          printf '%s\n' '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}' > /tmp/checker.json
 
       - name: Build focused Arena tests
+        shell: bash
         run: |
           set -euxo pipefail
           git clone https://github.com/leanprover/lean-kernel-arena /tmp/arena
@@ -88,48 +47,23 @@ jobs:
           done
 
       - name: Semantic equality gate
+        shell: bash
         run: |
           set -euxo pipefail
           cd /tmp/arena
           for T in app-lam beta-ladder let-ladder grind-ring-5; do
-            /tmp/base-bin /tmp/checker.json < _build/tests/perf/$T.ndjson > /tmp/base-$T.out 2>/tmp/base-$T.err
-            /tmp/cand-bin /tmp/checker.json < _build/tests/perf/$T.ndjson > /tmp/cand-$T.out 2>/tmp/cand-$T.err
-            cmp /tmp/base-$T.out /tmp/cand-$T.out
+            /tmp/base-bin /tmp/checker.json < "_build/tests/perf/$T.ndjson" > "/tmp/base-$T.out" 2> "/tmp/base-$T.err"
+            /tmp/cand-bin /tmp/checker.json < "_build/tests/perf/$T.ndjson" > "/tmp/cand-$T.out" 2> "/tmp/cand-$T.err"
+            cmp "/tmp/base-$T.out" "/tmp/cand-$T.out"
           done
 
       - name: Callgrind separator
+        shell: bash
         run: |
           set -euxo pipefail
           cd /tmp/arena
-          nix shell github:NixOS/nixpkgs/0ad6f47ea4fe188f4bc8f0380f93ae8523337c6c#valgrind -c bash -lc '
-            for T in app-lam beta-ladder let-ladder grind-ring-5; do
-              valgrind --tool=callgrind --callgrind-out-file=/tmp/base-$T.cg /tmp/base-bin /tmp/checker.json < _build/tests/perf/$T.ndjson >/dev/null 2>/tmp/base-$T.vg
-              valgrind --tool=callgrind --callgrind-out-file=/tmp/cand-$T.cg /tmp/cand-bin /tmp/checker.json < _build/tests/perf/$T.ndjson >/dev/null 2>/tmp/cand-$T.vg
-            done
-          '
-          python3 - <<'PY' | tee /tmp/decision.txt
-          from pathlib import Path
-          def ir(path):
-              for line in Path(path).read_text(errors='ignore').splitlines():
-                  if line.startswith('summary:'):
-                      return int(line.split()[1])
-              raise RuntimeError(path)
-          ratios={}
-          for t in ['app-lam','beta-ladder','let-ladder','grind-ring-5']:
-              b=ir(f'/tmp/base-{t}.cg'); c=ir(f'/tmp/cand-{t}.cg')
-              d=(c-b)/b
-              ratios[t]=d
-              print(f'{t} base={b} cand={c} delta={d:.6%}')
-          target=min(ratios['app-lam'], ratios['beta-ladder'])
-          guard=max(ratios['let-ladder'], ratios['grind-ring-5'])
-          if target <= -0.03 and guard <= 0.005:
-              decision='PROMOTE__UNUSED_LAMBDA_APPLICATION_ELISION'
-          elif target <= -0.005 and guard <= 0.005:
-              decision='REAL_GAIN__ESCALATE_FULL_ARENA'
-          else:
-              decision='KILL__UNUSED_LAMBDA_ELISION_NOT_MATERIAL'
-          print('DECISION='+decision)
-          PY
+          nix shell github:NixOS/nixpkgs/0ad6f47ea4fe188f4bc8f0380f93ae8523337c6c#valgrind -c bash -lc 'for T in app-lam beta-ladder let-ladder grind-ring-5; do valgrind --tool=callgrind --callgrind-out-file=/tmp/base-$T.cg /tmp/base-bin /tmp/checker.json < _build/tests/perf/$T.ndjson >/dev/null 2>/tmp/base-$T.vg; valgrind --tool=callgrind --callgrind-out-file=/tmp/cand-$T.cg /tmp/cand-bin /tmp/checker.json < _build/tests/perf/$T.ndjson >/dev/null 2>/tmp/cand-$T.vg; done'
+          python3 "$GITHUB_WORKSPACE/.github/scripts/v3_unused_lambda_separator_decide.py" | tee /tmp/decision.txt
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
@@ -140,5 +74,3 @@ jobs:
             /tmp/*.cg
             /tmp/*.vg
             /tmp/*.err
-
-# retrigger after structural patch fix
