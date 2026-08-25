@@ -1,0 +1,22 @@
+name: Gap2 pair census lite
+on:
+  push:
+    branches:
+      - experiment/gap2-pair-census-lite
+jobs:
+  census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Run lightweight pair census
+        run: bash scripts/run_gap2_pair_census_lite.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gap2-pair-census-lite
+          path: |
+            pair-census-summary.txt
+            pair-events.log
