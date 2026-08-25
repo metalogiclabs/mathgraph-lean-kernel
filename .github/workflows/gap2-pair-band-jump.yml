@@ -8,13 +8,16 @@ on:
 
 jobs:
   jump:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     timeout-minutes: 240
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: cachix/install-nix-action@v31
+        with:
+          enable_kvm: true
+          set_as_trusted_user: true
       - name: Run pair-band jump
         run: bash scripts/run_gap2_pair_band_jump.sh
       - name: Upload results
