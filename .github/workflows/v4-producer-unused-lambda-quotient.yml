@@ -1,0 +1,78 @@
+name: V4 producer-side unused-lambda quotient
+
+'on':
+  push:
+    branches:
+      - experiment/v4-producer-unused-lambda-quotient
+    paths:
+      - .github/workflows/v4-producer-unused-lambda-quotient.yml
+      - .github/scripts/v4_producer_unused_lambda_patch.py
+      - .github/scripts/v4_producer_unused_lambda_decide.py
+  workflow_dispatch:
+
+jobs:
+  separator:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24
+
+      - name: Build frozen baseline and producer-side candidate
+        shell: bash
+        run: |
+          set -euxo pipefail
+          BASE=3d7585c21242f29fdaa48ae9a16e16c6afe42238
+          git worktree add /tmp/base "$BASE"
+          git worktree add /tmp/cand "$BASE"
+          python3 .github/scripts/v4_producer_unused_lambda_patch.py
+          for A in base cand; do
+            cd "/tmp/$A"
+            cargo test --locked
+            cargo build --release --locked
+            cp target/release/sokonanoda "/tmp/$A-bin"
+          done
+          printf '%s\n' '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}' > /tmp/checker.json
+
+      - name: Build focused Arena tests
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          git checkout f0fe3b379dbce91537417b529140d0ca250f271c
+          for T in perf/app-lam perf/beta-ladder perf/let-ladder perf/grind-ring-5; do
+            nix develop -c ./lka.py build-test "$T"
+          done
+
+      - name: Semantic equality gate
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          for T in app-lam beta-ladder let-ladder grind-ring-5; do
+            /tmp/base-bin /tmp/checker.json < "_build/tests/perf/$T.ndjson" > "/tmp/base-$T.out" 2> "/tmp/base-$T.err"
+            /tmp/cand-bin /tmp/checker.json < "_build/tests/perf/$T.ndjson" > "/tmp/cand-$T.out" 2> "/tmp/cand-$T.err"
+            cmp "/tmp/base-$T.out" "/tmp/cand-$T.out"
+          done
+
+      - name: Callgrind separator
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          nix shell github:NixOS/nixpkgs/0ad6f47ea4fe188f4bc8f0380f93ae8523337c6c#valgrind -c bash -lc 'for T in app-lam beta-ladder let-ladder grind-ring-5; do valgrind --tool=callgrind --callgrind-out-file=/tmp/base-$T.cg /tmp/base-bin /tmp/checker.json < _build/tests/perf/$T.ndjson >/dev/null 2>/tmp/base-$T.vg; valgrind --tool=callgrind --callgrind-out-file=/tmp/cand-$T.cg /tmp/cand-bin /tmp/checker.json < _build/tests/perf/$T.ndjson >/dev/null 2>/tmp/cand-$T.vg; done'
+          python3 "$GITHUB_WORKSPACE/.github/scripts/v4_producer_unused_lambda_decide.py" | tee /tmp/decision.txt
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: v4-producer-unused-lambda-quotient
+          path: |
+            /tmp/decision.txt
+            /tmp/*.cg
+            /tmp/*.vg
+            /tmp/*.err
