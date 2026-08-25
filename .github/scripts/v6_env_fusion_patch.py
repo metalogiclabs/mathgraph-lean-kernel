@@ -6,9 +6,11 @@ arm = sys.argv[2]
 p = root / 'src' / 'eval.rs'
 s = p.read_text()
 
-# V6 is deliberately a narrow producer/consumer fusion experiment.
-# We avoid memoizing key_env and instead bypass repeated key_env construction
-# when the consumer can directly use the producer's already-pruned env.
+# V6 boundary-validation run: deliberately narrow producer/consumer fusion probe.
+# We avoid memoizing key_env and instead test whether the consumer can directly
+# use the producer's already-pruned env when projection preserves full length.
+# This first run validates the boundary; a true pre-projection bypass is only
+# justified if this separator shows the boundary is semantically stable.
 # The exact splice points are guarded so a source drift fails loudly.
 needle = 'let key_env = self.key_env(env, e);'
 if needle not in s:
