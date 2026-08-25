@@ -6,6 +6,8 @@ name: V3 unused-lambda application separator
       - experiment/v3-app-closed-lambda-separator
     paths:
       - .github/workflows/v3-app-closed-lambda-separator.yml
+      - .github/scripts/v3_unused_lambda_separator_patch.py
+      - .github/scripts/v3_unused_lambda_separator_decide.py
   workflow_dispatch:
 
 jobs:
