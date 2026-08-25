@@ -5,6 +5,7 @@ cp scripts/run_adaptive_conv_scheduler_ablation.sh /tmp/run_adaptive_conv_schedu
 # refutation benchmarks correctly exit 1, so keep only the numeric timing line.
 # This wrapper is intentionally a separate file so a synchronization commit retriggers
 # the PR workflow with the corrected parser while preserving the original failed harness.
+# Fresh trigger after V6 killed the key_env/projection boundary.
 sed -i "s#/usr/bin/time -f '%e'#/usr/bin/time -q -f '%e'#g" /tmp/run_adaptive_conv_scheduler_ablation_fixed.sh
 sed -i 's#; cat /tmp/time.txt)#; tail -n 1 /tmp/time.txt)#g' /tmp/run_adaptive_conv_scheduler_ablation_fixed.sh
 bash /tmp/run_adaptive_conv_scheduler_ablation_fixed.sh
