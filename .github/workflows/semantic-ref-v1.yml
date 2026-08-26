@@ -42,6 +42,7 @@ jobs:
           ./lka.py build-test perf/beta-ladder
 
       - name: Build baseline and candidate
+        working-directory: arena
         shell: nix develop -c bash -euxo pipefail {0}
         run: |
           for arm in base candidate; do
@@ -78,6 +79,7 @@ jobs:
           PY
 
       - name: Callgrind instruction census
+        working-directory: arena
         shell: nix develop -c bash -euxo pipefail {0}
         run: |
           nix profile install nixpkgs#valgrind
@@ -91,9 +93,9 @@ jobs:
             printf '%s,%s,%s\n' "$test" "$arm" "$ir" >>/tmp/semref-ir.csv
           }
           for arm in base candidate; do
-            profile prelude arena/_build/tests/init-prelude.ndjson "$arm"
-            profile beta arena/_build/tests/perf/beta-ladder.ndjson "$arm"
-            profile std arena/_build/tests/std.ndjson "$arm"
+            profile prelude _build/tests/init-prelude.ndjson "$arm"
+            profile beta _build/tests/perf/beta-ladder.ndjson "$arm"
+            profile std _build/tests/std.ndjson "$arm"
           done
           cat /tmp/semref-ir.csv
 
@@ -108,8 +110,6 @@ jobs:
               b=rows[(t,'base')]; c=rows[(t,'candidate')]; q=c/b
               ratios[t]=q
               print(f'{t}: base={b} candidate={c} ratio={q:.6f} delta={(q-1)*100:+.2f}%')
-          # The architecture is intended to attack ubiquitous large-corpus work.
-          # A micro-only win is explicitly insufficient.
           if ratios['std'] <= 0.80 and ratios['prelude'] <= 0.90:
               decision='PROMOTE_SEMANTIC_REF_IDENTITY'
           elif ratios['std'] <= 0.95:
