@@ -1,0 +1,127 @@
+name: semantic-ref-v1 phase-change gate
+
+on:
+  push:
+    branches: [semantic-ref-v1]
+    paths:
+      - 'experiments/apply_semantic_ref_env_identity.py'
+      - '.github/workflows/semantic-ref-v1.yml'
+  workflow_dispatch:
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare baseline and candidate
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          git clone --local . /tmp/semref-base
+          git clone --local . /tmp/semref-candidate
+          python3 experiments/apply_semantic_ref_env_identity.py /tmp/semref-candidate
+          git -C /tmp/semref-candidate diff --check
+          git -C /tmp/semref-candidate diff -- src/value.rs src/eval.rs
+
+      - name: Build decisive Arena tests
+        working-directory: arena
+        shell: nix develop -c bash -euxo pipefail {0}
+        run: |
+          ./lka.py build-test tutorial
+          ./lka.py build-test init-prelude
+          ./lka.py build-test std
+          ./lka.py build-test perf/beta-ladder
+
+      - name: Build baseline and candidate
+        shell: nix develop -c bash -euxo pipefail {0}
+        run: |
+          for arm in base candidate; do
+            root="/tmp/semref-${arm}"
+            CARGO_TARGET_DIR="/tmp/semref-${arm}-target" RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path "$root/Cargo.toml" --release --locked
+            cp "/tmp/semref-${arm}-target/release/sokonanoda" "/tmp/semref-${arm}-checker"
+          done
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+
+      - name: Semantic equivalence gate
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib, subprocess, sys
+          files=sorted(pathlib.Path('arena/_build/tests/tutorial').rglob('*.ndjson'))
+          assert files, 'no tutorial subtests found'
+          mismatches=[]
+          for i,p in enumerate(files,1):
+              data=p.read_bytes()
+              def run(exe):
+                  r=subprocess.run([exe,'/tmp/checker.json'],input=data,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+                  return r.returncode
+              b=run('/tmp/semref-base-checker')
+              c=run('/tmp/semref-candidate-checker')
+              if b != c:
+                  mismatches.append((str(p),b,c))
+              if i % 25 == 0: print('checked',i,'/',len(files))
+          print('tutorial_cases=',len(files))
+          print('verdict_mismatches=',len(mismatches))
+          for row in mismatches[:20]: print('MISMATCH',*row)
+          if mismatches: sys.exit(1)
+          PY
+
+      - name: Callgrind instruction census
+        shell: nix develop -c bash -euxo pipefail {0}
+        run: |
+          nix profile install nixpkgs#valgrind
+          printf 'test,arm,Ir\n' >/tmp/semref-ir.csv
+          profile () {
+            test="$1"; file="$2"; arm="$3"
+            out="/tmp/cg-${test}-${arm}.out"
+            timeout 1800 valgrind --tool=callgrind --callgrind-out-file="$out" "/tmp/semref-${arm}-checker" /tmp/checker.json < "$file" >/dev/null 2>/dev/null
+            ir=$(awk '/^summary:/ {print $2}' "$out")
+            test -n "$ir"
+            printf '%s,%s,%s\n' "$test" "$arm" "$ir" >>/tmp/semref-ir.csv
+          }
+          for arm in base candidate; do
+            profile prelude arena/_build/tests/init-prelude.ndjson "$arm"
+            profile beta arena/_build/tests/perf/beta-ladder.ndjson "$arm"
+            profile std arena/_build/tests/std.ndjson "$arm"
+          done
+          cat /tmp/semref-ir.csv
+
+      - name: Decide phase-change hypothesis
+        run: |
+          python3 - <<'PY' | tee /tmp/semantic-ref-summary.txt
+          import csv
+          rows={(r['test'],r['arm']):int(r['Ir']) for r in csv.DictReader(open('/tmp/semref-ir.csv'))}
+          print('SEMANTIC_REF_V1_RESULTS')
+          ratios={}
+          for t in ('prelude','beta','std'):
+              b=rows[(t,'base')]; c=rows[(t,'candidate')]; q=c/b
+              ratios[t]=q
+              print(f'{t}: base={b} candidate={c} ratio={q:.6f} delta={(q-1)*100:+.2f}%')
+          # The architecture is intended to attack ubiquitous large-corpus work.
+          # A micro-only win is explicitly insufficient.
+          if ratios['std'] <= 0.80 and ratios['prelude'] <= 0.90:
+              decision='PROMOTE_SEMANTIC_REF_IDENTITY'
+          elif ratios['std'] <= 0.95:
+              decision='WEAK_SIGNAL_REFINE_IDENTITY'
+          else:
+              decision='KILL_ENV_IDENTITY_TRANCHE'
+          print('DECISION='+decision)
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: semantic-ref-v1-results
+          path: |
+            /tmp/semref-ir.csv
+            /tmp/semantic-ref-summary.txt
