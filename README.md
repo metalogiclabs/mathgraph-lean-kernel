@@ -1,14 +1,13 @@
-# About
+# MathGraph Lean Kernel
 
-This is an experimental fork on top of:
+A high-performance experimental proof checker for Lean 4, developed by [Metalogic Labs](https://mathgraph.org/).
+
+MathGraph builds on:
 - [nanoda_lib](https://github.com/ammkrn/nanoda_lib)
 - [sonanoda](https://github.com/datokrat/sonanoda)
 - [still-nanoda](https://github.com/SchrodingerZhu/still-nanoda)
+- [sokonanoda](https://github.com/intgrah/sokonanoda)
 
-It is essentially a testing bed for high-performance typechecking for Lean.
+The checker is developed as a testing bed for high-performance Lean typechecking, soundness testing, differential testing, and checker validation. It is tested against the [Lean Kernel Arena](https://arena.lean-lang.org/), including its accept/reject corpus and large Lean environments such as mathlib.
 
-You shouldn't use this for serious purposes.
-
-Currently, it is about 9x faster than the official kernel, measured on mathlib.
-
-Basically, the core conversion algorithm is entirely replaced by something closure-based. There are also some non-theoretical, purely programming optimisations.
+The core conversion algorithm is closure-based, with additional implementation-level optimisations. MathGraph remains an experimental kernel implementation and is not a replacement for Lean's official kernel.
