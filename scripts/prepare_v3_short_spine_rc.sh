@@ -15,6 +15,7 @@ assert s.count('a == 1 && (b == 3 || b == 4 || b == 6)') == 1
 p.write_text(s)
 PY
 
+cargo fmt
 cargo fmt --check
 cargo test --release --locked
 
