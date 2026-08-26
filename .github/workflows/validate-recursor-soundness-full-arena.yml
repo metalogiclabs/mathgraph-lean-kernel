@@ -36,23 +36,23 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          TESTROOT=$(find /tmp/arena-tests -type d -name good | head -1 | xargs dirname)
-          test -n "$TESTROOT"
           good=0
           bad=0
-          for f in "$TESTROOT"/good/*.ndjson; do
+          while IFS= read -r f; do
             if ! target/release/sokonanoda config.json < "$f" >/dev/null 2>/tmp/check.err; then
               echo "ERROR: rejected good test $f"
               cat /tmp/check.err || true
               exit 1
             fi
             good=$((good+1))
-          done
-          for f in "$TESTROOT"/bad/*.ndjson; do
+          done < <(find /tmp/arena-tests/good -type f -name '*.ndjson' | sort)
+          while IFS= read -r f; do
             if target/release/sokonanoda config.json < "$f" >/dev/null 2>/tmp/check.err; then
               echo "ERROR: accepted bad test $f"
               exit 1
             fi
             bad=$((bad+1))
-          done
+          done < <(find /tmp/arena-tests/bad -type f -name '*.ndjson' | sort)
           echo "ARENA_SMALL_GATE=PASS good=$good bad=$bad"
+          test "$good" -ge 100
+          test "$bad" -ge 60
