@@ -1,0 +1,18 @@
+name: minimize-v3-pr
+on:
+  push:
+    branches: [v3-short-spine-scheduling]
+    paths:
+      - '.github/workflows/minimize-v3-pr.yml'
+      - 'scripts/minimize_v3_pr.sh'
+permissions:
+  contents: write
+jobs:
+  minimize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Minimize production diff
+        run: bash scripts/minimize_v3_pr.sh
