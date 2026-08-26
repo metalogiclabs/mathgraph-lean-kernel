@@ -1,0 +1,58 @@
+name: Validate recursor soundness full Arena
+
+on:
+  push:
+    branches: [validate-recursor-soundness-full-arena]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Repo tests
+        run: cargo test --all
+      - name: Build release checker
+        run: cargo build --release
+      - name: Configure checker
+        run: |
+          cat > config.json <<'EOF'
+          {
+            "use_stdin": true,
+            "nat_extension": true,
+            "string_extension": true,
+            "unpermitted_axiom_hard_error": false,
+            "unsafe_permit_all_axioms": true,
+            "num_threads": 4
+          }
+          EOF
+      - name: Fetch current Arena small corpus
+        run: |
+          set -euxo pipefail
+          curl -fsSL https://arena.lean-lang.org/lean-arena-tests.tar.gz -o /tmp/arena-tests.tar.gz
+          mkdir -p /tmp/arena-tests
+          tar -xzf /tmp/arena-tests.tar.gz -C /tmp/arena-tests
+      - name: Full semantic gate
+        shell: bash
+        run: |
+          set -euxo pipefail
+          TESTROOT=$(find /tmp/arena-tests -type d -name good | head -1 | xargs dirname)
+          test -n "$TESTROOT"
+          good=0
+          bad=0
+          for f in "$TESTROOT"/good/*.ndjson; do
+            if ! target/release/sokonanoda config.json < "$f" >/dev/null 2>/tmp/check.err; then
+              echo "ERROR: rejected good test $f"
+              cat /tmp/check.err || true
+              exit 1
+            fi
+            good=$((good+1))
+          done
+          for f in "$TESTROOT"/bad/*.ndjson; do
+            if target/release/sokonanoda config.json < "$f" >/dev/null 2>/tmp/check.err; then
+              echo "ERROR: accepted bad test $f"
+              exit 1
+            fi
+            bad=$((bad+1))
+          done
+          echo "ARENA_SMALL_GATE=PASS good=$good bad=$bad"
