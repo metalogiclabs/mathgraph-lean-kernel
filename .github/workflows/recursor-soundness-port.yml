@@ -1,0 +1,112 @@
+name: Qualify recursor soundness port
+
+on:
+  push:
+    branches: [soundness-recursor-ownership]
+
+permissions:
+  contents: write
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply upstream recursor ownership fixes
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -fsSL https://github.com/ammkrn/nanoda_lib/commit/f04456a32f50c9dfd92ac2d4bb8ad668b6baf934.patch -o /tmp/underived.patch
+          git apply --3way --include=src/inductive.rs --include=src/parser.rs /tmp/underived.patch
+          curl -fsSL https://github.com/ammkrn/nanoda_lib/commit/8a327a18c3a1401d6ccc1d64053b1397861136e8.patch -o /tmp/orphan.patch
+          git apply --3way --include=src/tc.rs /tmp/orphan.patch
+          git diff --check
+          git diff -- src/inductive.rs src/parser.rs src/tc.rs
+
+      - name: Build and repo tests
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cargo test --all
+          cargo build --release
+
+      - name: Download current Arena small suite
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -fsSL https://arena.lean-lang.org/lean-arena-tests.tar.gz -o /tmp/arena-tests.tar.gz
+          mkdir -p /tmp/arena-tests
+          tar -xzf /tmp/arena-tests.tar.gz -C /tmp/arena-tests
+          find /tmp/arena-tests -maxdepth 3 -type f | head -40
+
+      - name: Configure checker
+        shell: bash
+        run: |
+          cat > config.json <<'EOF'
+          {
+            "use_stdin": true,
+            "nat_extension": true,
+            "string_extension": true,
+            "unpermitted_axiom_hard_error": false,
+            "unsafe_permit_all_axioms": true,
+            "num_threads": 4
+          }
+          EOF
+
+      - name: Sharp residual tests
+        shell: bash
+        run: |
+          set -euxo pipefail
+          TESTROOT=$(find /tmp/arena-tests -type d -name bad | head -1 | xargs dirname)
+          test -n "$TESTROOT"
+          for name in extra-rec orphan-rec; do
+            f="$TESTROOT/bad/$name.ndjson"
+            test -f "$f"
+            if target/release/sokonanoda config.json < "$f" >/tmp/$name.out 2>/tmp/$name.err; then
+              echo "ERROR: $name was accepted"
+              cat /tmp/$name.out || true
+              cat /tmp/$name.err || true
+              exit 1
+            fi
+            echo "$name: rejected as required"
+          done
+
+      - name: Full Arena small-suite semantic gate
+        shell: bash
+        run: |
+          set -euxo pipefail
+          TESTROOT=$(find /tmp/arena-tests -type d -name good | head -1 | xargs dirname)
+          good=0
+          bad=0
+          for f in "$TESTROOT"/good/*.ndjson; do
+            if ! target/release/sokonanoda config.json < "$f" >/dev/null 2>/tmp/check.err; then
+              echo "ERROR: rejected good test $f"
+              cat /tmp/check.err || true
+              exit 1
+            fi
+            good=$((good+1))
+          done
+          for f in "$TESTROOT"/bad/*.ndjson; do
+            if target/release/sokonanoda config.json < "$f" >/dev/null 2>/tmp/check.err; then
+              echo "ERROR: accepted bad test $f"
+              exit 1
+            fi
+            bad=$((bad+1))
+          done
+          echo "ARENA_SMALL_GATE=PASS good=$good bad=$bad"
+
+      - name: Commit qualified source only
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git rm .github/workflows/recursor-soundness-port.yml
+          git add src/inductive.rs src/parser.rs src/tc.rs
+          git diff --cached --check
+          git commit -m "Fix recursor ownership validation"
+          git push
