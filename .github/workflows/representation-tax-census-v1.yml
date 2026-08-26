@@ -1,0 +1,97 @@
+name: representation-tax-census-v1
+
+on:
+  push:
+    branches: [representation-tax-census-v1]
+    paths:
+      - '.github/workflows/representation-tax-census-v1.yml'
+  workflow_dispatch:
+
+jobs:
+  census:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare Arena and Std
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena
+          nix develop -c ./lka.py build-test std
+
+      - name: Build MathGraph census binary
+        working-directory: arena
+        shell: nix develop -c bash -euxo pipefail {0}
+        run: |
+          CARGO_TARGET_DIR=/tmp/representation-tax-target \
+            RUSTFLAGS='-C target-cpu=x86-64 -C debuginfo=1' \
+            cargo build --manifest-path ../Cargo.toml --release --locked
+          cp /tmp/representation-tax-target/release/sokonanoda /tmp/representation-tax-checker
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+
+      - name: Callgrind Std hot-function census
+        working-directory: arena
+        shell: nix develop -c bash -euxo pipefail {0}
+        run: |
+          nix profile add nixpkgs#valgrind
+          timeout 1800 valgrind --tool=callgrind --collect-jumps=yes \
+            --callgrind-out-file=/tmp/std.callgrind \
+            /tmp/representation-tax-checker /tmp/checker.json \
+            < _build/tests/std.ndjson >/dev/null 2>/dev/null
+          callgrind_annotate --inclusive=yes --threshold=0.05 /tmp/std.callgrind \
+            > /tmp/std-inclusive.txt
+          callgrind_annotate --inclusive=no --threshold=0.05 /tmp/std.callgrind \
+            > /tmp/std-self.txt
+          head -250 /tmp/std-inclusive.txt | tee /tmp/std-inclusive-top.txt
+          head -250 /tmp/std-self.txt | tee /tmp/std-self-top.txt
+
+      - name: Classify representation tax
+        run: |
+          python3 - <<'PY' | tee /tmp/representation-tax-summary.txt
+          import re, pathlib
+          text = pathlib.Path('/tmp/std-inclusive.txt').read_text(errors='replace')
+          cats = {
+            'QUOTE_REIFY': ('quote', 'reify'),
+            'FORCE_EVAL': ('force', 'eval', 'whnf', 'value_of', 'apply_closure'),
+            'EXPR_REBUILD': ('lift', 'lower', 'inst_', 'subst', 'mk_app', 'mk_pi', 'mk_lambda', 'replace'),
+            'CONVERSION': ('def_eq', 'conv', 'is_def_eq'),
+            'PARSER': ('parse', 'serde', 'json'),
+            'ENV_KEY': ('env_key', 'global_key', 'closure_key', 'env_slots_key'),
+            'INDUCTIVE': ('inductive', 'recursor', 'check_ctor', 'mk_minor', 'mk_rec'),
+          }
+          rows=[]
+          for line in text.splitlines():
+            m=re.match(r'\s*([0-9,]+)\s+\(([0-9.]+)%\)\s+(.*)', line)
+            if not m: continue
+            ir=int(m.group(1).replace(',','')); pct=float(m.group(2)); fn=m.group(3)
+            rows.append((pct,ir,fn))
+          print('REPRESENTATION_TAX_CENSUS_V1')
+          print('parsed_hot_rows=', len(rows))
+          for cat, needles in cats.items():
+            hits=[r for r in rows if any(n.lower() in r[2].lower() for n in needles)]
+            print(f'\n[{cat}] hits={len(hits)}')
+            for pct,ir,fn in sorted(hits, reverse=True)[:20]:
+              print(f'{pct:8.3f}% {ir:15d} {fn}')
+          print('\n[TOP_INCLUSIVE]')
+          for pct,ir,fn in sorted(rows, reverse=True)[:60]:
+            print(f'{pct:8.3f}% {ir:15d} {fn}')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: representation-tax-census-v1
+          path: |
+            /tmp/std-inclusive-top.txt
+            /tmp/std-self-top.txt
+            /tmp/representation-tax-summary.txt
