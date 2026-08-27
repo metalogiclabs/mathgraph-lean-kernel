@@ -1,0 +1,77 @@
+name: MSI behavioural quotient census v9
+
+on:
+  push:
+    branches: [msi-behavioural-quotient-census-v9]
+  workflow_dispatch:
+
+jobs:
+  census:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Prepare Arena corpora
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena
+          nix develop -c ./lka.py build-test std
+          nix develop -c ./lka.py build-test cedar
+      - name: Prepare instrumented checker
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 --branch mathgraph https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/bq
+          cp experiments/apply_msi_behavioural_quotient_census_v9.py /tmp/bq/patch.py
+          cd /tmp/bq
+          python3 patch.py
+      - name: Build checker
+        working-directory: arena
+        shell: nix develop -c bash -euxo pipefail {0}
+        run: |
+          CARGO_TARGET_DIR=/tmp/bq-target RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/bq/Cargo.toml --release --locked
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+      - name: Run behavioural census
+        working-directory: arena
+        shell: nix develop -c bash -euxo pipefail {0}
+        run: |
+          python3 - <<'PY'
+          import subprocess, pathlib, re, json
+          out={}
+          for corpus in ['std','cedar']:
+            path=pathlib.Path(f'_build/tests/{corpus}.ndjson')
+            with path.open('rb') as f:
+              r=subprocess.run(['/tmp/bq-target/release/sokonanoda','/tmp/checker.json'],stdin=f,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,timeout=1800)
+            text=r.stderr.decode('utf8','replace')
+            lines=[x for x in text.splitlines() if x.startswith('MSI_BQ_CENSUS ')]
+            if r.returncode != 0 or not lines:
+              print(text[-4000:])
+              raise SystemExit(f'{corpus}: checker failed or census marker missing rc={r.returncode}')
+            raw=lines[-1].split(' ',1)[1].replace('\\\\"','"').replace('\\"','"')
+            try:
+              data=json.loads(raw)
+            except Exception:
+              print('RAW',raw)
+              raise
+            out[corpus]=data
+            print(corpus, json.dumps(data,indent=2))
+          for corpus,data in out.items():
+            a=data['all']
+            print(f"{corpus.upper()}_CURRENT_KEYS={a['keys']}")
+            print(f"{corpus.upper()}_EVAL_VALUE_CLASSES={a['values']}")
+            print(f"{corpus.upper()}_LOWER_BOUND_COMPRESSION_X={a['compression_x']}")
+            print(f"{corpus.upper()}_COLLAPSE_PCT={100*(1-a['value_per_key']):.3f}")
+          pathlib.Path('/tmp/msi-bq-v9.json').write_text(json.dumps(out,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: msi-behavioural-quotient-census-v9
+          path: /tmp/msi-bq-v9.json
+          if-no-files-found: warn
