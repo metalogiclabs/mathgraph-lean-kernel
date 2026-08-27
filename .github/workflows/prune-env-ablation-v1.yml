@@ -1,0 +1,107 @@
+name: prune-env ablation v1
+
+on:
+  push:
+    branches: [prune-env-ablation-v1]
+  workflow_dispatch:
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare Arena corpora
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena
+          nix develop -c ./lka.py build-test tutorial
+          nix develop -c ./lka.py build-test std
+          nix develop -c ./lka.py build-test cedar
+
+      - name: Prepare baseline and candidate
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 --branch mathgraph https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/base
+          cp -a /tmp/base /tmp/candidate
+          cp experiments/apply_prune_env_ablation.py /tmp/candidate/apply_prune_env_ablation.py
+          cd /tmp/candidate
+          python3 apply_prune_env_ablation.py
+
+      - name: Build baseline and candidate
+        working-directory: arena
+        shell: nix develop -c bash -euxo pipefail {0}
+        run: |
+          CARGO_TARGET_DIR=/tmp/base-target RUSTFLAGS='-C target-cpu=x86-64 -C debuginfo=1' cargo build --manifest-path /tmp/base/Cargo.toml --release --locked
+          CARGO_TARGET_DIR=/tmp/candidate-target RUSTFLAGS='-C target-cpu=x86-64 -C debuginfo=1' cargo build --manifest-path /tmp/candidate/Cargo.toml --release --locked
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+
+      - name: Tutorial semantic equivalence
+        working-directory: arena
+        shell: nix develop -c bash -euxo pipefail {0}
+        run: |
+          python3 - <<'PY'
+          import pathlib, subprocess, json
+          root=pathlib.Path('_build/tests/tutorial')
+          files=sorted(root.rglob('*.ndjson'))
+          mism=[]
+          for p in files:
+              data=p.read_bytes()
+              def run(bin):
+                  r=subprocess.run([bin,'/tmp/checker.json'],input=data,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+                  return r.returncode
+              a=run('/tmp/base-target/release/sokonanoda')
+              b=run('/tmp/candidate-target/release/sokonanoda')
+              if a!=b: mism.append((str(p),a,b))
+          print(json.dumps({'tutorial_cases':len(files),'mismatches':mism[:50],'mismatch_count':len(mism)},indent=2))
+          if mism: raise SystemExit(1)
+          PY
+
+      - name: Install Valgrind
+        run: nix profile add nixpkgs#valgrind
+
+      - name: Measure Std and Cedar
+        working-directory: arena
+        shell: nix develop -c bash -euxo pipefail {0}
+        run: |
+          measure() {
+            label="$1"; bin="$2"; input="$3"
+            timeout 2400 valgrind --tool=callgrind --callgrind-out-file="/tmp/${label}.cg" "$bin" /tmp/checker.json < "$input" >/dev/null 2>/dev/null
+            awk '/summary:/ {print $2}' "/tmp/${label}.cg" | tail -1
+          }
+          BASE_STD=$(measure base-std /tmp/base-target/release/sokonanoda _build/tests/std.ndjson)
+          CAND_STD=$(measure cand-std /tmp/candidate-target/release/sokonanoda _build/tests/std.ndjson)
+          BASE_CEDAR=$(measure base-cedar /tmp/base-target/release/sokonanoda _build/tests/cedar.ndjson)
+          CAND_CEDAR=$(measure cand-cedar /tmp/candidate-target/release/sokonanoda _build/tests/cedar.ndjson)
+          python3 - "$BASE_STD" "$CAND_STD" "$BASE_CEDAR" "$CAND_CEDAR" <<'PY' | tee /tmp/result.txt
+          import sys, json
+          bs,cs,bc,cc=map(int,sys.argv[1:])
+          def row(b,c):
+              return {'baseline':b,'candidate':c,'ratio':c/b,'delta_pct':100*(c/b-1)}
+          out={'std':row(bs,cs),'cedar':row(bc,cc)}
+          print(json.dumps(out,indent=2))
+          if cs/bs <= .90 and cc/bc <= .92:
+              print('DECISION=PROMOTE_LIVENESS_REPLACEMENT')
+          elif cs/bs >= .98:
+              print('DECISION=KILL_PRUNE_ABLATION_ROUTE')
+          else:
+              print('DECISION=REFINE_PRUNING_ROUTE')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: prune-env-ablation-v1
+          path: /tmp/result.txt
+          if-no-files-found: warn
