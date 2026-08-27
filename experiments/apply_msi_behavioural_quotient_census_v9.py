@@ -56,7 +56,7 @@ fn bq_record<'t>(env: E<'t>, e: ExprPtr<'t>, v: V<'t>) {
 
 pub fn print_behavioural_quotient_census() {
     let Some(st) = BQ_STATE.get() else {
-        eprintln!("MSI_BQ_CENSUS {\\\"sampled_keys\\\":0}");
+        eprintln!("MSI_BQ_CENSUS {{\"sampled_keys\":0}}");
         return;
     };
     let st = st.lock().unwrap();
