@@ -68,6 +68,38 @@ jobs:
           if mism: raise SystemExit(1)
           PY
 
+      - name: Large corpus acceptance gate
+        working-directory: arena
+        shell: nix develop -c bash -euxo pipefail {0}
+        run: |
+          python3 - <<'PY'
+          import subprocess, json
+          bins={
+            'baseline':'/tmp/base-target/release/sokonanoda',
+            'candidate':'/tmp/candidate-target/release/sokonanoda',
+          }
+          corpora={
+            'std':'_build/tests/std.ndjson',
+            'cedar':'_build/tests/cedar.ndjson',
+          }
+          rows={}
+          bad=[]
+          for corpus,path in corpora.items():
+              rows[corpus]={}
+              for label,bin in bins.items():
+                  with open(path,'rb') as f:
+                      r=subprocess.run([bin,'/tmp/checker.json'],stdin=f,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,timeout=900)
+                  err=r.stderr.decode('utf-8','replace')[-2000:]
+                  rows[corpus][label]={'returncode':r.returncode,'stderr_tail':err}
+                  if r.returncode != 0:
+                      bad.append((corpus,label,r.returncode,err))
+          print(json.dumps(rows,indent=2))
+          if bad:
+              print('DECISION=INVALID_EARLY_REJECTION')
+              raise SystemExit(1)
+          print('DECISION=LARGE_CORPORA_ACCEPTED')
+          PY
+
       - name: Install Valgrind
         run: nix profile add nixpkgs#valgrind
 
@@ -77,7 +109,15 @@ jobs:
         run: |
           measure() {
             label="$1"; bin="$2"; input="$3"
-            timeout 2400 valgrind --tool=callgrind --callgrind-out-file="/tmp/${label}.cg" "$bin" /tmp/checker.json < "$input" >/dev/null 2>/dev/null
+            set +e
+            timeout 2400 valgrind --tool=callgrind --callgrind-out-file="/tmp/${label}.cg" "$bin" /tmp/checker.json < "$input" >/tmp/${label}.out 2>/tmp/${label}.err
+            rc=$?
+            set -e
+            if [ "$rc" -ne 0 ]; then
+              echo "measurement checker failed: $label rc=$rc" >&2
+              tail -100 /tmp/${label}.err >&2 || true
+              exit "$rc"
+            fi
             awk '/summary:/ {print $2}' "/tmp/${label}.cg" | tail -1
           }
           BASE_STD=$(measure base-std /tmp/base-target/release/sokonanoda _build/tests/std.ndjson)
