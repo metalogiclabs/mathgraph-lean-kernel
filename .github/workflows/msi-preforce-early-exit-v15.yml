@@ -11,6 +11,11 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install Nix
         uses: cachix/install-nix-action@v31
+      - name: Install Valgrind
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y valgrind
       - name: Prepare Std prefix and both checkers
         shell: bash
         run: |
@@ -39,9 +44,8 @@ jobs:
             /usr/bin/time -f "BASE_NATIVE_${i}=%e RSS=%M" /tmp/base-target/release/sokonanoda /tmp/checker.json < /tmp/std-prefix.ndjson >/dev/null 2>>/tmp/result.txt
             /usr/bin/time -f "CAND_NATIVE_${i}=%e RSS=%M" /tmp/cand-target/release/sokonanoda /tmp/checker.json < /tmp/std-prefix.ndjson >/dev/null 2>>/tmp/result.txt
           done
-          cd arena
-          nix develop -c valgrind --tool=callgrind --callgrind-out-file=/tmp/base.cg /tmp/base-target/release/sokonanoda /tmp/checker.json < /tmp/std-prefix.ndjson >/dev/null 2>/tmp/base-cg.err
-          nix develop -c valgrind --tool=callgrind --callgrind-out-file=/tmp/cand.cg /tmp/cand-target/release/sokonanoda /tmp/checker.json < /tmp/std-prefix.ndjson >/dev/null 2>/tmp/cand-cg.err
+          valgrind --tool=callgrind --callgrind-out-file=/tmp/base.cg /tmp/base-target/release/sokonanoda /tmp/checker.json < /tmp/std-prefix.ndjson >/dev/null 2>/tmp/base-cg.err
+          valgrind --tool=callgrind --callgrind-out-file=/tmp/cand.cg /tmp/cand-target/release/sokonanoda /tmp/checker.json < /tmp/std-prefix.ndjson >/dev/null 2>/tmp/cand-cg.err
           grep 'Collected' /tmp/base-cg.err | tail -1 | sed 's/^/BASE_/' | tee -a /tmp/result.txt
           grep 'Collected' /tmp/cand-cg.err | tail -1 | sed 's/^/CAND_/' | tee -a /tmp/result.txt
           cat /tmp/result.txt
