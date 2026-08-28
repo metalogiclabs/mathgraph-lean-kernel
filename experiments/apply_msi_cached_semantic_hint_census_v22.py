@@ -90,7 +90,7 @@ new = r'''    #[inline]
             if cached_eq && result { MSI_HINT_EQ_TRUE.fetch_add(1, Relaxed); }
             if cached_neq && result { MSI_HINT_NEQ_TRUE.fetch_add(1, Relaxed); }
         }
-        if n % 500_000 == 0 {
+        if n == 3_000_000 {
             eprintln!(
                 "MSI_CACHED_HINT total={} sample={} both={} eq={} eq_true={} neq={} neq_true={}",
                 MSI_HINT_TOTAL.load(Relaxed),
