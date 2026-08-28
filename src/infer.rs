@@ -1,5 +1,6 @@
 use crate::env::Declar;
 use crate::expr::Expr;
+use crate::msi::{same_sort_level, InferCap};
 use crate::tc::{InferFlag, TypeChecker};
 use crate::util::{ExprPtr, LevelPtr, LevelsPtr, NamePtr};
 use crate::value::{self, Closure, RigidHead, Value, C, E, V};
@@ -28,11 +29,31 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         }
     }
 
+    /// MSI transition: consume an already-exposed Sort directly. Only unresolved
+    /// values pay for forcing and reclassification.
     pub(crate) fn ensure_sort_v(&mut self, depth: u32, v: V<'t>) -> LevelPtr<'t> {
+        if let Value::Sort { level, .. } = v {
+            return *level;
+        }
         match self.force_all(depth, v) {
-            Value::Sort { level , .. } => *level,
+            Value::Sort { level, .. } => *level,
             _ => panic!("expected a sort"),
         }
+    }
+
+    /// Producer boundary for inference capabilities. This preserves semantic
+    /// status that is already present in the inferred value while retaining the
+    /// ordinary value as a sound generic fallback.
+    #[inline]
+    fn infer_cap(
+        &mut self,
+        flag: InferFlag,
+        depth: u32,
+        env: E<'t>,
+        ctx: C<'t>,
+        e: ExprPtr<'t>,
+    ) -> InferCap<'t> {
+        InferCap::from_value(self.infer_value(flag, depth, env, ctx, e))
     }
 
     pub(crate) fn infer_sort_of_v(
@@ -43,8 +64,11 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         ctx: C<'t>,
         e: ExprPtr<'t>,
     ) -> LevelPtr<'t> {
-        let t = self.infer_value(flag, depth, env, ctx, e);
-        self.ensure_sort_v(depth, t)
+        let cap = self.infer_cap(flag, depth, env, ctx, e);
+        match cap.sort_level {
+            Some(level) => level,
+            None => self.ensure_sort_v(depth, cap.value),
+        }
     }
 
     pub(crate) fn arg_value(&mut self, depth: u32, env: E<'t>, a: ExprPtr<'t>) -> V<'t> {
@@ -139,8 +163,10 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 let dom = self.arg_value(depth, env, binder_type);
                 if flag == Check {
                     self.infer_sort_of_v(flag, depth, env, ctx, binder_type);
-                    let val_ty = self.infer_value(flag, depth, env, ctx, val);
-                    assert!(self.conv_types_at(depth, dom, val_ty), "let def_eq failed");
+                    let val_cap = self.infer_cap(flag, depth, env, ctx, val);
+                    let ok = same_sort_level(dom, val_cap)
+                        || self.conv_types_at(depth, dom, val_cap.value);
+                    assert!(ok, "let def_eq failed");
                 }
                 let slot = self.arg_value(depth, env, val);
                 let env2 = value::env_extend(self.arena, env, slot);
@@ -167,14 +193,21 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         let (fun, mut args) = self.ctx.unfold_apps_stack(self.arena, e);
         let mut fty = self.infer_value(flag, depth, env, ctx, fun);
         while let Some(arg) = args.pop() {
-            let fty_f = self.force_all(depth, fty);
+            // MSI Pi edge: when inference already produced a raw Pi, consume that
+            // certified shape directly. Generic forcing is the residual fallback.
+            let fty_f = match fty {
+                Value::Pi { .. } => fty,
+                _ => self.force_all(depth, fty),
+            };
             let (domain, body) = match fty_f {
                 Value::Pi { domain, body, .. } => (*domain, body),
                 _ => panic!("expected a pi type"),
             };
             if flag == Check {
-                let arg_ty = self.infer_value(flag, depth, env, ctx, arg);
-                assert!(self.conv_types_at(depth, domain, arg_ty), "app arg def_eq failed");
+                let arg_cap = self.infer_cap(flag, depth, env, ctx, arg);
+                let ok = same_sort_level(domain, arg_cap)
+                    || self.conv_types_at(depth, domain, arg_cap.value);
+                assert!(ok, "app arg def_eq failed");
             }
             if body.ctx.is_none() && self.ctx.num_loose_bvars(body.body) == 0 {
                 fty = self.eval(depth, body.env, body.body);
@@ -252,8 +285,11 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         assert!(self.ctx.no_dupes_all_params(info.uparams), "duplicate universe parameters in declaration");
         let empty_env = self.empty_env();
         let empty_ctx = self.empty_ctx();
-        let ty_ty = self.infer_value(Check, 0, empty_env, empty_ctx, info.ty);
-        let sort = self.ensure_sort_v(0, ty_ty);
+        let ty_cap = self.infer_cap(Check, 0, empty_env, empty_ctx, info.ty);
+        let sort = match ty_cap.sort_level {
+            Some(level) => level,
+            None => self.ensure_sort_v(0, ty_cap.value),
+        };
         if let Declar::Theorem { .. } = d {
             assert!(self.ctx.is_zero(sort), "theorem type must be Prop (sort 0)");
         }
