@@ -1,0 +1,49 @@
+name: MSI hidden equality family census v25
+on:
+  push:
+    branches: [msi-hidden-equality-family-v25]
+  workflow_dispatch:
+
+jobs:
+  census:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+        name: Install Nix
+      - name: Build and run census
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena
+          nix develop -c ./lka.py build-test std
+          head -n 1000000 _build/tests/std.ndjson >/tmp/std-prefix.ndjson
+          cd ..
+          git clone --depth 1 --branch mathgraph https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/cand
+          cp experiments/apply_msi_hidden_equality_family_v25.py /tmp/cand/patch.py
+          (cd /tmp/cand && python3 patch.py)
+          cd arena
+          nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=/tmp/v25-target RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/cand/Cargo.toml --release --locked"
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+          /tmp/v25-target/release/sokonanoda /tmp/checker.json </tmp/std-prefix.ndjson >/tmp/v25.out 2>/tmp/v25.err
+          grep 'MSI_HIDDEN_FAM' /tmp/v25.err | tail -1 | tee /tmp/result.txt
+          python3 - <<'PY' | tee -a /tmp/result.txt
+          import re
+          s=open('/tmp/result.txt').read(); names=['sort','nat','str','rigid','unfold','pi','lam','thunk','other']
+          for stage in ['raw','post']:
+            vals={n:int(re.search(fr'{stage}_{n}=(\d+)',s).group(1)) for n in names}
+            total=sum(vals.values()); print(f'{stage.upper()}_EQ_TOTAL={total}')
+            for n,v in sorted(vals.items(),key=lambda kv:-kv[1]):
+              print(f'{stage.upper()}_{n.upper()}_SHARE_PCT={100*v/total:.6f}' if total else f'{stage.upper()}_{n.upper()}_SHARE_PCT=0')
+            if total: print(f'{stage.upper()}_DOMINANT={max(vals,key=vals.get)}')
+          PY
+          cat /tmp/result.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: msi-hidden-equality-family-v25
+          path: |
+            /tmp/result.txt
+            /tmp/v25.err
