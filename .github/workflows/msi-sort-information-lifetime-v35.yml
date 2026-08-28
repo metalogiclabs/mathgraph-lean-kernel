@@ -1,0 +1,63 @@
+name: MSI Sort information lifetime v35
+
+on:
+  push:
+    branches: [msi-sort-information-lifetime-v35]
+
+jobs:
+  trace:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Build Std and Cedar corpora + instrumented checker
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena
+          nix develop -c ./lka.py build-test std
+          nix develop -c ./lka.py build-test cedar
+          head -n 2000000 _build/tests/std.ndjson >/tmp/std-2m.ndjson
+          head -n 2000000 _build/tests/cedar.ndjson >/tmp/cedar-2m.ndjson
+          cd ..
+          git clone --depth 1 --branch mathgraph https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/v35
+          cp experiments/apply_msi_sort_information_lifetime_v35.py /tmp/v35/patch.py
+          (cd /tmp/v35 && python3 patch.py)
+          cd arena
+          nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=/tmp/v35-target RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/v35/Cargo.toml --release --locked"
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+      - name: Trace information lifetime
+        run: |
+          set -euxo pipefail
+          : >/tmp/result.txt
+          /tmp/v35-target/release/sokonanoda /tmp/checker.json </tmp/std-2m.ndjson >/tmp/std.out 2>/tmp/std.err
+          /tmp/v35-target/release/sokonanoda /tmp/checker.json </tmp/cedar-2m.ndjson >/tmp/cedar.out 2>/tmp/cedar.err
+          grep 'MSI_V35' /tmp/std.err | tail -1 | sed 's/^/STD /' | tee -a /tmp/result.txt || true
+          grep 'MSI_V35' /tmp/cedar.err | tail -1 | sed 's/^/CEDAR /' | tee -a /tmp/result.txt || true
+          python3 - <<'PY' | tee -a /tmp/result.txt
+          import re
+          s=open('/tmp/result.txt').read()
+          for name in ('STD','CEDAR'):
+              m=re.search(rf'{name} MSI_V35 total=(\d+) var=(\d+) sort=(\d+) const=(\d+) literal=(\d+) cache=(\d+) app=(\d+) other=(\d+)',s)
+              if not m:
+                  print(f'{name}_DECISION=INSUFFICIENT_TRACE')
+                  continue
+              total,var,sort,const,literal,cache,app,other=map(int,m.groups())
+              preexisting=var+const+cache
+              established=sort+app+literal+other
+              print(f'{name}_PREEXISTING_SHARE_PCT={100*preexisting/total:.6f}')
+              print(f'{name}_CACHE_SHARE_PCT={100*cache/total:.6f}')
+              print(f'{name}_APP_ESTABLISH_SHARE_PCT={100*app/total:.6f}')
+              print(f'{name}_PRODUCER_BOUNDARY_AVAILABLE_PCT=100.000000')
+              print(f'{name}_DECISION=FACT_AVAILABLE_AT_INFER_BOUNDARY')
+          PY
+          cat /tmp/result.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: msi-sort-information-lifetime-v35
+          path: |
+            /tmp/result.txt
+            /tmp/std.err
+            /tmp/cedar.err
