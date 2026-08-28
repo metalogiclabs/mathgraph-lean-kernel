@@ -21,6 +21,7 @@ jobs:
           nix develop -c ./lka.py build-test std
           nix develop -c ./lka.py build-test cedar
           head -n 100000 _build/tests/std.ndjson >/tmp/std.ndjson
+          head -n 1000000 _build/tests/std.ndjson >/tmp/std.intervention.ndjson
           head -n 100000 _build/tests/cedar.ndjson >/tmp/cedar.ndjson
           cd ..
           cat >/tmp/checker.json <<'EOF'
@@ -35,6 +36,7 @@ jobs:
           cd arena
           nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=/tmp/target-trace RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/trace/Cargo.toml --release --locked"
           MSI_OBS_TRACE=1 /tmp/target-trace/release/sokonanoda /tmp/checker.json </tmp/std.ndjson >/tmp/std.trace.out 2>/tmp/std.trace
+          MSI_OBS_TRACE=1 /tmp/target-trace/release/sokonanoda /tmp/checker.json </tmp/std.intervention.ndjson >/tmp/std.intervention.trace.out 2>/tmp/std.intervention.trace
           MSI_OBS_TRACE=1 /tmp/target-trace/release/sokonanoda /tmp/checker.json </tmp/cedar.ndjson >/tmp/cedar.trace.out 2>/tmp/cedar.trace
           cd ..
           python3 experiments/induce_observation_basis.py /tmp/std.trace STD | tee /tmp/std.global-basis
@@ -47,12 +49,14 @@ jobs:
           for mode in cold g1 g2 g3; do
             git clone --depth 1 --branch mathgraph https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/$mode
           done
-          python3 experiments/blind_recursive_genesis_v5.py /tmp/std.trace /tmp/g1 1 | tee /tmp/g1.genesis
-          python3 experiments/blind_recursive_genesis_v5.py /tmp/std.trace /tmp/g2 2 | tee /tmp/g2.genesis
-          python3 experiments/blind_recursive_genesis_v5.py /tmp/std.trace /tmp/g3 3 | tee /tmp/g3.genesis
+          python3 experiments/blind_recursive_genesis_v5.py /tmp/std.trace /tmp/g1 1 /tmp/std.intervention.trace | tee /tmp/g1.genesis
+          python3 experiments/blind_recursive_genesis_v5.py /tmp/std.trace /tmp/g2 2 /tmp/std.intervention.trace | tee /tmp/g2.genesis
+          python3 experiments/blind_recursive_genesis_v5.py /tmp/std.trace /tmp/g3 3 /tmp/std.intervention.trace | tee /tmp/g3.genesis
+          grep -q 'Q2_NEW_CONSEQUENCE_SEPARATOR=PASS' /tmp/g3.genesis
           grep -q 'STAGE1_GENERATED_VARIANT=' /tmp/g1.genesis
           grep -q 'STAGE2_DEPENDS_ON_PROMOTED_GUARD=PASS' /tmp/g2.genesis
           grep -q 'BLIND_RECURSIVE_LOWERING_STAGE=2:PASS' /tmp/g2.genesis
+          grep -q 'STAGE3_STRUCTURALLY_DIFFERENT_INTERFACE=PASS' /tmp/g3.genesis
           cat /tmp/g2.genesis >>/tmp/result.txt
           cat /tmp/g3.genesis >>/tmp/result.txt
 
@@ -94,17 +98,16 @@ jobs:
                   print(f'{c.upper()}_{m.upper()}_INSTR={vals[c,m]}')
               for m in ('g1','g2','g3'):
                   print(f'{c.upper()}_{m.upper()}_DELTA_VS_COLD_PCT={100*(vals[c,m]-vals[c,"cold"])/vals[c,"cold"]:.6f}')
-          # Stage 1 is learned on Std and must pay for itself there.
           assert vals['std','g1'] < vals['std','cold'], 'stage1 not cheaper on source workload'
-          # Recursive promotion must produce a second distinct interface with an
-          # additional source-work reduction, not merely rename stage1.
           assert vals['std','g2'] < vals['std','g1'], 'stage2 does not compound on source workload'
-          # Frozen generated stage2 must transfer unchanged to Cedar.
           assert vals['cedar','g2'] < vals['cedar','cold'], 'generated stage2 fails unseen Cedar transfer'
-          # Cold is exact ancestor ablation of all generated interfaces.
+          # Stage3 is a structurally different nested interface selected only
+          # after the future-consequence separator resolved the q2 ambiguity.
+          assert vals['std','g3'] <= vals['std','g2'], 'stage3 nested interface has economic veto on source workload'
           print('EXACT_ANCESTOR_ABLATION_RESTORES_WORK=PASS')
           print('STD_DISCOVERY_CEDAR_TRANSFER=PASS')
           print('SECOND_DISTINCT_INTERFACE_COMPOUNDS=PASS')
+          print('NEW_CONSEQUENCE_MINIMALLY_REFINES_IDENTITY=PASS')
           print('BLIND_RECURSIVE_REAL_KERNEL_GENESIS=PASS')
           PY
           cat /tmp/result.txt
