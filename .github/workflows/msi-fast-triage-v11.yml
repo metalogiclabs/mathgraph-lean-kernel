@@ -39,21 +39,21 @@ jobs:
       - name: Install Valgrind
         run: nix profile add nixpkgs#valgrind
 
-      - name: Fast Callgrind profile
+      - name: Fast Callgrind self-cost profile
         run: |
           set -euxo pipefail
           timeout 1200 valgrind --tool=callgrind --callgrind-out-file=/tmp/triage.cg /tmp/checker-target/release/sokonanoda /tmp/checker.json < /tmp/std-prefix.ndjson >/tmp/cg.out 2>/tmp/cg.err
-          callgrind_annotate --inclusive=yes --threshold=0.15 /tmp/triage.cg > /tmp/annotate.txt
+          callgrind_annotate --inclusive=no --threshold=0.05 /tmp/triage.cg > /tmp/self.txt
           grep '^summary:' /tmp/triage.cg | tail -1 | tee /tmp/summary.txt
-          echo '=== HOT FUNCTIONS ===' | tee /tmp/hot.txt
-          grep -E 'prune_env|key_env|force_all|force_thunk|apply_closure|unify|head_spine_sig|spine_probe|simplify|eq_antisymm|infer_value|eval_no_cache|mk_thunk_hc|iota|unfold_value' /tmp/annotate.txt | head -120 | tee -a /tmp/hot.txt || true
-          echo '=== TOP ANNOTATION ===' | tee -a /tmp/hot.txt
-          sed -n '1,120p' /tmp/annotate.txt | tee -a /tmp/hot.txt
+          echo '=== RECONSTRUCTION SELF COST ===' | tee /tmp/hot.txt
+          grep -E 'prune_env|key_env|force_all|force_thunk|apply_closure|unify|head_spine_sig|spine_probe|simplify|eq_antisymm|infer_value|eval_no_cache|mk_thunk_hc|iota|unfold_value|num_loose_bvars|has_loose_bvar|spine_apps' /tmp/self.txt | head -160 | tee -a /tmp/hot.txt || true
+          echo '=== TOP SELF COST ===' | tee -a /tmp/hot.txt
+          sed -n '1,160p' /tmp/self.txt | tee -a /tmp/hot.txt
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: msi-fast-triage-v11
+          name: msi-fast-triage-v11-self
           path: |
             /tmp/hot.txt
             /tmp/summary.txt
