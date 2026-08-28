@@ -1,0 +1,52 @@
+name: MSI pre-force early exit v15
+on:
+  push:
+    branches: [msi-preforce-early-exit-v15]
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+      - name: Prepare Std prefix and both checkers
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena
+          nix develop -c ./lka.py build-test std
+          head -n 1000000 _build/tests/std.ndjson > /tmp/std-prefix.ndjson
+          cd ..
+          git clone --depth 1 --branch mathgraph https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/base
+          cp -a /tmp/base /tmp/cand
+          cp experiments/apply_msi_preforce_early_exit_v15.py /tmp/cand/patch.py
+          (cd /tmp/cand && python3 patch.py)
+          cd arena
+          nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=/tmp/base-target RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/base/Cargo.toml --release --locked"
+          nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=/tmp/cand-target RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/cand/Cargo.toml --release --locked"
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+      - name: Native A/B and Callgrind
+        shell: bash
+        run: |
+          set -euxo pipefail
+          : > /tmp/result.txt
+          for i in 1 2 3 4 5; do
+            /usr/bin/time -f "BASE_NATIVE_${i}=%e RSS=%M" /tmp/base-target/release/sokonanoda /tmp/checker.json < /tmp/std-prefix.ndjson >/dev/null 2>>/tmp/result.txt
+            /usr/bin/time -f "CAND_NATIVE_${i}=%e RSS=%M" /tmp/cand-target/release/sokonanoda /tmp/checker.json < /tmp/std-prefix.ndjson >/dev/null 2>>/tmp/result.txt
+          done
+          cd arena
+          nix develop -c valgrind --tool=callgrind --callgrind-out-file=/tmp/base.cg /tmp/base-target/release/sokonanoda /tmp/checker.json < /tmp/std-prefix.ndjson >/dev/null 2>/tmp/base-cg.err
+          nix develop -c valgrind --tool=callgrind --callgrind-out-file=/tmp/cand.cg /tmp/cand-target/release/sokonanoda /tmp/checker.json < /tmp/std-prefix.ndjson >/dev/null 2>/tmp/cand-cg.err
+          grep 'Collected' /tmp/base-cg.err | tail -1 | sed 's/^/BASE_/' | tee -a /tmp/result.txt
+          grep 'Collected' /tmp/cand-cg.err | tail -1 | sed 's/^/CAND_/' | tee -a /tmp/result.txt
+          cat /tmp/result.txt
+      - name: Upload result
+        uses: actions/upload-artifact@v4
+        with:
+          name: msi-preforce-early-exit-v15
+          path: /tmp/result.txt
