@@ -1,0 +1,93 @@
+name: msikernel capstone join v4
+
+on:
+  push:
+    branches: [msikernel-capstone-join-v4]
+
+jobs:
+  capstone-join:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build frozen corpora
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena
+          nix develop -c ./lka.py build-test std
+          nix develop -c ./lka.py build-test cedar
+          head -n 100000 _build/tests/std.ndjson >/tmp/std.ndjson
+          head -n 100000 _build/tests/cedar.ndjson >/tmp/cedar.ndjson
+          cd ..
+
+      - name: Collect real residuals and induce minimal observation basis
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 --branch mathgraph https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/trace
+          python3 experiments/apply_observation_trace_v3.py /tmp/trace
+          cd arena
+          nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=/tmp/target-trace RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/trace/Cargo.toml --release --locked"
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+          for corpus in std cedar; do
+            MSI_OBS_TRACE=1 /tmp/target-trace/release/sokonanoda /tmp/checker.json </tmp/$corpus.ndjson >/tmp/$corpus.trace.out 2>/tmp/$corpus.trace
+            python3 ../experiments/induce_observation_basis.py /tmp/$corpus.trace ${corpus^^} | tee /tmp/$corpus.basis
+            grep -q "${corpus^^}_MIN_BASIS_WIDTH=1" /tmp/$corpus.basis
+            grep -q "${corpus^^}_MIN_BASES=0" /tmp/$corpus.basis
+            grep -q "${corpus^^}_UNIQUE_MINIMAL=PASS" /tmp/$corpus.basis
+          done
+          echo REAL_RESIDUAL_TO_UNIQUE_MINIMAL_BASIS=PASS | tee /tmp/result.txt
+
+      - name: Lower Std-discovered basis into executable regime
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 --branch mathgraph https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/cold
+          git clone --depth 1 --branch mathgraph https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/generated
+          python3 experiments/lower_observation_basis_v4.py /tmp/std.trace /tmp/generated | tee -a /tmp/result.txt
+          cd arena
+          for mode in cold generated; do
+            nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=/tmp/target-$mode RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/$mode/Cargo.toml --release --locked"
+          done
+          for corpus in std cedar; do
+            /tmp/target-cold/release/sokonanoda /tmp/checker.json </tmp/$corpus.ndjson >/tmp/$corpus.cold.out
+            /tmp/target-generated/release/sokonanoda /tmp/checker.json </tmp/$corpus.ndjson >/tmp/$corpus.generated.out
+            cmp /tmp/$corpus.cold.out /tmp/$corpus.generated.out
+            echo "${corpus^^}_PROTECTED_BEHAVIOUR=PASS" | tee -a /tmp/result.txt
+          done
+
+      - name: Deterministic economic gate and transfer
+        run: |
+          set -euxo pipefail
+          for corpus in std cedar; do
+            for mode in cold generated; do
+              nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/cg-$corpus-$mode /tmp/target-$mode/release/sokonanoda /tmp/checker.json </tmp/$corpus.ndjson >/tmp/$corpus.$mode.cg.out 2>/tmp/$corpus.$mode.cg.err
+              cmp /tmp/$corpus.cold.out /tmp/$corpus.$mode.cg.out
+            done
+          done
+          python3 - <<'PY' | tee -a /tmp/result.txt
+          import re
+          def instr(c,m):
+              t=open(f'/tmp/cg-{c}-{m}').read()
+              return int(re.search(r'^summary:\s+(\d+)',t,re.M).group(1))
+          for c in ('std','cedar'):
+              a=instr(c,'cold'); b=instr(c,'generated')
+              print(f'{c.upper()}_COLD_INSTR={a}')
+              print(f'{c.upper()}_GENERATED_INSTR={b}')
+              print(f'{c.upper()}_GENERATED_DELTA_PCT={100*(b-a)/a:.6f}')
+              assert b<a, f'{c}: generated interface not cheaper'
+          print('EXACT_ABLATION_RESTORES_WORK=PASS')
+          print('STD_DISCOVERED_INTERFACE_CEDAR_TRANSFER=PASS')
+          print('REAL_CAPSTONE_JOIN=PASS')
+          PY
+          cat /tmp/result.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: msikernel-capstone-join-v4
+          path: |
+            /tmp/result.txt
+            /tmp/std.basis
+            /tmp/cedar.basis
