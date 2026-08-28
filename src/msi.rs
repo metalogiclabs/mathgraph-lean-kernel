@@ -10,12 +10,6 @@ use crate::value::{Value, V};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::OnceLock;
 
-/// The first compiled semantic interface.
-///
-/// `value` preserves the ordinary fallback path. `sort_level` is a certified
-/// view exposed by the producer boundary when the inferred value is already a
-/// raw `Sort`. Consumers may discharge a Sort-specific continuation directly;
-/// otherwise they fall back to the existing generic checker.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct InferCap<'a> {
     pub(crate) value: V<'a>,
@@ -34,11 +28,6 @@ impl<'a> InferCap<'a> {
     }
 }
 
-/// Exact continuation-local discharge for the first MSI capability.
-///
-/// This is deliberately equality-only: it does not claim that unequal level
-/// pointers imply semantic inequality. Failure simply means "residual remains"
-/// and the caller must use the ordinary conversion path.
 #[inline]
 pub(crate) fn same_sort_level<'a>(expected: V<'a>, actual: InferCap<'a>) -> bool {
     match (expected, actual.sort_level) {
@@ -47,22 +36,9 @@ pub(crate) fn same_sort_level<'a>(expected: V<'a>, actual: InferCap<'a>) -> bool
     }
 }
 
-// --- Real-trace bridge -----------------------------------------------------
-//
-// The trace is deliberately observational. It does not affect checker control
-// flow and it does not emit semantic names. Every inferred producer value is
-// treated as an opaque state id, and two currently protected future probes are
-// evaluated on it:
-//
-//   c0: the opaque outcome identity returned by the Sort-expecting future,
-//       or 0 when that future cannot discharge directly;
-//   c1: whether the application-function future can consume the value as an
-//       already-established Pi-shaped interface.
-//
-// The offline compiler sees only (state, c0, c1). The labels above are not in
-// the emitted records. This is the first bridge from real checker execution to
-// the MSI equation E_B = intersection_c ker(c).
-
+// Real-trace bridge. The emitted record contains no semantic names: only an
+// opaque event id and the outcomes of two protected future observations. This
+// is observational only and cannot change checker control flow.
 static TRACE_ENABLED: OnceLock<bool> = OnceLock::new();
 static TRACE_COUNT: AtomicUsize = AtomicUsize::new(0);
 const TRACE_LIMIT: usize = 250_000;
@@ -72,9 +48,6 @@ fn trace_enabled() -> bool {
     *TRACE_ENABLED.get_or_init(|| std::env::var_os("MSIKERNEL_TRACE").is_some())
 }
 
-/// Emit an anonymous, complete two-continuation observation vector for a real
-/// inference result. Pointer identity is used only as an opaque within-process
-/// state identifier; it is never interpreted as semantic equality.
 #[inline]
 pub(crate) fn trace_producer(value: V<'_>) {
     if !trace_enabled() {
@@ -85,12 +58,13 @@ pub(crate) fn trace_producer(value: V<'_>) {
         return;
     }
 
-    let state = value as *const Value<'_> as usize;
+    // c0 is the opaque outcome of the first future observation. Zero means the
+    // future cannot discharge directly. Nonzero values are opaque outcome ids.
     let c0 = match value {
-        // Reserve zero for the residual/no-direct-discharge outcome.
         Value::Sort { level, .. } => level.get_hash().wrapping_add(1),
         _ => 0,
     };
+    // c1 is the outcome of the second future observation.
     let c1: u8 = if matches!(value, Value::Pi { .. }) { 1 } else { 0 };
-    eprintln!("MSI_TRACE|{state:x}|{c0:x}|{c1}");
+    eprintln!("MSI_TRACE|{n:x}|{c0:x}|{c1}");
 }
