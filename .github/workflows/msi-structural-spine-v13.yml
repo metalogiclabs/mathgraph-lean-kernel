@@ -1,0 +1,37 @@
+name: MSI structural spine v13
+on:
+  push:
+    branches: [msi-structural-spine-v13]
+jobs:
+  census:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Prepare Std prefix and checker
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena
+          nix develop -c ./lka.py build-test std
+          head -n 1000000 _build/tests/std.ndjson > /tmp/std-prefix.ndjson
+          git clone --depth 1 --branch mathgraph https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/checker
+          cp ../experiments/apply_msi_structural_spine_v13.py /tmp/checker/patch.py
+          (cd /tmp/checker && python3 patch.py)
+          nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=/tmp/checker-target RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/checker/Cargo.toml --release --locked"
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+      - name: Run structural spine census
+        run: |
+          set -euxo pipefail
+          /usr/bin/time -f 'NATIVE_SECONDS=%e MAX_RSS_KB=%M' /tmp/checker-target/release/sokonanoda /tmp/checker.json < /tmp/std-prefix.ndjson >/tmp/out.txt 2>/tmp/err.txt
+          grep 'MSI_STRUCT_SPINE' /tmp/err.txt | tail -1 | tee /tmp/result.txt
+          tail -5 /tmp/err.txt | tee -a /tmp/result.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: msi-structural-spine-v13
+          path: /tmp/result.txt
