@@ -36,6 +36,7 @@ jobs:
         run: |
           set -euxo pipefail
           : >/tmp/result.txt
+          nix shell nixpkgs#valgrind -c valgrind --version
           for corpus in std cedar; do
             for mode in local shared ablate; do
               /tmp/v37-$mode-target/release/sokonanoda /tmp/checker.json </tmp/$corpus-1m.ndjson >/tmp/$corpus-$mode.out
@@ -44,7 +45,7 @@ jobs:
             cmp /tmp/$corpus-local.out /tmp/$corpus-ablate.out
             echo "${corpus^^}_OUTPUT_EQ=PASS" | tee -a /tmp/result.txt
             for mode in local shared ablate; do
-              nix develop -c valgrind --tool=callgrind --callgrind-out-file=/tmp/cg-$corpus-$mode /tmp/v37-$mode-target/release/sokonanoda /tmp/checker.json </tmp/$corpus-1m.ndjson >/tmp/$corpus-$mode-cg.out 2>/tmp/$corpus-$mode-cg.err
+              nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/cg-$corpus-$mode /tmp/v37-$mode-target/release/sokonanoda /tmp/checker.json </tmp/$corpus-1m.ndjson >/tmp/$corpus-$mode-cg.out 2>/tmp/$corpus-$mode-cg.err
               cmp /tmp/$corpus-local.out /tmp/$corpus-$mode-cg.out
             done
             python3 - "$corpus" <<'PY' | tee -a /tmp/result.txt
