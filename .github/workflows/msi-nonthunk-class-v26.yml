@@ -1,0 +1,89 @@
+name: MSI non-thunk class v26
+on:
+  push:
+    branches: [msi-nonthunk-class-v26]
+    paths:
+      - '.github/workflows/msi-nonthunk-class-v26.yml'
+      - 'experiments/apply_msi_nonthunk_class_v26.py'
+  workflow_dispatch:
+jobs:
+  benchmark:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+        with:
+          enable_kvm: true
+          set_as_trusted_user: true
+      - name: Install Valgrind
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y valgrind
+      - name: Prepare
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena
+          nix develop -c ./lka.py build-test std
+          head -n 1000000 _build/tests/std.ndjson >/tmp/std-prefix.ndjson
+          cd ..
+          git clone --depth 1 --branch mathgraph https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/base
+          for mode in rigid closure unfold direct; do
+            cp -a /tmp/base /tmp/$mode
+            cp experiments/apply_msi_nonthunk_class_v26.py /tmp/$mode/patch.py
+            (cd /tmp/$mode && python3 patch.py $mode)
+          done
+          cd arena
+          for mode in base rigid closure unfold direct; do
+            nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=/tmp/${mode}-target RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/${mode}/Cargo.toml --release --locked"
+          done
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+      - name: Benchmark
+        shell: bash
+        run: |
+          set -euxo pipefail
+          : >/tmp/result.txt
+          variants='base rigid closure unfold direct'
+          for i in 1 2 3; do
+            for mode in $variants; do
+              /usr/bin/time -f "${mode^^}_NATIVE_${i}=%e RSS=%M" /tmp/${mode}-target/release/sokonanoda /tmp/checker.json </tmp/std-prefix.ndjson >/tmp/${mode}-${i}.out 2>>/tmp/result.txt
+              if [ "$mode" != base ]; then cmp /tmp/base-${i}.out /tmp/${mode}-${i}.out; fi
+            done
+          done
+          for mode in $variants; do
+            valgrind --tool=callgrind --callgrind-out-file=/tmp/${mode}.cg /tmp/${mode}-target/release/sokonanoda /tmp/checker.json </tmp/std-prefix.ndjson >/tmp/${mode}-cg.out 2>/tmp/${mode}-cg.err
+            if [ "$mode" != base ]; then cmp /tmp/base-cg.out /tmp/${mode}-cg.out; fi
+            grep 'Collected' /tmp/${mode}-cg.err | tail -1 | sed "s/^/${mode^^}_/" | tee -a /tmp/result.txt
+          done
+          python3 - <<'PY' | tee -a /tmp/result.txt
+          import re,statistics
+          s=open('/tmp/result.txt').read(); modes=['base','rigid','closure','unfold','direct']; means={}; ins={}
+          for m in modes:
+              xs=[float(x) for x in re.findall(fr'{m.upper()}_NATIVE_\d+=([0-9.]+)',s)]
+              means[m]=statistics.mean(xs)
+              z=re.search(fr'{m.upper()}_.*Collected\s*:\s*([0-9,]+)',s); ins[m]=int(z.group(1).replace(',',''))
+              print(f'{m.upper()}_NATIVE_MEAN={means[m]:.6f}')
+              print(f'{m.upper()}_INSTR={ins[m]}')
+          for m in modes[1:]:
+              print(f'{m.upper()}_NATIVE_DELTA_PCT={100*(means[m]-means["base"])/means["base"]:.6f}')
+              print(f'{m.upper()}_INSTR_DELTA_PCT={100*(ins[m]-ins["base"])/ins["base"]:.6f}')
+          w=min(modes[1:],key=lambda m:ins[m])
+          print('BEST='+w)
+          print('DECISION=' + ('TRANSFER_CLASS_WINNER' if ins[w] < ins['base'] else 'KILL_CLASS_FASTPATHS'))
+          PY
+          cat /tmp/result.txt
+      - name: Upload result
+        uses: actions/upload-artifact@v4
+        with:
+          name: msi-nonthunk-class-v26
+          path: |
+            /tmp/result.txt
+            /tmp/base-cg.err
+            /tmp/rigid-cg.err
+            /tmp/closure-cg.err
+            /tmp/unfold-cg.err
+            /tmp/direct-cg.err
