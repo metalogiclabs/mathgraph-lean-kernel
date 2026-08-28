@@ -14,6 +14,7 @@ pub mod inductive;
 pub mod infer;
 pub mod level;
 pub mod name;
+pub(crate) mod msi;
 pub mod parser;
 pub mod pretty_printer;
 pub mod quot;
