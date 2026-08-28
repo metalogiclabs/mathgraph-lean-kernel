@@ -7,9 +7,10 @@ lib=root/'src/lib.rs'
 infer=root/'src/infer.rs'
 
 obs=r'''use crate::value::{RigidHead, Value, V};
-use std::sync::OnceLock;
+use std::sync::{OnceLock, atomic::{AtomicU64, Ordering}};
 
 static ENABLED: OnceLock<bool> = OnceLock::new();
+static EVENT_ID: AtomicU64 = AtomicU64::new(0);
 #[inline] fn enabled() -> bool { *ENABLED.get_or_init(|| std::env::var_os("MSI_OBS_TRACE").is_some()) }
 
 // Frozen mechanically enumerable producer-coordinate grammar.  The trace
@@ -35,7 +36,11 @@ pub(crate) fn coords(v: V<'_>) -> (u64,u64,u64,u64) {
 #[inline]
 pub(crate) fn emit(v: V<'_>, q: u8, outcome: u8) {
     if !enabled() { return; }
-    let sid=v as *const Value<'_> as usize;
+    // Use an event identity, not an arena address. Arena addresses can be reused
+    // across checker lifetimes/declarations; treating the address as a global
+    // state key can spuriously merge distinct observations and fabricate
+    // contradictory residuals in the offline inducer.
+    let sid = EVENT_ID.fetch_add(1, Ordering::Relaxed);
     let (a0,a1,a2,a3)=coords(v);
     eprintln!("MSI_PROD|{sid:x}|{a0}|{a1}|{a2}|{a3}");
     eprintln!("MSI_RES|{sid:x}|q{q}|{outcome}");
@@ -45,7 +50,6 @@ pub(crate) fn emit(v: V<'_>, q: u8, outcome: u8) {
 
 s=lib.read_text()
 if 'mod msi_obs;' not in s:
-    marker='mod'
     # Module order is not semantically relevant. Put near the top after attrs/comments.
     pos=s.find('\n', s.find('mod ')) if 'mod ' in s else 0
     s=s[:pos+1]+'mod msi_obs;\n'+s[pos+1:]
