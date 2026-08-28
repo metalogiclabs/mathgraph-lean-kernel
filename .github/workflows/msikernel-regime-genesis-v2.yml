@@ -1,0 +1,117 @@
+name: msikernel regime genesis v2
+
+on:
+  push:
+    branches: [msikernel-regime-genesis-v2]
+
+jobs:
+  regime-genesis:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build frozen corpora and candidate regimes
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena
+          nix develop -c ./lka.py build-test std
+          nix develop -c ./lka.py build-test cedar
+          head -n 200000 _build/tests/std.ndjson >/tmp/std.ndjson
+          head -n 200000 _build/tests/cedar.ndjson >/tmp/cedar.ndjson
+          cd ..
+
+          for mode in cold s p sp; do
+            git clone --depth 1 --branch mathgraph https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/$mode
+            if [ "$mode" != cold ]; then
+              python3 experiments/apply_regime_candidate_v2.py "$mode" /tmp/$mode
+            fi
+          done
+
+          cd arena
+          for mode in cold s p sp; do
+            nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=/tmp/target-$mode RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/$mode/Cargo.toml --release --locked"
+          done
+
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+
+      - name: Protected-behaviour and exact-ablation gate
+        run: |
+          set -euxo pipefail
+          : >/tmp/result.txt
+          for corpus in std cedar; do
+            /tmp/target-cold/release/sokonanoda /tmp/checker.json </tmp/$corpus.ndjson >/tmp/$corpus-cold.out
+            for mode in s p sp; do
+              /tmp/target-$mode/release/sokonanoda /tmp/checker.json </tmp/$corpus.ndjson >/tmp/$corpus-$mode.out
+              cmp /tmp/$corpus-cold.out /tmp/$corpus-$mode.out
+              echo "${corpus^^}_${mode^^}_OUTPUT_EQ=PASS" | tee -a /tmp/result.txt
+            done
+          done
+          echo EXACT_ABLATION_ARM=COLD | tee -a /tmp/result.txt
+
+      - name: Deterministic work census
+        run: |
+          set -euxo pipefail
+          nix shell nixpkgs#valgrind -c valgrind --version
+          for corpus in std cedar; do
+            for mode in cold s p sp; do
+              nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/cg-$corpus-$mode /tmp/target-$mode/release/sokonanoda /tmp/checker.json </tmp/$corpus.ndjson >/tmp/$corpus-$mode-cg.out 2>/tmp/$corpus-$mode-cg.err
+              cmp /tmp/$corpus-cold.out /tmp/$corpus-$mode-cg.out
+            done
+          done
+
+          python3 - <<'PY' | tee -a /tmp/result.txt
+          import re
+          def instr(c,m):
+              text=open(f'/tmp/cg-{c}-{m}').read()
+              q=re.search(r'^summary:\s+(\d+)', text, re.M)
+              if not q: raise SystemExit(f'missing callgrind summary {c}/{m}')
+              return int(q.group(1))
+
+          vals={(c,m):instr(c,m) for c in ('std','cedar') for m in ('cold','s','p','sp')}
+          for c in ('std','cedar'):
+              base=vals[c,'cold']
+              for m in ('cold','s','p','sp'):
+                  v=vals[c,m]
+                  print(f'{c.upper()}_{m.upper()}_INSTR={v}')
+                  print(f'{c.upper()}_{m.upper()}_DELTA_PCT={100*(v-base)/base:.6f}')
+
+          # Frozen developmental protocol: first residual extension may choose only
+          # one generator.  Among singleton extensions that strictly reduce work
+          # on discovery corpus Std, choose the cheapest.  Candidate names are
+          # implementation labels only; selection sees instruction outcomes.
+          singletons=[m for m in ('s','p') if vals['std',m] < vals['std','cold']]
+          assert singletons, 'NO_SINGLETON_RESIDUAL_REPAIR'
+          k1=min(singletons, key=lambda m: vals['std',m])
+          print(f'STD_SELECTED_MINIMAL_EXTENSION={k1}')
+          print('RESIDUAL_TO_MINIMAL_EXTENSION=PASS')
+
+          # Exact ablation is the unchanged cold regime.
+          assert vals['std','cold'] > vals['std',k1]
+          print('EXACT_ABLATION_RESTORES_WORK=PASS')
+
+          # Freeze K1 on Std and transfer without reselection to Cedar.
+          transfer=vals['cedar',k1] < vals['cedar','cold']
+          print('CEDAR_FROZEN_EXTENSION_TRANSFER=' + ('PASS' if transfer else 'FAIL'))
+          assert transfer
+
+          # Second generation: after K1 is installed, admit the remaining
+          # independent generator only if the combined regime strictly improves
+          # the frozen frontier on both corpora.
+          compounds=(vals['std','sp'] < vals['std',k1] and vals['cedar','sp'] < vals['cedar',k1])
+          print('SECOND_PROMOTION_COMPOUNDS=' + ('PASS' if compounds else 'FAIL'))
+          if compounds:
+              print('REGIME_GENESIS_CHAIN=PASS')
+          else:
+              print('REGIME_GENESIS_CHAIN=PARTIAL_STAGE1_ONLY')
+          PY
+
+          cat /tmp/result.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: msikernel-regime-genesis-v2
+          path: /tmp/result.txt
