@@ -2,53 +2,76 @@
 from __future__ import annotations
 from pathlib import Path
 import itertools, re, sys
-from collections import defaultdict
 
 trace=Path(sys.argv[1])
 root=Path(sys.argv[2])
 stage=int(sys.argv[3]) if len(sys.argv)>3 else 3
+intervention=Path(sys.argv[4]) if len(sys.argv)>4 else None
 
-prod={}; residuals=[]
-for line in trace.read_text().splitlines():
-    if line.startswith('MSI_PROD|'):
-        _,sid,*atoms=line.split('|'); prod[sid]=tuple(map(int,atoms))
-    elif line.startswith('MSI_RES|'):
-        _,sid,ctx,out=line.split('|'); residuals.append((sid,ctx,int(out)))
+
+def read_trace(path):
+    prod={}; residuals=[]
+    for line in path.read_text().splitlines():
+        if line.startswith('MSI_PROD|'):
+            _,sid,*atoms=line.split('|'); prod[sid]=tuple(map(int,atoms))
+        elif line.startswith('MSI_RES|'):
+            _,sid,ctx,out=line.split('|'); residuals.append((sid,ctx,int(out)))
+    return prod,residuals
+
+prod,residuals=read_trace(trace)
 if not prod or not residuals: raise SystemExit('missing trace rows')
+iproduct, iresiduals = read_trace(intervention) if intervention else ({},[])
 
-# Find the unique minimum anonymous coordinate basis separately for each future
-# context.  No semantic labels enter this search.
-def bases_for(ctx):
-    rows=[r for r in residuals if r[0] in prod and r[1]==ctx]
-    n=len(next(iter(prod.values())))
+# Find the minimum anonymous coordinate bases for a protected future context.
+def bases_for(ctx, p=prod, rs=residuals):
+    rows=[r for r in rs if r[0] in p and r[1]==ctx]
+    n=len(next(iter(p.values())))
     for k in range(n+1):
         good=[]
         for idxs in itertools.combinations(range(n),k):
             tab={}; ok=True
             for sid,_,out in rows:
-                sig=tuple(prod[sid][i] for i in idxs)
+                sig=tuple(p[sid][i] for i in idxs)
                 if sig in tab and tab[sig]!=out: ok=False; break
                 tab[sig]=out
             if ok: good.append(idxs)
         if good: return rows,good
     return rows,[]
 
+
+def sufficient_on_union(ctx,basis):
+    tab={}
+    for p,rs in ((prod,residuals),(iproduct,iresiduals)):
+        for sid,c,out in rs:
+            if c!=ctx or sid not in p: continue
+            sig=tuple(p[sid][i] for i in basis)
+            if sig in tab and tab[sig]!=out:
+                return False
+            tab[sig]=out
+    return True
+
 chosen={}
 for ctx in ('q0','q1','q2'):
     rows,bs=bases_for(ctx)
     if not rows: raise SystemExit(f'{ctx}: no rows')
-    if len(bs)!=1: raise SystemExit(f'{ctx}: minimum basis not unique: {bs}')
+    if len(bs)>1 and intervention:
+        survivors=[b for b in bs if sufficient_on_union(ctx,b)]
+        print(f'{ctx.upper()}_TRAIN_AMBIGUOUS_BASES={bs}')
+        print(f'{ctx.upper()}_INTERVENTION_SURVIVORS={survivors}')
+        if len(survivors)==1:
+            bs=survivors
+            print(f'{ctx.upper()}_NEW_CONSEQUENCE_SEPARATOR=PASS')
+    if len(bs)!=1: raise SystemExit(f'{ctx}: minimum basis not unique after intervention: {bs}')
     chosen[ctx]=bs[0]
     print(f'{ctx.upper()}_UNIQUE_MIN_BASIS={",".join(map(str,bs[0])) or "EMPTY"}')
 
-# Recover the concrete representation vocabulary from the checker source itself,
-# rather than from a hand-maintained semantic lowering table.
+# Recover the concrete representation vocabulary from checker source rather than
+# from a hand-maintained semantic lowering table.
 value_src=(root/'src/value.rs').read_text()
 def enum_variants(name):
     m=re.search(rf'pub enum {name}<[^>]+>\s*\{{(.*?)\n\}}',value_src,re.S)
     if not m: raise SystemExit(f'cannot parse enum {name}')
     body=m.group(1)
-    # top-level variant declarations only
     out=[]; depth=0; token=''
     for ch in body:
         token+=ch
@@ -65,21 +88,24 @@ rigid_variants=enum_variants('RigidHead')
 print('SOURCE_DERIVED_VALUE_VARIANTS='+','.join(value_variants))
 print('SOURCE_DERIVED_RIGID_VARIANTS='+','.join(rigid_variants))
 
-# For a context and selected basis, identify the unique positive signature.
+# Positive signature is learned from all available verified consequences after
+# the ambiguity-resolving intervention, never from a semantic label.
 def positive_sig(ctx,basis):
-    rows=[r for r in residuals if r[0] in prod and r[1]==ctx]
-    pos={tuple(prod[sid][i] for i in basis) for sid,_,out in rows if out==1}
-    neg={tuple(prod[sid][i] for i in basis) for sid,_,out in rows if out==0}
+    pos=set(); neg=set()
+    for p,rs in ((prod,residuals),(iproduct,iresiduals)):
+        for sid,c,out in rs:
+            if c!=ctx or sid not in p: continue
+            ss=tuple(p[sid][i] for i in basis)
+            (pos if out==1 else neg).add(ss)
     if len(pos)!=1 or pos & neg: raise SystemExit(f'{ctx}: no unique positive signature: pos={pos} overlap={pos&neg}')
     return next(iter(pos))
 
 sig={ctx:positive_sig(ctx,b) for ctx,b in chosen.items()}
 print('ANONYMOUS_POSITIVE_SIGNATURES='+';'.join(f'{k}:{sig[k]}' for k in ('q0','q1','q2')))
 
-# Stage 1 must be expressible as a single top-level runtime distinction.  Its
-# verified repair promotes a generic "guard before force, fallback otherwise"
-# constructor. Stage 2 then applies that promoted constructor to an unseen
-# context. Stage 3 attempts a nested distinction if the data require it.
+# Stage 1 promotes the generic guard-before-force constructor. Stage 2 reuses
+# the same generated constructor on an unseen context. Stage 3 may require a
+# nested source-derived distinction, providing the recursive representation gate.
 if chosen['q0']!=(0,): raise SystemExit(f'q0 expected one-coordinate source-derived guard, got {chosen["q0"]}')
 if chosen['q1']!=(0,): raise SystemExit(f'q1 must be generated by promoted top-level guard, got {chosen["q1"]}')
 q0v=value_variants[sig['q0'][0]]
@@ -103,10 +129,6 @@ if stage>=2:
     if old not in s: raise SystemExit('stage2 consumer template not found')
     s=s.replace(old,new,1)
 if stage>=3:
-    # q2 is deliberately not required for the core recursive gate. If it is a
-    # single nested-head coordinate, mechanically lower it as a third,
-    # structurally different interface; otherwise report the residual rather
-    # than smuggling in a hand-written representation.
     b=chosen['q2']
     if b==(1,):
         hv=rigid_variants[sig['q2'][0]]
