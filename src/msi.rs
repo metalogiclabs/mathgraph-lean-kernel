@@ -25,6 +25,7 @@ pub(crate) struct InferCap<'a> {
 impl<'a> InferCap<'a> {
     #[inline]
     pub(crate) fn from_value(value: V<'a>) -> Self {
+        trace_producer(value);
         let sort_level = match value {
             Value::Sort { level, .. } => Some(*level),
             _ => None,
@@ -58,8 +59,8 @@ pub(crate) fn same_sort_level<'a>(expected: V<'a>, actual: InferCap<'a>) -> bool
 //   c1: whether the application-function future can consume the value as an
 //       already-established Pi-shaped interface.
 //
-// The offline compiler sees only (state, c0, c1).  The labels above are not in
-// the emitted records.  This is the first bridge from real checker execution to
+// The offline compiler sees only (state, c0, c1). The labels above are not in
+// the emitted records. This is the first bridge from real checker execution to
 // the MSI equation E_B = intersection_c ker(c).
 
 static TRACE_ENABLED: OnceLock<bool> = OnceLock::new();
@@ -72,7 +73,7 @@ fn trace_enabled() -> bool {
 }
 
 /// Emit an anonymous, complete two-continuation observation vector for a real
-/// inference result.  Pointer identity is used only as an opaque within-process
+/// inference result. Pointer identity is used only as an opaque within-process
 /// state identifier; it is never interpreted as semantic equality.
 #[inline]
 pub(crate) fn trace_producer(value: V<'_>) {
