@@ -43,7 +43,7 @@ jobs:
           /tmp/v39-cap-target/release/sokonanoda /tmp/checker.json </tmp/acquire-std.ndjson >/tmp/cap.out 2>/tmp/cap.err
           /tmp/v39-app-target/release/sokonanoda /tmp/checker.json </tmp/acquire-std.ndjson >/tmp/app.out 2>/tmp/app.err
           grep 'MSI_V36' /tmp/cap.err | tail -1 | tee /tmp/cap-trace.txt
-          grep 'MSI_V39_APP' /tmp/app.err | head -5 | tee /tmp/app-trace-sample.txt
+          awk '/MSI_V39_APP/ {print; n++; if (n==5) exit}' /tmp/app.err | tee /tmp/app-trace-sample.txt
 
       - name: Freeze both discoveries before held-out data
         run: |
