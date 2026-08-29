@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+set -euxo pipefail
+ROOT="$PWD"
+
+git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+cd arena
+nix develop -c ./lka.py build-test std
+nix develop -c ./lka.py build-test cedar
+head -n 1000000 _build/tests/std.ndjson >/tmp/acquire1m.ndjson
+head -n 2000000 _build/tests/std.ndjson >/tmp/acquire2m.ndjson
+head -n 3000000 _build/tests/std.ndjson >/tmp/std3m.ndjson
+head -n 4000000 _build/tests/std.ndjson >/tmp/std4m.ndjson
+head -n 1000000 _build/tests/cedar.ndjson >/tmp/cedar1m.ndjson
+head -n 2000000 _build/tests/cedar.ndjson >/tmp/cedar2m.ndjson
+sha256sum /tmp/acquire1m.ndjson /tmp/acquire2m.ndjson /tmp/std3m.ndjson /tmp/std4m.ndjson /tmp/cedar1m.ndjson /tmp/cedar2m.ndjson | tee /tmp/corpus-hashes.txt
+cat >/tmp/checker.json <<'EOF'
+{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+EOF
+cd "$ROOT"
+
+git clone --depth 1 --branch mathgraph https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/v40-cap-probe
+git clone --depth 1 --branch mathgraph https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/v40-app-probe
+cp experiments/apply_msi_semantic_rediscovery_frontier_v36.py /tmp/v40-cap-probe/patch.py
+(cd /tmp/v40-cap-probe && python3 patch.py)
+cp experiments/probe_blind_applicability_v39.py /tmp/v40-app-probe/patch.py
+(cd /tmp/v40-app-probe && python3 patch.py)
+cd arena
+nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=/tmp/v40-cap-target RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/v40-cap-probe/Cargo.toml --release --locked"
+nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=/tmp/v40-app-target RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/v40-app-probe/Cargo.toml --release --locked"
+/tmp/v40-cap-target/release/sokonanoda /tmp/checker.json </tmp/acquire1m.ndjson >/tmp/cap.out 2>/tmp/cap.err
+/tmp/v40-app-target/release/sokonanoda /tmp/checker.json </tmp/acquire1m.ndjson >/tmp/app.out 2>/tmp/app.err
+cd "$ROOT"
+python3 experiments/select_blind_interface_applicability_v39.py /tmp/cap.err /tmp/app.err /tmp/semantic-selection.json | tee /tmp/semantic-selection.log
+python3 - <<'PY'
+import json
+x=json.load(open('/tmp/semantic-selection.json'))
+assert x['selection_uses_heldout'] is False
+print('FROZEN_CAPABILITY='+x['winner_materializer'])
+print('FROZEN_APPLICABILITY='+x['winner_applicability_materializer'])
+PY
+
+for mode in local shared gated ungated ablate; do
+  git clone --depth 1 --branch mathgraph https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/v40-$mode
+  (cd /tmp/v40-$mode && python3 "$ROOT/experiments/apply_blind_interface_applicability_v39.py" /tmp/semantic-selection.json $mode)
+done
+cd arena
+for mode in local shared gated ungated ablate; do
+  nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=/tmp/v40-$mode-target RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/v40-$mode/Cargo.toml --release --locked"
+done
+for mode in local shared gated; do
+  /tmp/v40-$mode-target/release/sokonanoda /tmp/checker.json </tmp/acquire2m.ndjson >/tmp/acq-$mode.out
+done
+cmp /tmp/acq-local.out /tmp/acq-shared.out
+cmp /tmp/acq-local.out /tmp/acq-gated.out
+set +e
+/tmp/v40-ungated-target/release/sokonanoda /tmp/checker.json </tmp/acquire2m.ndjson >/tmp/acq-ungated.out 2>/tmp/acq-ungated.err
+ue=$?
+set -e
+echo ACQUISITION_UNGATED_EXIT=$ue | tee /tmp/acquisition-control.txt
+nix shell nixpkgs#valgrind -c valgrind --version
+for mode in local shared gated; do
+  nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/cg-acq1-$mode /tmp/v40-$mode-target/release/sokonanoda /tmp/checker.json </tmp/acquire1m.ndjson >/tmp/acq1-$mode.out 2>/tmp/acq1-$mode.err
+  nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/cg-acq2-$mode /tmp/v40-$mode-target/release/sokonanoda /tmp/checker.json </tmp/acquire2m.ndjson >/tmp/acq2-$mode.out 2>/tmp/acq2-$mode.err
+done
+cd "$ROOT"
+python3 experiments/select_earned_memory_policy_v40.py /tmp/semantic-selection.json /tmp/policy-selection.json \
+  /tmp/cg-acq1-local /tmp/cg-acq2-local \
+  /tmp/cg-acq1-shared /tmp/cg-acq2-shared \
+  /tmp/cg-acq1-gated /tmp/cg-acq2-gated | tee /tmp/policy-selection.log
+mode=$(python3 -c "import json; print(json.load(open('/tmp/policy-selection.json'))['winner_policy'])")
+echo FROZEN_POLICY=$mode
+
+cd arena
+: >/tmp/result.txt
+cat /tmp/semantic-selection.json >>/tmp/result.txt
+echo >>/tmp/result.txt
+cat /tmp/policy-selection.json >>/tmp/result.txt
+echo >>/tmp/result.txt
+for corpus in std4m cedar2m; do
+  /tmp/v40-local-target/release/sokonanoda /tmp/checker.json </tmp/$corpus.ndjson >/tmp/$corpus-local.out
+  /tmp/v40-$mode-target/release/sokonanoda /tmp/checker.json </tmp/$corpus.ndjson >/tmp/$corpus-selected.out
+  /tmp/v40-ablate-target/release/sokonanoda /tmp/checker.json </tmp/$corpus.ndjson >/tmp/$corpus-ablate.out
+  cmp /tmp/$corpus-local.out /tmp/$corpus-selected.out
+  cmp /tmp/$corpus-local.out /tmp/$corpus-ablate.out
+done
+echo FRESH_STD_SEMANTICS=PASS | tee -a /tmp/result.txt
+echo FRESH_CEDAR_SEMANTICS=PASS | tee -a /tmp/result.txt
+echo FROZEN_POLICY=$mode | tee -a /tmp/result.txt
+
+for arm in local selected ablate; do
+  actual=$arm
+  if [ "$arm" = selected ]; then actual=$mode; fi
+  nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/cg-std3-$arm /tmp/v40-$actual-target/release/sokonanoda /tmp/checker.json </tmp/std3m.ndjson >/tmp/std3-$arm.out 2>/tmp/std3-$arm.err
+  nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/cg-std4-$arm /tmp/v40-$actual-target/release/sokonanoda /tmp/checker.json </tmp/std4m.ndjson >/tmp/std4-$arm.out 2>/tmp/std4-$arm.err
+  nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/cg-cedar1-$arm /tmp/v40-$actual-target/release/sokonanoda /tmp/checker.json </tmp/cedar1m.ndjson >/tmp/cedar1-$arm.out 2>/tmp/cedar1-$arm.err
+  nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/cg-cedar2-$arm /tmp/v40-$actual-target/release/sokonanoda /tmp/checker.json </tmp/cedar2m.ndjson >/tmp/cedar2-$arm.out 2>/tmp/cedar2-$arm.err
+done
+python3 - <<'PY' | tee -a /tmp/result.txt
+import json,re
+from pathlib import Path
+policy=json.load(open('/tmp/policy-selection.json'))['winner_policy']
+def s(p):
+    m=re.search(r'^summary:\s+(\d+)',Path(p).read_text(),re.M)
+    if not m: raise SystemExit('missing summary '+p)
+    return int(m.group(1))
+vals={}
+for corpus,a,b in [('STD','std3','std4'),('CEDAR','cedar1','cedar2')]:
+    vals[corpus]={arm:s(f'/tmp/cg-{b}-{arm}')-s(f'/tmp/cg-{a}-{arm}') for arm in ('local','selected','ablate')}
+wins=[]
+for corpus,v in vals.items():
+    for arm,n in v.items(): print(f'{corpus}_{arm.upper()}_INSTR={n}')
+    print(f'{corpus}_SELECTED_VS_LOCAL_PCT={100*(v["selected"]-v["local"])/v["local"]:.6f}')
+    print(f'{corpus}_SELECTED_VS_ABLATE_PCT={100*(v["selected"]-v["ablate"])/v["ablate"]:.6f}')
+    ok=v['selected'] <= v['local'] and v['selected'] < v['ablate']
+    print(f'{corpus}_EARNED_MEMORY_TRANSFER={str(ok).upper()}')
+    wins.append(ok)
+print('SELECTION_USED_HELDOUT=FALSE')
+print('FROZEN_POLICY='+policy)
+print('DECISION=' + ('EARNED_MEMORY_POLICY_TRANSFER' if all(wins) else 'NO_EARNED_MEMORY_POLICY_TRANSFER'))
+PY
+cat /tmp/result.txt
