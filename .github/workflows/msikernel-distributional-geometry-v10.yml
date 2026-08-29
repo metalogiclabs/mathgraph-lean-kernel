@@ -1,0 +1,107 @@
+name: msikernel distributional geometry v10
+
+on:
+  push:
+    branches: [msikernel-distributional-geometry-v10]
+  workflow_dispatch:
+
+jobs:
+  distributional-v10:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build frozen Std and Cedar corpora and open distant sealed slices
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena
+          nix develop -c ./lka.py build-test std
+          nix develop -c ./lka.py build-test cedar
+          sed -n '5000001,5100000p' _build/tests/std.ndjson >/tmp/std.ndjson
+          sed -n '10000001,10100000p' _build/tests/cedar.ndjson >/tmp/cedar.ndjson
+          test "$(wc -l </tmp/std.ndjson)" -eq 100000
+          test "$(wc -l </tmp/cedar.ndjson)" -eq 100000
+          cd ..
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+
+      - name: Instantiate frozen capability lattice
+        run: |
+          set -euxo pipefail
+          modes='cold g3 param prior rigid param_prior param_rigid prior_rigid param_prior_rigid'
+          for mode in $modes; do
+            git clone --depth 1 --branch mathgraph https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/$mode
+          done
+          for mode in g3 param prior rigid param_prior param_rigid prior_rigid param_prior_rigid; do
+            python3 experiments/apply_distributional_geometry_v10.py /tmp/$mode $mode | tee /tmp/$mode.genesis
+          done
+          cp DISTRIBUTIONAL_ACCESSIBILITY_GEOMETRY_V10.md /tmp/predictions.md
+          echo V10_PREDICTIONS_FROZEN_BEFORE_OUTCOMES=PASS | tee /tmp/result.txt
+
+      - name: Build and exact semantic gate
+        run: |
+          set -euxo pipefail
+          cd arena
+          for mode in cold g3 param prior rigid param_prior param_rigid prior_rigid param_prior_rigid; do
+            nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=/tmp/target-$mode RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/$mode/Cargo.toml --release --locked"
+          done
+          for corpus in std cedar; do
+            /tmp/target-cold/release/sokonanoda /tmp/checker.json </tmp/$corpus.ndjson >/tmp/$corpus.cold.out
+            for mode in g3 param prior rigid param_prior param_rigid prior_rigid param_prior_rigid; do
+              /tmp/target-$mode/release/sokonanoda /tmp/checker.json </tmp/$corpus.ndjson >/tmp/$corpus.$mode.out
+              cmp /tmp/$corpus.cold.out /tmp/$corpus.$mode.out
+            done
+            echo "${corpus^^}_V10_BYTE_IDENTICAL=PASS" | tee -a /tmp/result.txt
+          done
+
+      - name: Reveal distant-slice outcomes and score frozen topology
+        run: |
+          set -euxo pipefail
+          for corpus in std cedar; do
+            for mode in g3 param prior rigid param_prior param_rigid prior_rigid param_prior_rigid; do
+              nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/cg-$corpus-$mode /tmp/target-$mode/release/sokonanoda /tmp/checker.json </tmp/$corpus.ndjson >/tmp/$corpus.$mode.cg.out 2>/tmp/$corpus.$mode.cg.err
+              cmp /tmp/$corpus.cold.out /tmp/$corpus.$mode.cg.out
+            done
+          done
+          python3 - <<'PY' | tee -a /tmp/result.txt
+          import re
+          states=['param','prior','rigid','param_prior','param_rigid','prior_rigid','param_prior_rigid']
+          predicted={m:('VETO' if m=='param' else 'PROMOTE') for m in states}
+          def instr(c,m):
+              t=open(f'/tmp/cg-{c}-{m}').read()
+              return int(re.search(r'^summary:\s+(\d+)',t,re.M).group(1))
+          vals={(c,m):instr(c,m) for c in ('std','cedar') for m in ['g3']+states}
+          print(f'STD_G3_INSTR={vals["std","g3"]}')
+          print(f'CEDAR_G3_INSTR={vals["cedar","g3"]}')
+          correct=0
+          for m in states:
+              ds=vals['std',m]-vals['std','g3']; dc=vals['cedar',m]-vals['cedar','g3']
+              actual='PROMOTE' if ds<0 and dc<0 else 'VETO'
+              ok=actual==predicted[m]
+              correct += int(ok)
+              print(f'{m.upper()}_STD_DELTA={ds}')
+              print(f'{m.upper()}_CEDAR_DELTA={dc}')
+              print(f'{m.upper()}_PREDICTED={predicted[m]}')
+              print(f'{m.upper()}_ACTUAL={actual}')
+              print(f'{m.upper()}_PREDICTION_MATCH={"PASS" if ok else "FAIL"}')
+          print(f'V10_PROSPECTIVE_SCORE={correct}/7')
+          if correct==7:
+              print('DISTRIBUTIONAL_ACCESSIBILITY_GEOMETRY_V10=PASS')
+          else:
+              print('DISTRIBUTIONAL_ACCESSIBILITY_GEOMETRY_V10=FALSIFIED_OR_INCOMPLETE')
+              raise SystemExit(1)
+          PY
+          cat /tmp/result.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: msikernel-distributional-geometry-v10
+          path: |
+            /tmp/result.txt
+            /tmp/predictions.md
+            /tmp/*.genesis
