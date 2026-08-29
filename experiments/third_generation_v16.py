@@ -100,3 +100,5 @@ def main():
     elif not a.list: print('BASELINE_ONLY=1')
     p.write_text(s)
 if __name__=='__main__': main()
+
+# V16 trigger: third-generation causal gate.
