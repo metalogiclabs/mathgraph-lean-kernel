@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import csv,itertools,sys
+import csv,itertools,re,sys
 
 BASE=('empty','closed','canonical')
 SOURCES=('s0','s1','s2','s3')
@@ -16,7 +16,7 @@ def pred_holds(rule,r,g=None):
     if rule=='TRUE': return True
     for lit in rule.split('&') if rule else ():
         n,v=lit.split('='); v=int(v)
-        q = g if n=='g' else r[n]
+        q=g if n=='g' else r[n]
         if q!=v: return False
     return True
 
@@ -44,16 +44,15 @@ def best_pred(rows,atoms,g=None):
 
 def programs(src):
     for k in range(16):
-        yield (f'and(shr({src},{k}),1)',3+k//999)
-        yield (f'mod(shr({src},{k}),2)',3+k//999)
-        yield (f'neq0(and(shr({src},{k}),1))',4+k//999)
+        yield (f'and(shr({src},{k}),1)',3)
+        yield (f'mod(shr({src},{k}),2)',3)
+        yield (f'neq0(and(shr({src},{k}),1))',4)
 
 def eval_prog(expr,r):
-    src=expr.split('(',2)[2].split(',',1)[0]
-    h=r[src]
-    k=int(expr.rsplit(',',1)[1].split(')',1)[0])
-    bit=(h>>k)&1
-    return bit
+    m=re.search(r'shr\((s[0-3]),(\d+)\)',expr)
+    if not m: raise ValueError(expr)
+    src,k=m.group(1),int(m.group(2)); h=r[src]
+    return (h>>k)&1
 
 def score_sources(rows,sources):
     choices=[]
@@ -86,8 +85,7 @@ def main():
     top=[z for z in ch if -z[0]==best_cov and z[1]==best_cost]
     classes={}
     for z in top:
-        key=(z[5],z[6])
-        classes.setdefault(key,[]).append(z)
+        key=(z[5],z[6]); classes.setdefault(key,[]).append(z)
     print(f'V18_BEST_BEHAVIOURAL_CLASSES={len(classes)}')
     if len(classes)!=1:
         print('SOURCE_OBSERVABLE_GENESIS_V18=UNDERIDENTIFIED'); return 2
