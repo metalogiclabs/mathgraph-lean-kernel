@@ -1,0 +1,48 @@
+name: Developmental Conversion Counterfactual Static V1
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - developmental-conv-policy-v1-clean
+    paths:
+      - 'experiments/developmental_conv_policy/**'
+      - '.github/workflows/developmental-conv-counterfactual-static-v1.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  counterfactual:
+    strategy:
+      fail-fast: false
+      matrix:
+        action: [baseline, unfold_left, unfold_right, unfold_both]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Fetch frozen Arena branch
+        run: git clone --depth 1 --branch mathgraph-v3-candidate https://github.com/heathsanchez/lean-kernel-arena.git /tmp/lean-kernel-arena
+      - name: Materialize repository-static Arena exports
+        run: |
+          mkdir -p /tmp/lean-kernel-arena/_build/tests
+          find /tmp/lean-kernel-arena/tests -maxdepth 1 -name '*.ndjson' -exec cp {} /tmp/lean-kernel-arena/_build/tests/ \;
+      - name: Inject isolated counterfactual scheduler
+        run: python experiments/developmental_conv_policy/instrument_conv_force.py
+      - name: Run semantic counterfactual
+        env:
+          MATHGRAPH_CONV_FORCE_ACTION: ${{ matrix.action }}
+          LEAN_KERNEL_ARENA: /tmp/lean-kernel-arena
+          LEAN_KERNEL_ARENA_VERBOSE: '1'
+        run: |
+          set -o pipefail
+          /usr/bin/time -v cargo test --release --test arena arena_fast_tier -- --nocapture 2>&1 | tee counterfactual-${{ matrix.action }}.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: developmental-conv-counterfactual-${{ matrix.action }}
+          path: counterfactual-${{ matrix.action }}.log
+          if-no-files-found: warn
+          retention-days: 30
