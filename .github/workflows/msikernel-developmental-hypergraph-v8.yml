@@ -1,0 +1,164 @@
+name: msikernel developmental hypergraph v8
+
+on:
+  push:
+    branches: [msikernel-developmental-hypergraph-v8]
+  workflow_dispatch:
+
+jobs:
+  hypergraph:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build frozen Std and unseen Cedar corpora
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena
+          nix develop -c ./lka.py build-test std
+          nix develop -c ./lka.py build-test cedar
+          head -n 100000 _build/tests/std.ndjson >/tmp/std.ndjson
+          head -n 100000 _build/tests/cedar.ndjson >/tmp/cedar.ndjson
+          cd ..
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+
+      - name: Materialize all 16 post-g2 developmental nodes
+        run: |
+          set -euxo pipefail
+          for mask in $(seq 0 15); do
+            d=$(printf '/tmp/node-%02d' "$mask")
+            git clone --depth 1 --branch mathgraph https://github.com/metalogiclabs/mathgraph-lean-kernel.git "$d"
+            python3 experiments/developmental_hypergraph_v8.py "$d" "$mask" | tee $(printf '/tmp/node-%02d.genesis' "$mask")
+          done
+          echo HYPERGRAPH_NODES=16 | tee /tmp/result.txt
+          echo HYPERGRAPH_POSSIBLE_DIRECTED_EDGES=32 | tee -a /tmp/result.txt
+
+      - name: Build and exact semantic census
+        run: |
+          set -euxo pipefail
+          cd arena
+          for mask in $(seq 0 15); do
+            d=$(printf '/tmp/node-%02d' "$mask")
+            t=$(printf '/tmp/target-%02d' "$mask")
+            nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=$t RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path $d/Cargo.toml --release --locked"
+          done
+          for corpus in std cedar; do
+            for mask in $(seq 0 15); do
+              t=$(printf '/tmp/target-%02d' "$mask")
+              o=$(printf '/tmp/%s.node-%02d.out' "$corpus" "$mask")
+              "$t/release/sokonanoda" /tmp/checker.json </tmp/$corpus.ndjson >"$o"
+              if [ "$mask" -gt 0 ]; then cmp /tmp/$corpus.node-00.out "$o"; fi
+            done
+            echo "${corpus^^}_ALL_16_NODES_BYTE_IDENTICAL=PASS" | tee -a /tmp/result.txt
+          done
+
+      - name: Deterministic cost census
+        run: |
+          set -euxo pipefail
+          for corpus in std cedar; do
+            for mask in $(seq 0 15); do
+              t=$(printf '/tmp/target-%02d' "$mask")
+              cg=$(printf '/tmp/cg-%s-%02d' "$corpus" "$mask")
+              out=$(printf '/tmp/%s.node-%02d.cg.out' "$corpus" "$mask")
+              nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file="$cg" "$t/release/sokonanoda" /tmp/checker.json </tmp/$corpus.ndjson >"$out" 2>$(printf '/tmp/%s.node-%02d.cg.err' "$corpus" "$mask")
+              cmp /tmp/$corpus.node-00.out "$out"
+            done
+          done
+
+      - name: Reconstruct traversable developmental graph
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY' | tee -a /tmp/result.txt
+          import re
+          P=['rigid_projection','param_pi','prior_field_pi','final_field_pi']
+          def instr(c,m):
+              t=open(f'/tmp/cg-{c}-{m:02d}').read()
+              return int(re.search(r'^summary:\s+(\d+)',t,re.M).group(1))
+          val={(c,m):instr(c,m) for c in ('std','cedar') for m in range(16)}
+          for m in range(16):
+              print(f'NODE_{m:04b}_STD={val["std",m]}')
+              print(f'NODE_{m:04b}_CEDAR={val["cedar",m]}')
+
+          good={m:[] for m in range(16)}
+          blocked={m:[] for m in range(16)}
+          portal_context={p:[] for p in P}
+          for m in range(16):
+              for i,p in enumerate(P):
+                  b=1<<i
+                  if m & b: continue
+                  n=m|b
+                  ds=val['std',n]-val['std',m]
+                  dc=val['cedar',n]-val['cedar',m]
+                  ok=ds<0 and dc<0
+                  (good if ok else blocked)[m].append((n,p,ds,dc))
+                  portal_context[p].append((m,ok,ds,dc))
+                  print(f'EDGE_{m:04b}_TO_{n:04b}_{p.upper()}=' + ('PASS' if ok else 'VETO') + f' STD_DELTA={ds} CEDAR_DELTA={dc}')
+
+          # Reachability and longest admissible path from frozen g2 node 0000.
+          best={0:(0,[0])}
+          for bits in range(5):
+              for m in range(16):
+                  if m.bit_count()!=bits or m not in best: continue
+                  depth,path=best[m]
+                  for n,p,ds,dc in good[m]:
+                      cand=(depth+1,path+[n])
+                      if n not in best or cand[0]>best[n][0]: best[n]=cand
+          maxnode=max(best,key=lambda m:best[m][0])
+          maxdepth,path=best[maxnode]
+          print(f'REACHABLE_NODES={len(best)}')
+          print(f'LONGEST_POST_G2_GENERATIONS={maxdepth}')
+          print('LONGEST_PATH='+'->'.join(f'{m:04b}' for m in path))
+          print(f'TOTAL_VERIFIED_GENERATIONS={2+maxdepth}')
+
+          sinks=[]
+          for m in sorted(best):
+              outs=[e for e in good[m] if e[0] in best or True]
+              if not outs: sinks.append(m)
+          print('REACHABLE_SINKS=' + (','.join(f'{m:04b}' for m in sinks) if sinks else 'NONE'))
+
+          # Context dependence: same portal can flip sign depending on prior promotions.
+          flips=[]
+          for p,rows in portal_context.items():
+              oks={ok for _,ok,_,_ in rows}
+              if len(oks)>1: flips.append(p)
+              ds=[r[2] for r in rows]; dc=[r[3] for r in rows]
+              print(f'PORTAL_{p.upper()}_STD_DELTA_RANGE={min(ds)}:{max(ds)}')
+              print(f'PORTAL_{p.upper()}_CEDAR_DELTA_RANGE={min(dc)}:{max(dc)}')
+              print(f'PORTAL_{p.upper()}_CONTEXT_DEPENDENT=' + ('PASS' if len(oks)>1 else 'NO'))
+          print('CONTEXT_DEPENDENT_PORTALS=' + (','.join(flips) if flips else 'NONE'))
+
+          # Rescue: an initially vetoed portal becomes admissible after another accepted move.
+          rescues=[]
+          for i,p in enumerate(P):
+              b=1<<i
+              initial=next(r for r in portal_context[p] if r[0]==0)
+              if initial[1]: continue
+              for m,ok,ds,dc in portal_context[p]:
+                  if m in best and ok:
+                      rescues.append((p,m)); break
+          print('RESIDUAL_RESCUES=' + (','.join(f'{p}@{m:04b}' for p,m in rescues) if rescues else 'NONE'))
+
+          # Greedy policy: at each node choose admissible edge with lowest combined successor cost.
+          m=0; greedy=[0]
+          while good[m]:
+              options=[e for e in good[m]]
+              n,p,ds,dc=min(options,key=lambda e:val['std',e[0]]+val['cedar',e[0]])
+              m=n; greedy.append(m)
+          print('GREEDY_PATH='+'->'.join(f'{x:04b}' for x in greedy))
+          print(f'GREEDY_POST_G2_GENERATIONS={len(greedy)-1}')
+          print('DEVELOPMENTAL_HYPERGRAPH_CENSUS=PASS')
+          print('EDGE_LAW=exact_semantics AND delta_std<0 AND delta_cedar<0')
+          PY
+          cat /tmp/result.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: msikernel-developmental-hypergraph-v8
+          path: |
+            /tmp/result.txt
+            /tmp/node-*.genesis
