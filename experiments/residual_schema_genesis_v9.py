@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 import argparse, re
 
+# V9 freezes the transformation schema before the external tournament runs.
 
 def frozen_prefix(s: str) -> str:
     old='''    pub(crate) fn ensure_sort_v(&mut self, depth: u32, v: V<'t>) -> LevelPtr<'t> {\n        match self.force_all(depth, v) {\n            Value::Sort { level , .. } => *level,\n            _ => panic!("expected a sort"),\n        }\n    }'''
@@ -15,8 +16,6 @@ def frozen_prefix(s: str) -> str:
     return s.replace(old,new,1)
 
 # Generic source-derived schema. No portal names or hand-picked line numbers.
-# Find a value that is unconditionally force_all'd and immediately pattern-matched
-# on one constructor. Generate a fast path for that already-constructor case.
 PAT = re.compile(
     r'(?P<indent>^[ \t]*)match self\.force_all\(depth, (?P<var>[A-Za-z_][A-Za-z0-9_]*)\) \{\n'
     r'(?P=indent)    Value::(?P<ctor>[A-Za-z_][A-Za-z0-9_]*) (?P<pat>\{[^\n]*\}) => (?P<body>[^\n]+),',
@@ -35,17 +34,13 @@ def rewrite_one(s: str, idx: int) -> tuple[str,str]:
     if idx < 0 or idx >= len(cs): raise SystemExit(f'candidate index {idx} out of range 0..{len(cs)-1}')
     m,line=cs[idx]
     ind=m.group('indent'); var=m.group('var'); ctor=m.group('ctor'); pat=m.group('pat'); body=m.group('body')
-    matched=m.group(0)
     replacement=(
         f"{ind}match {var} {{\n"
         f"{ind}    Value::{ctor} {pat} => {body},\n"
         f"{ind}    _ => match self.force_all(depth, {var}) {{\n"
         f"{ind}        Value::{ctor} {pat} => {body},"
     )
-    # Preserve the remainder of the original match after its first arm, but it now
-    # belongs to the nested residual match; close the outer match after it.
     start=m.start(); first_end=m.end()
-    # Find matching close of the original simple match by indentation.
     close_pat=re.compile(r'^'+re.escape(ind)+r'\}', re.M)
     cm=close_pat.search(s, first_end)
     if not cm: raise SystemExit('could not locate match close')
@@ -64,7 +59,7 @@ def main():
     repo=Path(args.repo); p=repo/'src/infer.rs'
     s=frozen_prefix(p.read_text())
     cs=candidates(s)
-    print(f'GENERATED_SCHEMA=constructor_fastpath_over_force_residual')
+    print('GENERATED_SCHEMA=constructor_fastpath_over_force_residual')
     print('PORTAL_LABELS_USED=0')
     print(f'DISCOVERED_CANDIDATES={len(cs)}')
     for i,(m,line) in enumerate(cs):
