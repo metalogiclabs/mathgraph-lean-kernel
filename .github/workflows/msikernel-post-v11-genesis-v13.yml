@@ -1,0 +1,118 @@
+name: MSI Kernel Post-V11 Genesis V13
+on:
+  push:
+    branches: [msikernel-post-v11-genesis-v13]
+    paths:
+      - '.github/workflows/msikernel-post-v11-genesis-v13.yml'
+      - 'experiments/post_v11_genesis_v13.py'
+  workflow_dispatch:
+jobs:
+  tournament:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Build frozen external corpora
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena
+          nix develop -c ./lka.py build-test std
+          nix develop -c ./lka.py build-test cedar
+          head -n 100000 _build/tests/std.ndjson >/tmp/std.ndjson
+          head -n 100000 _build/tests/cedar.ndjson >/tmp/cedar.ndjson
+          cd ..
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+      - name: Observe post-V11 residual state
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 --branch mathgraph https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/probe
+          python3 experiments/post_v11_genesis_v13.py /tmp/probe --probe
+          cd arena
+          nix develop -c bash -c "CARGO_TARGET_DIR=/tmp/target-probe RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/probe/Cargo.toml --release --locked"
+          /tmp/target-probe/release/sokonanoda /tmp/checker.json </tmp/std.ndjson >/tmp/probe-std.out 2>/tmp/std.trace
+          /tmp/target-probe/release/sokonanoda /tmp/checker.json </tmp/cedar.ndjson >/tmp/probe-cedar.out 2>/tmp/cedar.trace
+          cd ..
+          grep -c 'V13CTX' /tmp/std.trace | tee /tmp/std-trace-count.txt
+          grep -c 'V13CTX' /tmp/cedar.trace | tee /tmp/cedar-trace-count.txt
+          test "$(cat /tmp/std-trace-count.txt)" -gt 0
+          test "$(cat /tmp/cedar-trace-count.txt)" -gt 0
+      - name: Derive post-V11 candidates
+        run: |
+          set -euxo pipefail
+          python3 experiments/post_v11_genesis_v13.py . --std-trace /tmp/std.trace --cedar-trace /tmp/cedar.trace --list | tee /tmp/discovery.txt
+          n=$(sed -n 's/^DERIVED_POST_V11_CELLS=//p' /tmp/discovery.txt)
+          test "$n" -gt 0
+          echo "VARIANT_COUNT=$n" >> "$GITHUB_ENV"
+          git clone --depth 1 --branch mathgraph https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/base
+          python3 experiments/post_v11_genesis_v13.py /tmp/base --std-trace /tmp/std.trace --cedar-trace /tmp/cedar.trace
+          for i in $(seq 0 $((n-1))); do
+            d=/tmp/variant-$i
+            git clone --depth 1 --branch mathgraph https://github.com/metalogiclabs/mathgraph-lean-kernel.git "$d"
+            python3 experiments/post_v11_genesis_v13.py "$d" --std-trace /tmp/std.trace --cedar-trace /tmp/cedar.trace --variant "$i" | tee "/tmp/variant-$i.genesis"
+          done
+      - name: Build baseline and generated variants
+        run: |
+          set -euxo pipefail
+          cd arena
+          nix develop -c bash -c "CARGO_TARGET_DIR=/tmp/target-base RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/base/Cargo.toml --release --locked"
+          : >/tmp/build-status.txt
+          for i in $(seq 0 $((VARIANT_COUNT-1))); do
+            if nix develop -c bash -c "CARGO_TARGET_DIR=/tmp/target-$i RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/variant-$i/Cargo.toml --release --locked"; then
+              echo "VARIANT_${i}_BUILD=PASS" | tee -a /tmp/build-status.txt
+            else echo "VARIANT_${i}_BUILD=FAIL" | tee -a /tmp/build-status.txt; fi
+          done
+      - name: Exact semantic gate
+        run: |
+          set -euxo pipefail
+          /tmp/target-base/release/sokonanoda /tmp/checker.json </tmp/std.ndjson >/tmp/std.base.out
+          /tmp/target-base/release/sokonanoda /tmp/checker.json </tmp/cedar.ndjson >/tmp/cedar.base.out
+          : >/tmp/semantic-status.txt
+          for i in $(seq 0 $((VARIANT_COUNT-1))); do
+            if ! grep -q "VARIANT_${i}_BUILD=PASS" /tmp/build-status.txt; then continue; fi
+            ok=1
+            /tmp/target-$i/release/sokonanoda /tmp/checker.json </tmp/std.ndjson >/tmp/std.$i.out || ok=0
+            /tmp/target-$i/release/sokonanoda /tmp/checker.json </tmp/cedar.ndjson >/tmp/cedar.$i.out || ok=0
+            cmp /tmp/std.base.out /tmp/std.$i.out || ok=0
+            cmp /tmp/cedar.base.out /tmp/cedar.$i.out || ok=0
+            if [ "$ok" = 1 ]; then echo "VARIANT_${i}_SEMANTICS=PASS" | tee -a /tmp/semantic-status.txt; else echo "VARIANT_${i}_SEMANTICS=FAIL" | tee -a /tmp/semantic-status.txt; fi
+          done
+      - name: Post-V11 economic verifier
+        run: |
+          set -euxo pipefail
+          measure () { local bin=$1 corpus=$2 tag=$3; nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/cg-$tag "$bin" /tmp/checker.json </tmp/$corpus.ndjson >/tmp/$tag.out 2>/tmp/$tag.err; sed -n 's/^summary:[[:space:]]*//p' /tmp/cg-$tag; }
+          bstd=$(measure /tmp/target-base/release/sokonanoda std base-std)
+          bcedar=$(measure /tmp/target-base/release/sokonanoda cedar base-cedar)
+          echo "BASE_STD=$bstd" >/tmp/result.txt; echo "BASE_CEDAR=$bcedar" >>/tmp/result.txt
+          accepted=0; best=-1; bestsum=999999999999
+          for i in $(seq 0 $((VARIANT_COUNT-1))); do
+            if ! grep -q "VARIANT_${i}_SEMANTICS=PASS" /tmp/semantic-status.txt; then continue; fi
+            s=$(measure /tmp/target-$i/release/sokonanoda std v-$i-std); c=$(measure /tmp/target-$i/release/sokonanoda cedar v-$i-cedar)
+            ds=$((s-bstd)); dc=$((c-bcedar)); sm=$((ds+dc))
+            echo "VARIANT_${i}_STD_DELTA=$ds CEDAR_DELTA=$dc SUM_DELTA=$sm" | tee -a /tmp/result.txt
+            if [ "$ds" -lt 0 ] && [ "$dc" -lt 0 ]; then
+              echo "VARIANT_${i}_VERDICT=PASS" | tee -a /tmp/result.txt
+              accepted=$((accepted+1)); if [ "$sm" -lt "$bestsum" ]; then bestsum=$sm; best=$i; fi
+            else echo "VARIANT_${i}_VERDICT=VETO" | tee -a /tmp/result.txt; fi
+          done
+          echo "PARENT_STATE=V11_variant_5" | tee -a /tmp/result.txt
+          echo "RESIDUAL_SOURCE=V12_no_old_candidate_newly_admissible" | tee -a /tmp/result.txt
+          echo "CORPUS_ID_VISIBLE_TO_PATCH=0" | tee -a /tmp/result.txt
+          echo "ACCEPTED_POST_V11_GENERATED=$accepted" | tee -a /tmp/result.txt
+          echo "BEST_POST_V11_VARIANT=$best" | tee -a /tmp/result.txt
+          cat /tmp/discovery.txt >>/tmp/result.txt; cat /tmp/build-status.txt >>/tmp/result.txt; cat /tmp/semantic-status.txt >>/tmp/result.txt
+          test "$accepted" -gt 0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: msikernel-post-v11-genesis-v13
+          path: |
+            /tmp/result.txt
+            /tmp/discovery.txt
+            /tmp/std-trace-count.txt
+            /tmp/cedar-trace-count.txt
+            /tmp/variant-*.genesis
+            /tmp/build-status.txt
+            /tmp/semantic-status.txt
