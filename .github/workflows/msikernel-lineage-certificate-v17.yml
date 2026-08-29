@@ -1,0 +1,104 @@
+name: MSI Kernel Frozen Lineage Certificate V17
+
+on:
+  push:
+    branches: [msikernel-lineage-certificate-v17]
+    paths:
+      - 'experiments/lineage_certificate_v17.py'
+      - '.github/workflows/msikernel-lineage-certificate-v17.yml'
+  workflow_dispatch:
+
+jobs:
+  lineage-certificate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Build frozen corpora
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena
+          nix develop -c ./lka.py build-test std
+          nix develop -c ./lka.py build-test cedar
+          head -n 100000 _build/tests/std.ndjson >/tmp/std.ndjson
+          head -n 100000 _build/tests/cedar.ndjson >/tmp/cedar.ndjson
+          cd ..
+          echo '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}' >/tmp/checker.json
+      - name: Materialize frozen lineage states
+        run: |
+          set -euxo pipefail
+          : >/tmp/states.txt
+          for state in A B E C F D; do
+            git clone --depth 1 --branch mathgraph https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/state-$state
+            python3 experiments/lineage_certificate_v17.py /tmp/state-$state --state $state | tee /tmp/$state.state
+            cat /tmp/$state.state >>/tmp/states.txt
+          done
+          test $(grep -c '^SOURCE_SHA256=' /tmp/states.txt) -eq 6
+          test $(grep '^SOURCE_SHA256=' /tmp/states.txt | sort -u | wc -l) -eq 6
+      - name: Build all lineage states
+        run: |
+          set -euxo pipefail
+          cd arena
+          : >/tmp/build.txt
+          for state in A B E C F D; do
+            if nix develop -c bash -c "CARGO_TARGET_DIR=/tmp/t-$state RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/state-$state/Cargo.toml --release --locked"; then
+              echo ${state}_BUILD=PASS | tee -a /tmp/build.txt
+            else
+              echo ${state}_BUILD=FAIL | tee -a /tmp/build.txt
+            fi
+          done
+          test $(grep -c '_BUILD=PASS' /tmp/build.txt) -eq 6
+      - name: Global exact semantic gate
+        run: |
+          set -euxo pipefail
+          : >/tmp/sem.txt
+          for corpus in std cedar; do
+            /tmp/t-A/release/sokonanoda /tmp/checker.json </tmp/$corpus.ndjson >/tmp/$corpus.A.out
+          done
+          for state in B E C F D; do
+            ok=1
+            for corpus in std cedar; do
+              /tmp/t-$state/release/sokonanoda /tmp/checker.json </tmp/$corpus.ndjson >/tmp/$corpus.$state.out || ok=0
+              cmp /tmp/$corpus.A.out /tmp/$corpus.$state.out || ok=0
+            done
+            if [ $ok = 1 ]; then echo ${state}_SEM=PASS | tee -a /tmp/sem.txt; else echo ${state}_SEM=FAIL | tee -a /tmp/sem.txt; fi
+          done
+          test $(grep -c '_SEM=PASS' /tmp/sem.txt) -eq 5
+      - name: Frozen causal lineage verifier
+        run: |
+          set -euxo pipefail
+          measure(){ local state=$1 corpus=$2; nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/cg-$state-$corpus /tmp/t-$state/release/sokonanoda /tmp/checker.json </tmp/$corpus.ndjson >/dev/null 2>/tmp/$state-$corpus.err; sed -n 's/^summary:[[:space:]]*//p' /tmp/cg-$state-$corpus; }
+          : >/tmp/result.txt
+          for state in A B E C F D; do
+            s=$(measure $state std); c=$(measure $state cedar)
+            echo STATE_${state}_STD=$s CEDAR=$c | tee -a /tmp/result.txt
+            eval S_${state}=$s; eval C_${state}=$c
+          done
+          prior_pre_s=$((S_E-S_A)); prior_pre_c=$((C_E-C_A))
+          prior_post_s=$((S_C-S_B)); prior_post_c=$((C_C-C_B))
+          param_ablate_s=$((S_F-S_B)); param_ablate_c=$((C_F-C_B))
+          param_parent_s=$((S_D-S_C)); param_parent_c=$((C_D-C_C))
+          verdict(){ if [ $1 -lt 0 ] && [ $2 -lt 0 ]; then echo PASS; else echo VETO; fi; }
+          vpp=$(verdict $prior_pre_s $prior_pre_c); vpo=$(verdict $prior_post_s $prior_post_c)
+          vpa=$(verdict $param_ablate_s $param_ablate_c); vpc=$(verdict $param_parent_s $param_parent_c)
+          echo V15_PRE_V11_PRIOR_STD_DELTA=$prior_pre_s CEDAR_DELTA=$prior_pre_c VERDICT=$vpp | tee -a /tmp/result.txt
+          echo V15_POST_V11_PRIOR_STD_DELTA=$prior_post_s CEDAR_DELTA=$prior_post_c VERDICT=$vpo | tee -a /tmp/result.txt
+          echo V16_PRIOR_ABLATED_PARAM_STD_DELTA=$param_ablate_s CEDAR_DELTA=$param_ablate_c VERDICT=$vpa | tee -a /tmp/result.txt
+          echo V16_PRIOR_PRESENT_PARAM_STD_DELTA=$param_parent_s CEDAR_DELTA=$param_parent_c VERDICT=$vpc | tee -a /tmp/result.txt
+          echo V17_V15_CAUSAL_FLIP=$([ "$vpp" = VETO ] && [ "$vpo" = PASS ] && echo PASS || echo FAIL) | tee -a /tmp/result.txt
+          echo V17_V16_CAUSAL_FLIP=$([ "$vpa" = VETO ] && [ "$vpc" = PASS ] && echo PASS || echo FAIL) | tee -a /tmp/result.txt
+          echo V17_GLOBAL_SEMANTICS=PASS | tee -a /tmp/result.txt
+          echo V17_LINEAGE_CERTIFICATE=$([ "$vpp" = VETO ] && [ "$vpo" = PASS ] && [ "$vpa" = VETO ] && [ "$vpc" = PASS ] && echo PASS || echo FAIL) | tee -a /tmp/result.txt
+          cat /tmp/states.txt >>/tmp/result.txt
+          grep -q 'V17_LINEAGE_CERTIFICATE=PASS' /tmp/result.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: msikernel-lineage-certificate-v17
+          path: |
+            /tmp/result.txt
+            /tmp/states.txt
+            /tmp/build.txt
+            /tmp/sem.txt
+            /tmp/*.state
