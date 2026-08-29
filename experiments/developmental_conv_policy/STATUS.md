@@ -32,4 +32,6 @@ Current deciding sequence:
 4. fit on a frozen discovery set and decide on a sealed set;
 5. retain a generated policy only if the preregistered gate passes.
 
+The failed rerun of workflow run 33233952672 used its original pre-fix commit (`279ba712...`), so it repeated the old tracer compile errors and is not evidence against the repaired instrumentation. A fresh push is required to execute the fixed head.
+
 Do not add another hand-written conversion heuristic before the real trace census identifies the next consequential separator.
