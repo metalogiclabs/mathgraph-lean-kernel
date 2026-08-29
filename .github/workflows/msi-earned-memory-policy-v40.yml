@@ -46,7 +46,7 @@ jobs:
           nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=/tmp/v40-app-target RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/v40-app-probe/Cargo.toml --release --locked"
           /tmp/v40-cap-target/release/sokonanoda /tmp/checker.json </tmp/acquire1m.ndjson >/tmp/cap.out 2>/tmp/cap.err
           /tmp/v40-app-target/release/sokonanoda /tmp/checker.json </tmp/acquire1m.ndjson >/tmp/app.out 2>/tmp/app.err
-          cd ..
+          cd "$GITHUB_WORKSPACE"
           python3 experiments/select_blind_interface_applicability_v39.py /tmp/cap.err /tmp/app.err /tmp/semantic-selection.json | tee /tmp/semantic-selection.log
           python3 - <<'PY'
           import json
@@ -86,7 +86,7 @@ jobs:
             nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/cg-acq1-$mode /tmp/v40-$mode-target/release/sokonanoda /tmp/checker.json </tmp/acquire1m.ndjson >/tmp/acq1-$mode.out 2>/tmp/acq1-$mode.err
             nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/cg-acq2-$mode /tmp/v40-$mode-target/release/sokonanoda /tmp/checker.json </tmp/acquire2m.ndjson >/tmp/acq2-$mode.out 2>/tmp/acq2-$mode.err
           done
-          cd ..
+          cd "$GITHUB_WORKSPACE"
           python3 experiments/select_earned_memory_policy_v40.py /tmp/semantic-selection.json /tmp/policy-selection.json \
             /tmp/cg-acq1-local /tmp/cg-acq2-local \
             /tmp/cg-acq1-shared /tmp/cg-acq2-shared \
