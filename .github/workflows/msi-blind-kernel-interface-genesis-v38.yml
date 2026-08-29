@@ -22,8 +22,9 @@ jobs:
           nix develop -c ./lka.py build-test cedar
           # Acquisition sees only the first 2M Std lines.
           head -n 2000000 _build/tests/std.ndjson >/tmp/acquire-std.ndjson
-          # Same-source held-out is disjoint from acquisition.
-          tail -n +2000001 _build/tests/std.ndjson | head -n 1000000 >/tmp/heldout-std.ndjson
+          # Same-source held-out is disjoint from acquisition. Use sed rather than
+          # tail|head so pipefail cannot turn the intentional early close into SIGPIPE.
+          sed -n '2000001,3000000p' _build/tests/std.ndjson >/tmp/heldout-std.ndjson
           # Cedar is never exposed before the interface is frozen.
           head -n 1000000 _build/tests/cedar.ndjson >/tmp/heldout-cedar.ndjson
           sha256sum /tmp/acquire-std.ndjson /tmp/heldout-std.ndjson /tmp/heldout-cedar.ndjson | tee /tmp/corpus-hashes.txt
