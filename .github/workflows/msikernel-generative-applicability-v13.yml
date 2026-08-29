@@ -1,0 +1,26 @@
+name: msikernel generative applicability v13
+
+on:
+  workflow_dispatch:
+
+jobs:
+  prereg-smoke:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify frozen V13 artifacts
+        run: |
+          set -euxo pipefail
+          test -f GENERATIVE_APPLICABILITY_V13.md
+          test -f experiments/generative_applicability_v13.py
+          python3 -m py_compile experiments/generative_applicability_v13.py
+          cat >/tmp/v13_smoke.csv <<'EOF'
+          corpus,event_id,safe,f0,f1,f2
+          std,0,1,1,0,1
+          std,1,1,1,0,0
+          cedar,2,0,0,1,1
+          cedar,3,0,0,1,0
+          EOF
+          python3 experiments/generative_applicability_v13.py /tmp/v13_smoke.csv 2 | tee /tmp/v13_smoke.txt
+          grep -q 'V13_UNIQUE_MINIMUM_GENERATED_PREDICATE=PASS' /tmp/v13_smoke.txt
+          echo V13_PREREG_SMOKE=PASS
