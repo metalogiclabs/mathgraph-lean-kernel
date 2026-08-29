@@ -50,7 +50,6 @@ PRIOR_NEW='''        for i in 0..idx {
             match cur {
                 Value::Pi { domain, body, .. } => {'''
 
-# Residual-derived from remaining force_all -> demanded-constructor sites after V15 winner.
 CANDIDATES=[
 ('struct_type_direct_rigid',
 '''        let struct_ty_f = self.force_all(depth, struct_ty);''',
@@ -79,6 +78,14 @@ def repl(s,old,new,name):
     if old not in s: raise SystemExit(f'missing site: {name}')
     return s.replace(old,new,1)
 
+def print_meta(state):
+    print(f'STATE={state}')
+    print('PARENT=V11+ensure+app+V15_prior' if state=='parent' else 'PARENT=V11+ensure+app;V15_ABLATED=1')
+    print('RESIDUAL_SOURCE=V15_remaining_force_all_constructor_demands')
+    print('CORPUS_ID_VISIBLE_TO_PATCH=0')
+    print(f'GENERATED_CANDIDATES={len(CANDIDATES)}')
+    for i,(n,_,_) in enumerate(CANDIDATES): print(f'CANDIDATE_{i}={n}')
+
 def install_common(s):
     s=repl(s,V11_OLD,V11_NEW,'V11')
     s=repl(s,ENSURE_OLD,ENSURE_NEW,'ensure')
@@ -87,18 +94,14 @@ def install_common(s):
 
 def main():
     ap=argparse.ArgumentParser(); ap.add_argument('repo'); ap.add_argument('--state',choices=['ablate','parent'],required=True); ap.add_argument('--variant',type=int); ap.add_argument('--list',action='store_true'); a=ap.parse_args()
+    print_meta(a.state)
+    if a.list:
+        return
     p=Path(a.repo)/'src/infer.rs'; s=install_common(p.read_text())
     if a.state=='parent': s=repl(s,PRIOR_OLD,PRIOR_NEW,'V15_prior_field')
-    print(f'STATE={a.state}')
-    print('PARENT=V11+ensure+app+V15_prior' if a.state=='parent' else 'PARENT=V11+ensure+app;V15_ABLATED=1')
-    print('RESIDUAL_SOURCE=V15_remaining_force_all_constructor_demands')
-    print('CORPUS_ID_VISIBLE_TO_PATCH=0')
-    print(f'GENERATED_CANDIDATES={len(CANDIDATES)}')
-    for i,(n,_,_) in enumerate(CANDIDATES): print(f'CANDIDATE_{i}={n}')
     if a.variant is not None:
         n,old,new=CANDIDATES[a.variant]; s=repl(s,old,new,n); print(f'APPLIED_VARIANT={a.variant}:{n}')
-    elif not a.list: print('BASELINE_ONLY=1')
+    else:
+        print('BASELINE_ONLY=1')
     p.write_text(s)
 if __name__=='__main__': main()
-
-# V16 trigger: third-generation causal gate.
