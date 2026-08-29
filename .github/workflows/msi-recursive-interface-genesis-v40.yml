@@ -1,0 +1,133 @@
+name: MSI recursive interface genesis v40
+
+on:
+  push:
+    branches: [msi-recursive-interface-genesis-v40]
+  workflow_dispatch:
+
+jobs:
+  recursive-genesis:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build acquisition and sealed corpora
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena
+          nix develop -c ./lka.py build-test std
+          nix develop -c ./lka.py build-test cedar
+          head -n 2000000 _build/tests/std.ndjson >/tmp/acquire-std2m.ndjson
+          head -n 3000000 _build/tests/std.ndjson >/tmp/heldout-std3m.ndjson
+          head -n 1000000 _build/tests/cedar.ndjson >/tmp/heldout-cedar1m.ndjson
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+
+      - name: Acquire residuals above frozen native Sort
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 --branch mathgraph https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/v40-acquire
+          cp experiments/apply_msi_sort_interface_regenesis_v37.py /tmp/v40-acquire/native_sort.py
+          cp experiments/apply_post_sort_residual_probe_v39.py /tmp/v40-acquire/post_sort_probe.py
+          (cd /tmp/v40-acquire && python3 native_sort.py shared && python3 post_sort_probe.py)
+          cd arena
+          nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=/tmp/v40-acquire-target RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/v40-acquire/Cargo.toml --release --locked"
+          /tmp/v40-acquire-target/release/sokonanoda /tmp/checker.json </tmp/acquire-std2m.ndjson >/tmp/acquire.out 2>/tmp/acquire.err
+          grep 'MSI_V39_POST' /tmp/acquire.err | tail -1 | tee /tmp/acquire-residual.txt
+
+      - name: Blindly select second interface before held-out economics
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY' | tee /tmp/v40-selection.log
+          import json,re
+          s=open('/tmp/acquire-residual.txt').read()
+          v={k:int(x) for k,x in re.findall(r'(app_pi|app_pi_pre|proj_ind|proj_ind_pre)=(\d+)',s)}
+          # Anonymous candidates. Selection rule sees only unresolved rediscovery demand.
+          cands={
+            'c1': {'total':v['app_pi'],'pre':v['app_pi_pre'],'materializer':'pi'},
+            'c2': {'total':v['proj_ind'],'pre':v['proj_ind_pre'],'materializer':'inductive'},
+          }
+          for z in cands.values(): z['gap']=z['total']-z['pre']
+          winner=max(cands, key=lambda k:(cands[k]['gap'],cands[k]['total'],k))
+          out={'winner_id':winner,'winner_materializer':cands[winner]['materializer'],'selection_uses_heldout':False,'anonymous_scores':{k:{'total':z['total'],'pre':z['pre'],'gap':z['gap']} for k,z in cands.items()}}
+          json.dump(out,open('/tmp/selection.json','w'),sort_keys=True,indent=2)
+          print(json.dumps(out,sort_keys=True))
+          print('V40_FROZEN_WINNER_ID='+winner)
+          print('V40_SELECTION_USED_HELDOUT=FALSE')
+          PY
+
+      - name: Materialize frozen Sort plus second-interface causal arms
+        run: |
+          set -euxo pipefail
+          for arm in base local shared ablate; do
+            git clone --depth 1 --branch mathgraph https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/v40-$arm
+            cp experiments/apply_msi_sort_interface_regenesis_v37.py /tmp/v40-$arm/native_sort.py
+            (cd /tmp/v40-$arm && python3 native_sort.py shared)
+            if [ "$arm" != base ]; then
+              cp experiments/apply_recursive_second_interface_v40.py /tmp/v40-$arm/second.py
+              (cd /tmp/v40-$arm && python3 second.py /tmp/selection.json $arm)
+            fi
+          done
+          cd arena
+          for arm in base local shared ablate; do
+            nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=/tmp/v40-$arm-target RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/v40-$arm/Cargo.toml --release --locked"
+          done
+
+      - name: Sealed semantic transfer
+        run: |
+          set -euxo pipefail
+          : >/tmp/result.txt
+          cat /tmp/selection.json >>/tmp/result.txt
+          for corpus in heldout-std3m heldout-cedar1m; do
+            for arm in base local shared ablate; do
+              /tmp/v40-$arm-target/release/sokonanoda /tmp/checker.json </tmp/$corpus.ndjson >/tmp/$corpus-$arm.out
+            done
+            for arm in local shared ablate; do cmp /tmp/$corpus-base.out /tmp/$corpus-$arm.out; done
+            echo "V40_${corpus^^}_SEMANTIC_EQ=PASS" | tee -a /tmp/result.txt
+          done
+
+      - name: Deterministic held-out economics
+        run: |
+          set -euxo pipefail
+          nix shell nixpkgs#valgrind -c valgrind --version
+          for arm in base local shared ablate; do
+            nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/cg-std2m-$arm /tmp/v40-$arm-target/release/sokonanoda /tmp/checker.json </tmp/acquire-std2m.ndjson >/dev/null 2>/dev/null
+            nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/cg-std3m-$arm /tmp/v40-$arm-target/release/sokonanoda /tmp/checker.json </tmp/heldout-std3m.ndjson >/dev/null 2>/dev/null
+            nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/cg-cedar-$arm /tmp/v40-$arm-target/release/sokonanoda /tmp/checker.json </tmp/heldout-cedar1m.ndjson >/dev/null 2>/dev/null
+          done
+          python3 - <<'PY' | tee -a /tmp/result.txt
+          import re,json
+          def s(p):
+              m=re.search(r'^summary:\s+(\d+)',open(p).read(),re.M); assert m,p; return int(m.group(1))
+          std={a:s('/tmp/cg-std3m-'+a)-s('/tmp/cg-std2m-'+a) for a in ('base','local','shared','ablate')}
+          cedar={a:s('/tmp/cg-cedar-'+a) for a in ('base','local','shared','ablate')}
+          ok=True
+          for name,d in [('STD',std),('CEDAR',cedar)]:
+              for a,x in d.items(): print(f'V40_{name}_{a.upper()}={x}')
+              win=d['shared'] < d['base'] and d['shared'] < d['local'] and d['shared'] < d['ablate']
+              print(f'V40_{name}_SECOND_SHARED_WIN={str(win).upper()}')
+              print(f'V40_{name}_SHARED_VS_BASE_PCT={100*(d["shared"]-d["base"])/d["base"]:.6f}')
+              print(f'V40_{name}_SHARED_VS_LOCAL_PCT={100*(d["shared"]-d["local"])/d["local"]:.6f}')
+              print(f'V40_{name}_SHARED_VS_ABLATE_PCT={100*(d["shared"]-d["ablate"])/d["ablate"]:.6f}')
+              ok &= win
+          sel=json.load(open('/tmp/selection.json'))
+          print('V40_FROZEN_WINNER_ID='+sel['winner_id'])
+          print('V40_SECOND_INTERFACE='+sel['winner_materializer'])
+          print('V40_EXACT_ABLATION_PRESENT=TRUE')
+          print('V40_DECISION=' + ('RECURSIVE_NATIVE_INTERFACE_GENESIS_TRANSFER' if ok else 'NO_RECURSIVE_NATIVE_INTERFACE_GENESIS_TRANSFER'))
+          if not ok: raise SystemExit(2)
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: msi-recursive-interface-genesis-v40
+          path: |
+            /tmp/result.txt
+            /tmp/selection.json
+            /tmp/v40-selection.log
+            /tmp/acquire-residual.txt
