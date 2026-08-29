@@ -13,11 +13,7 @@ permissions:
   contents: read
 
 jobs:
-  counterfactual:
-    strategy:
-      fail-fast: false
-      matrix:
-        action: [baseline, unfold_left, unfold_right, unfold_both]
+  counterfactual-cost:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -33,20 +29,87 @@ jobs:
         run: python scripts/apply_extra_rec_soundness.py
       - name: Inject isolated counterfactual scheduler
         run: python experiments/developmental_conv_policy/instrument_conv_force.py
-      - name: Run semantic counterfactual
+      - name: Build benchmark binary once
+        run: cargo test --release --test arena --no-run
+      - name: Locate benchmark binary
+        run: |
+          BIN=$(find target/release/deps -maxdepth 1 -type f -name 'arena-*' -perm -111 | head -n 1)
+          test -n "$BIN"
+          echo "ARENA_BIN=$BIN" >> "$GITHUB_ENV"
+          echo "ARENA_BIN=$BIN"
+      - name: Frozen semantic gate for every action
         env:
-          MATHGRAPH_CONV_FORCE_ACTION: ${{ matrix.action }}
           LEAN_KERNEL_ARENA: /tmp/lean-kernel-arena
           LEAN_KERNEL_ARENA_VERBOSE: '1'
         run: |
-          set -o pipefail
-          /usr/bin/time -v cargo test --release --test arena arena_fast_tier -- --nocapture 2>&1 | tee counterfactual-${{ matrix.action }}.log
+          set -euo pipefail
+          : > semantic-gates.log
+          for action in baseline unfold_left unfold_right unfold_both; do
+            echo "=== $action ===" | tee -a semantic-gates.log
+            MATHGRAPH_CONV_FORCE_ACTION="$action" "$ARENA_BIN" arena_fast_tier --nocapture 2>&1 | tee -a semantic-gates.log
+          done
+      - name: Same-runner repeated cost tournament
+        env:
+          LEAN_KERNEL_ARENA: /tmp/lean-kernel-arena
+          LEAN_KERNEL_ARENA_VERBOSE: '0'
+        run: |
+          python - <<'PY'
+          import json, os, statistics, subprocess, time
+
+          actions = ['baseline', 'unfold_left', 'unfold_right', 'unfold_both']
+          reps = 200
+          binary = os.environ['ARENA_BIN']
+          env0 = os.environ.copy()
+          rows = []
+
+          # Interleave arms each round to reduce temporal runner drift.
+          for r in range(reps):
+              order = actions[r % len(actions):] + actions[:r % len(actions)]
+              for action in order:
+                  env = env0.copy()
+                  env['MATHGRAPH_CONV_FORCE_ACTION'] = action
+                  t0 = time.perf_counter_ns()
+                  p = subprocess.run(
+                      [binary, 'arena_fast_tier'],
+                      env=env,
+                      stdout=subprocess.DEVNULL,
+                      stderr=subprocess.DEVNULL,
+                  )
+                  dt = time.perf_counter_ns() - t0
+                  if p.returncode != 0:
+                      raise SystemExit(f'{action} semantic failure during benchmark: {p.returncode}')
+                  rows.append({'round': r, 'action': action, 'ns': dt})
+
+          summary = {}
+          for action in actions:
+              xs = [x['ns'] for x in rows if x['action'] == action]
+              xs_sorted = sorted(xs)
+              summary[action] = {
+                  'n': len(xs),
+                  'median_ns': int(statistics.median(xs)),
+                  'mean_ns': int(statistics.fmean(xs)),
+                  'p10_ns': xs_sorted[int(0.10 * (len(xs)-1))],
+                  'p90_ns': xs_sorted[int(0.90 * (len(xs)-1))],
+              }
+          base = summary['baseline']['median_ns']
+          for action in actions:
+              summary[action]['median_ratio_vs_baseline'] = summary[action]['median_ns'] / base
+          winner = min(actions, key=lambda a: summary[a]['median_ns'])
+          out = {'reps_per_action': reps, 'winner_by_median': winner, 'summary': summary}
+          with open('counterfactual-cost-raw.jsonl', 'w') as f:
+              for row in rows:
+                  f.write(json.dumps(row, sort_keys=True) + '\n')
+          with open('counterfactual-cost-summary.json', 'w') as f:
+              json.dump(out, f, indent=2, sort_keys=True)
+          print(json.dumps(out, indent=2, sort_keys=True))
+          PY
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: developmental-conv-counterfactual-${{ matrix.action }}
-          path: counterfactual-${{ matrix.action }}.log
+          name: developmental-conv-counterfactual-cost-v2
+          path: |
+            semantic-gates.log
+            counterfactual-cost-raw.jsonl
+            counterfactual-cost-summary.json
           if-no-files-found: warn
           retention-days: 30
-
-# Counterfactual replay after green Arena census; preserve admitted recursor soundness gate.
