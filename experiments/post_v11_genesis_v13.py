@@ -46,7 +46,6 @@ def choose(std,cedar,cap=16):
     keys=set(std)|set(cedar); ts=sum(std.values()) or 1; tc=sum(cedar.values()) or 1; rows=[]
     for k in keys:
         ps=std[k]/ts; pc=cedar[k]/tc
-        # residual-derived: prioritize cells whose prevalence differs across domains and which are actually Pi-fastpath eligible
         if k[-1] != 1: continue
         score=abs(ps-pc)+0.05*(ps+pc)
         rows.append((score,k,std[k],cedar[k]))
@@ -89,3 +88,5 @@ def main():
     elif not a.list:
         p.write_text(install_v11(s)); print('V11_BASELINE_ONLY=1')
 if __name__=='__main__': main()
+
+# workflow trigger: V13 post-V11 genesis
