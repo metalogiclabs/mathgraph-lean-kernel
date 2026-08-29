@@ -1,0 +1,19 @@
+name: MSI Kernel Unsupplied Residual Genesis V9
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [msikernel-unsupplied-residual-genesis-v9]
+
+jobs:
+  discover:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Locate residual family without portal labels
+        run: |
+          python3 experiments/unsupplied_residual_genesis_v9.py . | tee /tmp/v9-discovery.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: msikernel-unsupplied-residual-genesis-v9-discovery
+          path: /tmp/v9-discovery.txt
