@@ -29,6 +29,8 @@ jobs:
         run: |
           mkdir -p /tmp/lean-kernel-arena/_build/tests
           find /tmp/lean-kernel-arena/tests -maxdepth 1 -name '*.ndjson' -exec cp {} /tmp/lean-kernel-arena/_build/tests/ \;
+      - name: Apply admitted recursor-set soundness repair in working tree only
+        run: python scripts/apply_extra_rec_soundness.py
       - name: Inject isolated counterfactual scheduler
         run: python experiments/developmental_conv_policy/instrument_conv_force.py
       - name: Run semantic counterfactual
@@ -46,3 +48,5 @@ jobs:
           path: counterfactual-${{ matrix.action }}.log
           if-no-files-found: warn
           retention-days: 30
+
+# Counterfactual replay after green Arena census; preserve admitted recursor soundness gate.
