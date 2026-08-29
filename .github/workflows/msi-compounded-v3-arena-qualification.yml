@@ -52,44 +52,108 @@ jobs:
           nix develop -c bash -c 'build_pgo /tmp/base'
           nix develop -c bash -c 'build_pgo /tmp/cand'
 
-      - name: Arena-scale instruction tournament
+      - name: Four-suite PGO wall-time tournament
         run: |
           set -euxo pipefail
           cd arena
           : >/tmp/results.txt
-          measure() {
-            local bin=$1 input=$2 tag=$3 pf=/tmp/perf-$3.txt
-            set +e
-            perf stat -x ';' -e instructions -o "$pf" -- "$bin" /tmp/checker.json < "$input" >/tmp/out-$tag.txt 2>/tmp/err-$tag.txt
-            local rc=$?
-            set -e
-            echo ${tag}_EXIT=$rc >>/tmp/results.txt
-            test $rc -eq 0
-            awk -F';' '$3 ~ /^instructions/ {gsub(/[[:space:]]/,"",$1); print $1; exit}' "$pf"
+          run_time() {
+            local bin=$1 input=$2 tag=$3
+            local total=0
+            for rep in 1 2 3; do
+              /usr/bin/time -f '%e' -o /tmp/time-$tag-$rep.txt "$bin" /tmp/checker.json < "$input" >/tmp/out-$tag-$rep.txt
+              t=$(cat /tmp/time-$tag-$rep.txt)
+              echo ${tag}_REP${rep}_SECONDS=$t >>/tmp/results.txt
+            done
+            python3 - "$tag" <<'PY'
+          import sys, pathlib
+          tag=sys.argv[1]
+          xs=[float(pathlib.Path(f'/tmp/time-{tag}-{i}.txt').read_text()) for i in (1,2,3)]
+          xs.sort()
+          print(f'{xs[1]:.6f}')
+          PY
           }
           for test in std cedar cslib mathlib; do
             echo BUILDING_TEST=$test | tee -a /tmp/results.txt
             nix develop -c ./lka.py build-test "$test"
             input="_build/tests/$test.ndjson"
-            b=$(measure /tmp/base/target/release/sokonanoda "$input" base-$test)
-            c=$(measure /tmp/cand/target/release/sokonanoda "$input" cand-$test)
-            test -n "$b"; test -n "$c"
-            d=$((c-b)); ppm=$((1000000*d/b))
-            echo ${test}_BASE_INSTRUCTIONS=$b CAND_INSTRUCTIONS=$c DELTA=$d DELTA_PPM=$ppm | tee -a /tmp/results.txt
+            b=$(run_time /tmp/base/target/release/sokonanoda "$input" base-$test)
+            c=$(run_time /tmp/cand/target/release/sokonanoda "$input" cand-$test)
+            python3 - "$test" "$b" "$c" <<'PY' | tee -a /tmp/results.txt
+          import sys
+          name,b,c=sys.argv[1],float(sys.argv[2]),float(sys.argv[3])
+          print(f'{name}_BASE_SECONDS={b:.6f} CAND_SECONDS={c:.6f} DELTA_SECONDS={c-b:.6f} DELTA_PPM={int(1_000_000*(c-b)/b)}')
+          PY
           done
           python3 - <<'PY' | tee -a /tmp/results.txt
           import re
           t=open('/tmp/results.txt').read(); rows=[]
-          for name,b,c,d,ppm in re.findall(r'^(std|cedar|cslib|mathlib)_BASE_INSTRUCTIONS=(\d+) CAND_INSTRUCTIONS=(\d+) DELTA=(-?\d+) DELTA_PPM=(-?\d+)',t,re.M):
-              rows.append((name,int(b),int(c),int(d),int(ppm)))
-          if len(rows)!=4: raise SystemExit('missing instruction rows')
+          for name,b,c,d,ppm in re.findall(r'^(std|cedar|cslib|mathlib)_BASE_SECONDS=([0-9.]+) CAND_SECONDS=([0-9.]+) DELTA_SECONDS=(-?[0-9.]+) DELTA_PPM=(-?\d+)',t,re.M):
+              rows.append((name,float(b),float(c),float(d),int(ppm)))
+          if len(rows)!=4: raise SystemExit('missing wall rows')
           B=sum(x[1] for x in rows); C=sum(x[2] for x in rows)
-          print(f'FOUR_SUITE_BASE={B}')
-          print(f'FOUR_SUITE_CAND={C}')
-          print(f'FOUR_SUITE_DELTA={C-B}')
-          print(f'FOUR_SUITE_DELTA_PPM={1000000*(C-B)//B}')
-          print('FOUR_SUITE_ALL_IMPROVE='+('PASS' if all(x[3] < 0 for x in rows) else 'FAIL'))
+          print(f'FOUR_SUITE_BASE_SECONDS={B:.6f}')
+          print(f'FOUR_SUITE_CAND_SECONDS={C:.6f}')
+          print(f'FOUR_SUITE_DELTA_SECONDS={C-B:.6f}')
+          print(f'FOUR_SUITE_DELTA_PPM={int(1_000_000*(C-B)/B)}')
+          print('FOUR_SUITE_ALL_WALL_IMPROVE='+('PASS' if all(x[3] < 0 for x in rows) else 'FAIL'))
           PY
+
+      - name: Deterministic Callgrind instruction proxy
+        run: |
+          set -euxo pipefail
+          cd arena
+          for test in std cedar cslib mathlib; do
+            head -n 100000 "_build/tests/$test.ndjson" > "/tmp/$test-100k.ndjson"
+            for who in base cand; do
+              bin="/tmp/$who/target/release/sokonanoda"
+              nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file="/tmp/cg-$who-$test.out" "$bin" /tmp/checker.json < "/tmp/$test-100k.ndjson" >/dev/null
+              n=$(grep '^summary:' "/tmp/cg-$who-$test.out" | awk '{print $2}')
+              echo ${test}_${who}_CALLGRIND=$n | tee -a /tmp/results.txt
+            done
+          done
+          python3 - <<'PY' | tee -a /tmp/results.txt
+          import re
+          t=open('/tmp/results.txt').read(); rows=[]
+          for name in ('std','cedar','cslib','mathlib'):
+              b=int(re.search(rf'^{name}_base_CALLGRIND=(\d+)',t,re.M).group(1))
+              c=int(re.search(rf'^{name}_cand_CALLGRIND=(\d+)',t,re.M).group(1))
+              rows.append((name,b,c))
+              print(f'{name}_CALLGRIND_DELTA={c-b} DELTA_PPM={1_000_000*(c-b)//b}')
+          B=sum(b for _,b,_ in rows); C=sum(c for _,_,c in rows)
+          print(f'FOUR_SUITE_CALLGRIND_BASE={B}')
+          print(f'FOUR_SUITE_CALLGRIND_CAND={C}')
+          print(f'FOUR_SUITE_CALLGRIND_DELTA={C-B}')
+          print(f'FOUR_SUITE_CALLGRIND_DELTA_PPM={1_000_000*(C-B)//B}')
+          print('FOUR_SUITE_ALL_CALLGRIND_IMPROVE='+('PASS' if all(c<b for _,b,c in rows) else 'FAIL'))
+          PY
+
+      - name: Full Arena semantic and soundness gate
+        run: |
+          set -euxo pipefail
+          cd arena
+          cat > checkers/mathgraph-msi-compounded-v3.yaml <<EOF
+          description: temporary MSI compounded qualification
+          url: https://github.com/metalogiclabs/mathgraph-lean-kernel
+          ref: mathgraph-msi-compounded-v3
+          rev: $GITHUB_SHA
+          build: |
+            python3 scripts/apply_msi_compounded_v3.py
+            cat > config.json <<__END__
+             {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4}
+            __END__
+            ROOT=\$(cd ../../../.. && pwd)
+            "\$ROOT/lka.py" build-test init-prelude
+            RUSTFLAGS="-C target-cpu=native -Cprofile-generate=\$PWD/pgo" cargo build --release
+            target/release/sokonanoda config.json < "\$ROOT/_build/tests/init-prelude.ndjson" >/dev/null
+            llvm-profdata merge -o "\$PWD/pgo/merged.profdata" "\$PWD/pgo"
+            RUSTFLAGS="-C target-cpu=native -Cprofile-use=\$PWD/pgo/merged.profdata" cargo build --release
+          run: |
+            target/release/sokonanoda config.json < "\$IN" || exit 1
+          EOF
+          nix develop -c ./lka.py build-test
+          nix develop -c ./lka.py build-checker mathgraph-msi-compounded-v3
+          nix develop -c ./lka.py run mathgraph-msi-compounded-v3 | tee /tmp/full-arena.txt
 
       - uses: actions/upload-artifact@v4
         if: always()
@@ -99,5 +163,6 @@ jobs:
             /tmp/results.txt
             /tmp/genesis.txt
             /tmp/source-hashes.txt
-            /tmp/perf-*.txt
-            /tmp/err-*.txt
+            /tmp/time-*.txt
+            /tmp/cg-*.out
+            /tmp/full-arena.txt
