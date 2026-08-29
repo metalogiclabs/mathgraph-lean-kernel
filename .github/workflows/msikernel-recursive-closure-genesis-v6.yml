@@ -1,0 +1,156 @@
+name: msikernel recursive closure genesis v6
+
+on:
+  push:
+    branches: [msikernel-recursive-closure-genesis-v6]
+  workflow_dispatch:
+
+jobs:
+  recursive-closure-genesis:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build frozen source and transfer corpora
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena
+          nix develop -c ./lka.py build-test std
+          nix develop -c ./lka.py build-test cedar
+          head -n 100000 _build/tests/std.ndjson >/tmp/std.ndjson
+          head -n 1000000 _build/tests/std.ndjson >/tmp/std.intervention.ndjson
+          head -n 100000 _build/tests/cedar.ndjson >/tmp/cedar.ndjson
+          cd ..
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+
+      - name: Collect generation-1 and generation-2 consequences from cold checker
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 --branch mathgraph https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/trace12
+          python3 experiments/apply_blind_recursive_trace_v5.py /tmp/trace12
+          cd arena
+          nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=/tmp/target-trace12 RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/trace12/Cargo.toml --release --locked"
+          MSI_OBS_TRACE=1 /tmp/target-trace12/release/sokonanoda /tmp/checker.json </tmp/std.ndjson >/tmp/std.trace12.out 2>/tmp/std.trace12
+          MSI_OBS_TRACE=1 /tmp/target-trace12/release/sokonanoda /tmp/checker.json </tmp/std.intervention.ndjson >/tmp/std.intervention.trace12.out 2>/tmp/std.intervention.trace12
+          MSI_OBS_TRACE=1 /tmp/target-trace12/release/sokonanoda /tmp/checker.json </tmp/cedar.ndjson >/tmp/cedar.trace12.out 2>/tmp/cedar.trace12
+          cd ..
+          echo REAL_COLD_CONSEQUENCE_TRACE=PASS | tee /tmp/result.txt
+
+      - name: Generate and causally promote stages 1 and 2
+        run: |
+          set -euxo pipefail
+          for mode in cold g1 g2 g3; do
+            git clone --depth 1 --branch mathgraph https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/$mode
+          done
+          python3 experiments/blind_recursive_genesis_v5.py /tmp/std.trace12 /tmp/g1 1 /tmp/std.intervention.trace12 | tee /tmp/g1.genesis
+          test -f /tmp/g1/.msi-stage1-promotion.json
+          python3 experiments/blind_recursive_genesis_v5.py /tmp/std.trace12 /tmp/g2 2 /tmp/std.intervention.trace12 /tmp/g1/.msi-stage1-promotion.json | tee /tmp/g2.genesis
+          python3 experiments/emit_stage2_promotion_v6.py /tmp/g2.genesis /tmp/stage2-promotion.json | tee /tmp/stage2.cert
+          test -f /tmp/stage2-promotion.json
+
+          # Prepare an independently generated stage-2 state for generation 3.
+          python3 experiments/blind_recursive_genesis_v5.py /tmp/std.trace12 /tmp/g3 2 /tmp/std.intervention.trace12 /tmp/g1/.msi-stage1-promotion.json | tee /tmp/g3.stage2
+          echo TWO_GENERATIONS_PROMOTED=PASS | tee -a /tmp/result.txt
+
+      - name: Expose generation-3 residual only inside generated stage-2 fast path
+        run: |
+          set -euxo pipefail
+          cp -a /tmp/g2 /tmp/g2trace
+          python3 experiments/apply_stage2_q3_trace_v6.py /tmp/g2trace | tee /tmp/q3.attach
+          cd arena
+          nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=/tmp/target-q3trace RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/g2trace/Cargo.toml --release --locked"
+          MSI_Q3_TRACE=1 /tmp/target-q3trace/release/sokonanoda /tmp/checker.json </tmp/std.ndjson >/tmp/std.q3.out 2>/tmp/std.q3.trace
+          MSI_Q3_TRACE=1 /tmp/target-q3trace/release/sokonanoda /tmp/checker.json </tmp/std.intervention.ndjson >/tmp/std.q3.intervention.out 2>/tmp/std.q3.intervention.trace
+          MSI_Q3_TRACE=1 /tmp/target-q3trace/release/sokonanoda /tmp/checker.json </tmp/cedar.ndjson >/tmp/cedar.q3.out 2>/tmp/cedar.q3.trace
+          cd ..
+          test -s /tmp/std.q3.trace
+          grep -q 'MSI_RES|.*|q3|' /tmp/std.q3.trace
+          echo Q3_EXISTS_ONLY_AFTER_STAGE2_CONTROL_FLOW=PASS | tee -a /tmp/result.txt
+
+      - name: Generate third representation with exact ancestor ablation
+        run: |
+          set -euxo pipefail
+          # Same stage-3 learner request without the stage-2 promotion certificate must fail.
+          cp -a /tmp/g3 /tmp/g3ablate
+          if python3 experiments/recursive_closure_genesis_v6.py /tmp/std.q3.trace /tmp/g3ablate /tmp/missing-stage2.json /tmp/std.q3.intervention.trace >/tmp/g3.ablate 2>&1; then
+            echo 'stage3 unexpectedly generated without stage2 promotion' >&2
+            exit 1
+          fi
+          grep -q 'STAGE3_STAGE2_PROMOTION_REQUIRED' /tmp/g3.ablate
+          echo EXACT_STAGE2_ABLATION_BLOCKS_STAGE3=PASS | tee -a /tmp/result.txt
+
+          python3 experiments/recursive_closure_genesis_v6.py /tmp/std.q3.trace /tmp/g3 /tmp/stage2-promotion.json /tmp/std.q3.intervention.trace | tee /tmp/g3.genesis
+          test -f /tmp/g3/.msi-stage3-promotion.json
+          grep -q 'THIRD_STRUCTURALLY_DISTINCT_INTERFACE=PASS' /tmp/g3.genesis
+          grep -q 'STAGE3_PRODUCER_PRESERVED_CONSEQUENCE=PASS' /tmp/g3.genesis
+          grep -q 'RECURSIVE_CLOSURE_GENESIS_V6=PASS' /tmp/g3.genesis
+          cat /tmp/g1.genesis /tmp/g2.genesis /tmp/g3.genesis >>/tmp/result.txt
+
+      - name: Build cold and all three generated regimes
+        run: |
+          set -euxo pipefail
+          cd arena
+          for mode in cold g1 g2 g3; do
+            nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=/tmp/target-$mode RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/$mode/Cargo.toml --release --locked"
+          done
+          for corpus in std cedar; do
+            for mode in cold g1 g2 g3; do
+              /tmp/target-$mode/release/sokonanoda /tmp/checker.json </tmp/$corpus.ndjson >/tmp/$corpus.$mode.out
+            done
+            for mode in g1 g2 g3; do cmp /tmp/$corpus.cold.out /tmp/$corpus.$mode.out; done
+            echo "${corpus^^}_BYTE_IDENTICAL_ALL_GENERATIONS=PASS" | tee -a /tmp/result.txt
+          done
+
+      - name: Deterministic three-generation economic transfer gate
+        run: |
+          set -euxo pipefail
+          for corpus in std cedar; do
+            for mode in cold g1 g2 g3; do
+              nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/cg-$corpus-$mode /tmp/target-$mode/release/sokonanoda /tmp/checker.json </tmp/$corpus.ndjson >/tmp/$corpus.$mode.cg.out 2>/tmp/$corpus.$mode.cg.err
+              cmp /tmp/$corpus.cold.out /tmp/$corpus.$mode.cg.out
+            done
+          done
+          python3 - <<'PY' | tee -a /tmp/result.txt
+          import re
+          def instr(c,m):
+              t=open(f'/tmp/cg-{c}-{m}').read()
+              return int(re.search(r'^summary:\s+(\d+)',t,re.M).group(1))
+          vals={}
+          for c in ('std','cedar'):
+              for m in ('cold','g1','g2','g3'):
+                  vals[c,m]=instr(c,m)
+                  print(f'{c.upper()}_{m.upper()}_INSTR={vals[c,m]}')
+              for m in ('g1','g2','g3'):
+                  print(f'{c.upper()}_{m.upper()}_DELTA_VS_COLD_PCT={100*(vals[c,m]-vals[c,"cold"])/vals[c,"cold"]:.6f}')
+          assert vals['std','g1'] < vals['std','cold']
+          assert vals['std','g2'] < vals['std','g1']
+          assert vals['cedar','g1'] < vals['cedar','cold']
+          assert vals['cedar','g2'] < vals['cedar','g1']
+          assert vals['std','g3'] < vals['std','g2'], 'stage3 economic veto on source workload'
+          assert vals['cedar','g3'] < vals['cedar','g2'], 'stage3 fails unseen Cedar economic transfer'
+          print('THREE_GENERATION_STRICT_COMPOUNDING=PASS')
+          print('THIRD_INTERFACE_UNSEEN_CEDAR_TRANSFER=PASS')
+          print('RECURSIVE_RESIDUAL_ONLY_AFTER_PROMOTION=PASS')
+          print('EXACT_ANCESTOR_ABLATION_CHAIN=PASS')
+          print('BLIND_THREE_GENERATION_REAL_KERNEL_DEVELOPMENT=PASS')
+          PY
+          cat /tmp/result.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: msikernel-recursive-closure-genesis-v6
+          path: |
+            /tmp/result.txt
+            /tmp/g1.genesis
+            /tmp/g2.genesis
+            /tmp/g3.genesis
+            /tmp/g3.ablate
+            /tmp/stage2-promotion.json
+            /tmp/std.q3.trace
+            /tmp/cedar.q3.trace
