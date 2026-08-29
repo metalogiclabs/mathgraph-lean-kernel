@@ -49,3 +49,5 @@ Prospective transfer: rows 400001..600000 through dependency-complete 600000-row
 
 ## Boundary
 This remains bounded program synthesis over a supplied generic operator alphabet. It does not establish unrestricted invention of primitive operators or autonomous creation of the grammar itself.
+
+<!-- trigger: neutral CI instantiation commit; scientific specification unchanged -->
