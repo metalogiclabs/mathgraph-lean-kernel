@@ -1,0 +1,118 @@
+name: MSI Kernel Operator Family Change V14
+
+on:
+  push:
+    branches: [msikernel-operator-family-change-v14]
+    paths:
+      - 'experiments/operator_family_change_v14.py'
+      - '.github/workflows/msikernel-operator-family-change-v14.yml'
+  workflow_dispatch:
+
+jobs:
+  causal-tournament:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Build frozen external corpora
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena
+          nix develop -c ./lka.py build-test std
+          nix develop -c ./lka.py build-test cedar
+          head -n 100000 _build/tests/std.ndjson >/tmp/std.ndjson
+          head -n 100000 _build/tests/cedar.ndjson >/tmp/cedar.ndjson
+          cd ..
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+      - name: Generate pre and post V11 operator families
+        run: |
+          set -euxo pipefail
+          python3 experiments/operator_family_change_v14.py . --state post --list | tee /tmp/operators.txt
+          n=$(sed -n 's/^OPERATOR_FAMILY_CANDIDATES=//p' /tmp/operators.txt)
+          echo "VARIANT_COUNT=$n" >> "$GITHUB_ENV"
+          for state in pre post; do
+            git clone --depth 1 --branch mathgraph https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/base-$state
+            python3 experiments/operator_family_change_v14.py /tmp/base-$state --state $state
+            for i in $(seq 0 $((n-1))); do
+              git clone --depth 1 --branch mathgraph https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/$state-$i
+              python3 experiments/operator_family_change_v14.py /tmp/$state-$i --state $state --variant $i | tee /tmp/$state-$i.genesis
+            done
+          done
+      - name: Build baselines and variants
+        run: |
+          set -euxo pipefail
+          cd arena
+          : >/tmp/build-status.txt
+          for state in pre post; do
+            nix develop -c bash -c "CARGO_TARGET_DIR=/tmp/target-base-$state RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/base-$state/Cargo.toml --release --locked"
+            for i in $(seq 0 $((VARIANT_COUNT-1))); do
+              if nix develop -c bash -c "CARGO_TARGET_DIR=/tmp/target-$state-$i RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/$state-$i/Cargo.toml --release --locked"; then
+                echo "${state}_${i}_BUILD=PASS" | tee -a /tmp/build-status.txt
+              else echo "${state}_${i}_BUILD=FAIL" | tee -a /tmp/build-status.txt; fi
+            done
+          done
+      - name: Exact semantic gate
+        run: |
+          set -euxo pipefail
+          : >/tmp/semantic-status.txt
+          for state in pre post; do
+            /tmp/target-base-$state/release/sokonanoda /tmp/checker.json </tmp/std.ndjson >/tmp/std.base.$state.out
+            /tmp/target-base-$state/release/sokonanoda /tmp/checker.json </tmp/cedar.ndjson >/tmp/cedar.base.$state.out
+            for i in $(seq 0 $((VARIANT_COUNT-1))); do
+              if ! grep -q "${state}_${i}_BUILD=PASS" /tmp/build-status.txt; then continue; fi
+              ok=1
+              /tmp/target-$state-$i/release/sokonanoda /tmp/checker.json </tmp/std.ndjson >/tmp/std.$state.$i.out || ok=0
+              /tmp/target-$state-$i/release/sokonanoda /tmp/checker.json </tmp/cedar.ndjson >/tmp/cedar.$state.$i.out || ok=0
+              cmp /tmp/std.base.$state.out /tmp/std.$state.$i.out || ok=0
+              cmp /tmp/cedar.base.$state.out /tmp/cedar.$state.$i.out || ok=0
+              if [ "$ok" = 1 ]; then echo "${state}_${i}_SEMANTICS=PASS" | tee -a /tmp/semantic-status.txt; else echo "${state}_${i}_SEMANTICS=FAIL" | tee -a /tmp/semantic-status.txt; fi
+            done
+          done
+      - name: Causal dual-corpus economic verifier
+        run: |
+          set -euxo pipefail
+          measure () { local bin=$1 corpus=$2 tag=$3; nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/cg-$tag "$bin" /tmp/checker.json </tmp/$corpus.ndjson >/tmp/$tag.out 2>/tmp/$tag.err; sed -n 's/^summary:[[:space:]]*//p' /tmp/cg-$tag; }
+          : >/tmp/result.txt
+          for state in pre post; do
+            bs=$(measure /tmp/target-base-$state/release/sokonanoda std base-$state-std)
+            bc=$(measure /tmp/target-base-$state/release/sokonanoda cedar base-$state-cedar)
+            echo "BASE_${state}_STD=$bs BASE_${state}_CEDAR=$bc" | tee -a /tmp/result.txt
+            for i in $(seq 0 $((VARIANT_COUNT-1))); do
+              if ! grep -q "${state}_${i}_SEMANTICS=PASS" /tmp/semantic-status.txt; then continue; fi
+              s=$(measure /tmp/target-$state-$i/release/sokonanoda std $state-$i-std)
+              c=$(measure /tmp/target-$state-$i/release/sokonanoda cedar $state-$i-cedar)
+              ds=$((s-bs)); dc=$((c-bc))
+              verdict=VETO; if [ "$ds" -lt 0 ] && [ "$dc" -lt 0 ]; then verdict=PASS; fi
+              echo "${state}_${i}_STD_DELTA=$ds CEDAR_DELTA=$dc VERDICT=$verdict" | tee -a /tmp/result.txt
+            done
+          done
+          causal=0; best=-1
+          for i in $(seq 0 $((VARIANT_COUNT-1))); do
+            pre=$(grep "^pre_${i}_STD_DELTA=" /tmp/result.txt || true)
+            post=$(grep "^post_${i}_STD_DELTA=" /tmp/result.txt || true)
+            if echo "$pre" | grep -q 'VERDICT=VETO' && echo "$post" | grep -q 'VERDICT=PASS'; then
+              causal=$((causal+1)); best=$i; echo "CAUSAL_FLIP_VARIANT=$i" | tee -a /tmp/result.txt
+            fi
+          done
+          echo "RESIDUAL_SOURCE=V13_post_V11_same_family_exhausted" | tee -a /tmp/result.txt
+          echo "ABLATION_STATE=pre_V11" | tee -a /tmp/result.txt
+          echo "CORPUS_ID_VISIBLE_TO_PATCH=0" | tee -a /tmp/result.txt
+          echo "CAUSAL_ADMISSIBILITY_FLIPS=$causal" | tee -a /tmp/result.txt
+          echo "BEST_CAUSAL_VARIANT=$best" | tee -a /tmp/result.txt
+          cat /tmp/operators.txt >>/tmp/result.txt
+          cat /tmp/build-status.txt >>/tmp/result.txt
+          cat /tmp/semantic-status.txt >>/tmp/result.txt
+          test "$causal" -gt 0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: msikernel-operator-family-change-v14
+          path: |
+            /tmp/result.txt
+            /tmp/operators.txt
+            /tmp/*-*.genesis
+            /tmp/build-status.txt
+            /tmp/semantic-status.txt
