@@ -77,3 +77,5 @@ def main():
     p.write_text(s)
 
 if __name__=='__main__': main()
+
+# V15 frozen trigger
