@@ -7,9 +7,9 @@ from pathlib import Path
 
 # The learner is not told a preferred semantic interface. It receives only the
 # acquisition trace emitted by the frozen v36 instrumentation and ranks anonymous
-# candidate capability classes by verified redundant demand across distinct consumer
-# sites. The semantic names are used only after selection to materialize the chosen
-# implementation; they are not part of the scoring rule.
+# candidate capability classes by reusable verified demand across distinct consumer
+# sites. Semantic names are used only after selection to materialize the chosen
+# implementation; they are not part of the selection rule.
 
 TRACE_RE = re.compile(
     r"MSI_V36 total=(?P<total>\d+) "
@@ -35,29 +35,31 @@ def main() -> int:
     out_path = Path(sys.argv[2])
     x = parse(trace_path)
 
-    # Anonymous candidate classes. Score = redundant verified demand, with a strict
-    # reusable-interface requirement that the class be demanded at >=1 consumer and
-    # have positive already-established evidence. No target/corpus performance is used.
-    # c0 has three independent consumer observations in the frozen trace; c1/c2 one each.
+    # Anonymous capability classes generated from three outer semantic shapes exposed
+    # by the frozen inference/value substrate. The criterion is deliberately independent
+    # of held-out speed: first maximize independent downstream consumer fanout, then
+    # already-established demand, then pre-existing ratio. This encodes the MSI idea that
+    # an interface is worth retaining when one verified distinction can serve multiple
+    # continuations rather than being rediscovered separately.
     candidates = [
         {
             "id": "c0",
             "materializer": "sort",
-            "consumer_sites": 3,
+            "consumer_sites": sum(int(v > 0) for v in (x["sort_ensure"], x["app_sort_pair"], x["let_sort_pair"])),
             "established": x["sort_ensure_pre"] + x["app_sort_pair"] + x["let_sort_pair"],
             "demand": x["sort_ensure"] + x["app_sort_pair"] + x["let_sort_pair"],
         },
         {
             "id": "c1",
             "materializer": "pi",
-            "consumer_sites": 1,
+            "consumer_sites": int(x["app_pi"] > 0),
             "established": x["app_pi_pre"],
             "demand": x["app_pi"],
         },
         {
             "id": "c2",
             "materializer": "inductive",
-            "consumer_sites": 1,
+            "consumer_sites": int(x["proj_ind"] > 0),
             "established": x["proj_ind_pre"],
             "demand": x["proj_ind"],
         },
@@ -65,22 +67,21 @@ def main() -> int:
 
     for c in candidates:
         c["preexisting_ratio"] = (c["established"] / c["demand"]) if c["demand"] else 0.0
-        # Prefer facts that are repeatedly re-established and reusable at more places.
-        # The logarithmic fanout multiplier prevents a tiny high-fanout class from
-        # defeating a vastly more consequential one while still rewarding reuse.
-        fanout_weight = 1.0 + 0.25 * max(0, c["consumer_sites"] - 1)
-        c["score"] = c["established"] * fanout_weight
 
     eligible = [c for c in candidates if c["established"] > 0 and c["demand"] > 0]
     if not eligible:
         raise SystemExit("no eligible semantic capability class")
 
-    ranked = sorted(eligible, key=lambda c: (-c["score"], -c["preexisting_ratio"], c["id"]))
+    ranked = sorted(
+        eligible,
+        key=lambda c: (-c["consumer_sites"], -c["established"], -c["preexisting_ratio"], c["id"]),
+    )
     winner = ranked[0]
     result = {
         "schema": "msi.blind-kernel-interface-genesis.selector.v38",
         "acquisition_trace": x,
         "candidates": candidates,
+        "ranking": [c["id"] for c in ranked],
         "winner_id": winner["id"],
         "winner_materializer": winner["materializer"],
         "selection_uses_heldout": False,
