@@ -1,153 +1,35 @@
-name: MSI blind interface applicability genesis v39
+name: MSI earned memory policy v40
 
 on:
   push:
-    branches: [msi-blind-interface-applicability-genesis-v39]
+    branches: [msi-earned-memory-policy-v40]
   workflow_dispatch:
 
 jobs:
-  genesis:
+  earned-memory:
     runs-on: ubuntu-24.04
-    timeout-minutes: 55
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - uses: cachix/install-nix-action@v31
-
-      - name: Build acquisition and sealed corpora
-        run: |
-          set -euxo pipefail
-          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
-          cd arena
-          nix develop -c ./lka.py build-test std
-          nix develop -c ./lka.py build-test cedar
-          head -n 2000000 _build/tests/std.ndjson >/tmp/acquire-std.ndjson
-          head -n 3000000 _build/tests/std.ndjson >/tmp/heldout-std-prefix3m.ndjson
-          head -n 1000000 _build/tests/cedar.ndjson >/tmp/heldout-cedar.ndjson
-          sha256sum /tmp/acquire-std.ndjson /tmp/heldout-std-prefix3m.ndjson /tmp/heldout-cedar.ndjson | tee /tmp/corpus-hashes.txt
-          cat >/tmp/checker.json <<'EOF'
-          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
-          EOF
-
-      - name: Acquire anonymous capability and applicability residuals only
-        run: |
-          set -euxo pipefail
-          git clone --depth 1 --branch mathgraph https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/v39-cap-probe
-          git clone --depth 1 --branch mathgraph https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/v39-app-probe
-          cp experiments/apply_msi_semantic_rediscovery_frontier_v36.py /tmp/v39-cap-probe/patch.py
-          (cd /tmp/v39-cap-probe && python3 patch.py)
-          cp experiments/probe_blind_applicability_v39.py /tmp/v39-app-probe/patch.py
-          (cd /tmp/v39-app-probe && python3 patch.py)
-          cd arena
-          nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=/tmp/v39-cap-target RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/v39-cap-probe/Cargo.toml --release --locked"
-          nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=/tmp/v39-app-target RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/v39-app-probe/Cargo.toml --release --locked"
-          /tmp/v39-cap-target/release/sokonanoda /tmp/checker.json </tmp/acquire-std.ndjson >/tmp/cap.out 2>/tmp/cap.err
-          /tmp/v39-app-target/release/sokonanoda /tmp/checker.json </tmp/acquire-std.ndjson >/tmp/app.out 2>/tmp/app.err
-          grep 'MSI_V36' /tmp/cap.err | tail -1 | tee /tmp/cap-trace.txt
-          awk '/MSI_V39_APP/ {print; n++; if (n==5) exit}' /tmp/app.err | tee /tmp/app-trace-sample.txt
-
-      - name: Freeze both discoveries before held-out data
-        run: |
-          set -euxo pipefail
-          python3 experiments/select_blind_interface_applicability_v39.py /tmp/cap.err /tmp/app.err /tmp/selection.json | tee /tmp/selection.log
-          python3 - <<'PY'
-          import json
-          x=json.load(open('/tmp/selection.json'))
-          assert x['selection_uses_heldout'] is False
-          print('FROZEN_CAPABILITY_ID='+x['winner_capability_id'])
-          print('FROZEN_CAPABILITY='+x['winner_materializer'])
-          print('FROZEN_APPLICABILITY_ID='+x['winner_applicability_id'])
-          print('FROZEN_APPLICABILITY='+x['winner_applicability_materializer'])
-          PY
-
-      - name: Materialize causal arms
-        run: |
-          set -euxo pipefail
-          for mode in local shared gated ungated ablate; do
-            git clone --depth 1 --branch mathgraph https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/v39-$mode
-            (cd /tmp/v39-$mode && python3 "$GITHUB_WORKSPACE/experiments/apply_blind_interface_applicability_v39.py" /tmp/selection.json $mode)
-          done
-          cd arena
-          for mode in local shared gated ungated ablate; do
-            nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=/tmp/v39-$mode-target RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/v39-$mode/Cargo.toml --release --locked"
-          done
-
-      - name: Sealed semantic gates and overgeneralization control
-        run: |
-          set -euxo pipefail
-          : >/tmp/result.txt
-          cat /tmp/selection.json >>/tmp/result.txt
-          echo >>/tmp/result.txt
-          for corpus in heldout-std-prefix3m heldout-cedar; do
-            for mode in local shared gated ablate; do
-              /tmp/v39-$mode-target/release/sokonanoda /tmp/checker.json </tmp/$corpus.ndjson >/tmp/$corpus-$mode.out
-            done
-            cmp /tmp/$corpus-local.out /tmp/$corpus-shared.out
-            cmp /tmp/$corpus-local.out /tmp/$corpus-gated.out
-            cmp /tmp/$corpus-local.out /tmp/$corpus-ablate.out
-          done
-          echo HELDOUT_STD_OUTPUT_EQ=PASS | tee -a /tmp/result.txt
-          echo HELDOUT_CEDAR_OUTPUT_EQ=PASS | tee -a /tmp/result.txt
-          set +e
-          /tmp/v39-ungated-target/release/sokonanoda /tmp/checker.json </tmp/heldout-std-prefix3m.ndjson >/tmp/ungated-std.out 2>/tmp/ungated-std.err
-          us=$?
-          /tmp/v39-ungated-target/release/sokonanoda /tmp/checker.json </tmp/heldout-cedar.ndjson >/tmp/ungated-cedar.out 2>/tmp/ungated-cedar.err
-          uc=$?
-          set -e
-          echo "UNGATED_STD_EXIT=$us" | tee -a /tmp/result.txt
-          echo "UNGATED_CEDAR_EXIT=$uc" | tee -a /tmp/result.txt
-          if [ "$us" -eq 0 ]; then cmp -s /tmp/heldout-std-prefix3m-local.out /tmp/ungated-std.out; echo "UNGATED_STD_OUTPUT_EQ=$?" | tee -a /tmp/result.txt || true; fi
-          if [ "$uc" -eq 0 ]; then cmp -s /tmp/heldout-cedar-local.out /tmp/ungated-cedar.out; echo "UNGATED_CEDAR_OUTPUT_EQ=$?" | tee -a /tmp/result.txt || true; fi
-
-      - name: Deterministic held-out economics
-        run: |
-          set -euxo pipefail
-          nix shell nixpkgs#valgrind -c valgrind --version
-          for mode in local shared gated ablate; do
-            nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/cg-std2m-$mode /tmp/v39-$mode-target/release/sokonanoda /tmp/checker.json </tmp/acquire-std.ndjson >/tmp/std2m-$mode-cg.out 2>/tmp/std2m-$mode-cg.err
-            nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/cg-std3m-$mode /tmp/v39-$mode-target/release/sokonanoda /tmp/checker.json </tmp/heldout-std-prefix3m.ndjson >/tmp/std3m-$mode-cg.out 2>/tmp/std3m-$mode-cg.err
-            nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/cg-cedar-$mode /tmp/v39-$mode-target/release/sokonanoda /tmp/checker.json </tmp/heldout-cedar.ndjson >/tmp/cedar-$mode-cg.out 2>/tmp/cedar-$mode-cg.err
-          done
-          python3 - <<'PY' | tee -a /tmp/result.txt
-          import json,re
-          sel=json.load(open('/tmp/selection.json'))
-          def summary(p):
-              m=re.search(r'^summary:\s+(\d+)',open(p).read(),re.M)
-              if not m: raise SystemExit('missing summary '+p)
-              return int(m.group(1))
-          sets={}
-          for mode in ('local','shared','gated','ablate'):
-              a=summary(f'/tmp/cg-std2m-{mode}'); b=summary(f'/tmp/cg-std3m-{mode}')
-              sets.setdefault('STD',{})[mode]=b-a
-              sets.setdefault('CEDAR',{})[mode]=summary(f'/tmp/cg-cedar-{mode}')
-          wins=[]
-          for corpus,vals in sets.items():
-              for k,v in vals.items(): print(f'{corpus}_{k.upper()}_INSTR={v}')
-              print(f'{corpus}_GATED_VS_SHARED_PCT={100*(vals["gated"]-vals["shared"])/vals["shared"]:.6f}')
-              print(f'{corpus}_GATED_VS_LOCAL_PCT={100*(vals["gated"]-vals["local"])/vals["local"]:.6f}')
-              print(f'{corpus}_GATED_VS_ABLATE_PCT={100*(vals["gated"]-vals["ablate"])/vals["ablate"]:.6f}')
-              win=vals['gated'] < vals['shared'] and vals['gated'] < vals['local'] and vals['gated'] < vals['ablate']
-              print(f'{corpus}_GENERATED_GATED_WIN={str(win).upper()}')
-              wins.append(win)
-          print('SELECTION_USED_HELDOUT=FALSE')
-          print('FROZEN_CAPABILITY='+sel['winner_materializer'])
-          print('FROZEN_APPLICABILITY='+sel['winner_applicability_materializer'])
-          print('DECISION=' + ('BLIND_INTERFACE_AND_APPLICABILITY_TRANSFER' if all(wins) else 'NO_BLIND_INTERFACE_AND_APPLICABILITY_TRANSFER'))
-          PY
-          cat /tmp/result.txt
-
+      - name: Run frozen V40 protocol
+        run: bash experiments/run_earned_memory_policy_v40.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: msi-blind-interface-applicability-genesis-v39
+          name: msi-earned-memory-policy-v40
           path: |
             /tmp/result.txt
-            /tmp/selection.json
-            /tmp/selection.log
-            /tmp/cap-trace.txt
-            /tmp/app-trace-sample.txt
+            /tmp/semantic-selection.json
+            /tmp/semantic-selection.log
+            /tmp/policy-selection.json
+            /tmp/policy-selection.log
+            /tmp/acquisition-control.txt
             /tmp/corpus-hashes.txt
-            /tmp/ungated-std.err
-            /tmp/ungated-cedar.err
-            /tmp/cg-std2m-*
-            /tmp/cg-std3m-*
-            /tmp/cg-cedar-*
+            /tmp/acq-ungated.err
+            /tmp/cg-acq1-*
+            /tmp/cg-acq2-*
+            /tmp/cg-std3-*
+            /tmp/cg-std4-*
+            /tmp/cg-cedar1-*
+            /tmp/cg-cedar2-*
