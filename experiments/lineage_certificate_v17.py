@@ -99,3 +99,5 @@ def main():
     print('CORPUS_ID_VISIBLE_TO_PATCH=0')
 
 if __name__=='__main__': main()
+
+# V17 trigger: frozen one-run lineage certificate.
