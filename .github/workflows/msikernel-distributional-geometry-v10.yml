@@ -13,17 +13,26 @@ jobs:
       - uses: actions/checkout@v4
       - uses: cachix/install-nix-action@v31
 
-      - name: Build frozen Std and Cedar corpora and open distant sealed slices
+      - name: Build frozen Std and Cedar corpora and dependency-complete sealed windows
         run: |
           set -euxo pipefail
           git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
           cd arena
           nix develop -c ./lka.py build-test std
           nix develop -c ./lka.py build-test cedar
-          sed -n '5000001,5100000p' _build/tests/std.ndjson >/tmp/std.ndjson
-          sed -n '10000001,10100000p' _build/tests/cedar.ndjson >/tmp/cedar.ndjson
-          test "$(wc -l </tmp/std.ndjson)" -eq 100000
-          test "$(wc -l </tmp/cedar.ndjson)" -eq 100000
+          # V8/V9 learned only from rows 1..100000.  V10 keeps that
+          # preregistration frozen and tests rows 300001..400000.  Because the
+          # export is a dependency-ordered stream, replay complete prefixes and
+          # isolate the held-out window by subtracting cumulative Callgrind
+          # counts.  Never cut the export in the middle.
+          head -n 300000 _build/tests/std.ndjson >/tmp/std.start.ndjson
+          head -n 400000 _build/tests/std.ndjson >/tmp/std.end.ndjson
+          head -n 300000 _build/tests/cedar.ndjson >/tmp/cedar.start.ndjson
+          head -n 400000 _build/tests/cedar.ndjson >/tmp/cedar.end.ndjson
+          test "$(wc -l </tmp/std.start.ndjson)" -eq 300000
+          test "$(wc -l </tmp/std.end.ndjson)" -eq 400000
+          test "$(wc -l </tmp/cedar.start.ndjson)" -eq 300000
+          test "$(wc -l </tmp/cedar.end.ndjson)" -eq 400000
           cd ..
           cat >/tmp/checker.json <<'EOF'
           {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
@@ -41,6 +50,8 @@ jobs:
           done
           cp DISTRIBUTIONAL_ACCESSIBILITY_GEOMETRY_V10.md /tmp/predictions.md
           echo V10_PREDICTIONS_FROZEN_BEFORE_OUTCOMES=PASS | tee /tmp/result.txt
+          echo V10_WINDOW_ROWS=300001..400000 | tee -a /tmp/result.txt
+          echo V10_WINDOW_MEASUREMENT=CUMULATIVE_PREFIX_DIFFERENCE | tee -a /tmp/result.txt
 
       - name: Build and exact semantic gate
         run: |
@@ -50,41 +61,47 @@ jobs:
             nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=/tmp/target-$mode RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/$mode/Cargo.toml --release --locked"
           done
           for corpus in std cedar; do
-            /tmp/target-cold/release/sokonanoda /tmp/checker.json </tmp/$corpus.ndjson >/tmp/$corpus.cold.out
-            for mode in g3 param prior rigid param_prior param_rigid prior_rigid param_prior_rigid; do
-              /tmp/target-$mode/release/sokonanoda /tmp/checker.json </tmp/$corpus.ndjson >/tmp/$corpus.$mode.out
-              cmp /tmp/$corpus.cold.out /tmp/$corpus.$mode.out
+            for boundary in start end; do
+              /tmp/target-cold/release/sokonanoda /tmp/checker.json </tmp/$corpus.$boundary.ndjson >/tmp/$corpus.$boundary.cold.out
+              for mode in g3 param prior rigid param_prior param_rigid prior_rigid param_prior_rigid; do
+                /tmp/target-$mode/release/sokonanoda /tmp/checker.json </tmp/$corpus.$boundary.ndjson >/tmp/$corpus.$boundary.$mode.out
+                cmp /tmp/$corpus.$boundary.cold.out /tmp/$corpus.$boundary.$mode.out
+              done
             done
             echo "${corpus^^}_V10_BYTE_IDENTICAL=PASS" | tee -a /tmp/result.txt
           done
 
-      - name: Reveal distant-slice outcomes and score frozen topology
+      - name: Reveal dependency-complete held-out-window outcomes and score frozen topology
         run: |
           set -euxo pipefail
           for corpus in std cedar; do
             for mode in g3 param prior rigid param_prior param_rigid prior_rigid param_prior_rigid; do
-              nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/cg-$corpus-$mode /tmp/target-$mode/release/sokonanoda /tmp/checker.json </tmp/$corpus.ndjson >/tmp/$corpus.$mode.cg.out 2>/tmp/$corpus.$mode.cg.err
-              cmp /tmp/$corpus.cold.out /tmp/$corpus.$mode.cg.out
+              for boundary in start end; do
+                nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/cg-$corpus-$boundary-$mode /tmp/target-$mode/release/sokonanoda /tmp/checker.json </tmp/$corpus.$boundary.ndjson >/tmp/$corpus.$boundary.$mode.cg.out 2>/tmp/$corpus.$boundary.$mode.cg.err
+                cmp /tmp/$corpus.$boundary.cold.out /tmp/$corpus.$boundary.$mode.cg.out
+              done
             done
           done
           python3 - <<'PY' | tee -a /tmp/result.txt
           import re
           states=['param','prior','rigid','param_prior','param_rigid','prior_rigid','param_prior_rigid']
           predicted={m:('VETO' if m=='param' else 'PROMOTE') for m in states}
-          def instr(c,m):
-              t=open(f'/tmp/cg-{c}-{m}').read()
+          def cumulative(c,b,m):
+              t=open(f'/tmp/cg-{c}-{b}-{m}').read()
               return int(re.search(r'^summary:\s+(\d+)',t,re.M).group(1))
-          vals={(c,m):instr(c,m) for c in ('std','cedar') for m in ['g3']+states}
-          print(f'STD_G3_INSTR={vals["std","g3"]}')
-          print(f'CEDAR_G3_INSTR={vals["cedar","g3"]}')
+          def window(c,m):
+              return cumulative(c,'end',m)-cumulative(c,'start',m)
+          vals={(c,m):window(c,m) for c in ('std','cedar') for m in ['g3']+states}
+          print(f'STD_G3_WINDOW_INSTR={vals["std","g3"]}')
+          print(f'CEDAR_G3_WINDOW_INSTR={vals["cedar","g3"]}')
           correct=0
           for m in states:
               ds=vals['std',m]-vals['std','g3']; dc=vals['cedar',m]-vals['cedar','g3']
               actual='PROMOTE' if ds<0 and dc<0 else 'VETO'
               ok=actual==predicted[m]
               correct += int(ok)
-              print(f'{m.upper()}_STD_DELTA={ds}')
-              print(f'{m.upper()}_CEDAR_DELTA={dc}')
+              print(f'{m.upper()}_STD_WINDOW_DELTA={ds}')
+              print(f'{m.upper()}_CEDAR_WINDOW_DELTA={dc}')
               print(f'{m.upper()}_PREDICTED={predicted[m]}')
               print(f'{m.upper()}_ACTUAL={actual}')
               print(f'{m.upper()}_PREDICTION_MATCH={"PASS" if ok else "FAIL"}')
