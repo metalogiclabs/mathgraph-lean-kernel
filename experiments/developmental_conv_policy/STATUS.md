@@ -1,6 +1,6 @@
 # Status
 
-V1 scaffold is live on branch `developmental-conv-policy-v1-clean`.
+V1 is live on branch `developmental-conv-policy-v1-clean`.
 
 Implemented:
 
@@ -10,14 +10,26 @@ Implemented:
 - JSONL trace contract and JSON schema;
 - synthetic nontrivial-policy self-test;
 - frozen Arena-native success/failure gate;
-- GitHub Actions self-test workflow.
+- GitHub Actions compiler self-test;
+- observational-only `conv.rs` trace injector behind `MATHGRAPH_CONV_TRACE`;
+- structural trace extractor and census summary;
+- repository-static Arena-native semantic/trace workflow.
+
+The injector modifies only the CI working tree. It derives records from values the frozen baseline has already computed and performs no additional unfold/evaluation probes, so tracing does not intentionally perturb the conversion schedule.
 
 Not yet implemented:
 
-- `conv.rs` env-flagged state instrumentation;
 - counterfactual action replay for real conversion decisions;
-- discovery/sealed Arena trace collection;
+- full generated Arena discovery/sealed trace collection;
 - generated Rust policy emission;
 - full Arena semantic and performance ablation gate.
 
-The next code change should be instrumentation only; do not add another hand-written conversion heuristic before the real trace census decides the next separator.
+Current deciding sequence:
+
+1. trace smoke gate must compile and preserve tests;
+2. static Arena census must preserve accept/reject outcomes and produce real structural decision records;
+3. only then add counterfactual replay over the observed states;
+4. fit on a frozen discovery set and decide on a sealed set;
+5. retain a generated policy only if the preregistered gate passes.
+
+Do not add another hand-written conversion heuristic before the real trace census identifies the next consequential separator.
