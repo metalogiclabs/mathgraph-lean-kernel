@@ -40,3 +40,5 @@ jobs:
             conv-trace-summary.json
           if-no-files-found: error
           retention-days: 30
+
+# Fresh-head trigger: the previous manual rerun was pinned to the original pre-fix SHA.
