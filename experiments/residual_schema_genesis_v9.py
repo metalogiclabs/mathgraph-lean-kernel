@@ -3,17 +3,33 @@ from __future__ import annotations
 from pathlib import Path
 import argparse, re
 
-# V9 freezes the transformation schema before the external tournament runs.
-
+# V9 freezes the admitted prefix, but the live mathgraph branch may already contain
+# equivalent or stronger G1/G2 transitions. Make this normalization idempotent:
+# patch legacy source when present, otherwise require evidence that the modern
+# source already contains the same direct-constructor fast paths.
 def frozen_prefix(s: str) -> str:
-    old='''    pub(crate) fn ensure_sort_v(&mut self, depth: u32, v: V<'t>) -> LevelPtr<'t> {\n        match self.force_all(depth, v) {\n            Value::Sort { level , .. } => *level,\n            _ => panic!("expected a sort"),\n        }\n    }'''
-    new='''    pub(crate) fn ensure_sort_v(&mut self, depth: u32, v: V<'t>) -> LevelPtr<'t> {\n        if let Value::Sort { level, .. } = v { return *level; }\n        match self.force_all(depth, v) {\n            Value::Sort { level , .. } => *level,\n            _ => panic!("expected a sort"),\n        }\n    }'''
-    if old not in s: raise SystemExit('frozen g1 site missing')
-    s=s.replace(old,new,1)
-    old='''        while let Some(arg) = args.pop() {\n            let fty_f = self.force_all(depth, fty);\n            let (domain, body) = match fty_f {\n                Value::Pi { domain, body, .. } => (*domain, body),\n                _ => panic!("expected a pi type"),\n            };'''
-    new='''        while let Some(arg) = args.pop() {\n            let (domain, body) = match fty {\n                Value::Pi { domain, body, .. } => (*domain, body),\n                _ => {\n                    let fty_f = self.force_all(depth, fty);\n                    match fty_f {\n                        Value::Pi { domain, body, .. } => (*domain, body),\n                        _ => panic!("expected a pi type"),\n                    }\n                }\n            };'''
-    if old not in s: raise SystemExit('frozen g2 site missing')
-    return s.replace(old,new,1)
+    g1_old='''    pub(crate) fn ensure_sort_v(&mut self, depth: u32, v: V<'t>) -> LevelPtr<'t> {\n        match self.force_all(depth, v) {\n            Value::Sort { level , .. } => *level,\n            _ => panic!("expected a sort"),\n        }\n    }'''
+    g1_new='''    pub(crate) fn ensure_sort_v(&mut self, depth: u32, v: V<'t>) -> LevelPtr<'t> {\n        if let Value::Sort { level, .. } = v { return *level; }\n        match self.force_all(depth, v) {\n            Value::Sort { level , .. } => *level,\n            _ => panic!("expected a sort"),\n        }\n    }'''
+    if g1_old in s:
+        s=s.replace(g1_old,g1_new,1)
+        print('FROZEN_G1=APPLIED_LEGACY')
+    elif re.search(r'fn ensure_sort_v\([^)]*\).*?if let Value::Sort', s, re.S):
+        print('FROZEN_G1=ALREADY_PRESENT')
+    else:
+        raise SystemExit('frozen g1 semantic transition missing')
+
+    g2_old='''        while let Some(arg) = args.pop() {\n            let fty_f = self.force_all(depth, fty);\n            let (domain, body) = match fty_f {\n                Value::Pi { domain, body, .. } => (*domain, body),\n                _ => panic!("expected a pi type"),\n            };'''
+    g2_new='''        while let Some(arg) = args.pop() {\n            let (domain, body) = match fty {\n                Value::Pi { domain, body, .. } => (*domain, body),\n                _ => {\n                    let fty_f = self.force_all(depth, fty);\n                    match fty_f {\n                        Value::Pi { domain, body, .. } => (*domain, body),\n                        _ => panic!("expected a pi type"),\n                    }\n                }\n            };'''
+    if g2_old in s:
+        s=s.replace(g2_old,g2_new,1)
+        print('FROZEN_G2=APPLIED_LEGACY')
+    elif re.search(r'while let Some\(arg\) = args\.pop\(\).*?match fty \{\s*Value::Pi \{ \.\. \} => fty,\s*_ => self\.force_all\(depth, fty\)', s, re.S):
+        print('FROZEN_G2=ALREADY_PRESENT')
+    elif re.search(r'while let Some\(arg\) = args\.pop\(\).*?match fty \{\s*Value::Pi \{ domain, body, \.\. \}', s, re.S):
+        print('FROZEN_G2=ALREADY_PRESENT')
+    else:
+        raise SystemExit('frozen g2 semantic transition missing')
+    return s
 
 # Generic source-derived schema. No portal names or hand-picked line numbers.
 PAT = re.compile(
