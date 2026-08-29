@@ -1,0 +1,111 @@
+name: msikernel discovered stage3 v7
+
+on:
+  push:
+    branches: [msikernel-discovered-stage3-v7]
+  workflow_dispatch:
+
+jobs:
+  discover-stage3:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build frozen Std and unseen Cedar corpora
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena
+          nix develop -c ./lka.py build-test std
+          nix develop -c ./lka.py build-test cedar
+          head -n 100000 _build/tests/std.ndjson >/tmp/std.ndjson
+          head -n 100000 _build/tests/cedar.ndjson >/tmp/cedar.ndjson
+          cd ..
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+
+      - name: Instantiate frozen post-g2 candidate family
+        run: |
+          set -euxo pipefail
+          for mode in cold g2 rigid_projection param_pi prior_field_pi final_field_pi; do
+            git clone --depth 1 --branch mathgraph https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/$mode
+          done
+          python3 experiments/discover_stage3_v7.py /tmp/g2 g2 | tee /tmp/g2.genesis
+          for c in rigid_projection param_pi prior_field_pi final_field_pi; do
+            python3 experiments/discover_stage3_v7.py /tmp/$c $c | tee /tmp/$c.genesis
+          done
+          echo STAGE3_CANDIDATE_ENUMERATION=PASS | tee /tmp/result.txt
+
+      - name: Build and exact semantic gate
+        run: |
+          set -euxo pipefail
+          cd arena
+          for mode in cold g2 rigid_projection param_pi prior_field_pi final_field_pi; do
+            nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=/tmp/target-$mode RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/$mode/Cargo.toml --release --locked"
+          done
+          for corpus in std cedar; do
+            /tmp/target-cold/release/sokonanoda /tmp/checker.json </tmp/$corpus.ndjson >/tmp/$corpus.cold.out
+            for mode in g2 rigid_projection param_pi prior_field_pi final_field_pi; do
+              /tmp/target-$mode/release/sokonanoda /tmp/checker.json </tmp/$corpus.ndjson >/tmp/$corpus.$mode.out
+              cmp /tmp/$corpus.cold.out /tmp/$corpus.$mode.out
+            done
+            echo "${corpus^^}_ALL_STAGE3_CANDIDATES_BYTE_IDENTICAL=PASS" | tee -a /tmp/result.txt
+          done
+
+      - name: Transfer-aware economic discovery gate
+        run: |
+          set -euxo pipefail
+          for corpus in std cedar; do
+            for mode in g2 rigid_projection param_pi prior_field_pi final_field_pi; do
+              nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/cg-$corpus-$mode /tmp/target-$mode/release/sokonanoda /tmp/checker.json </tmp/$corpus.ndjson >/tmp/$corpus.$mode.cg.out 2>/tmp/$corpus.$mode.cg.err
+              cmp /tmp/$corpus.cold.out /tmp/$corpus.$mode.cg.out
+            done
+          done
+          python3 - <<'PY' | tee -a /tmp/result.txt
+          import re
+          candidates=['rigid_projection','param_pi','prior_field_pi','final_field_pi']
+          def instr(c,m):
+              t=open(f'/tmp/cg-{c}-{m}').read()
+              return int(re.search(r'^summary:\s+(\d+)',t,re.M).group(1))
+          vals={(c,m):instr(c,m) for c in ('std','cedar') for m in ['g2']+candidates}
+          print(f'STD_G2_INSTR={vals["std","g2"]}')
+          print(f'CEDAR_G2_INSTR={vals["cedar","g2"]}')
+          survivors=[]
+          for m in candidates:
+              ds=vals['std',m]-vals['std','g2']; dc=vals['cedar',m]-vals['cedar','g2']
+              print(f'CANDIDATE_{m.upper()}_STD_INSTR={vals["std",m]}')
+              print(f'CANDIDATE_{m.upper()}_CEDAR_INSTR={vals["cedar",m]}')
+              print(f'CANDIDATE_{m.upper()}_STD_DELTA={ds}')
+              print(f'CANDIDATE_{m.upper()}_CEDAR_DELTA={dc}')
+              if ds < 0 and dc < 0:
+                  survivors.append((vals['std',m]+vals['cedar',m],m,ds,dc))
+                  print(f'CANDIDATE_{m.upper()}_TRANSFER_ECONOMIC_GATE=PASS')
+              else:
+                  print(f'CANDIDATE_{m.upper()}_TRANSFER_ECONOMIC_GATE=VETO')
+          if survivors:
+              survivors.sort()
+              _,winner,ds,dc=survivors[0]
+              print(f'DISCOVERED_STAGE3={winner}')
+              print('STAGE3_DISCOVERY_AFTER_G2=PASS')
+              print('LONG_HORIZON_PREFIX_EXTENDED_TO=3')
+          else:
+              print('DISCOVERED_STAGE3=NONE')
+              print('STAGE3_BOUNDED_FRONTIER_EXHAUSTED=PASS')
+              print('LONG_HORIZON_PREFIX_REMAINS=2')
+          print('POST_G2_TRANSFER_AWARE_RESIDUAL_TOURNAMENT=DECIDED')
+          PY
+          cat /tmp/result.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: msikernel-discovered-stage3-v7
+          path: |
+            /tmp/result.txt
+            /tmp/g2.genesis
+            /tmp/rigid_projection.genesis
+            /tmp/param_pi.genesis
+            /tmp/prior_field_pi.genesis
+            /tmp/final_field_pi.genesis
