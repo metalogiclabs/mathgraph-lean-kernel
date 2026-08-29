@@ -26,6 +26,8 @@ jobs:
           mkdir -p /tmp/lean-kernel-arena/_build/tests
           find /tmp/lean-kernel-arena/tests -maxdepth 1 -name '*.ndjson' -print -exec cp {} /tmp/lean-kernel-arena/_build/tests/ \;
           echo "STATIC_EXPORTS=$(find /tmp/lean-kernel-arena/_build/tests -name '*.ndjson' | wc -l)"
+      - name: Apply admitted recursor-set soundness repair in working tree only
+        run: python scripts/apply_extra_rec_soundness.py
       - name: Inject trace instrumentation into working tree only
         run: python experiments/developmental_conv_policy/instrument_conv.py
       - name: Run Arena-native semantic gate with tracing
@@ -50,4 +52,4 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-# Triggered after trace-smoke gate passed on 2026-08-29.
+# Recursor-set soundness repair is injected in CI before observational tracing.
