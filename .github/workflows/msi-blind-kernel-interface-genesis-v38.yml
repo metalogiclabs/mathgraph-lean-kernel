@@ -20,14 +20,16 @@ jobs:
           cd arena
           nix develop -c ./lka.py build-test std
           nix develop -c ./lka.py build-test cedar
-          # Acquisition sees only the first 2M Std lines.
+          # Acquisition sees only the valid first-2M prefix of Std.
           head -n 2000000 _build/tests/std.ndjson >/tmp/acquire-std.ndjson
-          # Same-source held-out is disjoint from acquisition. Use sed rather than
-          # tail|head so pipefail cannot turn the intentional early close into SIGPIPE.
-          sed -n '2000001,3000000p' _build/tests/std.ndjson >/tmp/heldout-std.ndjson
-          # Cedar is never exposed before the interface is frozen.
+          # Lean exports are stateful: later records may reference earlier indices.
+          # Therefore the same-source sealed continuation must retain its prefix.
+          # The first 3M records are valid as a unit; held-out economics are measured
+          # as the deterministic instruction delta between the 3M and 2M prefixes.
+          head -n 3000000 _build/tests/std.ndjson >/tmp/heldout-std-prefix3m.ndjson
+          # Cedar is source-distinct and never exposed before the interface is frozen.
           head -n 1000000 _build/tests/cedar.ndjson >/tmp/heldout-cedar.ndjson
-          sha256sum /tmp/acquire-std.ndjson /tmp/heldout-std.ndjson /tmp/heldout-cedar.ndjson | tee /tmp/corpus-hashes.txt
+          sha256sum /tmp/acquire-std.ndjson /tmp/heldout-std-prefix3m.ndjson /tmp/heldout-cedar.ndjson | tee /tmp/corpus-hashes.txt
           cat >/tmp/checker.json <<'EOF'
           {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
           EOF
@@ -68,52 +70,65 @@ jobs:
             nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=/tmp/v38-$mode-target RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/v38-$mode/Cargo.toml --release --locked"
           done
 
-      - name: Semantic gate on both sealed continuations
+      - name: Semantic gate on sealed continuation and source-distinct corpus
         run: |
           set -euxo pipefail
           : >/tmp/result.txt
           cat /tmp/selection.json >>/tmp/result.txt
           echo >>/tmp/result.txt
-          for corpus in heldout-std heldout-cedar; do
-            for mode in local shared ablate; do
-              /tmp/v38-$mode-target/release/sokonanoda /tmp/checker.json </tmp/$corpus.ndjson >/tmp/$corpus-$mode.out
-            done
-            cmp /tmp/$corpus-local.out /tmp/$corpus-shared.out
-            cmp /tmp/$corpus-local.out /tmp/$corpus-ablate.out
-            echo "${corpus^^}_OUTPUT_EQ=PASS" | tr '-' '_' | tee -a /tmp/result.txt
+          for mode in local shared ablate; do
+            /tmp/v38-$mode-target/release/sokonanoda /tmp/checker.json </tmp/heldout-std-prefix3m.ndjson >/tmp/heldout-std-prefix3m-$mode.out
+            /tmp/v38-$mode-target/release/sokonanoda /tmp/checker.json </tmp/heldout-cedar.ndjson >/tmp/heldout-cedar-$mode.out
           done
+          cmp /tmp/heldout-std-prefix3m-local.out /tmp/heldout-std-prefix3m-shared.out
+          cmp /tmp/heldout-std-prefix3m-local.out /tmp/heldout-std-prefix3m-ablate.out
+          cmp /tmp/heldout-cedar-local.out /tmp/heldout-cedar-shared.out
+          cmp /tmp/heldout-cedar-local.out /tmp/heldout-cedar-ablate.out
+          echo "HELDOUT_STD_CONTINUATION_OUTPUT_EQ=PASS" | tee -a /tmp/result.txt
+          echo "HELDOUT_CEDAR_OUTPUT_EQ=PASS" | tee -a /tmp/result.txt
 
       - name: Deterministic held-out consequence economics
         run: |
           set -euxo pipefail
           nix shell nixpkgs#valgrind -c valgrind --version
-          for corpus in heldout-std heldout-cedar; do
-            for mode in local shared ablate; do
-              nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/cg-$corpus-$mode /tmp/v38-$mode-target/release/sokonanoda /tmp/checker.json </tmp/$corpus.ndjson >/tmp/$corpus-$mode-cg.out 2>/tmp/$corpus-$mode-cg.err
-              cmp /tmp/$corpus-local.out /tmp/$corpus-$mode-cg.out
-            done
+          # Same-source continuation: benchmark valid 2M and 3M prefixes separately,
+          # then subtract. This isolates the cost of records 2,000,001..3,000,000
+          # without violating export dependency order.
+          for mode in local shared ablate; do
+            nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/cg-std2m-$mode /tmp/v38-$mode-target/release/sokonanoda /tmp/checker.json </tmp/acquire-std.ndjson >/tmp/std2m-$mode-cg.out 2>/tmp/std2m-$mode-cg.err
+            nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/cg-std3m-$mode /tmp/v38-$mode-target/release/sokonanoda /tmp/checker.json </tmp/heldout-std-prefix3m.ndjson >/tmp/std3m-$mode-cg.out 2>/tmp/std3m-$mode-cg.err
+            nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/cg-heldout-cedar-$mode /tmp/v38-$mode-target/release/sokonanoda /tmp/checker.json </tmp/heldout-cedar.ndjson >/tmp/heldout-cedar-$mode-cg.out 2>/tmp/heldout-cedar-$mode-cg.err
+            cmp /tmp/heldout-std-prefix3m-$mode.out /tmp/std3m-$mode-cg.out
+            cmp /tmp/heldout-cedar-$mode.out /tmp/heldout-cedar-$mode-cg.out
           done
           python3 - <<'PY' | tee -a /tmp/result.txt
           import json,re
           selection=json.load(open('/tmp/selection.json'))
+          def summary(path):
+              s=open(path).read()
+              m=re.search(r'^summary:\s+(\d+)',s,re.M)
+              if not m: raise SystemExit('no callgrind summary '+path)
+              return int(m.group(1))
+          std={}
+          cedar={}
+          for mode in ('local','shared','ablate'):
+              a=summary(f'/tmp/cg-std2m-{mode}')
+              b=summary(f'/tmp/cg-std3m-{mode}')
+              if b <= a: raise SystemExit(f'nonpositive held-out delta {mode}: {a} -> {b}')
+              std[mode]=b-a
+              cedar[mode]=summary(f'/tmp/cg-heldout-cedar-{mode}')
           all_win=True
-          for corpus in ('heldout-std','heldout-cedar'):
-              vals={}
-              for mode in ('local','shared','ablate'):
-                  s=open(f'/tmp/cg-{corpus}-{mode}').read()
-                  m=re.search(r'^summary:\s+(\d+)',s,re.M)
-                  if not m: raise SystemExit(f'no callgrind summary {corpus} {mode}')
-                  vals[mode]=int(m.group(1))
-              u=corpus.upper().replace('-','_')
-              for k,v in vals.items(): print(f'{u}_{k.upper()}_INSTR={v}')
-              print(f'{u}_SHARED_VS_LOCAL_PCT={100*(vals["shared"]-vals["local"])/vals["local"]:.6f}')
-              print(f'{u}_SHARED_VS_ABLATE_PCT={100*(vals["shared"]-vals["ablate"])/vals["ablate"]:.6f}')
+          for name,vals in (('HELDOUT_STD_CONTINUATION',std),('HELDOUT_CEDAR',cedar)):
+              for k,v in vals.items(): print(f'{name}_{k.upper()}_INSTR={v}')
+              print(f'{name}_SHARED_VS_LOCAL_PCT={100*(vals["shared"]-vals["local"])/vals["local"]:.6f}')
+              print(f'{name}_SHARED_VS_ABLATE_PCT={100*(vals["shared"]-vals["ablate"])/vals["ablate"]:.6f}')
               win=vals['shared'] < vals['local'] and vals['shared'] < vals['ablate']
-              print(f'{u}_SHARED_INTERFACE_WIN={str(win).upper()}')
+              print(f'{name}_SHARED_INTERFACE_WIN={str(win).upper()}')
               all_win &= win
           print('FROZEN_WINNER_ID='+selection['winner_id'])
           print('SELECTION_USED_HELDOUT=FALSE')
           print('EXACT_ABLATION_PRESENT=TRUE')
+          print('STD_HELDOUT_COST_IS_PREFIX_DELTA=TRUE')
           print('DECISION=' + ('BLIND_INTERFACE_GENESIS_TRANSFER' if all_win else 'NO_BLIND_INTERFACE_GENESIS_TRANSFER'))
           if not all_win:
               raise SystemExit(2)
@@ -130,9 +145,12 @@ jobs:
             /tmp/selection.log
             /tmp/acquire-trace.txt
             /tmp/corpus-hashes.txt
-            /tmp/cg-heldout-std-local
-            /tmp/cg-heldout-std-shared
-            /tmp/cg-heldout-std-ablate
+            /tmp/cg-std2m-local
+            /tmp/cg-std2m-shared
+            /tmp/cg-std2m-ablate
+            /tmp/cg-std3m-local
+            /tmp/cg-std3m-shared
+            /tmp/cg-std3m-ablate
             /tmp/cg-heldout-cedar-local
             /tmp/cg-heldout-cedar-shared
             /tmp/cg-heldout-cedar-ablate
