@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
-import itertools, json, re, sys
+import itertools, json, sys
 
 trace=Path(sys.argv[1])
 root=Path(sys.argv[2])
@@ -29,7 +29,9 @@ iproduct,iresiduals=read_trace(intervention) if intervention else ({},[])
 rows=[r for r in residuals if r[1]=='q3' and r[0] in prod]
 if not rows:
     raise SystemExit('q3: no closure residual rows')
-n=len(next(iter(prod.values())))
+# b3 is deliberately presentation/address noise.  The developmental grammar
+# admits only the three structural coordinates b0,b1,b2.
+admissible=(0,1,2)
 
 def good_basis(basis, datasets=((prod,residuals),)):
     tab={}
@@ -43,8 +45,8 @@ def good_basis(basis, datasets=((prod,residuals),)):
     return True
 
 mins=[]
-for k in range(n+1):
-    for b in itertools.combinations(range(n),k):
+for k in range(len(admissible)+1):
+    for b in itertools.combinations(admissible,k):
         if good_basis(b): mins.append(b)
     if mins: break
 print(f'Q3_TRAIN_MIN_BASES={mins}')
@@ -59,7 +61,6 @@ if len(surv)!=1:
 basis=surv[0]
 print('Q3_UNIQUE_MIN_BASIS='+(','.join(map(str,basis)) if basis else 'EMPTY'))
 
-# Determine the positive signature only from verified outcomes.
 pos=set(); neg=set()
 for p,rs in ((prod,residuals),(iproduct,iresiduals)):
     for sid,ctx,out in rs:
@@ -71,9 +72,6 @@ if len(pos)!=1 or pos & neg:
 positive=next(iter(pos))
 print(f'Q3_ANONYMOUS_POSITIVE_SIGNATURE={positive}')
 
-# Generation 3 is a different representation class: a retained composite fact
-# on Closure, established at construction and consumed later without re-deriving
-# the future-relevant predicate.
 value=root/'src/value.rs'
 s=value.read_text()
 old='''pub struct Closure<'a> {\n    pub env: E<'a>,\n    pub ctx: Option<C<'a>>,\n    pub body: ExprPtr<'a>,\n}'''
@@ -81,17 +79,19 @@ new='''pub struct Closure<'a> {\n    pub env: E<'a>,\n    pub ctx: Option<C<'a>>
 if old not in s: raise SystemExit('closure representation template not found')
 s=s.replace(old,new,1)
 
-# Compile the learned anonymous basis/signature into producer-time establishment.
-def predicate(ctx_expr, body_expr):
+def predicate(ctx_expr, body_expr, env_expr):
     terms=[]
     for i,v in zip(basis,positive):
-        atom={0:f'({ctx_expr}).is_none()',1:f'({body_expr}).num_loose_bvars() == 0',2:'false',3:'false'}.get(i)
-        if atom is None: raise SystemExit(f'unsupported q3 basis coordinate {i}')
+        atom={
+            0:f'({ctx_expr}).is_none()',
+            1:f'({body_expr}).num_loose_bvars() == 0',
+            2:f'({env_expr}).len() == 0',
+        }[i]
         terms.append(f'({atom})' if v==1 else f'!({atom})')
     return ' && '.join(terms) if terms else 'true'
 
-pred_eval=predicate('None::<C<\'_>>','body')
-pred_infer=predicate('Some(ctx)','body')
+pred_eval=predicate("None::<C<'a>>",'body','env')
+pred_infer=predicate('Some(ctx)','body','env')
 old="""impl<'a> Closure<'a> {\n    pub fn mk_eval(env: E<'a>, body: ExprPtr<'a>) -> Self { Closure { env, ctx: None, body } }\n\n    pub fn mk_infer(env: E<'a>, ctx: C<'a>, body: ExprPtr<'a>) -> Self { Closure { env, ctx: Some(ctx), body } }\n}"""
 new=f"""impl<'a> Closure<'a> {{\n    pub fn mk_eval(env: E<'a>, body: ExprPtr<'a>) -> Self {{\n        let direct_cap = {pred_eval};\n        Closure {{ env, ctx: None, body, direct_cap }}\n    }}\n\n    pub fn mk_infer(env: E<'a>, ctx: C<'a>, body: ExprPtr<'a>) -> Self {{\n        let direct_cap = {pred_infer};\n        Closure {{ env, ctx: Some(ctx), body, direct_cap }}\n    }}\n}}"""
 if old not in s: raise SystemExit('closure constructor template not found')
