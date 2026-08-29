@@ -18,8 +18,8 @@ fn developmental_conv_trace_enabled() -> bool {
 #[inline]
 fn developmental_conv_trace(
     depth: u32,
-    left_len: usize,
-    right_len: usize,
+    left_len: u32,
+    right_len: u32,
     left_hint_lt: bool,
     right_hint_lt: bool,
     baseline_action: &'static str,
@@ -29,13 +29,13 @@ fn developmental_conv_trace(
     }
     eprintln!(
         concat!(
-            "MATHGRAPH_CONV_TRACE {\"state\":{",
+            "MATHGRAPH_CONV_TRACE {{\"state\":{{",
             "\"depth\":{},",
             "\"left_len\":{},\"right_len\":{},",
             "\"left_shorter\":{},\"right_shorter\":{},",
             "\"one_spine_is_one\":{},",
             "\"left_hint_lt\":{},\"right_hint_lt\":{}",
-            "},\"baseline_action\":\"{}\"}"
+            "}},\"baseline_action\":\"{}\"}}"
         ),
         depth,
         left_len,
