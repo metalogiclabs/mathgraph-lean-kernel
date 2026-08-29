@@ -40,7 +40,6 @@ jobs:
             cp experiments/apply_msi_sort_interface_regenesis_v37.py /tmp/v39-$mode/native_materializer.py
             (cd /tmp/v39-$mode && python3 native_materializer.py $mode)
           done
-          # Persist the exact native-source delta used by the deciding arm.
           git --no-pager diff --no-index /tmp/v39-local/src/infer.rs /tmp/v39-shared/src/infer.rs > /tmp/native-sort-interface.diff || true
           cd arena
           for mode in local shared ablate; do
@@ -92,12 +91,12 @@ jobs:
       - name: Gate D rerun residual discovery above promoted interface
         run: |
           set -euxo pipefail
-          cp experiments/apply_msi_semantic_rediscovery_frontier_v36.py /tmp/v39-shared/residual_probe.py
+          cp experiments/apply_msi_post_sort_residual_probe_v39.py /tmp/v39-shared/residual_probe.py
           (cd /tmp/v39-shared && python3 residual_probe.py)
           cd arena
           nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=/tmp/v39-residual-target RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/v39-shared/Cargo.toml --release --locked"
           /tmp/v39-residual-target/release/sokonanoda /tmp/checker.json </tmp/std3m.ndjson >/tmp/v39-residual.out 2>/tmp/v39-residual.err
-          grep 'MSI_V36' /tmp/v39-residual.err | tail -1 | tee /tmp/v39-residual.txt
+          grep 'MSI_V39_POST_SORT' /tmp/v39-residual.err | tail -1 | tee /tmp/v39-residual.txt
           python3 - <<'PY' | tee -a /tmp/result.txt
           import re
           s=open('/tmp/v39-residual.txt').read()
