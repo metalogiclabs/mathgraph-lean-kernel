@@ -1,0 +1,51 @@
+name: Developmental Conversion Arena Static V1
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - developmental-conv-policy-v1-clean
+    paths:
+      - 'experiments/developmental_conv_policy/**'
+      - '.github/workflows/developmental-conv-arena-static-v1.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  arena-static-census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Fetch frozen Arena branch
+        run: git clone --depth 1 --branch mathgraph-v3-candidate https://github.com/heathsanchez/lean-kernel-arena.git /tmp/lean-kernel-arena
+      - name: Materialize repository-static Arena exports
+        run: |
+          mkdir -p /tmp/lean-kernel-arena/_build/tests
+          find /tmp/lean-kernel-arena/tests -maxdepth 1 -name '*.ndjson' -print -exec cp {} /tmp/lean-kernel-arena/_build/tests/ \;
+          echo "STATIC_EXPORTS=$(find /tmp/lean-kernel-arena/_build/tests -name '*.ndjson' | wc -l)"
+      - name: Inject trace instrumentation into working tree only
+        run: python experiments/developmental_conv_policy/instrument_conv.py
+      - name: Run Arena-native semantic gate with tracing
+        env:
+          MATHGRAPH_CONV_TRACE: '1'
+          LEAN_KERNEL_ARENA: /tmp/lean-kernel-arena
+          LEAN_KERNEL_ARENA_VERBOSE: '1'
+        run: |
+          set -o pipefail
+          cargo test --release --test arena arena_fast_tier -- --nocapture 2>&1 | tee conv-arena-static.log
+      - name: Extract structural census
+        run: python experiments/developmental_conv_policy/extract_trace.py conv-arena-static.log conv-arena-static.jsonl
+      - name: Freeze first census summary
+        run: cat conv-trace-summary.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: developmental-conv-arena-static-v1
+          path: |
+            conv-arena-static.log
+            conv-arena-static.jsonl
+            conv-trace-summary.json
+          if-no-files-found: error
+          retention-days: 30
