@@ -1,0 +1,21 @@
+name: MSI Kernel Residual Schema Genesis V9
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [msikernel-residual-schema-genesis-v9]
+
+jobs:
+  discover:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Derive candidate transformation sites from source residual pattern
+        run: |
+          python3 experiments/residual_schema_genesis_v9.py . --list | tee /tmp/v9.txt
+          grep '^PORTAL_LABELS_USED=0$' /tmp/v9.txt
+          grep '^DISCOVERED_CANDIDATES=' /tmp/v9.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: msikernel-residual-schema-genesis-v9
+          path: /tmp/v9.txt
