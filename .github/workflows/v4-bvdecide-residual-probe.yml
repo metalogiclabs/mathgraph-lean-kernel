@@ -52,7 +52,7 @@ jobs:
           ROOT="$GITHUB_WORKSPACE/arena"
           RUSTFLAGS="-C target-cpu=native -Cprofile-generate=$PWD/pgo" cargo build --release --locked
           target/release/sokonanoda config.json < "$ROOT/_build/tests/init-prelude.ndjson" >/dev/null
-          llvm-profdata merge -o "$PWD/pgo/merged.profdata" "$PWD/pgo"
+          nix shell nixpkgs#llvm -c llvm-profdata merge -o "$PWD/pgo/merged.profdata" "$PWD/pgo"
           rm -rf target
           RUSTFLAGS="-C target-cpu=native -Cprofile-use=$PWD/pgo/merged.profdata" cargo build --release --locked
 
