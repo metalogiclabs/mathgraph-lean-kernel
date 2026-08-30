@@ -1,0 +1,66 @@
+name: V4 BVDecide Exact Declaration Probe
+on:
+  push:
+    branches: [mathgraph-v4-bvdecide-residual-20260830]
+    paths: ['scripts/apply_v4_target_probe.py','.github/workflows/v4-bvdecide-exact-probe.yml']
+  workflow_dispatch:
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Build Std
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena && nix develop -c ./lka.py build-test std
+      - name: Build live baseline and candidate states with exact probe
+        run: |
+          set -euxo pipefail
+          for s in base ensure app param prior all; do
+            git clone https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/$s
+            git -C /tmp/$s checkout 2de1895a52d21ad266b77002defe3e6bc69bbcfd
+          done
+          python3 scripts/apply_v4_compounded.py /tmp/ensure/src/infer.rs --only ensure_sort_direct_sort
+          python3 scripts/apply_v4_compounded.py /tmp/app/src/infer.rs --only app_direct_pi
+          python3 scripts/apply_v4_compounded.py /tmp/param/src/infer.rs --only param_telescope_direct_pi_fallback
+          python3 scripts/apply_v4_compounded.py /tmp/prior/src/infer.rs --only prior_field_direct_pi
+          python3 scripts/apply_v4_compounded.py /tmp/all/src/infer.rs
+          for s in base ensure app param prior all; do
+            python3 scripts/apply_v4_target_probe.py /tmp/$s
+            (cd /tmp/$s && cargo build --release --locked)
+          done
+          cat >/tmp/serial.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+      - name: Exact per-declaration tournament
+        run: |
+          set -euxo pipefail
+          f=arena/_build/tests/std.ndjson
+          : >/tmp/results.txt
+          for s in base ensure app param prior all; do
+            for rep in 1 2 3; do
+              /tmp/$s/target/release/sokonanoda /tmp/serial.json < "$f" >/dev/null 2>/tmp/${s}-${rep}.err
+              grep 'V4_TARGET_DECL' /tmp/${s}-${rep}.err | tee -a /tmp/results.txt
+            done
+          done
+          python3 - <<'PY' | tee -a /tmp/results.txt
+          import re,statistics
+          t=open('/tmp/results.txt').read(); states='base ensure app param prior all'.split(); vals={}
+          for s in states:
+              ns=[int(x) for x in re.findall(rf'V4_TARGET_DECL index=\d+ name=.* nanos=(\d+)', ''.join(open(f'/tmp/{s}-{i}.err').read() for i in (1,2,3)))]
+              if len(ns)!=3: raise SystemExit(f'{s}: expected 3 target samples, got {len(ns)}')
+              m=statistics.median(ns); vals[s]=m
+              print(f'{s}_TARGET_MEDIAN_NS={int(m)} SAMPLES={ns}')
+          b=vals['base']
+          for s in states[1:]: print(f'{s}_TARGET_VS_BASE_PPM={int(1_000_000*(vals[s]-b)/b)}')
+          print('BEST_TARGET_STATE='+min(states,key=vals.get))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v4-bvdecide-exact-probe
+          path: |
+            /tmp/results.txt
+            /tmp/*.err
