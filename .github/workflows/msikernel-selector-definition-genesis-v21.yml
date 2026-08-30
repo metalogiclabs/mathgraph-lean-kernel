@@ -107,7 +107,7 @@ jobs:
           for c in std cedar; do
             /tmp/target-g3/release/sokonanoda /tmp/checker.json </tmp/$c.test.ndjson >/tmp/$c.g3.test.out
             /tmp/target-guard/release/sokonanoda /tmp/checker.json </tmp/$c.test.ndjson >/tmp/$c.guard.test.out
-            cmp /tmp/$c.g3.test.out /tmp/$c.guard.test.test.out 2>/dev/null || cmp /tmp/$c.g3.test.out /tmp/$c.guard.test.out
+            cmp /tmp/$c.g3.test.out /tmp/$c.guard.test.out
             echo "${c^^}_V21_HELDOUT_BYTE_IDENTICAL=PASS" | tee -a /tmp/result.txt
           done
           echo V21_HELDOUT_ROWS=400001..600000 | tee -a /tmp/result.txt
