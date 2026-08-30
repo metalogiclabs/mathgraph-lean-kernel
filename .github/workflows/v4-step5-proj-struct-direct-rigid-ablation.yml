@@ -1,0 +1,86 @@
+name: V4 Step5 Projection Direct-Rigid Ablation
+
+on:
+  push:
+    branches: [mathgraph-v4-bvdecide-residual]
+    paths:
+      - '.github/workflows/v4-step5-proj-struct-direct-rigid-ablation.yml'
+  workflow_dispatch:
+
+jobs:
+  ablate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build Arena Std corpus
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena
+          nix develop -c ./lka.py build-test init-prelude
+          nix develop -c ./lka.py build-test std
+
+      - name: Materialize retained V4 and direct-Rigid candidate
+        run: |
+          set -euxo pipefail
+          git clone https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/v4
+          git -C /tmp/v4 checkout 2de1895a52d21ad266b77002defe3e6bc69bbcfd
+          cp -a /tmp/v4 /tmp/rigid
+          python3 - <<'PY'
+          from pathlib import Path
+          def repl(root, old, new):
+              p=Path(root)/'src/infer.rs'; s=p.read_text(); assert old in s, old[:80]; p.write_text(s.replace(old,new,1))
+          roots=['/tmp/v4','/tmp/rigid']
+          app_old='''        while let Some(arg) = args.pop() {\n            let fty_f = self.force_all(depth, fty);\n            let (domain, body) = match fty_f {\n                Value::Pi { domain, body, .. } => (*domain, body),\n                _ => panic!("expected a pi type"),\n            };'''
+          app_new='''        while let Some(arg) = args.pop() {\n            let (domain, body) = match fty {\n                Value::Pi { domain, body, .. } => (*domain, body),\n                _ => match self.force_all(depth, fty) {\n                    Value::Pi { domain, body, .. } => (*domain, body),\n                    _ => panic!("expected a pi type"),\n                },\n            };'''
+          sort_old='''    pub(crate) fn ensure_sort_v(&mut self, depth: u32, v: V<'t>) -> LevelPtr<'t> {\n        match self.force_all(depth, v) {\n            Value::Sort { level , .. } => *level,\n            _ => panic!("expected a sort"),\n        }\n    }'''
+          sort_new='''    pub(crate) fn ensure_sort_v(&mut self, depth: u32, v: V<'t>) -> LevelPtr<'t> {\n        match v {\n            Value::Sort { level, .. } => *level,\n            _ => match self.force_all(depth, v) {\n                Value::Sort { level, .. } => *level,\n                _ => panic!("expected a sort"),\n            },\n        }\n    }'''
+          param_old='''        for p in params.iter().take(num_params).copied() {\n            match self.force_all(depth, cur) {\n                Value::Pi { domain, body, .. } => cur = self.apply_closure(depth, body, p, Some(*domain)),\n                _ => panic!("ran out of param telescope in projection"),\n            }\n        }'''
+          param_new='''        for p in params.iter().take(num_params).copied() {\n            match cur {\n                Value::Pi { domain, body, .. } => cur = self.apply_closure(depth, body, p, Some(*domain)),\n                _ => match self.force_all(depth, cur) {\n                    Value::Pi { domain, body, .. } => cur = self.apply_closure(depth, body, p, Some(*domain)),\n                    _ => panic!("ran out of param telescope in projection"),\n                },\n            }\n        }'''
+          final_old='''        match self.force_all(depth, cur) {\n            Value::Pi { domain, .. } => {\n                if struct_ty_is_prop && !self.is_prop_type(depth, domain) {\n                    panic!("projection of a non-proof field from a Prop structure")\n                }\n                *domain\n            }\n            _ => panic!("ran out of constructor telescope getting projection field"),\n        }'''
+          final_new='''        match cur {\n            Value::Pi { domain, .. } => {\n                if struct_ty_is_prop && !self.is_prop_type(depth, domain) {\n                    panic!("projection of a non-proof field from a Prop structure")\n                }\n                *domain\n            }\n            _ => match self.force_all(depth, cur) {\n                Value::Pi { domain, .. } => {\n                    if struct_ty_is_prop && !self.is_prop_type(depth, domain) {\n                        panic!("projection of a non-proof field from a Prop structure")\n                    }\n                    *domain\n                }\n                _ => panic!("ran out of constructor telescope getting projection field"),\n            },\n        }'''
+          for r in roots:
+              repl(r,app_old,app_new); repl(r,sort_old,sort_new); repl(r,param_old,param_new); repl(r,final_old,final_new)
+          old='''        let struct_ty = self.infer_value(flag, depth, env, ctx, structure);\n        let struct_ty_f = self.force_all(depth, struct_ty);\n        let struct_ty_is_prop = self.is_prop_type(depth, struct_ty_f);\n        let (ind_name, ind_levels, spine) = match struct_ty_f {\n            Value::Rigid { head: RigidHead::Inductive(n, ls), spine, .. } => (*n, *ls, *spine),\n            _ => panic!("projection structure type is not an inductive"),\n        };'''
+          new='''        let struct_ty = self.infer_value(flag, depth, env, ctx, structure);\n        let struct_ty_f = match struct_ty {\n            Value::Rigid { head: RigidHead::Inductive(..), .. } => struct_ty,\n            _ => self.force_all(depth, struct_ty),\n        };\n        let struct_ty_is_prop = self.is_prop_type(depth, struct_ty_f);\n        let (ind_name, ind_levels, spine) = match struct_ty_f {\n            Value::Rigid { head: RigidHead::Inductive(n, ls), spine, .. } => (*n, *ls, *spine),\n            _ => panic!("projection structure type is not an inductive"),\n        };'''
+          repl('/tmp/rigid',old,new)
+          PY
+          git -C /tmp/rigid diff -- src/infer.rs | tee /tmp/rigid.diff
+
+      - name: Build identically with PGO
+        run: |
+          set -euxo pipefail
+          ROOT="$GITHUB_WORKSPACE/arena"
+          for k in v4 rigid; do
+            d=/tmp/$k; cd "$d"
+            echo '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}' > config.json
+            RUSTFLAGS="-C target-cpu=x86-64-v3 -Cprofile-generate=$PWD/pgo" cargo build --release --locked
+            target/release/sokonanoda config.json < "$ROOT/_build/tests/init-prelude.ndjson" >/dev/null
+            nix shell nixpkgs#llvm -c llvm-profdata merge -o "$PWD/pgo/merged.profdata" "$PWD/pgo"
+            rm -rf target
+            RUSTFLAGS="-C target-cpu=x86-64-v3 -Cprofile-use=$PWD/pgo/merged.profdata" cargo build --release --locked
+          done
+
+      - name: Deterministic Std instruction ablation
+        run: |
+          set -euxo pipefail
+          cd arena
+          for k in v4 rigid; do
+            nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/${k}.callgrind /tmp/${k}/target/release/sokonanoda /tmp/${k}/config.json < _build/tests/std.ndjson >/dev/null
+            grep '^summary:' /tmp/${k}.callgrind | awk '{print $2}' > /tmp/${k}.ir
+          done
+          python3 - <<'PY' | tee /tmp/result.txt
+          a=int(open('/tmp/v4.ir').read()); b=int(open('/tmp/rigid.ir').read())
+          print(f'V4_IR={a}'); print(f'RIGID_IR={b}'); print(f'DELTA_IR={b-a}'); print(f'DELTA_PCT={(b/a-1)*100:.6f}'); print('V4_PROJ_STRUCT_DIRECT_RIGID=' + ('PASS' if b<a else 'FAIL'))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v4-step5-proj-struct-direct-rigid
+          path: |
+            /tmp/result.txt
+            /tmp/rigid.diff
+            /tmp/*.callgrind
