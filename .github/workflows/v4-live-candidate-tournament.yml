@@ -1,0 +1,145 @@
+name: V4 Live Candidate Tournament
+
+on:
+  push:
+    branches: [mathgraph-v4-bvdivide-residual-20260830]
+    paths:
+      - 'scripts/apply_v4_live_candidate.py'
+      - '.github/workflows/v4-live-candidate-tournament.yml'
+  workflow_dispatch:
+
+jobs:
+  tournament:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build focused and Std Arena tests
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cat > arena/tests/v4_bvdivide.lean <<'EOF'
+          import Std.Tactic.BVDecide
+          #check Std.Tactic.BVDecide.BVExpr.bitblast.blastUdiv.denote_blastDivSubtractShift_q
+          EOF
+          cat > arena/tests/v4-bvdivide.yaml <<'EOF'
+          description: Focused export for Std BVDecide unsigned-division bitblast theorem.
+          leanfile: tests/v4_bvdivide.lean
+          export-decls:
+            - Std.Tactic.BVDecide.BVExpr.bitblast.blastUdiv.denote_blastDivSubtractShift_q
+          outcome: accept
+          EOF
+          cd arena
+          nix develop -c ./lka.py build-test v4-bvdivide init-prelude std extra-rec orphan-rec
+
+      - name: Materialize live baseline and V4 candidate
+        run: |
+          set -euxo pipefail
+          for who in base cand; do
+            git clone https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/$who
+            cd /tmp/$who
+            git checkout 2de1895a52d21ad266b77002defe3e6bc69bbcfd
+          done
+          python3 "$GITHUB_WORKSPACE/scripts/apply_v4_live_candidate.py" /tmp/cand/src/infer.rs | tee /tmp/lineage.txt
+          sha256sum /tmp/base/src/infer.rs /tmp/cand/src/infer.rs | tee /tmp/hashes.txt
+
+      - name: Build both with identical Arena PGO
+        run: |
+          set -euxo pipefail
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}
+          EOF
+          export ROOT="$GITHUB_WORKSPACE/arena"
+          build_pgo() {
+            repo=$1
+            cd "$repo"
+            rm -rf pgo target
+            RUSTFLAGS="-C target-cpu=native -Cprofile-generate=$repo/pgo" cargo build --release --locked
+            target/release/sokonanoda /tmp/checker.json < "$ROOT/_build/tests/init-prelude.ndjson" >/dev/null
+            llvm-profdata merge -o "$repo/pgo/merged.profdata" "$repo/pgo"
+            rm -rf target
+            RUSTFLAGS="-C target-cpu=native -Cprofile-use=$repo/pgo/merged.profdata" cargo build --release --locked
+          }
+          export -f build_pgo
+          cd arena
+          nix develop -c bash -c 'build_pgo /tmp/base'
+          nix develop -c bash -c 'build_pgo /tmp/cand'
+
+      - name: Focused residual and full Std wall tournament
+        run: |
+          set -euxo pipefail
+          : >/tmp/results.txt
+          for test in v4-bvdivide std; do
+            input="$GITHUB_WORKSPACE/arena/_build/tests/$test.ndjson"
+            for who in base cand; do
+              for rep in 1 2 3; do
+                /usr/bin/time -f '%e' -o /tmp/time-$who-$test-$rep.txt "/tmp/$who/target/release/sokonanoda" /tmp/checker.json < "$input" >/tmp/out-$who-$test-$rep.txt
+                echo ${who}_${test}_REP${rep}=$(cat /tmp/time-$who-$test-$rep.txt) >> /tmp/results.txt
+              done
+            done
+          done
+          python3 - <<'PY' | tee -a /tmp/results.txt
+          from pathlib import Path
+          for test in ('v4-bvdivide','std'):
+              vals={}
+              for who in ('base','cand'):
+                  xs=[float(Path(f'/tmp/time-{who}-{test}-{i}.txt').read_text()) for i in (1,2,3)]
+                  xs.sort(); vals[who]=xs[1]
+              b,c=vals['base'],vals['cand']
+              ppm=int(1_000_000*(c-b)/b)
+              print(f'{test}_BASE_SECONDS={b:.6f} CAND_SECONDS={c:.6f} DELTA_SECONDS={c-b:.6f} DELTA_PPM={ppm}')
+          PY
+
+      - name: Deterministic focused Callgrind comparison
+        run: |
+          set -euxo pipefail
+          input="$GITHUB_WORKSPACE/arena/_build/tests/v4-bvdivide.ndjson"
+          for who in base cand; do
+            nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/cg-$who.out "/tmp/$who/target/release/sokonanoda" /tmp/checker.json < "$input" >/dev/null
+            n=$(grep '^summary:' /tmp/cg-$who.out | awk '{print $2}')
+            echo FOCUSED_${who}_CALLGRIND=$n | tee -a /tmp/results.txt
+          done
+          python3 - <<'PY' | tee -a /tmp/results.txt
+          import re
+          t=open('/tmp/results.txt').read()
+          b=int(re.search(r'FOCUSED_base_CALLGRIND=(\d+)',t).group(1)); c=int(re.search(r'FOCUSED_cand_CALLGRIND=(\d+)',t).group(1))
+          print(f'FOCUSED_CALLGRIND_DELTA={c-b} DELTA_PPM={1_000_000*(c-b)//b}')
+          PY
+
+      - name: Baseline-relative soundness gate
+        run: |
+          set -euxo pipefail
+          for test in extra-rec orphan-rec; do
+            input="$GITHUB_WORKSPACE/arena/_build/tests/$test.ndjson"
+            for who in base cand; do
+              set +e
+              "/tmp/$who/target/release/sokonanoda" /tmp/checker.json < "$input" >/tmp/$who-$test.out 2>/tmp/$who-$test.err
+              rc=$?
+              set -e
+              echo ${who}_${test}_EXIT=$rc | tee -a /tmp/results.txt
+            done
+          done
+          python3 - <<'PY' | tee -a /tmp/results.txt
+          import re
+          t=open('/tmp/results.txt').read()
+          ok=True
+          for test in ('extra-rec','orphan-rec'):
+              b=int(re.search(rf'base_{test}_EXIT=(\d+)',t).group(1)); c=int(re.search(rf'cand_{test}_EXIT=(\d+)',t).group(1))
+              ok &= b==c and c!=0
+          print('V4_SOUNDNESS_VECTOR=' + ('PASS' if ok else 'FAIL'))
+          if not ok: raise SystemExit(1)
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v4-live-candidate-tournament
+          path: |
+            /tmp/results.txt
+            /tmp/lineage.txt
+            /tmp/hashes.txt
+            /tmp/cg-*.out
+            /tmp/time-*.txt
+            /tmp/*-extra-rec.*
+            /tmp/*-orphan-rec.*
