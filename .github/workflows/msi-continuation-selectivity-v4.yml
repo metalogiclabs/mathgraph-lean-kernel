@@ -1,0 +1,159 @@
+name: MSI Continuation Selectivity V4 Tournament
+
+on:
+  push:
+    branches: [mathgraph-msi-compounded-v3]
+    paths:
+      - 'scripts/apply_continuation_selectivity_v4.py'
+      - '.github/workflows/msi-continuation-selectivity-v4.yml'
+  workflow_dispatch:
+
+jobs:
+  tournament:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+
+      - name: Materialize D and recovered continuation-selective states
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          for state in d d_app d_app_lambda d_a6; do
+            git clone --depth 1 --branch mathgraph https://github.com/metalogiclabs/mathgraph-lean-kernel.git "/tmp/$state"
+            python3 "$GITHUB_WORKSPACE/scripts/apply_msi_compounded_v3.py" "/tmp/$state/src/infer.rs"
+          done
+          python3 "$GITHUB_WORKSPACE/scripts/apply_continuation_selectivity_v4.py" /tmp/d_app/src/eval.rs --mode app
+          python3 "$GITHUB_WORKSPACE/scripts/apply_continuation_selectivity_v4.py" /tmp/d_app_lambda/src/eval.rs --mode app_lambda
+          python3 "$GITHUB_WORKSPACE/scripts/apply_continuation_selectivity_v4.py" /tmp/d_a6/src/eval.rs --mode a6
+          : >/tmp/results.txt
+          for state in d d_app d_app_lambda d_a6; do
+            sha256sum "/tmp/$state/src/infer.rs" "/tmp/$state/src/eval.rs" | tee -a /tmp/results.txt
+          done
+
+      - name: Build frozen Arena suites
+        run: |
+          set -euxo pipefail
+          cd arena
+          for test in init-prelude std cedar cslib mathlib; do
+            nix develop -c ./lka.py build-test "$test"
+          done
+
+      - name: Build all states with identical Arena PGO
+        run: |
+          set -euxo pipefail
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}
+          EOF
+          export ROOT="$GITHUB_WORKSPACE/arena"
+          build_pgo() {
+            repo=$1
+            cd "$repo"
+            rm -rf pgo target
+            RUSTFLAGS="-C target-cpu=native -Cprofile-generate=$repo/pgo" cargo build --release --locked
+            target/release/sokonanoda /tmp/checker.json < "$ROOT/_build/tests/init-prelude.ndjson" >/dev/null
+            llvm-profdata merge -o "$repo/pgo/merged.profdata" "$repo/pgo"
+            rm -rf target
+            RUSTFLAGS="-C target-cpu=native -Cprofile-use=$repo/pgo/merged.profdata" cargo build --release --locked
+          }
+          export -f build_pgo
+          cd arena
+          for state in d d_app d_app_lambda d_a6; do
+            nix develop -c bash -c "build_pgo /tmp/$state"
+          done
+
+      - name: Four-suite full PGO wall tournament
+        run: |
+          set -euxo pipefail
+          cd arena
+          for test in std cedar cslib mathlib; do
+            input="_build/tests/$test.ndjson"
+            for state in d d_app d_app_lambda d_a6; do
+              /usr/bin/time -f '%e' -o "/tmp/time-$state-$test.txt" "/tmp/$state/target/release/sokonanoda" /tmp/checker.json < "$input" >/tmp/out-$state-$test.txt
+              echo "${test}_${state}_SECONDS=$(cat /tmp/time-$state-$test.txt)" | tee -a /tmp/results.txt
+            done
+          done
+          python3 - <<'PY' | tee -a /tmp/results.txt
+          import re
+          t=open('/tmp/results.txt').read()
+          states=('d','d_app','d_app_lambda','d_a6')
+          tests=('std','cedar','cslib','mathlib')
+          vals={}
+          for test in tests:
+              for state in states:
+                  vals[test,state]=float(re.search(rf'^{test}_{state}_SECONDS=([0-9.]+)',t,re.M).group(1))
+          base=sum(vals[x,'d'] for x in tests)
+          print(f'D_BASE_FOUR_SUITE_SECONDS={base:.6f}')
+          best=None
+          for state in states[1:]:
+              total=sum(vals[x,state] for x in tests)
+              ppm=int(1_000_000*(total-base)/base)
+              allwin=all(vals[x,state] < vals[x,'d'] for x in tests)
+              print(f'{state}_FOUR_SUITE_SECONDS={total:.6f} VS_D_DELTA={total-base:.6f} VS_D_PPM={ppm} ALL4_IMPROVE={"PASS" if allwin else "FAIL"}')
+              for test in tests:
+                  b=vals[test,'d']; c=vals[test,state]
+                  print(f'{state}_{test}_VS_D_PPM={int(1_000_000*(c-b)/b)}')
+              if best is None or total < best[0]: best=(total,state)
+          print(f'BEST_CONTINUATION_STATE={best[1]}')
+          print(f'BEST_VS_D_PPM={int(1_000_000*(best[0]-base)/base)}')
+          PY
+
+      - name: Deterministic Callgrind tournament on four 100k prefixes
+        run: |
+          set -euxo pipefail
+          cd arena
+          for test in std cedar cslib mathlib; do
+            head -n 100000 "_build/tests/$test.ndjson" > "/tmp/$test-100k.ndjson"
+            for state in d d_app d_app_lambda d_a6; do
+              nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file="/tmp/cg-$state-$test.out" "/tmp/$state/target/release/sokonanoda" /tmp/checker.json < "/tmp/$test-100k.ndjson" >/dev/null
+              n=$(grep '^summary:' "/tmp/cg-$state-$test.out" | awk '{print $2}')
+              echo "${test}_${state}_CALLGRIND=$n" | tee -a /tmp/results.txt
+            done
+          done
+          python3 - <<'PY' | tee -a /tmp/results.txt
+          import re
+          t=open('/tmp/results.txt').read()
+          tests=('std','cedar','cslib','mathlib'); states=('d_app','d_app_lambda','d_a6')
+          def n(test,state): return int(re.search(rf'^{test}_{state}_CALLGRIND=(\d+)',t,re.M).group(1))
+          B=sum(n(x,'d') for x in tests)
+          print(f'D_BASE_CALLGRIND={B}')
+          for state in states:
+              C=sum(n(x,state) for x in tests)
+              print(f'{state}_CALLGRIND={C} VS_D_DELTA={C-B} VS_D_PPM={1_000_000*(C-B)//B} ALL4_IMPROVE={"PASS" if all(n(x,state)<n(x,"d") for x in tests) else "FAIL"}')
+          PY
+
+      - name: Baseline-relative inherited recursor residual gate
+        run: |
+          set -euxo pipefail
+          cd arena
+          nix develop -c ./lka.py build-test extra-rec
+          nix develop -c ./lka.py build-test orphan-rec
+          for state in d d_app d_app_lambda d_a6; do
+            for test in extra-rec orphan-rec; do
+              set +e
+              "/tmp/$state/target/release/sokonanoda" /tmp/checker.json < "_build/tests/$test.ndjson" >/dev/null 2>&1
+              rc=$?
+              set -e
+              echo "${state}_${test}_EXIT=$rc" | tee -a /tmp/results.txt
+            done
+          done
+          python3 - <<'PY' | tee -a /tmp/results.txt
+          import re
+          t=open('/tmp/results.txt').read()
+          for state in ('d_app','d_app_lambda','d_a6'):
+              same=True
+              for test in ('extra-rec','orphan-rec'):
+                  b=int(re.search(rf'^d_{test}_EXIT=(\d+)',t,re.M).group(1))
+                  c=int(re.search(rf'^{state}_{test}_EXIT=(\d+)',t,re.M).group(1))
+                  same &= (b==c)
+              print(f'{state}_INHERITED_RECURSOR_VECTOR_MATCH=' + ('PASS' if same else 'FAIL'))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: msi-continuation-selectivity-v4
+          path: |
+            /tmp/results.txt
+            /tmp/time-*.txt
+            /tmp/cg-*.out
