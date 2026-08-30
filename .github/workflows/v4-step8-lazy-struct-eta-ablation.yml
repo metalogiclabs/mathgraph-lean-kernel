@@ -1,0 +1,92 @@
+name: V4 Step8 Lazy Struct Eta Ablation
+
+on:
+  push:
+    branches: [mathgraph-v4-bvdecide-residual]
+    paths: ['.github/workflows/v4-step8-lazy-struct-eta-ablation.yml']
+  workflow_dispatch:
+
+jobs:
+  ablate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Build Arena corpora
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena
+          nix develop -c ./lka.py build-test init-prelude
+          nix develop -c ./lka.py build-test std
+      - name: Materialize retained6 and candidate
+        run: |
+          set -euxo pipefail
+          git clone https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/base
+          git -C /tmp/base checkout 2de1895a52d21ad266b77002defe3e6bc69bbcfd
+          cp -a /tmp/base /tmp/cand
+          curl -L https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/5a1485ae13a0623ca8b7001aee9e0e155381daad/experiments/apply_v4_retained6.py -o /tmp/apply.py
+          python3 /tmp/apply.py /tmp/base
+          python3 /tmp/apply.py /tmp/cand
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/cand/src/conv.rs'); s=p.read_text()
+          old='''    fn try_struct_eta(&mut self, depth: u32, x: V<'t>, y: V<'t>) -> bool {\n        let xt = self.value_type_opt(depth, x);\n        let yt = self.value_type_opt(depth, y);\n        for ty in [xt, yt].into_iter().flatten() {\n            let ty_f = self.force_all(depth, ty);\n            if let Value::Rigid { head: RigidHead::Inductive(ind_name, _), .. } = ty_f {\n                let ind_name = *ind_name;\n                if self.is_unit_inductive(ind_name) {\n                    return true;\n                }\n                if self.can_be_struct_memo(ind_name)\n                    && (self.try_eta_struct_v(depth, ind_name, x, y) || self.try_eta_struct_v(depth, ind_name, y, x))\n                {\n                    return true;\n                }\n            }\n        }\n        false\n    }'''
+          new='''    fn try_struct_eta_side(&mut self, depth: u32, ty: V<'t>, x: V<'t>, y: V<'t>) -> bool {\n        let ty_f = self.force_all(depth, ty);\n        if let Value::Rigid { head: RigidHead::Inductive(ind_name, _), .. } = ty_f {\n            let ind_name = *ind_name;\n            if self.is_unit_inductive(ind_name) {\n                return true;\n            }\n            if self.can_be_struct_memo(ind_name)\n                && (self.try_eta_struct_v(depth, ind_name, x, y) || self.try_eta_struct_v(depth, ind_name, y, x))\n            {\n                return true;\n            }\n        }\n        false\n    }\n\n    fn try_struct_eta(&mut self, depth: u32, x: V<'t>, y: V<'t>) -> bool {\n        if let Some(xt) = self.value_type_opt(depth, x) {\n            if self.try_struct_eta_side(depth, xt, x, y) {\n                return true;\n            }\n        }\n        if let Some(yt) = self.value_type_opt(depth, y) {\n            return self.try_struct_eta_side(depth, yt, x, y);\n        }\n        false\n    }'''
+          assert old in s
+          p.write_text(s.replace(old,new,1))
+          PY
+          git -C /tmp/cand diff -- src/conv.rs | tee /tmp/cand.diff
+      - name: Build identically with PGO
+        run: |
+          set -euxo pipefail
+          ROOT="$GITHUB_WORKSPACE/arena"
+          for k in base cand; do
+            d=/tmp/$k; cd "$d"
+            echo '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}' > config.json
+            RUSTFLAGS="-C target-cpu=x86-64-v3 -Cprofile-generate=$PWD/pgo" cargo build --release --locked
+            target/release/sokonanoda config.json < "$ROOT/_build/tests/init-prelude.ndjson" >/dev/null
+            nix shell nixpkgs#llvm -c llvm-profdata merge -o "$PWD/pgo/merged.profdata" "$PWD/pgo"
+            rm -rf target
+            RUSTFLAGS="-C target-cpu=x86-64-v3 -Cprofile-use=$PWD/pgo/merged.profdata" cargo build --release --locked
+          done
+      - name: Deterministic Std instruction ablation
+        run: |
+          set -euxo pipefail
+          cd arena
+          for k in base cand; do
+            nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/${k}.callgrind /tmp/${k}/target/release/sokonanoda /tmp/${k}/config.json < _build/tests/std.ndjson >/dev/null
+            grep '^summary:' /tmp/${k}.callgrind | awk '{print $2}' > /tmp/${k}.ir
+          done
+          python3 - <<'PY' | tee /tmp/result.txt
+          a=int(open('/tmp/base.ir').read()); b=int(open('/tmp/cand.ir').read())
+          print(f'RETAINED6_IR={a}'); print(f'CAND_IR={b}'); print(f'DELTA_IR={b-a}'); print(f'DELTA_PCT={(b/a-1)*100:.6f}'); print('V4_LAZY_STRUCT_ETA=' + ('PASS' if b<a else 'FAIL'))
+          PY
+      - name: Alternating wall-time sanity
+        run: |
+          set -euxo pipefail
+          cd arena
+          : > /tmp/wall.tsv
+          for i in 1 2 3; do
+            for k in base cand; do
+              /usr/bin/time -f "$k\t%e" -o /tmp/one.time /tmp/${k}/target/release/sokonanoda /tmp/${k}/config.json < _build/tests/std.ndjson >/dev/null
+              cat /tmp/one.time >> /tmp/wall.tsv
+            done
+          done
+          cat /tmp/wall.tsv | tee -a /tmp/result.txt
+          python3 - <<'PY' | tee -a /tmp/result.txt
+          import statistics
+          d={'base':[],'cand':[]}
+          for line in open('/tmp/wall.tsv'):
+              k,v=line.split(); d[k].append(float(v))
+          for k in d: print(k+'_WALL_MEDIAN='+str(statistics.median(d[k])))
+          a=statistics.median(d['base']); b=statistics.median(d['cand'])
+          print(f'WALL_DELTA_PCT={(b/a-1)*100:.6f}')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v4-step8-lazy-struct-eta
+          path: |
+            /tmp/result.txt
+            /tmp/cand.diff
+            /tmp/*.callgrind
