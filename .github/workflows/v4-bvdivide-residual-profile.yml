@@ -30,7 +30,9 @@ jobs:
           outcome: accept
           EOF
           cd arena
-          nix develop -c ./lka.py build-test v4-bvdivide init-prelude
+          for test in v4-bvdivide init-prelude; do
+            nix develop -c ./lka.py build-test "$test"
+          done
           wc -l _build/tests/v4-bvdivide.ndjson | tee /tmp/profile.txt
           du -h _build/tests/v4-bvdivide.ndjson | tee -a /tmp/profile.txt
 
