@@ -1,0 +1,124 @@
+name: V4 Step12 WHNF Admission Tournament
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/v4-step12-whnf-admission-tournament.yml'
+
+jobs:
+  tournament:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+        with:
+          enable_kvm: true
+          set_as_trusted_user: true
+
+      - name: Build Arena tests
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena
+          nix develop -c ./lka.py build-test init-prelude
+          nix develop -c ./lka.py build-test std
+
+      - name: Materialize retained6 and threshold variants
+        run: |
+          set -euxo pipefail
+          git clone https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/current
+          git -C /tmp/current checkout 2de1895a52d21ad266b77002defe3e6bc69bbcfd
+          curl -L https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/5a1485ae13a0623ca8b7001aee9e0e155381daad/experiments/apply_v4_retained6.py -o /tmp/apply.py
+          python3 /tmp/apply.py /tmp/current
+          grep -R "WHNF_ADMIT_THRESHOLD" -n /tmp/current/src | tee /tmp/original-threshold.txt
+          for t in 0 1; do
+            cp -a /tmp/current /tmp/t$t
+            python3 - "$t" "/tmp/t$t" <<'PY'
+          import pathlib,re,sys
+          val=sys.argv[1]; root=pathlib.Path(sys.argv[2])
+          found=0
+          for p in root.glob('src/*.rs'):
+              s=p.read_text()
+              ns,n=re.subn(r'(WHNF_ADMIT_THRESHOLD\s*:\s*u(?:8|16|32|64|size)\s*=\s*)\d+', r'\g<1>'+val, s)
+              if n:
+                  p.write_text(ns); found += n
+          assert found == 1, f'expected exactly one threshold assignment, found {found}'
+          PY
+            grep -R "WHNF_ADMIT_THRESHOLD" -n /tmp/t$t/src
+          done
+          for d in current t0 t1; do
+            echo '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}' > /tmp/$d/config.json
+          done
+
+      - name: PGO build all variants
+        run: |
+          set -euxo pipefail
+          ROOT="$GITHUB_WORKSPACE/arena"
+          for k in current t0 t1; do
+            d=/tmp/$k; cd "$d"
+            RUSTFLAGS="-C target-cpu=x86-64-v3 -Cprofile-generate=$PWD/pgo" cargo build --release --locked
+            target/release/sokonanoda config.json < "$ROOT/_build/tests/init-prelude.ndjson" >/dev/null
+            nix shell nixpkgs#llvm -c llvm-profdata merge -o "$PWD/pgo/merged.profdata" "$PWD/pgo"
+            rm -rf target
+            RUSTFLAGS="-C target-cpu=x86-64-v3 -Cprofile-use=$PWD/pgo/merged.profdata" cargo build --release --locked
+          done
+
+      - name: Deterministic Std instruction tournament
+        run: |
+          set -euxo pipefail
+          cd arena
+          : > /tmp/result.txt
+          for k in current t0 t1; do
+            nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/${k}.callgrind /tmp/${k}/target/release/sokonanoda /tmp/${k}/config.json < _build/tests/std.ndjson >/dev/null
+            ir=$(grep '^summary:' /tmp/${k}.callgrind | awk '{print $2}')
+            echo "${k}_IR=$ir" | tee -a /tmp/result.txt
+          done
+          python3 - <<'PY' | tee -a /tmp/result.txt
+          vals={}
+          for line in open('/tmp/result.txt'):
+              if '_IR=' in line:
+                  k,v=line.strip().split('='); vals[k[:-3]]=int(v)
+          base=vals['current']
+          for k in ['t0','t1']:
+              d=vals[k]-base
+              p=(vals[k]/base-1)*100
+              print(f'{k}_DELTA_IR={d}')
+              print(f'{k}_DELTA_PCT={p:.6f}')
+          best=min(vals,key=vals.get)
+          print(f'BEST_VARIANT={best}')
+          print(f'BEST_IR={vals[best]}')
+          print('V4_WHNF_ADMISSION_TOURNAMENT=' + ('PASS' if best!='current' else 'NO_GAIN'))
+          PY
+
+      - name: Alternating wall sanity
+        run: |
+          set -euxo pipefail
+          cd arena
+          : > /tmp/wall.tsv
+          for i in 1 2 3; do
+            for k in current t0 t1; do
+              /usr/bin/time -f "$k\t%e" -o /tmp/one.time /tmp/${k}/target/release/sokonanoda /tmp/${k}/config.json < _build/tests/std.ndjson >/dev/null
+              cat /tmp/one.time >> /tmp/wall.tsv
+            done
+          done
+          cat /tmp/wall.tsv | tee -a /tmp/result.txt
+          python3 - <<'PY' | tee -a /tmp/result.txt
+          import statistics
+          d={k:[] for k in ['current','t0','t1']}
+          for line in open('/tmp/wall.tsv'):
+              k,v=line.split(); d[k].append(float(v))
+          for k,v in d.items(): print(f'{k}_WALL_MEDIAN={statistics.median(v)}')
+          b=statistics.median(d['current'])
+          for k in ['t0','t1']:
+              x=statistics.median(d[k]); print(f'{k}_WALL_DELTA_PCT={(x/b-1)*100:.6f}')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v4-step12-whnf-admission-tournament
+          path: |
+            /tmp/result.txt
+            /tmp/original-threshold.txt
+            /tmp/*.callgrind
