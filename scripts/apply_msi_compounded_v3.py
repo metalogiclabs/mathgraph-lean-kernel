@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
 from pathlib import Path
-import sys
+import argparse
 
-p = Path(sys.argv[1] if len(sys.argv) > 1 else "src/infer.rs")
+parser = argparse.ArgumentParser()
+parser.add_argument("path", nargs="?", default="src/infer.rs")
+parser.add_argument("--skip", action="append", default=[])
+args = parser.parse_args()
+
+p = Path(args.path)
 s = p.read_text()
 
 repls = [
@@ -55,7 +60,16 @@ repls = [
                 Value::Pi { domain, body, .. } => {'''),
 ]
 
+skip = set(args.skip)
+known = {name for name, _, _ in repls}
+unknown = skip - known
+if unknown:
+    raise SystemExit(f"unknown --skip names: {sorted(unknown)}")
+
 for name, old, new in repls:
+    if name in skip:
+        print(f"SKIPPED={name}")
+        continue
     n = s.count(old)
     if n != 1:
         raise SystemExit(f"{name}: expected exactly one source site, found {n}")
