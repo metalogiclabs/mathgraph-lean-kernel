@@ -31,7 +31,9 @@ jobs:
           outcome: accept
           EOF
           cd arena
-          nix develop -c ./lka.py build-test v4-bvdivide init-prelude std extra-rec orphan-rec
+          for test in v4-bvdivide init-prelude std extra-rec orphan-rec; do
+            nix develop -c ./lka.py build-test "$test"
+          done
 
       - name: Materialize live baseline and V4 candidate
         run: |
