@@ -1,0 +1,104 @@
+name: msikernel online closure interpreter v27
+on:
+  push:
+    branches: [msikernel-online-closure-interpreter-v27]
+  workflow_dispatch:
+jobs:
+  online-closure-interpreter-v27:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Build frozen prefixes
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena
+          nix develop -c ./lka.py build-test std
+          nix develop -c ./lka.py build-test cedar
+          for c in std cedar; do head -n 400000 _build/tests/$c.ndjson >/tmp/$c.train.ndjson; head -n 600000 _build/tests/$c.ndjson >/tmp/$c.test.ndjson; done
+          cd ..
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+          cp ONLINE_CLOSURE_INTERPRETER_V27.md /tmp/prereg.md
+      - name: Collect primitive interaction traces
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 --branch mathgraph https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/probe
+          python3 experiments/online_closure_runtime_v27.py /tmp/probe probe | tee /tmp/runtime-probe.txt
+          cd arena
+          nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=/tmp/target-probe RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/probe/Cargo.toml --release --locked"
+          for c in std cedar; do /tmp/target-probe/release/sokonanoda /tmp/checker.json </tmp/$c.train.ndjson >/tmp/$c.probe.out 2>/tmp/$c.probe.log; done
+          cd ..
+          python3 - <<'PY'
+          import re,csv
+          hdr=['corpus','event_id','safe','root','a0','a1','empty','closed','canonical']; n=0;ct={0:0,1:0}
+          with open('/tmp/v27.csv','w',newline='') as f:
+            w=csv.writer(f);w.writerow(hdr)
+            for corpus in ('std','cedar'):
+              event=0
+              for line in open(f'/tmp/{corpus}.probe.log',errors='replace'):
+                m=re.search(r'ONLINEGEN_V27 safe=([01]) root=(\d+) a0=(\d+) a1=(\d+) empty=([01]) closed=([01]) canonical=([01])',line)
+                if not m: continue
+                vals=list(map(int,m.groups()));w.writerow([corpus,event,*vals]);event+=1;n+=1;ct[vals[0]]+=1
+          print(f'V27_PROBE_EVENTS={n} SAFE={ct[1]} UNSAFE={ct[0]}');assert ct[0] and ct[1]
+          PY
+      - name: Learn generated program
+        run: |
+          set -euxo pipefail
+          python3 experiments/online_closure_genesis_v27.py /tmp/v27.csv | tee /tmp/learn.txt
+          grep -q 'V27_INITIAL_CLOSURE_INSUFFICIENT=PASS' /tmp/learn.txt
+          grep -q 'V27_ONLINE_INTERPRETER_EXTENSION=PASS' /tmp/learn.txt
+          grep -q 'V27_UNIQUE_MIN_GENERATOR_CLASS=PASS' /tmp/learn.txt
+          grep -q 'V27_EXACT_GENERATOR_ABLATION=PASS' /tmp/learn.txt
+          grep -q 'V27_NO_PREMATERIALIZED_PROGRAM_OUTCOME_TABLE=PASS' /tmp/learn.txt
+          GEN="$(cat /tmp/v27_generator.txt)"; EXPR="$(cat /tmp/v27_expr.txt)"; PRED="$(cat /tmp/v27_predicate.txt)"
+          printf 'FROZEN_V27_GENERATOR=%s\nFROZEN_V27_EXPR=%s\nFROZEN_V27_PREDICATE=%s\n' "$GEN" "$EXPR" "$PRED" >/tmp/result.txt
+          cat /tmp/learn.txt >>/tmp/result.txt
+      - name: Build baseline guard broad
+        run: |
+          set -euxo pipefail
+          for m in base guard broad; do git clone --depth 1 --branch mathgraph https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/$m; done
+          GEN="$(cat /tmp/v27_generator.txt)";EXPR="$(cat /tmp/v27_expr.txt)";PRED="$(cat /tmp/v27_predicate.txt)"
+          python3 experiments/online_closure_runtime_v27.py /tmp/base base
+          python3 experiments/online_closure_runtime_v27.py /tmp/guard guard "$GEN" "$EXPR" "$PRED"
+          python3 experiments/online_closure_runtime_v27.py /tmp/broad broad "$GEN" "$EXPR" TRUE
+          cd arena
+          for m in base guard broad; do nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=/tmp/target-$m RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/$m/Cargo.toml --release --locked"; done
+      - name: Exact semantics and heldout transfer
+        run: |
+          set -euxo pipefail
+          for c in std cedar; do
+            /tmp/target-base/release/sokonanoda /tmp/checker.json </tmp/$c.train.ndjson >/tmp/$c.base.train.out
+            /tmp/target-guard/release/sokonanoda /tmp/checker.json </tmp/$c.train.ndjson >/tmp/$c.guard.train.out
+            cmp /tmp/$c.base.train.out /tmp/$c.guard.train.out
+            echo "${c^^}_V27_DISCOVERY_BYTE_IDENTICAL=PASS" | tee -a /tmp/result.txt
+          done
+          set +e
+          /tmp/target-broad/release/sokonanoda /tmp/checker.json </tmp/std.train.ndjson >/tmp/std.broad.out 2>/tmp/std.broad.err;rs=$?
+          /tmp/target-broad/release/sokonanoda /tmp/checker.json </tmp/cedar.train.ndjson >/tmp/cedar.broad.out 2>/tmp/cedar.broad.err;rc=$?
+          set -e
+          test "$rs" -ne 0 -o "$rc" -ne 0
+          echo V27_BROADENING_ABLATION=PASS | tee -a /tmp/result.txt
+          for c in std cedar; do
+            /tmp/target-base/release/sokonanoda /tmp/checker.json </tmp/$c.test.ndjson >/tmp/$c.base.test.out
+            /tmp/target-guard/release/sokonanoda /tmp/checker.json </tmp/$c.test.ndjson >/tmp/$c.guard.test.out
+            cmp /tmp/$c.base.test.out /tmp/$c.guard.test.out
+            echo "${c^^}_V27_HELDOUT_BYTE_IDENTICAL=PASS" | tee -a /tmp/result.txt
+          done
+          echo V27_HELDOUT_ROWS=400001..600000 | tee -a /tmp/result.txt
+          echo ONLINE_CLOSURE_INTERPRETER_V27=BOUNDED_POSITIVE | tee -a /tmp/result.txt
+          cat /tmp/result.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: msikernel-online-closure-interpreter-v27
+          path: |
+            /tmp/result.txt
+            /tmp/prereg.md
+            /tmp/learn.txt
+            /tmp/runtime-probe.txt
+            /tmp/v27.csv
+            /tmp/*broad.err
