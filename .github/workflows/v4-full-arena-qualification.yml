@@ -1,0 +1,168 @@
+name: V4 Full Arena Qualification
+
+on:
+  push:
+    branches: [mathgraph-v4-bvdivide-residual-20260830]
+    paths:
+      - '.github/workflows/v4-full-arena-qualification.yml'
+  workflow_dispatch:
+
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+
+      - name: Clone Arena and materialize candidate
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          for who in base cand; do
+            git clone https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/$who
+            cd /tmp/$who
+            git checkout 2de1895a52d21ad266b77002defe3e6bc69bbcfd
+          done
+          python3 "$GITHUB_WORKSPACE/scripts/apply_v4_live_candidate.py" /tmp/cand/src/infer.rs | tee /tmp/lineage.txt
+          sha256sum /tmp/base/src/infer.rs /tmp/cand/src/infer.rs | tee /tmp/hashes.txt
+
+      - name: Build performance and soundness tests
+        run: |
+          set -euxo pipefail
+          cd arena
+          for test in init-prelude std cedar cslib mathlib extra-rec orphan-rec; do
+            nix develop -c ./lka.py build-test "$test"
+          done
+
+      - name: Build baseline and candidate with identical Arena PGO
+        run: |
+          set -euxo pipefail
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}
+          EOF
+          export ROOT="$GITHUB_WORKSPACE/arena"
+          build_pgo() {
+            local repo=$1
+            cd "$repo"
+            rm -rf pgo target
+            RUSTFLAGS="-C target-cpu=native -Cprofile-generate=$repo/pgo" cargo build --release --locked
+            target/release/sokonanoda /tmp/checker.json < "$ROOT/_build/tests/init-prelude.ndjson" >/dev/null
+            llvm-profdata merge -o "$repo/pgo/merged.profdata" "$repo/pgo"
+            rm -rf target
+            RUSTFLAGS="-C target-cpu=native -Cprofile-use=$repo/pgo/merged.profdata" cargo build --release --locked
+          }
+          export -f build_pgo
+          cd arena
+          nix develop -c bash -c 'build_pgo /tmp/base'
+          nix develop -c bash -c 'build_pgo /tmp/cand'
+
+      - name: Four-suite PGO wall tournament
+        run: |
+          set -euxo pipefail
+          : >/tmp/results.txt
+          for test in std cedar cslib mathlib; do
+            input="$GITHUB_WORKSPACE/arena/_build/tests/$test.ndjson"
+            for who in base cand; do
+              for rep in 1 2 3; do
+                /usr/bin/time -f '%e' -o "/tmp/time-$who-$test-$rep.txt" "/tmp/$who/target/release/sokonanoda" /tmp/checker.json < "$input" >/dev/null
+                echo ${who}_${test}_REP${rep}=$(cat "/tmp/time-$who-$test-$rep.txt") >>/tmp/results.txt
+              done
+            done
+          done
+          python3 - <<'PY' | tee -a /tmp/results.txt
+          from pathlib import Path
+          tests=('std','cedar','cslib','mathlib')
+          rows=[]
+          for test in tests:
+              vals={}
+              for who in ('base','cand'):
+                  xs=[float(Path(f'/tmp/time-{who}-{test}-{i}.txt').read_text()) for i in (1,2,3)]
+                  xs.sort(); vals[who]=xs[1]
+              b,c=vals['base'],vals['cand']
+              d=c-b; ppm=int(1_000_000*d/b)
+              rows.append((test,b,c,d,ppm))
+              print(f'{test}_BASE_SECONDS={b:.6f} CAND_SECONDS={c:.6f} DELTA_SECONDS={d:.6f} DELTA_PPM={ppm}')
+          B=sum(r[1] for r in rows); C=sum(r[2] for r in rows)
+          print(f'FOUR_SUITE_BASE_SECONDS={B:.6f}')
+          print(f'FOUR_SUITE_CAND_SECONDS={C:.6f}')
+          print(f'FOUR_SUITE_DELTA_SECONDS={C-B:.6f}')
+          print(f'FOUR_SUITE_DELTA_PPM={int(1_000_000*(C-B)/B)}')
+          allwin=all(r[3] < 0 for r in rows)
+          print('FOUR_SUITE_ALL_WALL_IMPROVE=' + ('PASS' if allwin else 'FAIL'))
+          if not allwin: raise SystemExit(1)
+          PY
+
+      - name: Deterministic Callgrind 100k-prefix tournament
+        run: |
+          set -euxo pipefail
+          cd arena
+          for test in std cedar cslib mathlib; do
+            head -n 100000 "_build/tests/$test.ndjson" > "/tmp/$test-100k.ndjson"
+            for who in base cand; do
+              nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file="/tmp/cg-$who-$test.out" "/tmp/$who/target/release/sokonanoda" /tmp/checker.json < "/tmp/$test-100k.ndjson" >/dev/null
+              n=$(grep '^summary:' "/tmp/cg-$who-$test.out" | awk '{print $2}')
+              echo ${test}_${who}_CALLGRIND=$n | tee -a /tmp/results.txt
+            done
+          done
+          python3 - <<'PY' | tee -a /tmp/results.txt
+          import re
+          t=open('/tmp/results.txt').read(); rows=[]
+          for test in ('std','cedar','cslib','mathlib'):
+              b=int(re.search(rf'^{test}_base_CALLGRIND=(\d+)',t,re.M).group(1))
+              c=int(re.search(rf'^{test}_cand_CALLGRIND=(\d+)',t,re.M).group(1))
+              rows.append((test,b,c))
+              print(f'{test}_CALLGRIND_DELTA={c-b} DELTA_PPM={1_000_000*(c-b)//b}')
+          B=sum(b for _,b,_ in rows); C=sum(c for _,_,c in rows)
+          print(f'FOUR_SUITE_CALLGRIND_BASE={B}')
+          print(f'FOUR_SUITE_CALLGRIND_CAND={C}')
+          print(f'FOUR_SUITE_CALLGRIND_DELTA={C-B}')
+          print(f'FOUR_SUITE_CALLGRIND_DELTA_PPM={1_000_000*(C-B)//B}')
+          print('FOUR_SUITE_CALLGRIND_COMBINED_IMPROVE=' + ('PASS' if C < B else 'FAIL'))
+          if not C < B: raise SystemExit(1)
+          PY
+
+      - name: Full current Arena semantic gate
+        run: |
+          set -euxo pipefail
+          cd arena
+          cat > checkers/mathgraph-v4-candidate.yaml <<EOF
+          description: temporary MathGraph V4 candidate qualification
+          url: https://github.com/metalogiclabs/mathgraph-lean-kernel
+          ref: mathgraph-v4-bvdivide-residual-20260830
+          rev: $GITHUB_SHA
+          build: |
+            python3 scripts/apply_v4_live_candidate.py src/infer.rs
+            cat > config.json <<__END__
+             {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4}
+          __END__
+            ROOT=\$(cd ../../../.. && pwd)
+            "\$ROOT/lka.py" build-test init-prelude
+            RUSTFLAGS="-C target-cpu=native -Cprofile-generate=\$PWD/pgo" cargo build --release --locked
+            target/release/sokonanoda config.json < "\$ROOT/_build/tests/init-prelude.ndjson" >/dev/null
+            llvm-profdata merge -o "\$PWD/pgo/merged.profdata" "\$PWD/pgo"
+            RUSTFLAGS="-C target-cpu=native -Cprofile-use=\$PWD/pgo/merged.profdata" cargo build --release --locked
+          run: |
+            target/release/sokonanoda config.json < "\$IN" || exit 1
+          EOF
+          nix develop -c ./lka.py build-test
+          nix develop -c ./lka.py build-checker mathgraph-v4-candidate
+          mkdir -p /tmp/other-checkers
+          find checkers -maxdepth 1 -type f -name '*.yaml' ! -name 'mathgraph-v4-candidate.yaml' -exec mv {} /tmp/other-checkers/ \;
+          nix develop -c ./lka.py run | tee /tmp/full-arena.txt
+          if grep -q 'incorrect' /tmp/full-arena.txt; then
+            echo FULL_ARENA_ZERO_INCORRECT=FAIL | tee -a /tmp/results.txt
+            exit 1
+          fi
+          echo FULL_ARENA_ZERO_INCORRECT=PASS | tee -a /tmp/results.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v4-full-arena-qualification
+          path: |
+            /tmp/results.txt
+            /tmp/lineage.txt
+            /tmp/hashes.txt
+            /tmp/full-arena.txt
+            /tmp/time-*.txt
+            /tmp/cg-*.out
