@@ -1,0 +1,119 @@
+name: msikernel endogenous closure genesis v26
+on:
+  push:
+    branches: [msikernel-endogenous-closure-genesis-v26]
+  workflow_dispatch:
+jobs:
+  endogenous-closure-genesis-v26:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Build dependency-complete discovery and prospective prefixes
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena
+          nix develop -c ./lka.py build-test std
+          nix develop -c ./lka.py build-test cedar
+          for c in std cedar; do
+            head -n 400000 _build/tests/$c.ndjson >/tmp/$c.train.ndjson
+            head -n 600000 _build/tests/$c.ndjson >/tmp/$c.test.ndjson
+            test "$(wc -l </tmp/$c.train.ndjson)" -eq 400000
+            test "$(wc -l </tmp/$c.test.ndjson)" -eq 600000
+          done
+          cd ..
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+          cp ENDOGENOUS_CLOSURE_GENESIS_V26.md /tmp/prereg.md
+      - name: Collect anonymous generated-interaction outcomes
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 --branch mathgraph https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/probe
+          python3 experiments/endogenous_closure_runtime_v26.py /tmp/probe probe | tee /tmp/runtime-probe.txt
+          cd arena
+          nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=/tmp/target-probe RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/probe/Cargo.toml --release --locked"
+          for c in std cedar; do /tmp/target-probe/release/sokonanoda /tmp/checker.json </tmp/$c.train.ndjson >/tmp/$c.probe.out 2>/tmp/$c.probe.log; done
+          cd ..
+          python3 - <<'PY'
+          import re,csv
+          hdr=['corpus','event_id','safe','z00','z01','z10','z11','empty','closed','canonical'];counts={0:0,1:0};n=0
+          with open('/tmp/v26_observations.csv','w',newline='') as f:
+            w=csv.writer(f);w.writerow(hdr)
+            for corpus in ('std','cedar'):
+              event=0
+              for line in open(f'/tmp/{corpus}.probe.log',errors='replace'):
+                m=re.search(r'CLOSUREGEN_V26 safe=([01]) z00=(\d+) z01=(\d+) z10=(\d+) z11=(\d+) empty=([01]) closed=([01]) canonical=([01])',line)
+                if not m:continue
+                vals=list(map(int,m.groups()));w.writerow([corpus,event,*vals]);event+=1;n+=1;counts[vals[0]]+=1
+          print(f'V26_PROBE_EVENTS={n} SAFE={counts[1]} UNSAFE={counts[0]}');assert counts[1] and counts[0]
+          PY
+      - name: Generate closure extension and descendant guard
+        run: |
+          set -euxo pipefail
+          python3 experiments/endogenous_closure_genesis_v26.py /tmp/v26_observations.csv | tee /tmp/learn.txt
+          grep -q 'V26_INITIAL_GENERATOR_CLOSURE_INSUFFICIENT=PASS' /tmp/learn.txt
+          grep -q 'V26_MINIMAL_GENERATED_CLOSURE_EXTENSION=PASS' /tmp/learn.txt
+          grep -q 'V26_DESCENDANT_ONLY_REACHABLE_AFTER_INSTALL=PASS' /tmp/learn.txt
+          grep -q 'V26_EXACT_GENERATOR_ABLATION=PASS' /tmp/learn.txt
+          grep -q 'V26_NO_SUPPLIED_ACTION_MENU=PASS' /tmp/learn.txt
+          grep -q 'V26_SUPPLIED_ACTION_MENU_EXPOSED=NO' /tmp/runtime-probe.txt
+          grep -q 'V26_SUPPLIED_MEASUREMENT_SOURCE_EXPOSED=NO' /tmp/runtime-probe.txt
+          echo "FROZEN_V26_GENERATOR=$(cat /tmp/v26_generator.txt)" | tee /tmp/result.txt
+          echo "FROZEN_V26_SOURCE=$(cat /tmp/v26_source.txt)" | tee -a /tmp/result.txt
+          echo "FROZEN_V26_EXPR=$(cat /tmp/v26_expr.txt)" | tee -a /tmp/result.txt
+          echo "FROZEN_V26_PREDICATE=$(cat /tmp/v26_predicate.txt)" | tee -a /tmp/result.txt
+          cat /tmp/learn.txt >>/tmp/result.txt
+      - name: Compile reference generated descendant and broadening ablation
+        run: |
+          set -euxo pipefail
+          for mode in base guard broad; do git clone --depth 1 --branch mathgraph https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/$mode; done
+          EXPR="$(cat /tmp/v26_expr.txt)";PRED="$(cat /tmp/v26_predicate.txt)";BROAD="$(cat /tmp/v26_broad_predicate.txt)"
+          python3 experiments/endogenous_closure_runtime_v26.py /tmp/base base
+          python3 experiments/endogenous_closure_runtime_v26.py /tmp/guard guard "$EXPR" "$PRED"
+          python3 experiments/endogenous_closure_runtime_v26.py /tmp/broad broad "$EXPR" "$BROAD"
+          cd arena
+          for mode in base guard broad; do nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=/tmp/target-$mode RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/$mode/Cargo.toml --release --locked"; done
+      - name: Exact discovery semantics and broadening ablation
+        run: |
+          set -euxo pipefail
+          for c in std cedar; do
+            /tmp/target-base/release/sokonanoda /tmp/checker.json </tmp/$c.train.ndjson >/tmp/$c.base.train.out
+            /tmp/target-guard/release/sokonanoda /tmp/checker.json </tmp/$c.train.ndjson >/tmp/$c.guard.train.out
+            cmp /tmp/$c.base.train.out /tmp/$c.guard.train.out
+            echo "${c^^}_V26_DISCOVERY_BYTE_IDENTICAL=PASS" | tee -a /tmp/result.txt
+          done
+          set +e
+          /tmp/target-broad/release/sokonanoda /tmp/checker.json </tmp/std.train.ndjson >/tmp/std.broad.out 2>/tmp/std.broad.err;rs=$?
+          /tmp/target-broad/release/sokonanoda /tmp/checker.json </tmp/cedar.train.ndjson >/tmp/cedar.broad.out 2>/tmp/cedar.broad.err;rc=$?
+          set -e
+          bad=0
+          if [ "$rs" -ne 0 ] || ! cmp -s /tmp/std.base.train.out /tmp/std.broad.out; then bad=1; fi
+          if [ "$rc" -ne 0 ] || ! cmp -s /tmp/cedar.base.train.out /tmp/cedar.broad.out; then bad=1; fi
+          test "$bad" -eq 1
+          echo V26_EXACT_GENERATED_BROADENING_ABLATION=PASS | tee -a /tmp/result.txt
+      - name: Prospective transfer on untouched rows 400001 through 600000
+        run: |
+          set -euxo pipefail
+          for c in std cedar; do
+            /tmp/target-base/release/sokonanoda /tmp/checker.json </tmp/$c.test.ndjson >/tmp/$c.base.test.out
+            /tmp/target-guard/release/sokonanoda /tmp/checker.json </tmp/$c.test.ndjson >/tmp/$c.guard.test.out
+            cmp /tmp/$c.base.test.out /tmp/$c.guard.test.out
+            echo "${c^^}_V26_HELDOUT_BYTE_IDENTICAL=PASS" | tee -a /tmp/result.txt
+          done
+          echo V26_HELDOUT_ROWS=400001..600000 | tee -a /tmp/result.txt
+          echo ENDOGENOUS_CLOSURE_GENESIS_V26=BOUNDED_POSITIVE | tee -a /tmp/result.txt
+          cat /tmp/result.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: msikernel-endogenous-closure-genesis-v26
+          path: |
+            /tmp/result.txt
+            /tmp/prereg.md
+            /tmp/learn.txt
+            /tmp/runtime-probe.txt
+            /tmp/v26_observations.csv
+            /tmp/*broad.err
