@@ -1,0 +1,124 @@
+name: V4 Step4 Projection Combo Tournament
+
+on:
+  push:
+    branches: [mathgraph-v4-bvdecide-residual]
+    paths:
+      - '.github/workflows/v4-step4-projection-combo-tournament.yml'
+  workflow_dispatch:
+
+jobs:
+  tournament:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build Arena Std corpus
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena
+          nix develop -c ./lka.py build-test init-prelude
+          nix develop -c ./lka.py build-test std
+
+      - name: Materialize Step3 and projection variants
+        run: |
+          set -euxo pipefail
+          git clone https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/step3
+          git -C /tmp/step3 checkout 2de1895a52d21ad266b77002defe3e6bc69bbcfd
+          cp -a /tmp/step3 /tmp/prior
+          cp -a /tmp/step3 /tmp/final
+          cp -a /tmp/step3 /tmp/both
+          python3 - <<'PY'
+          from pathlib import Path
+          roots=['/tmp/step3','/tmp/prior','/tmp/final','/tmp/both']
+          def repl(root,old,new):
+              p=Path(root)/'src/infer.rs'; s=p.read_text(); assert old in s, (root,old[:60]); p.write_text(s.replace(old,new,1))
+          app_old='''        while let Some(arg) = args.pop() {\n            let fty_f = self.force_all(depth, fty);\n            let (domain, body) = match fty_f {\n                Value::Pi { domain, body, .. } => (*domain, body),\n                _ => panic!("expected a pi type"),\n            };'''
+          app_new='''        while let Some(arg) = args.pop() {\n            let (domain, body) = match fty {\n                Value::Pi { domain, body, .. } => (*domain, body),\n                _ => match self.force_all(depth, fty) {\n                    Value::Pi { domain, body, .. } => (*domain, body),\n                    _ => panic!("expected a pi type"),\n                },\n            };'''
+          sort_old='''    pub(crate) fn ensure_sort_v(&mut self, depth: u32, v: V<'t>) -> LevelPtr<'t> {\n        match self.force_all(depth, v) {\n            Value::Sort { level , .. } => *level,\n            _ => panic!("expected a sort"),\n        }\n    }'''
+          sort_new='''    pub(crate) fn ensure_sort_v(&mut self, depth: u32, v: V<'t>) -> LevelPtr<'t> {\n        match v {\n            Value::Sort { level, .. } => *level,\n            _ => match self.force_all(depth, v) {\n                Value::Sort { level, .. } => *level,\n                _ => panic!("expected a sort"),\n            },\n        }\n    }'''
+          param_old='''        for p in params.iter().take(num_params).copied() {\n            match self.force_all(depth, cur) {\n                Value::Pi { domain, body, .. } => cur = self.apply_closure(depth, body, p, Some(*domain)),\n                _ => panic!("ran out of param telescope in projection"),\n            }\n        }'''
+          param_new='''        for p in params.iter().take(num_params).copied() {\n            match cur {\n                Value::Pi { domain, body, .. } => cur = self.apply_closure(depth, body, p, Some(*domain)),\n                _ => match self.force_all(depth, cur) {\n                    Value::Pi { domain, body, .. } => cur = self.apply_closure(depth, body, p, Some(*domain)),\n                    _ => panic!("ran out of param telescope in projection"),\n                },\n            }\n        }'''
+          for r in roots:
+              repl(r,app_old,app_new); repl(r,sort_old,sort_new); repl(r,param_old,param_new)
+          prior_old='''        for i in 0..idx {\n            match self.force_all(depth, cur) {\n                Value::Pi { domain, body, .. } => {\n                    if self.ctx.has_loose_bvar(body.body, 0)\n                        && struct_ty_is_prop\n                        && !self.is_prop_type(depth, domain)\n                    {\n                        panic!("projection of a non-proof field from a Prop structure")\n                    }\n                    let prior = self.do_proj(depth, ind_name, i, struct_v);\n                    cur = self.apply_closure(depth, body, prior, Some(*domain));\n                }\n                _ => panic!("ran out of constructor telescope in projection"),\n            }\n        }'''
+          prior_new='''        for i in 0..idx {\n            match cur {\n                Value::Pi { domain, body, .. } => {\n                    if self.ctx.has_loose_bvar(body.body, 0)\n                        && struct_ty_is_prop\n                        && !self.is_prop_type(depth, domain)\n                    {\n                        panic!("projection of a non-proof field from a Prop structure")\n                    }\n                    let prior = self.do_proj(depth, ind_name, i, struct_v);\n                    cur = self.apply_closure(depth, body, prior, Some(*domain));\n                }\n                _ => match self.force_all(depth, cur) {\n                    Value::Pi { domain, body, .. } => {\n                        if self.ctx.has_loose_bvar(body.body, 0)\n                            && struct_ty_is_prop\n                            && !self.is_prop_type(depth, domain)\n                        {\n                            panic!("projection of a non-proof field from a Prop structure")\n                        }\n                        let prior = self.do_proj(depth, ind_name, i, struct_v);\n                        cur = self.apply_closure(depth, body, prior, Some(*domain));\n                    }\n                    _ => panic!("ran out of constructor telescope in projection"),\n                },\n            }\n        }'''
+          final_old='''        match self.force_all(depth, cur) {\n            Value::Pi { domain, .. } => {\n                if struct_ty_is_prop && !self.is_prop_type(depth, domain) {\n                    panic!("projection of a non-proof field from a Prop structure")\n                }\n                *domain\n            }\n            _ => panic!("ran out of constructor telescope getting projection field"),\n        }'''
+          final_new='''        match cur {\n            Value::Pi { domain, .. } => {\n                if struct_ty_is_prop && !self.is_prop_type(depth, domain) {\n                    panic!("projection of a non-proof field from a Prop structure")\n                }\n                *domain\n            }\n            _ => match self.force_all(depth, cur) {\n                Value::Pi { domain, .. } => {\n                    if struct_ty_is_prop && !self.is_prop_type(depth, domain) {\n                        panic!("projection of a non-proof field from a Prop structure")\n                    }\n                    *domain\n                }\n                _ => panic!("ran out of constructor telescope getting projection field"),\n            },\n        }'''
+          for r in ['/tmp/prior','/tmp/both']: repl(r,prior_old,prior_new)
+          for r in ['/tmp/final','/tmp/both']: repl(r,final_old,final_new)
+          PY
+          for k in step3 prior final both; do git -C /tmp/$k diff -- src/infer.rs > /tmp/$k.diff; done
+
+      - name: Build all identically with PGO
+        run: |
+          set -euxo pipefail
+          ROOT="$GITHUB_WORKSPACE/arena"
+          for k in step3 prior final both; do
+            d=/tmp/$k; cd "$d"
+            echo '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}' > config.json
+            RUSTFLAGS="-C target-cpu=native -Cprofile-generate=$PWD/pgo" cargo build --release --locked
+            target/release/sokonanoda config.json < "$ROOT/_build/tests/init-prelude.ndjson" >/dev/null
+            nix shell nixpkgs#llvm -c llvm-profdata merge -o "$PWD/pgo/merged.profdata" "$PWD/pgo"
+            rm -rf target
+            RUSTFLAGS="-C target-cpu=native -Cprofile-use=$PWD/pgo/merged.profdata" cargo build --release --locked
+          done
+
+      - name: Deterministic Std instruction tournament
+        run: |
+          set -euxo pipefail
+          cd arena
+          for k in step3 prior final both; do
+            nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/${k}.callgrind /tmp/${k}/target/release/sokonanoda /tmp/${k}/config.json < _build/tests/std.ndjson >/dev/null
+            grep '^summary:' /tmp/${k}.callgrind | awk '{print $2}' > /tmp/${k}.ir
+          done
+          python3 - <<'PY' | tee /tmp/result.txt
+          vals={k:int(open('/tmp/'+k+'.ir').read()) for k in ['step3','prior','final','both']}
+          base=vals['step3']
+          for k,v in vals.items():
+              print(f'{k.upper()}_IR={v}')
+              print(f'{k.upper()}_VS_STEP3_DELTA_IR={v-base}')
+              print(f'{k.upper()}_VS_STEP3_DELTA_PCT={(v/base-1)*100:.6f}')
+          winner=min(vals,key=vals.get)
+          print(f'WINNER={winner}')
+          print(f'WINNER_IR={vals[winner]}')
+          print(f'WINNER_DELTA_PCT={(vals[winner]/base-1)*100:.6f}')
+          print('V4_PROJECTION_COMBO_TOURNAMENT=' + ('PASS' if vals[winner] < base else 'NO_GAIN'))
+          PY
+
+      - name: Winner wall sanity
+        run: |
+          set -euxo pipefail
+          WINNER=$(awk -F= '/^WINNER=/{print $2}' /tmp/result.txt)
+          cd arena; : > /tmp/walls.txt
+          for i in 1 2 3; do
+            for k in step3 "$WINNER"; do
+              /usr/bin/time -f "$k $i %e" -o /tmp/one.txt /tmp/${k}/target/release/sokonanoda /tmp/${k}/config.json < _build/tests/std.ndjson >/dev/null
+              cat /tmp/one.txt | tee -a /tmp/walls.txt
+            done
+          done
+          python3 - <<'PY' | tee -a /tmp/result.txt
+          import statistics
+          rows=[x.split() for x in open('/tmp/walls.txt')]
+          ks=[]
+          for k,_,_ in rows:
+              if k not in ks: ks.append(k)
+          d={k:[] for k in ks}
+          for k,i,t in rows:d[k].append(float(t))
+          for k in ks: print(f'{k.upper()}_WALL_MEDIAN={statistics.median(d[k]):.6f}')
+          if len(ks)==2:
+              a=statistics.median(d[ks[0]]); b=statistics.median(d[ks[1]])
+              print(f'WINNER_WALL_DELTA_PCT={(b/a-1)*100:.6f}')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v4-step4-projection-combo-tournament
+          path: |
+            /tmp/result.txt
+            /tmp/walls.txt
+            /tmp/*.diff
+            /tmp/*.callgrind
