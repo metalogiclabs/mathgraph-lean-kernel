@@ -1,0 +1,84 @@
+name: MSI Compounded V3 Soundness Ablation
+
+on:
+  push:
+    branches: [mathgraph-msi-compounded-v3]
+    paths:
+      - 'scripts/apply_msi_compounded_v3.py'
+      - '.github/workflows/msi-compounded-v3-soundness-ablation.yml'
+  workflow_dispatch:
+
+jobs:
+  ablate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Build Arena residual tests
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena
+          nix develop -c ./lka.py build-test extra-rec
+          nix develop -c ./lka.py build-test orphan-rec
+      - name: Build baseline and leave-one-out states
+        run: |
+          set -euxo pipefail
+          : >/tmp/soundness.txt
+          for state in base full no_ensure no_app no_param no_prior; do
+            git clone --depth 1 --branch mathgraph https://github.com/metalogiclabs/mathgraph-lean-kernel.git "/tmp/$state"
+            if [ "$state" != base ]; then
+              args=""
+              case "$state" in
+                no_ensure) args="--skip ensure_sort_direct_sort" ;;
+                no_app) args="--skip app_direct_pi" ;;
+                no_param) args="--skip param_telescope_direct_pi_fallback" ;;
+                no_prior) args="--skip prior_field_direct_pi" ;;
+              esac
+              python3 "$GITHUB_WORKSPACE/scripts/apply_msi_compounded_v3.py" "/tmp/$state/src/infer.rs" $args | tee -a /tmp/soundness.txt
+            fi
+            (cd "/tmp/$state" && cargo build --release --locked)
+          done
+      - name: Decisive reject residuals
+        run: |
+          set -euxo pipefail
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}
+          EOF
+          failures=0
+          for state in base full no_ensure no_app no_param no_prior; do
+            echo STATE=$state | tee -a /tmp/soundness.txt
+            for test in extra-rec orphan-rec; do
+              set +e
+              "/tmp/$state/target/release/sokonanoda" /tmp/checker.json < "arena/_build/tests/$test.ndjson" >/tmp/${state}-${test}.out 2>/tmp/${state}-${test}.err
+              rc=$?
+              set -e
+              # Arena expects these malformed exports to be rejected: non-zero is PASS.
+              if [ $rc -ne 0 ]; then verdict=REJECT_PASS; else verdict=ACCEPT_FAIL; fi
+              echo ${state}_${test}_EXIT=$rc VERDICT=$verdict | tee -a /tmp/soundness.txt
+            done
+          done
+          python3 - <<'PY' | tee -a /tmp/soundness.txt
+          import re
+          t=open('/tmp/soundness.txt').read()
+          def v(s,x):
+              m=re.search(rf'^{s}_{x}_EXIT=(\d+) VERDICT=(\S+)',t,re.M)
+              return int(m.group(1)),m.group(2)
+          for s in ('base','full','no_ensure','no_app','no_param','no_prior'):
+              ok=all(v(s,x)[0] != 0 for x in ('extra-rec','orphan-rec'))
+              print(f'{s}_BOTH_REJECT=' + ('PASS' if ok else 'FAIL'))
+          base=all(v('base',x)[0] != 0 for x in ('extra-rec','orphan-rec'))
+          full=all(v('full',x)[0] != 0 for x in ('extra-rec','orphan-rec'))
+          print('BASELINE_SOUNDNESS=' + ('PASS' if base else 'FAIL'))
+          print('FULL_D_SOUNDNESS=' + ('PASS' if full else 'FAIL'))
+          culprits=[s for s in ('no_ensure','no_app','no_param','no_prior') if all(v(s,x)[0] != 0 for x in ('extra-rec','orphan-rec'))]
+          print('RESTORING_ABLATIONS=' + ','.join(culprits))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: msi-v3-soundness-ablation
+          path: |
+            /tmp/soundness.txt
+            /tmp/*-extra-rec.*
+            /tmp/*-orphan-rec.*
