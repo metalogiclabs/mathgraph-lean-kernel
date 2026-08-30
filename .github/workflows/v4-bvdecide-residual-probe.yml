@@ -1,0 +1,89 @@
+name: V4 BVDecide Residual Probe
+
+on:
+  push:
+    branches: [mathgraph-v4-bvdecide-residual]
+    paths:
+      - '.github/workflows/v4-bvdecide-residual-probe.yml'
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build frozen Arena Std corpus
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena
+          nix develop -c ./lka.py build-test init-prelude
+          nix develop -c ./lka.py build-test std
+          ls -lh _build/tests/std.ndjson
+
+      - name: Locate Julian BVDecide residual in export
+        run: |
+          set -euxo pipefail
+          cd arena
+          target='Std.Tactic.BVDecide.BVExpr.bitblast.blastUdiv.denote_blastDivSubtractShift_q'
+          grep -n -F "$target" _build/tests/std.ndjson | tee /tmp/target-lines.txt || true
+          short='denote_blastDivSubtractShift_q'
+          grep -n -F "$short" _build/tests/std.ndjson | tee /tmp/target-short-lines.txt || true
+          echo TARGET_FULL_MATCHES=$(wc -l </tmp/target-lines.txt) | tee /tmp/probe.txt
+          echo TARGET_SHORT_MATCHES=$(wc -l </tmp/target-short-lines.txt) | tee -a /tmp/probe.txt
+          if [ -s /tmp/target-short-lines.txt ]; then
+            line=$(head -n1 /tmp/target-short-lines.txt | cut -d: -f1)
+            lo=$(( line > 12 ? line-12 : 1 )); hi=$((line+12))
+            sed -n "${lo},${hi}p" _build/tests/std.ndjson > /tmp/target-neighborhood.ndjson
+            echo TARGET_FIRST_LINE=$line | tee -a /tmp/probe.txt
+          fi
+
+      - name: Build exact live Arena MathGraph revision
+        run: |
+          set -euxo pipefail
+          git clone https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/live
+          cd /tmp/live
+          git checkout 2de1895a52d21ad266b77002defe3e6bc69bbcfd
+          cat > config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+          ROOT="$GITHUB_WORKSPACE/arena"
+          RUSTFLAGS="-C target-cpu=native -Cprofile-generate=$PWD/pgo" cargo build --release --locked
+          target/release/sokonanoda config.json < "$ROOT/_build/tests/init-prelude.ndjson" >/dev/null
+          llvm-profdata merge -o "$PWD/pgo/merged.profdata" "$PWD/pgo"
+          rm -rf target
+          RUSTFLAGS="-C target-cpu=native -Cprofile-use=$PWD/pgo/merged.profdata" cargo build --release --locked
+
+      - name: Deterministic Std callgrind profile
+        run: |
+          set -euxo pipefail
+          cd arena
+          nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/std.callgrind /tmp/live/target/release/sokonanoda /tmp/live/config.json < _build/tests/std.ndjson >/tmp/std.out
+          summary=$(grep '^summary:' /tmp/std.callgrind | awk '{print $2}')
+          echo STD_CALLGRIND_INSTRUCTIONS=$summary | tee -a /tmp/probe.txt
+          nix shell nixpkgs#valgrind -c callgrind_annotate --inclusive=yes --tree=both --threshold=0.2 /tmp/std.callgrind > /tmp/std-callgrind.txt
+          sed -n '1,220p' /tmp/std-callgrind.txt | tee /tmp/std-callgrind-top.txt
+
+      - name: Full Std wall sanity, three repetitions
+        run: |
+          set -euxo pipefail
+          cd arena
+          for i in 1 2 3; do
+            /usr/bin/time -f '%e' -o /tmp/wall-$i.txt /tmp/live/target/release/sokonanoda /tmp/live/config.json < _build/tests/std.ndjson >/dev/null
+            echo STD_WALL_REP${i}=$(cat /tmp/wall-$i.txt) | tee -a /tmp/probe.txt
+          done
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v4-bvdecide-residual-probe
+          path: |
+            /tmp/probe.txt
+            /tmp/target-lines.txt
+            /tmp/target-short-lines.txt
+            /tmp/target-neighborhood.ndjson
+            /tmp/std-callgrind-top.txt
+            /tmp/std.callgrind
+            /tmp/wall-*.txt
