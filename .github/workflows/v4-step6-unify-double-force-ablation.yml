@@ -1,0 +1,93 @@
+name: V4 Step6 Duplicate Thunk-Force Ablation
+
+on:
+  push:
+    branches: [mathgraph-v4-bvdecide-residual]
+    paths:
+      - '.github/workflows/v4-step6-unify-double-force-ablation.yml'
+  workflow_dispatch:
+
+jobs:
+  ablate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build Arena Std corpus
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena
+          nix develop -c ./lka.py build-test init-prelude
+          nix develop -c ./lka.py build-test std
+
+      - name: Materialize retained V4 and duplicate-force candidate
+        run: |
+          set -euxo pipefail
+          git clone https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/v4
+          git -C /tmp/v4 checkout 2de1895a52d21ad266b77002defe3e6bc69bbcfd
+          cp -a /tmp/v4 /tmp/cand
+          python3 - <<'PY'
+          from pathlib import Path
+          def repl(root, path, old, new):
+              p=Path(root)/path; s=p.read_text(); assert old in s, old[:120]; p.write_text(s.replace(old,new,1))
+          roots=['/tmp/v4','/tmp/cand']
+          app_old='''        while let Some(arg) = args.pop() {\n            let fty_f = self.force_all(depth, fty);\n            let (domain, body) = match fty_f {\n                Value::Pi { domain, body, .. } => (*domain, body),\n                _ => panic!("expected a pi type"),\n            };'''
+          app_new='''        while let Some(arg) = args.pop() {\n            let (domain, body) = match fty {\n                Value::Pi { domain, body, .. } => (*domain, body),\n                _ => match self.force_all(depth, fty) {\n                    Value::Pi { domain, body, .. } => (*domain, body),\n                    _ => panic!("expected a pi type"),\n                },\n            };'''
+          sort_old='''    pub(crate) fn ensure_sort_v(&mut self, depth: u32, v: V<'t>) -> LevelPtr<'t> {\n        match self.force_all(depth, v) {\n            Value::Sort { level , .. } => *level,\n            _ => panic!("expected a sort"),\n        }\n    }'''
+          sort_new='''    pub(crate) fn ensure_sort_v(&mut self, depth: u32, v: V<'t>) -> LevelPtr<'t> {\n        match v {\n            Value::Sort { level, .. } => *level,\n            _ => match self.force_all(depth, v) {\n                Value::Sort { level, .. } => *level,\n                _ => panic!("expected a sort"),\n            },\n        }\n    }'''
+          param_old='''        for p in params.iter().take(num_params).copied() {\n            match self.force_all(depth, cur) {\n                Value::Pi { domain, body, .. } => cur = self.apply_closure(depth, body, p, Some(*domain)),\n                _ => panic!("ran out of param telescope in projection"),\n            }\n        }'''
+          param_new='''        for p in params.iter().take(num_params).copied() {\n            match cur {\n                Value::Pi { domain, body, .. } => cur = self.apply_closure(depth, body, p, Some(*domain)),\n                _ => match self.force_all(depth, cur) {\n                    Value::Pi { domain, body, .. } => cur = self.apply_closure(depth, body, p, Some(*domain)),\n                    _ => panic!("ran out of param telescope in projection"),\n                },\n            }\n        }'''
+          final_old='''        match self.force_all(depth, cur) {\n            Value::Pi { domain, .. } => {\n                if struct_ty_is_prop && !self.is_prop_type(depth, domain) {\n                    panic!("projection of a non-proof field from a Prop structure")\n                }\n                *domain\n            }\n            _ => panic!("ran out of constructor telescope getting projection field"),\n        }'''
+          final_new='''        match cur {\n            Value::Pi { domain, .. } => {\n                if struct_ty_is_prop && !self.is_prop_type(depth, domain) {\n                    panic!("projection of a non-proof field from a Prop structure")\n                }\n                *domain\n            }\n            _ => match self.force_all(depth, cur) {\n                Value::Pi { domain, .. } => {\n                    if struct_ty_is_prop && !self.is_prop_type(depth, domain) {\n                        panic!("projection of a non-proof field from a Prop structure")\n                    }\n                    *domain\n                }\n                _ => panic!("ran out of constructor telescope getting projection field"),\n            },\n        }'''
+          for r in roots:
+              repl(r,'src/infer.rs',app_old,app_new)
+              repl(r,'src/infer.rs',sort_old,sort_new)
+              repl(r,'src/infer.rs',param_old,param_new)
+              repl(r,'src/infer.rs',final_old,final_new)
+          old='''        let (t, t2) = (self.force_thunk(depth, x), self.force_thunk(depth, y));\n        if let Some(r) = self.conv_nat::<RIGID>(depth, t, t2) {'''
+          new='''        let (t, t2) = (x, y);\n        if let Some(r) = self.conv_nat::<RIGID>(depth, t, t2) {'''
+          repl('/tmp/cand','src/conv.rs',old,new)
+          PY
+          git -C /tmp/cand diff -- src/infer.rs src/conv.rs | tee /tmp/cand.diff
+
+      - name: Build identically with PGO
+        run: |
+          set -euxo pipefail
+          ROOT="$GITHUB_WORKSPACE/arena"
+          for k in v4 cand; do
+            d=/tmp/$k; cd "$d"
+            echo '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}' > config.json
+            RUSTFLAGS="-C target-cpu=x86-64-v3 -Cprofile-generate=$PWD/pgo" cargo build --release --locked
+            target/release/sokonanoda config.json < "$ROOT/_build/tests/init-prelude.ndjson" >/dev/null
+            nix shell nixpkgs#llvm -c llvm-profdata merge -o "$PWD/pgo/merged.profdata" "$PWD/pgo"
+            rm -rf target
+            RUSTFLAGS="-C target-cpu=x86-64-v3 -Cprofile-use=$PWD/pgo/merged.profdata" cargo build --release --locked
+          done
+
+      - name: Deterministic Std instruction ablation
+        run: |
+          set -euxo pipefail
+          cd arena
+          for k in v4 cand; do
+            nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/${k}.callgrind /tmp/${k}/target/release/sokonanoda /tmp/${k}/config.json < _build/tests/std.ndjson >/dev/null
+            grep '^summary:' /tmp/${k}.callgrind | awk '{print $2}' > /tmp/${k}.ir
+          done
+          python3 - <<'PY' | tee /tmp/result.txt
+          a=int(open('/tmp/v4.ir').read()); b=int(open('/tmp/cand.ir').read())
+          print(f'V4_IR={a}')
+          print(f'CAND_IR={b}')
+          print(f'DELTA_IR={b-a}')
+          print(f'DELTA_PCT={(b/a-1)*100:.6f}')
+          print('V4_UNIFY_DUPLICATE_FORCE=' + ('PASS' if b<a else 'FAIL'))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v4-step6-unify-double-force
+          path: |
+            /tmp/result.txt
+            /tmp/cand.diff
+            /tmp/*.callgrind
