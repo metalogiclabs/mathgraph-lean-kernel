@@ -1,0 +1,111 @@
+name: V4 Step2 Direct Sort Ablation
+
+on:
+  push:
+    branches: [mathgraph-v4-bvdecide-residual]
+    paths:
+      - '.github/workflows/v4-step2-direct-sort-ablation.yml'
+  workflow_dispatch:
+
+jobs:
+  ablate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build Arena Std corpus
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena
+          nix develop -c ./lka.py build-test init-prelude
+          nix develop -c ./lka.py build-test std
+
+      - name: Materialize retained app candidate and step2
+        run: |
+          set -euxo pipefail
+          git clone https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/app
+          cd /tmp/app
+          git checkout 2de1895a52d21ad266b77002defe3e6bc69bbcfd
+          cp -a /tmp/app /tmp/step2
+          python3 - <<'PY'
+          from pathlib import Path
+          for root in ('/tmp/app','/tmp/step2'):
+              p=Path(root)/'src/infer.rs'; s=p.read_text()
+              old='''        while let Some(arg) = args.pop() {\n            let fty_f = self.force_all(depth, fty);\n            let (domain, body) = match fty_f {\n                Value::Pi { domain, body, .. } => (*domain, body),\n                _ => panic!("expected a pi type"),\n            };'''
+              new='''        while let Some(arg) = args.pop() {\n            let (domain, body) = match fty {\n                Value::Pi { domain, body, .. } => (*domain, body),\n                _ => match self.force_all(depth, fty) {\n                    Value::Pi { domain, body, .. } => (*domain, body),\n                    _ => panic!("expected a pi type"),\n                },\n            };'''
+              assert old in s
+              p.write_text(s.replace(old,new,1))
+          p=Path('/tmp/step2/src/infer.rs'); s=p.read_text()
+          old='''    pub(crate) fn ensure_sort_v(&mut self, depth: u32, v: V<'t>) -> LevelPtr<'t> {\n        match self.force_all(depth, v) {\n            Value::Sort { level , .. } => *level,\n            _ => panic!("expected a sort"),\n        }\n    }'''
+          new='''    pub(crate) fn ensure_sort_v(&mut self, depth: u32, v: V<'t>) -> LevelPtr<'t> {\n        match v {\n            Value::Sort { level, .. } => *level,\n            _ => match self.force_all(depth, v) {\n                Value::Sort { level, .. } => *level,\n                _ => panic!("expected a sort"),\n            },\n        }\n    }'''
+          assert old in s
+          p.write_text(s.replace(old,new,1))
+          PY
+          git -C /tmp/step2 diff -- src/infer.rs | tee /tmp/step2.diff
+
+      - name: Build both identically with PGO
+        run: |
+          set -euxo pipefail
+          ROOT="$GITHUB_WORKSPACE/arena"
+          for d in /tmp/app /tmp/step2; do
+            cd "$d"
+            cat > config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+            RUSTFLAGS="-C target-cpu=native -Cprofile-generate=$PWD/pgo" cargo build --release --locked
+            target/release/sokonanoda config.json < "$ROOT/_build/tests/init-prelude.ndjson" >/dev/null
+            nix shell nixpkgs#llvm -c llvm-profdata merge -o "$PWD/pgo/merged.profdata" "$PWD/pgo"
+            rm -rf target
+            RUSTFLAGS="-C target-cpu=native -Cprofile-use=$PWD/pgo/merged.profdata" cargo build --release --locked
+          done
+
+      - name: Deterministic Std incremental instructions
+        run: |
+          set -euxo pipefail
+          cd arena
+          for k in app step2; do
+            nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/${k}.callgrind /tmp/${k}/target/release/sokonanoda /tmp/${k}/config.json < _build/tests/std.ndjson >/dev/null
+            grep '^summary:' /tmp/${k}.callgrind | awk '{print $2}' > /tmp/${k}.ir
+          done
+          python3 - <<'PY' | tee /tmp/result.txt
+          a=int(open('/tmp/app.ir').read()); s=int(open('/tmp/step2.ir').read())
+          print(f'APP_IR={a}')
+          print(f'STEP2_IR={s}')
+          print(f'INCREMENTAL_DELTA_IR={s-a}')
+          print(f'INCREMENTAL_DELTA_PCT={(s/a-1)*100:.6f}')
+          print('V4_DIRECT_SORT_INCREMENTAL=' + ('PASS' if s < a else 'FAIL'))
+          PY
+
+      - name: Std wall sanity interleaved
+        run: |
+          set -euxo pipefail
+          cd arena
+          : > /tmp/walls.txt
+          for i in 1 2 3; do
+            for k in app step2; do
+              /usr/bin/time -f "$k $i %e" -o /tmp/one.txt /tmp/${k}/target/release/sokonanoda /tmp/${k}/config.json < _build/tests/std.ndjson >/dev/null
+              cat /tmp/one.txt | tee -a /tmp/walls.txt
+            done
+          done
+          python3 - <<'PY' | tee -a /tmp/result.txt
+          import statistics
+          rows=[x.split() for x in open('/tmp/walls.txt')]
+          d={k:[] for k in ('app','step2')}
+          for k,i,t in rows:d[k].append(float(t))
+          for k in d: print(f'{k.upper()}_WALL_MEDIAN={statistics.median(d[k]):.6f}')
+          a=statistics.median(d['app']); s=statistics.median(d['step2'])
+          print(f'WALL_INCREMENTAL_DELTA_PCT={(s/a-1)*100:.6f}')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v4-step2-direct-sort-ablation
+          path: |
+            /tmp/result.txt
+            /tmp/walls.txt
+            /tmp/step2.diff
+            /tmp/app.callgrind
+            /tmp/step2.callgrind
