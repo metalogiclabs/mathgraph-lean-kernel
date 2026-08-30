@@ -1,0 +1,106 @@
+name: V4 App Direct Pi Ablation
+
+on:
+  push:
+    branches: [mathgraph-v4-bvdecide-residual]
+    paths:
+      - '.github/workflows/v4-app-direct-pi-ablation.yml'
+  workflow_dispatch:
+
+jobs:
+  ablate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build Arena Std corpus
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena
+          nix develop -c ./lka.py build-test init-prelude
+          nix develop -c ./lka.py build-test std
+
+      - name: Materialize live baseline and one-change candidate
+        run: |
+          set -euxo pipefail
+          git clone https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/base
+          cd /tmp/base
+          git checkout 2de1895a52d21ad266b77002defe3e6bc69bbcfd
+          cp -a /tmp/base /tmp/cand
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/cand/src/infer.rs')
+          s=p.read_text()
+          old='''        while let Some(arg) = args.pop() {\n            let fty_f = self.force_all(depth, fty);\n            let (domain, body) = match fty_f {\n                Value::Pi { domain, body, .. } => (*domain, body),\n                _ => panic!("expected a pi type"),\n            };'''
+          new='''        while let Some(arg) = args.pop() {\n            let (domain, body) = match fty {\n                Value::Pi { domain, body, .. } => (*domain, body),\n                _ => match self.force_all(depth, fty) {\n                    Value::Pi { domain, body, .. } => (*domain, body),\n                    _ => panic!("expected a pi type"),\n                },\n            };'''
+          assert old in s, 'target infer_app_v block not found'
+          p.write_text(s.replace(old,new,1))
+          PY
+          git -C /tmp/cand diff -- src/infer.rs | tee /tmp/candidate.diff
+
+      - name: Build baseline and candidate identically
+        run: |
+          set -euxo pipefail
+          ROOT="$GITHUB_WORKSPACE/arena"
+          for d in /tmp/base /tmp/cand; do
+            cd "$d"
+            cat > config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+            RUSTFLAGS="-C target-cpu=native -Cprofile-generate=$PWD/pgo" cargo build --release --locked
+            target/release/sokonanoda config.json < "$ROOT/_build/tests/init-prelude.ndjson" >/dev/null
+            nix shell nixpkgs#llvm -c llvm-profdata merge -o "$PWD/pgo/merged.profdata" "$PWD/pgo"
+            rm -rf target
+            RUSTFLAGS="-C target-cpu=native -Cprofile-use=$PWD/pgo/merged.profdata" cargo build --release --locked
+          done
+
+      - name: Deterministic Std instruction ablation
+        run: |
+          set -euxo pipefail
+          cd arena
+          for k in base cand; do
+            nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/${k}.callgrind /tmp/${k}/target/release/sokonanoda /tmp/${k}/config.json < _build/tests/std.ndjson >/dev/null
+            grep '^summary:' /tmp/${k}.callgrind | awk '{print $2}' > /tmp/${k}.ir
+          done
+          python3 - <<'PY' | tee /tmp/result.txt
+          b=int(open('/tmp/base.ir').read()); c=int(open('/tmp/cand.ir').read())
+          print(f'BASE_IR={b}')
+          print(f'CAND_IR={c}')
+          print(f'DELTA_IR={c-b}')
+          print(f'DELTA_PCT={(c/b-1)*100:.6f}')
+          print('V4_APP_DIRECT_PI_IR=' + ('PASS' if c < b else 'FAIL'))
+          PY
+
+      - name: Std wall sanity interleaved
+        run: |
+          set -euxo pipefail
+          cd arena
+          : > /tmp/walls.txt
+          for i in 1 2 3; do
+            for k in base cand; do
+              /usr/bin/time -f "$k $i %e" -o /tmp/one.txt /tmp/${k}/target/release/sokonanoda /tmp/${k}/config.json < _build/tests/std.ndjson >/dev/null
+              cat /tmp/one.txt | tee -a /tmp/walls.txt
+            done
+          done
+          python3 - <<'PY' | tee -a /tmp/result.txt
+          import statistics
+          rows=[x.split() for x in open('/tmp/walls.txt')]
+          d={k:[] for k in ('base','cand')}
+          for k,i,t in rows:d[k].append(float(t))
+          for k in d: print(f'{k.upper()}_WALL_MEDIAN={statistics.median(d[k]):.6f}')
+          b=statistics.median(d['base']); c=statistics.median(d['cand'])
+          print(f'WALL_DELTA_PCT={(c/b-1)*100:.6f}')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v4-app-direct-pi-ablation
+          path: |
+            /tmp/result.txt
+            /tmp/walls.txt
+            /tmp/candidate.diff
+            /tmp/base.callgrind
+            /tmp/cand.callgrind
