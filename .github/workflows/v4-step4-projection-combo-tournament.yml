@@ -59,11 +59,11 @@ jobs:
           for k in step3 prior final both; do
             d=/tmp/$k; cd "$d"
             echo '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}' > config.json
-            RUSTFLAGS="-C target-cpu=native -Cprofile-generate=$PWD/pgo" cargo build --release --locked
+            RUSTFLAGS="-C target-cpu=x86-64-v3 -Cprofile-generate=$PWD/pgo" cargo build --release --locked
             target/release/sokonanoda config.json < "$ROOT/_build/tests/init-prelude.ndjson" >/dev/null
             nix shell nixpkgs#llvm -c llvm-profdata merge -o "$PWD/pgo/merged.profdata" "$PWD/pgo"
             rm -rf target
-            RUSTFLAGS="-C target-cpu=native -Cprofile-use=$PWD/pgo/merged.profdata" cargo build --release --locked
+            RUSTFLAGS="-C target-cpu=x86-64-v3 -Cprofile-use=$PWD/pgo/merged.profdata" cargo build --release --locked
           done
 
       - name: Deterministic Std instruction tournament
