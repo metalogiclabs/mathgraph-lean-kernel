@@ -1,0 +1,11 @@
+from pathlib import Path
+import sys
+
+root = Path(sys.argv[1] if len(sys.argv) > 1 else '.')
+p = root / 'src/eval.rs'
+s = p.read_text()
+old = '''    pub(crate) fn eval(&mut self, depth: u32, env: E<'t>, e: ExprPtr<'t>) -> V<'t> {\n        if e.num_loose_bvars() == 0 && env.lsub().is_none() {\n            if let Some(v) = self.tc_cache.closed_eval_cache.get(&e) {\n                return v;\n            }\n            let v = self.eval_no_cache(depth, env, e);\n            self.tc_cache.closed_eval_cache.insert(e, v);\n            return v;\n        }\n        if matches!(\n            self.ctx.read_expr_ref(e),\n            Expr::App { .. } | Expr::Proj { .. } | Expr::Let { .. } | Expr::Pi { .. } | Expr::Lambda { .. }\n        ) {\n            let te = self.key_env(env, e);\n            let key = (te as *const value::Env<'t> as usize, e);\n            if let Some(v) = self.tc_cache.open_eval_cache.get(&key) {\n                return v;\n            }\n            let v = self.eval_no_cache(depth, te, e);\n            self.tc_cache.open_eval_cache.insert(key, v);\n            return v;\n        }\n        self.eval_no_cache(depth, env, e)\n    }'''
+new = '''    pub(crate) fn eval(&mut self, depth: u32, env: E<'t>, e: ExprPtr<'t>) -> V<'t> {\n        let k = e.num_loose_bvars();\n        if k == 0 && env.lsub().is_none() {\n            if let Some(v) = self.tc_cache.closed_eval_cache.get(&e) {\n                return v;\n            }\n            let v = self.eval_no_cache(depth, env, e);\n            self.tc_cache.closed_eval_cache.insert(e, v);\n            return v;\n        }\n        let first = self.ctx.read_expr_ref(e);\n        if matches!(first, Expr::App { .. } | Expr::Proj { .. } | Expr::Let { .. } | Expr::Pi { .. } | Expr::Lambda { .. }) {\n            let te = if k > 64 { env } else { self.prune_env(env, first.fv_mask()) };\n            let key = (te as *const value::Env<'t> as usize, e);\n            if let Some(v) = self.tc_cache.open_eval_cache.get(&key) {\n                return v;\n            }\n            let v = self.eval_no_cache(depth, te, e);\n            self.tc_cache.open_eval_cache.insert(key, v);\n            return v;\n        }\n        self.eval_no_cache(depth, env, e)\n    }'''
+assert old in s, 'eval target not found'
+p.write_text(s.replace(old, new, 1))
+print('V4_STEP24_EVAL_OPEN_CACHE_FUSION=YES')
