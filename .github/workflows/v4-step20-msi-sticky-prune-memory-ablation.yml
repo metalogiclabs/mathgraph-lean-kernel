@@ -2,8 +2,10 @@ name: V4 Step20 MSI sticky prune memory ablation
 on:
   workflow_dispatch:
   push:
-    branches: [mathgraph-v4-bvdecide-residual]
-    paths: ['.github/workflows/v4-step20-msi-sticky-prune-memory-ablation.yml']
+    branches:
+      - mathgraph-v4-bvdecide-residual
+    paths:
+      - .github/workflows/v4-step20-msi-sticky-prune-memory-ablation.yml
 jobs:
   ablation:
     runs-on: ubuntu-24.04
@@ -27,46 +29,21 @@ jobs:
           git -C /tmp/base checkout 2de1895a52d21ad266b77002defe3e6bc69bbcfd
           cp -a /tmp/base /tmp/cand
           curl -L https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/5a1485ae13a0623ca8b7001aee9e0e155381daad/experiments/apply_v4_retained6.py -o /tmp/apply.py
-          python3 - <<'PY'
-          from pathlib import Path
-          import re, subprocess
-          for root in ['/tmp/base','/tmp/cand']:
-              subprocess.run(['python3','/tmp/apply.py',root],check=True)
-              p=Path(root)/'src/eval.rs'; s=p.read_text()
-              s,n=re.subn(r'(WHNF_ADMIT_THRESHOLD\s*:\s*u8\s*=\s*)2',r'\g<1>1',s)
-              assert n==1
-              p.write_text(s)
-          p=Path('/tmp/cand/src/eval.rs'); s=p.read_text()
-          old="""        match e {
-              value::Env::Cons { prune, .. } | value::Env::Framed { prune, .. } => prune.set((mask, Some(r))),
-              value::Env::Nil { .. } => {}
-          }
-          r
-      }"""
-          new="""        match e {
-              value::Env::Cons { prune, .. } | value::Env::Framed { prune, .. } => {
-                  let (old_mask, old_r) = prune.get();
-                  if old_r.is_none() || old_mask == mask {
-                      prune.set((mask, Some(r)));
-                  }
-              }
-              value::Env::Nil { .. } => {}
-          }
-          r
-      }"""
-          assert old in s
-          p.write_text(s.replace(old,new,1))
-          PY
+          curl -L https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/cdd1d63acf297bb14c4ca4c43f42610e9ae7e552/experiments/apply_v4_step20_sticky_prune.py -o /tmp/sticky.py
           for k in base cand; do
-            echo '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}' > /tmp/$k/config.json
+            python3 /tmp/apply.py /tmp/$k
+            sed -i 's/WHNF_ADMIT_THRESHOLD: u8 = 2/WHNF_ADMIT_THRESHOLD: u8 = 1/' /tmp/$k/src/eval.rs
+            grep -q 'WHNF_ADMIT_THRESHOLD: u8 = 1' /tmp/$k/src/eval.rs
+            printf '%s\n' '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}' > /tmp/$k/config.json
           done
+          python3 /tmp/sticky.py /tmp/cand
           git -C /tmp/cand diff -- src > /tmp/candidate.diff
       - name: PGO builds
         run: |
           set -euxo pipefail
           ROOT="$GITHUB_WORKSPACE/arena"
           for k in base cand; do
-            d=/tmp/$k; cd "$d"
+            cd /tmp/$k
             RUSTFLAGS="-C target-cpu=x86-64-v3 -Cprofile-generate=$PWD/pgo" cargo build --release --locked
             target/release/sokonanoda config.json < "$ROOT/_build/tests/init-prelude.ndjson" >/dev/null
             nix shell nixpkgs#llvm -c llvm-profdata merge -o "$PWD/pgo/merged.profdata" "$PWD/pgo"
@@ -81,14 +58,9 @@ jobs:
             nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/${k}.callgrind /tmp/${k}/target/release/sokonanoda /tmp/${k}/config.json < _build/tests/std.ndjson >/dev/null
             grep '^summary:' /tmp/${k}.callgrind | awk '{print $2}' > /tmp/${k}.ir
           done
-          python3 - <<'PY' | tee /tmp/result.txt
-          b=int(open('/tmp/base.ir').read()); c=int(open('/tmp/cand.ir').read())
-          print(f'BASE_IR={b}')
-          print(f'CAND_IR={c}')
-          print(f'DELTA={c-b}')
-          print(f'DELTA_PCT={(c/b-1)*100:.6f}')
-          print('V4_MSI_STICKY_PRUNE=' + ('PASS' if c < b else 'FAIL'))
-          PY
+          b=$(cat /tmp/base.ir)
+          c=$(cat /tmp/cand.ir)
+          python3 -c "b=$b;c=$c;print(f'BASE_IR={b}\nCAND_IR={c}\nDELTA={c-b}\nDELTA_PCT={(c/b-1)*100:.6f}\nV4_MSI_STICKY_PRUNE={'PASS' if c < b else 'FAIL'}')" | tee /tmp/result.txt
       - name: Wall sanity
         run: |
           set -euxo pipefail
@@ -101,16 +73,7 @@ jobs:
             done
           done
           cat /tmp/wall.tsv | tee -a /tmp/result.txt
-          python3 - <<'PY' | tee -a /tmp/result.txt
-          import statistics
-          d={'base':[],'cand':[]}
-          for line in open('/tmp/wall.tsv'):
-              k,v=line.split(); d[k].append(float(v))
-          b=statistics.median(d['base']); c=statistics.median(d['cand'])
-          print(f'BASE_WALL_MEDIAN={b}')
-          print(f'CAND_WALL_MEDIAN={c}')
-          print(f'WALL_DELTA_PCT={(c/b-1)*100:.6f}')
-          PY
+          python3 -c "import statistics;d={'base':[],'cand':[]};[(d[k].append(float(v))) for k,v in (line.split() for line in open('/tmp/wall.tsv'))];b=statistics.median(d['base']);c=statistics.median(d['cand']);print(f'BASE_WALL_MEDIAN={b}\nCAND_WALL_MEDIAN={c}\nWALL_DELTA_PCT={(c/b-1)*100:.6f}')" | tee -a /tmp/result.txt
       - uses: actions/upload-artifact@v4
         with:
           name: v4-step20-msi-sticky-prune-memory
