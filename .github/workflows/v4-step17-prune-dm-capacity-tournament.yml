@@ -1,0 +1,120 @@
+name: V4 Step17 Prune DM Capacity Tournament
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/v4-step17-prune-dm-capacity-tournament.yml'
+
+jobs:
+  tournament:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build Arena tests
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena
+          nix develop -c ./lka.py build-test init-prelude
+          nix develop -c ./lka.py build-test std
+
+      - name: Materialize retained7 capacity variants
+        run: |
+          set -euxo pipefail
+          git clone https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/d10
+          git -C /tmp/d10 checkout 2de1895a52d21ad266b77002defe3e6bc69bbcfd
+          for k in d12 d14 d16; do cp -a /tmp/d10 /tmp/$k; done
+          curl -L https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/5a1485ae13a0623ca8b7001aee9e0e155381daad/experiments/apply_v4_retained6.py -o /tmp/apply.py
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          for root in ['/tmp/d10','/tmp/d12','/tmp/d14','/tmp/d16']:
+              import subprocess
+              subprocess.run(['python3','/tmp/apply.py',root],check=True)
+              p=Path(root)/'src/eval.rs'; s=p.read_text()
+              s,n=re.subn(r'(WHNF_ADMIT_THRESHOLD\s*:\s*u8\s*=\s*)2', r'\g<1>1', s)
+              assert n==1, (root,n)
+              p.write_text(s)
+          for tag,bits in [('d12',12),('d14',14),('d16',16)]:
+              p=Path('/tmp/'+tag)/'src/util.rs'; s=p.read_text()
+              s,n1=re.subn(r'pub\(crate\) const PRUNE_DM_LEN: usize = 1 << 10;', f'pub(crate) const PRUNE_DM_LEN: usize = 1 << {bits};', s)
+              s,n2=re.subn(r'pub\(crate\) const PRUNE_DM_SHIFT: u32 = 64 - 10;', f'pub(crate) const PRUNE_DM_SHIFT: u32 = 64 - {bits};', s)
+              assert (n1,n2)==(1,1), (tag,n1,n2)
+              p.write_text(s)
+          PY
+          for k in d10 d12 d14 d16; do
+            echo '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}' > /tmp/$k/config.json
+            grep -n 'PRUNE_DM_LEN\|PRUNE_DM_SHIFT\|WHNF_ADMIT_THRESHOLD' /tmp/$k/src/{util,eval}.rs | tee /tmp/$k.constants
+          done
+
+      - name: PGO build variants
+        run: |
+          set -euxo pipefail
+          ROOT="$GITHUB_WORKSPACE/arena"
+          for k in d10 d12 d14 d16; do
+            d=/tmp/$k; cd "$d"
+            RUSTFLAGS="-C target-cpu=x86-64-v3 -Cprofile-generate=$PWD/pgo" cargo build --release --locked
+            target/release/sokonanoda config.json < "$ROOT/_build/tests/init-prelude.ndjson" >/dev/null
+            nix shell nixpkgs#llvm -c llvm-profdata merge -o "$PWD/pgo/merged.profdata" "$PWD/pgo"
+            rm -rf target
+            RUSTFLAGS="-C target-cpu=x86-64-v3 -Cprofile-use=$PWD/pgo/merged.profdata" cargo build --release --locked
+          done
+
+      - name: Deterministic Std Callgrind tournament
+        run: |
+          set -euxo pipefail
+          cd arena
+          for k in d10 d12 d14 d16; do
+            nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/${k}.callgrind /tmp/${k}/target/release/sokonanoda /tmp/${k}/config.json < _build/tests/std.ndjson >/dev/null
+            grep '^summary:' /tmp/${k}.callgrind | awk '{print $2}' > /tmp/${k}.ir
+          done
+          python3 - <<'PY' | tee /tmp/result.txt
+          vals={k:int(open('/tmp/'+k+'.ir').read()) for k in ['d10','d12','d14','d16']}
+          base=vals['d10']
+          for k,v in vals.items():
+              print(f'{k}_IR={v}')
+              print(f'{k}_DELTA={v-base}')
+              print(f'{k}_DELTA_PCT={(v/base-1)*100:.6f}')
+          best=min(vals,key=vals.get)
+          print(f'BEST_VARIANT={best}')
+          print(f'BEST_IR={vals[best]}')
+          print('V4_PRUNE_DM_CAPACITY_TOURNAMENT=' + ('PASS' if best!='d10' else 'FAIL'))
+          PY
+
+      - name: Alternating wall sanity
+        run: |
+          set -euxo pipefail
+          cd arena
+          : > /tmp/wall.tsv
+          for i in 1 2 3; do
+            for k in d10 d12 d14 d16; do
+              /usr/bin/time -f "$k\t%e" -o /tmp/one.time /tmp/${k}/target/release/sokonanoda /tmp/${k}/config.json < _build/tests/std.ndjson >/dev/null
+              cat /tmp/one.time >> /tmp/wall.tsv
+            done
+          done
+          cat /tmp/wall.tsv | tee -a /tmp/result.txt
+          python3 - <<'PY' | tee -a /tmp/result.txt
+          import statistics
+          d={k:[] for k in ['d10','d12','d14','d16']}
+          for line in open('/tmp/wall.tsv'):
+              k,v=line.split(); d[k].append(float(v))
+          base=statistics.median(d['d10'])
+          for k,vs in d.items():
+              m=statistics.median(vs)
+              print(f'{k}_WALL_MEDIAN={m}')
+              print(f'{k}_WALL_DELTA_PCT={(m/base-1)*100:.6f}')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v4-step17-prune-dm-capacity-tournament
+          path: |
+            /tmp/result.txt
+            /tmp/*.callgrind
+            /tmp/*.ir
+            /tmp/*.constants
