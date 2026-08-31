@@ -1,0 +1,106 @@
+name: V4 Step21 prune retention tournament
+on:
+  workflow_dispatch:
+  push:
+    branches: [mathgraph-v4-bvdecide-residual]
+    paths:
+      - '.github/workflows/v4-step21-prune-retention-tournament.yml'
+jobs:
+  tournament:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Build Arena tests
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena
+          nix develop -c ./lka.py build-test init-prelude
+          nix develop -c ./lka.py build-test std
+      - name: Materialize retained7 variants
+        run: |
+          set -euxo pipefail
+          git clone https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/base
+          git -C /tmp/base checkout 2de1895a52d21ad266b77002defe3e6bc69bbcfd
+          for k in nocold firstcold fullsticky; do cp -a /tmp/base /tmp/$k; done
+          curl -L https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/5a1485ae13a0623ca8b7001aee9e0e155381daad/experiments/apply_v4_retained6.py -o /tmp/apply.py
+          curl -L https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/9930bd398cf576f61a3d625e72c2c1490deb59fd/experiments/apply_v4_step21_prune_retention.py -o /tmp/retention.py
+          for k in base nocold firstcold fullsticky; do
+            python3 /tmp/apply.py /tmp/$k
+            sed -i 's/WHNF_ADMIT_THRESHOLD: u8 = 2/WHNF_ADMIT_THRESHOLD: u8 = 1/' /tmp/$k/src/eval.rs
+            grep -q 'WHNF_ADMIT_THRESHOLD: u8 = 1' /tmp/$k/src/eval.rs
+            printf '%s\n' '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}' > /tmp/$k/config.json
+          done
+          python3 /tmp/retention.py /tmp/nocold nocold
+          python3 /tmp/retention.py /tmp/firstcold firstcold
+          python3 /tmp/retention.py /tmp/fullsticky fullsticky
+          for k in nocold firstcold fullsticky; do git -C /tmp/$k diff -- src > /tmp/$k.diff; done
+      - name: PGO builds and semantic smoke
+        run: |
+          set -euxo pipefail
+          ROOT="$GITHUB_WORKSPACE/arena"
+          for k in base nocold firstcold fullsticky; do
+            cd /tmp/$k
+            RUSTFLAGS="-C target-cpu=x86-64-v3 -Cprofile-generate=$PWD/pgo" cargo build --release --locked
+            target/release/sokonanoda config.json < "$ROOT/_build/tests/init-prelude.ndjson" >/dev/null
+            nix shell nixpkgs#llvm -c llvm-profdata merge -o "$PWD/pgo/merged.profdata" "$PWD/pgo"
+            rm -rf target
+            RUSTFLAGS="-C target-cpu=x86-64-v3 -Cprofile-use=$PWD/pgo/merged.profdata" cargo build --release --locked
+          done
+      - name: Deterministic Std Callgrind tournament
+        run: |
+          set -euxo pipefail
+          cd arena
+          for k in base nocold firstcold fullsticky; do
+            nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/${k}.callgrind /tmp/${k}/target/release/sokonanoda /tmp/${k}/config.json < _build/tests/std.ndjson >/dev/null
+            grep '^summary:' /tmp/${k}.callgrind | awk '{print $2}' > /tmp/${k}.ir
+          done
+          python3 - <<'PY' | tee /tmp/result.txt
+          ks=['base','nocold','firstcold','fullsticky']
+          vals={k:int(open('/tmp/'+k+'.ir').read()) for k in ks}
+          b=vals['base']
+          for k in ks:
+              v=vals[k]
+              print(f'{k.upper()}_IR={v}')
+              print(f'{k.upper()}_DELTA={v-b}')
+              print(f'{k.upper()}_DELTA_PCT={(v/b-1)*100:.6f}')
+          best=min(vals,key=vals.get)
+          print(f'BEST_VARIANT={best}')
+          print(f'BEST_IR={vals[best]}')
+          print('V4_STEP21=' + ('PASS' if best!='base' else 'FAIL'))
+          PY
+      - name: Alternating wall tournament
+        run: |
+          set -euxo pipefail
+          cd arena
+          : > /tmp/wall.tsv
+          for i in 1 2 3; do
+            for k in base nocold firstcold fullsticky; do
+              /usr/bin/time -f "$k\t%e" -o /tmp/one.time /tmp/${k}/target/release/sokonanoda /tmp/${k}/config.json < _build/tests/std.ndjson >/dev/null
+              cat /tmp/one.time >> /tmp/wall.tsv
+            done
+          done
+          cat /tmp/wall.tsv | tee -a /tmp/result.txt
+          python3 - <<'PY' | tee -a /tmp/result.txt
+          import statistics
+          ks=['base','nocold','firstcold','fullsticky']
+          d={k:[] for k in ks}
+          for line in open('/tmp/wall.tsv'):
+              k,v=line.split(); d[k].append(float(v))
+          b=statistics.median(d['base'])
+          for k in ks:
+              m=statistics.median(d[k])
+              print(f'{k.upper()}_WALL_MEDIAN={m}')
+              print(f'{k.upper()}_WALL_DELTA_PCT={(m/b-1)*100:.6f}')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v4-step21-prune-retention-tournament
+          path: |
+            /tmp/result.txt
+            /tmp/*.diff
+            /tmp/*.callgrind
+            /tmp/*.ir
