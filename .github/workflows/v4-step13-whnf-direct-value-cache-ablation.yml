@@ -37,7 +37,6 @@ jobs:
               ns,n=re.subn(r'(WHNF_ADMIT_THRESHOLD\s*:\s*u8\s*=\s*)2', r'\g<1>1', s)
               assert n==1, n
               p.write_text(ns)
-          # Find cache declaration dynamically and convert stored expression to stored Value.
           hits=[]
           for p in (Path('/tmp/cand')/'src').glob('*.rs'):
               s=p.read_text()
@@ -45,15 +44,11 @@ jobs:
                   hits.append(p)
           assert len(hits)==1, hits
           p=hits[0]; s=p.read_text()
-          old=s
-          # Expected cache shape: key -> (verified full key, quoted ExprPtr). Replace only whnf_store field type.
-          s,n=re.subn(r'(whnf_store\s*:\s*[^\n]*?\(u128,\s*)ExprPtr<[^>]+>(\)[^\n]*,)', r'\1V<\x27t>\2', s)
+          s,n=re.subn(r'(whnf_store\s*:\s*[^\n]*?\(u128,\s*)ExprPtr<[^>]+>(\)[^\n]*,)', r"\1V<'t>\2", s)
           if n != 1:
-              # More general lifetime spelling fallback.
-              s,n=re.subn(r'(whnf_store\s*:\s*[^\n]*?\(u128,\s*)ExprPtr<[^>]+>(\)[^\n]*)', r'\1V<\x27t>\2', s)
+              s,n=re.subn(r'(whnf_store\s*:\s*[^\n]*?\(u128,\s*)ExprPtr<[^>]+>(\)[^\n]*)', r"\1V<'t>\2", s)
           assert n==1, 'could not patch whnf_store type'
           p.write_text(s)
-          # eval.rs: store result value directly, and return it directly after existing identity verification.
           ep=Path('/tmp/cand/src/eval.rs'); s=ep.read_text()
           old='''        let q = self.quote(0, res);\n        let (hi, hb) = crate::util::tenure_slot(hk as usize);'''
           new='''        let (hi, hb) = crate::util::tenure_slot(hk as usize);'''
