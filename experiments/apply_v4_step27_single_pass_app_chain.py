@@ -11,7 +11,7 @@ if old1 not in s:
     raise SystemExit("first app-chain traversal block not found")
 s = s.replace(old1, new1, 1)
 old2 = """                let mut funs: smallvec::SmallVec<[ExprPtr<'t>; 8]> = smallvec::SmallVec::new();\n                funs.push(fun);\n                funs.push(f2);\n                let mut cur2 = a2;\n                while let &Expr::App { fun: fn3, arg: an3, .. } = self.ctx.read_expr_ref(cur2) {\n                    funs.push(fn3);\n                    cur2 = an3;\n                }\n"""
-new2 = """                let funs = funs.expect(\"non-uniform app chain must have collected functions\");\n"""
+new2 = """                let mut funs = funs.expect(\"non-uniform app chain must have collected functions\");\n"""
 if old2 not in s:
     raise SystemExit("second app-chain traversal block not found; apply Step26 first")
 s = s.replace(old2, new2, 1)
