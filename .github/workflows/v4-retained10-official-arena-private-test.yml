@@ -44,11 +44,11 @@ jobs:
         run: |
           set -euxo pipefail
           REV=$(cat /tmp/retained10-rev.txt)
-          cat > arena/checkers/retained10-private.yaml <<EOF
+          cat > arena/checkers/retained10-private.yaml <<'EOF'
           description: runner-local retained10 qualification only
           url: file:///tmp/retained10
           ref: HEAD
-          rev: $REV
+          rev: __REV__
           build: |
             cat > config.json <<__END__
             {
@@ -69,6 +69,7 @@ jobs:
           run: |
             target/release/sokonanoda config.json < "$IN" || exit 1
           EOF
+          sed -i "s/__REV__/$REV/" arena/checkers/retained10-private.yaml
           cat arena/checkers/retained10-private.yaml
 
       - name: Build all official tests
