@@ -1,0 +1,117 @@
+name: V4 retained10 Arena untouched 2de1895 control
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [mathgraph-v4-bvdecide-residual]
+    paths: ['.github/workflows/v4-retained10-arena-base2de-control.yml']
+
+jobs:
+  official-arena-base-control:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+
+      - name: Clone exact current official Arena
+        run: |
+          set -euxo pipefail
+          git clone https://github.com/leanprover/lean-kernel-arena.git arena
+          git -C arena rev-parse HEAD | tee /tmp/arena-rev.txt
+
+      - name: Materialize untouched 2de1895 locally
+        run: |
+          set -euxo pipefail
+          git clone https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/base2de
+          git -C /tmp/base2de checkout 2de1895a52d21ad266b77002defe3e6bc69bbcfd
+          git -C /tmp/base2de branch -f base2de-local HEAD
+          git -C /tmp/base2de rev-parse HEAD | tee /tmp/base2de-rev.txt
+
+      - name: Register runner-local base checker
+        run: |
+          set -euxo pipefail
+          REV=$(cat /tmp/base2de-rev.txt)
+          cat > arena/checkers/base2de-private.yaml <<'EOF'
+          description: runner-local untouched 2de1895 control only
+          url: file:///tmp/base2de
+          ref: base2de-local
+          rev: __REV__
+          build: |
+            cat > config.json <<__END__
+            {
+              "use_stdin": true,
+              "nat_extension": true,
+              "string_extension": true,
+              "unpermitted_axiom_hard_error": false,
+              "unsafe_permit_all_axioms": true,
+              "num_threads": 4
+            }
+            __END__
+            ROOT=$(cd ../../../.. && pwd)
+            "$ROOT/lka.py" build-test init-prelude
+            RUSTFLAGS="-C target-cpu=native -Cprofile-generate=$PWD/pgo" cargo build --release --locked
+            target/release/sokonanoda config.json < "$ROOT/_build/tests/init-prelude.ndjson" >/dev/null
+            llvm-profdata merge -o "$PWD/pgo/merged.profdata" "$PWD/pgo"
+            RUSTFLAGS="-C target-cpu=native -Cprofile-use=$PWD/pgo/merged.profdata" cargo build --release --locked
+          run: |
+            target/release/sokonanoda config.json < "$IN" || exit 1
+          EOF
+          sed -i "s/__REV__/$REV/" arena/checkers/base2de-private.yaml
+          cat arena/checkers/base2de-private.yaml
+
+      - name: Build all official tests
+        run: |
+          set -euxo pipefail
+          cd arena
+          nix develop -c ./lka.py build-test
+
+      - name: Build untouched base with official harness
+        run: |
+          set -euxo pipefail
+          cd arena
+          nix develop -c ./lka.py build-checker base2de-private
+
+      - name: Run untouched base on all official tests
+        run: |
+          set -euxo pipefail
+          cd arena
+          nix develop -c ./lka.py run base2de-private
+
+      - name: Summarize exact official results
+        if: always()
+        run: |
+          set -euxo pipefail
+          cd arena
+          echo "ARENA_REV=$(cat /tmp/arena-rev.txt)" | tee /tmp/summary.txt
+          echo "BASE2DE_REV=$(cat /tmp/base2de-rev.txt)" | tee -a /tmp/summary.txt
+          find _out _build -maxdepth 4 -type f \( -name 'results.json' -o -name '*.json' \) -print 2>/dev/null | tee /tmp/result-files.txt || true
+          python3 - <<'PY' | tee -a /tmp/summary.txt
+          import json, pathlib
+          candidates=[]
+          for root in [pathlib.Path('_out'), pathlib.Path('_build')]:
+              if root.exists():
+                  for p in root.rglob('*.json'):
+                      try:
+                          obj=json.loads(p.read_text())
+                      except Exception:
+                          continue
+                      s=json.dumps(obj)
+                      if 'base2de-private' in s:
+                          candidates.append((str(p),obj))
+          print('RESULT_JSON_CANDIDATES=', [p for p,_ in candidates])
+          for p,obj in candidates:
+              print('---',p)
+              print(json.dumps(obj, indent=2)[:20000])
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: base2de-official-arena-control
+          path: |
+            /tmp/summary.txt
+            /tmp/arena-rev.txt
+            /tmp/base2de-rev.txt
+            /tmp/result-files.txt
+            arena/_out
