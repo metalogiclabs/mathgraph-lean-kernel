@@ -38,6 +38,7 @@ jobs:
           git -C /tmp/retained10 config user.email 'arena-local@example.invalid'
           git -C /tmp/retained10 add src
           git -C /tmp/retained10 commit -m 'retained10 local qualification'
+          git -C /tmp/retained10 branch -f retained10-local HEAD
           git -C /tmp/retained10 rev-parse HEAD | tee /tmp/retained10-rev.txt
 
       - name: Register runner-local checker
@@ -47,7 +48,7 @@ jobs:
           cat > arena/checkers/retained10-private.yaml <<'EOF'
           description: runner-local retained10 qualification only
           url: file:///tmp/retained10
-          ref: HEAD
+          ref: retained10-local
           rev: __REV__
           build: |
             cat > config.json <<__END__
