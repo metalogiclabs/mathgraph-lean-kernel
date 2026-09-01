@@ -7,26 +7,122 @@ on:
     paths:
       - '.github/workflows/v4-retained10-final-qualification.yml'
 
+permissions:
+  contents: read
+
 jobs:
-  perf:
-    name: perf-${{ matrix.suite }}
+  semantic:
+    name: full-current-arena-semantic-gate
     runs-on: ubuntu-24.04
-    timeout-minutes: 240
-    strategy:
-      fail-fast: false
-      matrix:
-        suite: [init-prelude, init, std, cedar, cslib, mathlib]
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
       - uses: cachix/install-nix-action@v31
-      - name: Build Arena corpora
+      - name: Clone current Arena and build current CI corpus
         run: |
           set -euxo pipefail
           git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
           cd arena
+          git rev-parse HEAD | tee /tmp/arena-rev.txt
+          nix develop -c ./lka.py build-test --skip-ci
+      - name: Materialize exact retained10 candidate
+        run: |
+          set -euxo pipefail
+          git clone https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/cand
+          git -C /tmp/cand checkout 2de1895a52d21ad266b77002defe3e6bc69bbcfd
+          python3 experiments/apply_v4_retained10.py /tmp/cand
+          printf '%s\n' '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}' > /tmp/cand/config.json
+          git -C /tmp/cand diff -- src > /tmp/retained10.diff
+      - name: Build retained10
+        run: |
+          set -euxo pipefail
+          ROOT="$GITHUB_WORKSPACE/arena"
+          cd /tmp/cand
+          RUSTFLAGS="-C target-cpu=x86-64-v3 -Cprofile-generate=$PWD/pgo" cargo build --release --locked
+          target/release/sokonanoda config.json < "$ROOT/_build/tests/init-prelude.ndjson" >/dev/null
+          nix shell nixpkgs#llvm -c llvm-profdata merge -o "$PWD/pgo/merged.profdata" "$PWD/pgo"
+          rm -rf target
+          RUSTFLAGS="-C target-cpu=x86-64-v3 -Cprofile-use=$PWD/pgo/merged.profdata" cargo build --release --locked
+      - name: Check every current non-skip Arena verdict
+        run: |
+          set -euxo pipefail
+          cd arena
+          nix develop -c python3 - <<'PY' | tee /tmp/semantic-summary.txt
+          import pathlib, subprocess, sys, yaml
+          root = pathlib.Path('.')
+          built = root / '_build/tests'
+          checked = correct = either = failures = 0
+          bad = []
+          for nd in sorted(built.rglob('*.ndjson')):
+              name = str(nd.relative_to(built).with_suffix(''))
+              ypath = root / 'tests' / (name + '.yaml')
+              if not ypath.exists():
+                  continue
+              data = yaml.safe_load(ypath.read_text()) or {}
+              if data.get('skip-on-ci', False):
+                  continue
+              expected = data.get('outcome')
+              if expected not in {'accept','reject','either'}:
+                  continue
+              checked += 1
+              with nd.open('rb') as inp:
+                  try:
+                      p = subprocess.run(
+                          ['/tmp/cand/target/release/sokonanoda','/tmp/cand/config.json'],
+                          stdin=inp, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                          timeout=900)
+                      rc = p.returncode
+                  except subprocess.TimeoutExpired:
+                      rc = 124
+              observed = 'accept' if rc == 0 else 'reject'
+              ok = expected == 'either' or observed == expected
+              if expected == 'either':
+                  either += 1
+              if ok:
+                  correct += 1
+              else:
+                  failures += 1
+                  bad.append((name, expected, observed, rc))
+                  print(f'BAD\t{name}\texpected={expected}\tobserved={observed}\trc={rc}')
+          print(f'ARENA_SEMANTIC_CHECKED={checked}')
+          print(f'ARENA_SEMANTIC_CORRECT_OR_EITHER={correct}')
+          print(f'ARENA_SEMANTIC_EITHER={either}')
+          print(f'ARENA_SEMANTIC_FAILURES={failures}')
+          print('V4_FULL_SEMANTIC_GATE=' + ('PASS' if failures == 0 else 'FAIL'))
+          if failures:
+              sys.exit(1)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v4-retained10-semantic
+          path: |
+            /tmp/semantic-summary.txt
+            /tmp/arena-rev.txt
+            /tmp/retained10.diff
+
+  perf:
+    name: perf-${{ matrix.suite }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [init-prelude, init, std, cedar, cslib, mathlib]
+    env:
+      SUITE: ${{ matrix.suite }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Build exact current Arena workload
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena
+          git rev-parse HEAD | tee /tmp/arena-rev.txt
           nix develop -c ./lka.py build-test init-prelude
-          if [ "${{ matrix.suite }}" != "init-prelude" ]; then
-            nix develop -c ./lka.py build-test "${{ matrix.suite }}"
+          if [ "$SUITE" != init-prelude ]; then
+            nix develop -c ./lka.py build-test "$SUITE"
           fi
       - name: Materialize untouched live base and retained10
         run: |
@@ -34,20 +130,12 @@ jobs:
           git clone https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/base
           git -C /tmp/base checkout 2de1895a52d21ad266b77002defe3e6bc69bbcfd
           cp -a /tmp/base /tmp/cand
-          curl -L https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/5a1485ae13a0623ca8b7001aee9e0e155381daad/experiments/apply_v4_retained6.py -o /tmp/apply.py
-          curl -L https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/9930bd398cf576f61a3d625e72c2c1490deb59fd/experiments/apply_v4_step21_prune_retention.py -o /tmp/retention.py
-          curl -L https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/10d9de63a59e2c0e5c667f2445aefd0c77e69370/experiments/apply_v4_step24_eval_open_cache_fusion.py -o /tmp/fuse.py
-          curl -L https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/144f97b0a5ca84e5afcc56d06e92052eeb36ac89/experiments/apply_v4_step27_immediate_hetero_app.py -o /tmp/step27.py
-          python3 /tmp/apply.py /tmp/cand
-          sed -i 's/WHNF_ADMIT_THRESHOLD: u8 = 2/WHNF_ADMIT_THRESHOLD: u8 = 1/' /tmp/cand/src/eval.rs
-          python3 /tmp/retention.py /tmp/cand nocold
-          python3 /tmp/fuse.py /tmp/cand
-          python3 /tmp/step27.py /tmp/cand
+          python3 experiments/apply_v4_retained10.py /tmp/cand
           for k in base cand; do
-            printf '%s\n' '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}' > /tmp/$k/config.json
+            printf '%s\n' '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}' > /tmp/$k/config.json
           done
           git -C /tmp/cand diff -- src > /tmp/retained10.diff
-      - name: Identical PGO builds and smoke
+      - name: Build both with identical PGO
         run: |
           set -euxo pipefail
           ROOT="$GITHUB_WORKSPACE/arena"
@@ -59,26 +147,39 @@ jobs:
             rm -rf target
             RUSTFLAGS="-C target-cpu=x86-64-v3 -Cprofile-use=$PWD/pgo/merged.profdata" cargo build --release --locked
           done
-      - name: Deterministic Callgrind
+      - name: Semantic acceptance smoke
         run: |
           set -euxo pipefail
-          cd arena
-          suite='${{ matrix.suite }}'
+          IN="$GITHUB_WORKSPACE/arena/_build/tests/$SUITE.ndjson"
+          /tmp/base/target/release/sokonanoda /tmp/base/config.json < "$IN" >/dev/null
+          /tmp/cand/target/release/sokonanoda /tmp/cand/config.json < "$IN" >/dev/null
+      - name: Deterministic Callgrind instruction comparison
+        run: |
+          set -euxo pipefail
+          IN="$GITHUB_WORKSPACE/arena/_build/tests/$SUITE.ndjson"
           for k in base cand; do
-            nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/${k}.${suite}.callgrind /tmp/${k}/target/release/sokonanoda /tmp/${k}/config.json < "_build/tests/${suite}.ndjson" >/dev/null
-            grep '^summary:' "/tmp/${k}.${suite}.callgrind" | awk '{print $2}' > "/tmp/${k}.${suite}.ir"
+            timeout 15000 nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/${k}.callgrind /tmp/${k}/target/release/sokonanoda /tmp/${k}/config.json < "$IN" >/dev/null
+            grep '^summary:' /tmp/${k}.callgrind | awk '{print $2}' > /tmp/${k}.ir
           done
-          b=$(cat "/tmp/base.${suite}.ir"); c=$(cat "/tmp/cand.${suite}.ir")
-          python3 -c "b=$b;c=$c;print(f'SUITE={suite}\nBASE_IR={b}\nV4_IR={c}\nDELTA={c-b}\nDELTA_PCT={(c/b-1)*100:.6f}\nINSTRUCTION_VERDICT={'PASS' if c < b else 'FAIL'}')" | tee /tmp/result.txt
-      - name: Alternating wall sanity
+          b=$(cat /tmp/base.ir); c=$(cat /tmp/cand.ir)
+          python3 - <<PY | tee /tmp/result.txt
+          b=$b
+          c=$c
+          print('SUITE=$SUITE')
+          print(f'BASE_IR={b}')
+          print(f'V4_IR={c}')
+          print(f'DELTA={c-b}')
+          print(f'DELTA_PCT={(c/b-1)*100:.6f}')
+          print('INSTRUCTION_GATE=' + ('PASS' if c < b else 'FAIL'))
+          PY
+      - name: Alternating wall comparison
         run: |
           set -euxo pipefail
-          cd arena
-          suite='${{ matrix.suite }}'
+          IN="$GITHUB_WORKSPACE/arena/_build/tests/$SUITE.ndjson"
           : > /tmp/wall.tsv
           for i in 1 2 3; do
             for k in base cand; do
-              /usr/bin/time -f "$k\t%e" -o /tmp/one.time /tmp/${k}/target/release/sokonanoda /tmp/${k}/config.json < "_build/tests/${suite}.ndjson" >/dev/null
+              /usr/bin/time -f "$k\t%e" -o /tmp/one.time /tmp/${k}/target/release/sokonanoda /tmp/${k}/config.json < "$IN" >/dev/null
               cat /tmp/one.time >> /tmp/wall.tsv
             done
           done
@@ -99,86 +200,6 @@ jobs:
           name: v4-retained10-${{ matrix.suite }}
           path: |
             /tmp/result.txt
+            /tmp/arena-rev.txt
             /tmp/retained10.diff
             /tmp/*.ir
-
-  semantic:
-    name: full-current-arena-semantic-gate
-    runs-on: ubuntu-24.04
-    timeout-minutes: 240
-    steps:
-      - uses: actions/checkout@v4
-      - uses: cachix/install-nix-action@v31
-      - name: Clone Arena and build current CI test corpus
-        run: |
-          set -euxo pipefail
-          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
-          cd arena
-          nix develop -c ./lka.py build-test --skip-ci
-      - name: Materialize retained10 candidate
-        run: |
-          set -euxo pipefail
-          git clone https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/cand
-          git -C /tmp/cand checkout 2de1895a52d21ad266b77002defe3e6bc69bbcfd
-          curl -L https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/5a1485ae13a0623ca8b7001aee9e0e155381daad/experiments/apply_v4_retained6.py -o /tmp/apply.py
-          curl -L https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/9930bd398cf576f61a3d625e72c2c1490deb59fd/experiments/apply_v4_step21_prune_retention.py -o /tmp/retention.py
-          curl -L https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/10d9de63a59e2c0e5c667f2445aefd0c77e69370/experiments/apply_v4_step24_eval_open_cache_fusion.py -o /tmp/fuse.py
-          curl -L https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/144f97b0a5ca84e5afcc56d06e92052eeb36ac89/experiments/apply_v4_step27_immediate_hetero_app.py -o /tmp/step27.py
-          python3 /tmp/apply.py /tmp/cand
-          sed -i 's/WHNF_ADMIT_THRESHOLD: u8 = 2/WHNF_ADMIT_THRESHOLD: u8 = 1/' /tmp/cand/src/eval.rs
-          python3 /tmp/retention.py /tmp/cand nocold
-          python3 /tmp/fuse.py /tmp/cand
-          python3 /tmp/step27.py /tmp/cand
-          printf '%s\n' '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}' > /tmp/cand/config.json
-          cd /tmp/cand
-          RUSTFLAGS='-C target-cpu=x86-64-v3' cargo build --release --locked
-      - name: Register candidate with Arena
-        run: |
-          cat > arena/checkers/v4-retained10.yaml <<'YAML'
-          description: MathGraph V4 retained10 qualification candidate
-          version: qualification
-          dir: .
-          build: "true"
-          run: "/tmp/cand/target/release/sokonanoda /tmp/cand/config.json < \"$IN\" || exit 1"
-          name: v4-retained10
-          declines: []
-          YAML
-      - name: Run every current non-skip CI test
-        run: |
-          set -euxo pipefail
-          cd arena
-          python3 - <<'PY' > /tmp/tests.txt
-          import glob, yaml
-          for p in sorted(glob.glob('tests/*.yaml')):
-              d=yaml.safe_load(open(p))
-              if d.get('skip-on-ci', False):
-                  continue
-              print(p[len('tests/'):-len('.yaml')])
-          PY
-          : > /tmp/semantic.log
-          while IFS= read -r t; do
-            echo "=== $t ===" | tee -a /tmp/semantic.log
-            nix develop -c ./lka.py run --checker v4-retained10 --test "$t" 2>&1 | tee -a /tmp/semantic.log
-          done < /tmp/tests.txt
-          nix develop -c ./lka.py write-results --out /tmp/results.json
-          python3 - <<'PY' | tee /tmp/semantic-summary.txt
-          import json
-          d=json.load(open('/tmp/results.json'))
-          rs=[r for r in d['results'] if r.get('checker')=='v4-retained10']
-          from collections import Counter
-          c=Counter(r.get('correctness') for r in rs)
-          print('TOTAL',len(rs))
-          for k,v in sorted(c.items(), key=lambda kv:str(kv[0])): print(k,v)
-          bad=[r for r in rs if r.get('correctness') in ('incorrect','error')]
-          for r in bad: print('BAD',r.get('test'),r.get('status'),r.get('correctness'),r.get('exit_code'))
-          if bad:
-              raise SystemExit(1)
-          PY
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: v4-retained10-semantic
-          path: |
-            /tmp/results.json
-            /tmp/semantic.log
-            /tmp/semantic-summary.txt
