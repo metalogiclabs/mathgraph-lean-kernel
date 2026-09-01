@@ -1,0 +1,128 @@
+name: V4 retained10 official Arena private test
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [mathgraph-v4-bvdecide-residual]
+    paths: ['.github/workflows/v4-retained10-official-arena-private-test.yml']
+
+jobs:
+  official-arena:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+
+      - name: Clone exact official Arena
+        run: |
+          set -euxo pipefail
+          git clone https://github.com/leanprover/lean-kernel-arena.git arena
+          git -C arena rev-parse HEAD | tee /tmp/arena-rev.txt
+
+      - name: Materialize retained10 locally
+        run: |
+          set -euxo pipefail
+          git clone https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/retained10
+          git -C /tmp/retained10 checkout 2de1895a52d21ad266b77002defe3e6bc69bbcfd
+          curl -L https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/5a1485ae13a0623ca8b7001aee9e0e155381daad/experiments/apply_v4_retained6.py -o /tmp/apply.py
+          curl -L https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/9930bd398cf576f61a3d625e72c2c1490deb59fd/experiments/apply_v4_step21_prune_retention.py -o /tmp/retention.py
+          curl -L https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/10d9de63a59e2c0e5c667f2445aefd0c77e69370/experiments/apply_v4_step24_eval_open_cache_fusion.py -o /tmp/fuse.py
+          curl -L https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/42728476688204e80b21cb8a258cdfc72b1a4f12/experiments/apply_v4_step26_smallvec_app_chain.py -o /tmp/step26.py
+          python3 /tmp/apply.py /tmp/retained10
+          sed -i 's/WHNF_ADMIT_THRESHOLD: u8 = 2/WHNF_ADMIT_THRESHOLD: u8 = 1/' /tmp/retained10/src/eval.rs
+          python3 /tmp/retention.py /tmp/retained10 nocold
+          python3 /tmp/fuse.py /tmp/retained10
+          python3 /tmp/step26.py /tmp/retained10
+          git -C /tmp/retained10 config user.name 'Arena local qualification'
+          git -C /tmp/retained10 config user.email 'arena-local@example.invalid'
+          git -C /tmp/retained10 add src
+          git -C /tmp/retained10 commit -m 'retained10 local qualification'
+          git -C /tmp/retained10 rev-parse HEAD | tee /tmp/retained10-rev.txt
+
+      - name: Register runner-local checker
+        run: |
+          set -euxo pipefail
+          REV=$(cat /tmp/retained10-rev.txt)
+          cat > arena/checkers/retained10-private.yaml <<EOF
+          description: runner-local retained10 qualification only
+          url: file:///tmp/retained10
+          ref: HEAD
+          rev: $REV
+          build: |
+            cat > config.json <<__END__
+            {
+              "use_stdin": true,
+              "nat_extension": true,
+              "string_extension": true,
+              "unpermitted_axiom_hard_error": false,
+              "unsafe_permit_all_axioms": true,
+              "num_threads": 4
+            }
+            __END__
+            ROOT=$(cd ../../../.. && pwd)
+            "$ROOT/lka.py" build-test init-prelude
+            RUSTFLAGS="-C target-cpu=native -Cprofile-generate=$PWD/pgo" cargo build --release --locked
+            target/release/sokonanoda config.json < "$ROOT/_build/tests/init-prelude.ndjson" >/dev/null
+            llvm-profdata merge -o "$PWD/pgo/merged.profdata" "$PWD/pgo"
+            RUSTFLAGS="-C target-cpu=native -Cprofile-use=$PWD/pgo/merged.profdata" cargo build --release --locked
+          run: |
+            target/release/sokonanoda config.json < "$IN" || exit 1
+          EOF
+          cat arena/checkers/retained10-private.yaml
+
+      - name: Build all official tests
+        run: |
+          set -euxo pipefail
+          cd arena
+          nix develop -c ./lka.py build-test
+
+      - name: Build retained10 with official harness
+        run: |
+          set -euxo pipefail
+          cd arena
+          nix develop -c ./lka.py build-checker retained10-private
+
+      - name: Run retained10 on all official tests
+        run: |
+          set -euxo pipefail
+          cd arena
+          nix develop -c ./lka.py run retained10-private
+
+      - name: Summarize exact official results
+        if: always()
+        run: |
+          set -euxo pipefail
+          cd arena
+          echo "ARENA_REV=$(cat /tmp/arena-rev.txt)" | tee /tmp/summary.txt
+          echo "RETAINED10_LOCAL_REV=$(cat /tmp/retained10-rev.txt)" | tee -a /tmp/summary.txt
+          find _out _build -maxdepth 4 -type f \( -name 'results.json' -o -name '*.json' \) -print 2>/dev/null | tee /tmp/result-files.txt || true
+          python3 - <<'PY' | tee -a /tmp/summary.txt
+          import json, pathlib
+          candidates=[]
+          for root in [pathlib.Path('_out'), pathlib.Path('_build')]:
+              if root.exists():
+                  for p in root.rglob('*.json'):
+                      try:
+                          obj=json.loads(p.read_text())
+                      except Exception:
+                          continue
+                      s=json.dumps(obj)
+                      if 'retained10-private' in s:
+                          candidates.append((str(p),obj))
+          print('RESULT_JSON_CANDIDATES=', [p for p,_ in candidates])
+          for p,obj in candidates:
+              print('---',p)
+              print(json.dumps(obj, indent=2)[:20000])
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: retained10-official-arena-private-test
+          path: |
+            /tmp/summary.txt
+            /tmp/arena-rev.txt
+            /tmp/retained10-rev.txt
+            /tmp/result-files.txt
+            arena/_out
