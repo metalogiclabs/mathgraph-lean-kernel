@@ -1,0 +1,61 @@
+name: V4 Step25 Retained9 Profile
+on:
+  workflow_dispatch:
+  push:
+    branches: [mathgraph-v4-bvdecide-residual]
+    paths: ['.github/workflows/v4-step25-retained9-profile.yml']
+jobs:
+  profile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Build Arena corpora
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena
+          nix develop -c ./lka.py build-test init-prelude
+          nix develop -c ./lka.py build-test std
+      - name: Materialize retained9
+        run: |
+          set -euxo pipefail
+          git clone https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/r9
+          git -C /tmp/r9 checkout 2de1895a52d21ad266b77002defe3e6bc69bbcfd
+          curl -L https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/5a1485ae13a0623ca8b7001aee9e0e155381daad/experiments/apply_v4_retained6.py -o /tmp/apply.py
+          curl -L https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/9930bd398cf576f61a3d625e72c2c1490deb59fd/experiments/apply_v4_step21_prune_retention.py -o /tmp/retention.py
+          curl -L https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/10d9de63a59e2c0e5c667f2445aefd0c77e69370/experiments/apply_v4_step24_eval_open_cache_fusion.py -o /tmp/fuse.py
+          python3 /tmp/apply.py /tmp/r9
+          sed -i 's/WHNF_ADMIT_THRESHOLD: u8 = 2/WHNF_ADMIT_THRESHOLD: u8 = 1/' /tmp/r9/src/eval.rs
+          python3 /tmp/retention.py /tmp/r9 nocold
+          python3 /tmp/fuse.py /tmp/r9
+          printf '%s\n' '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}' > /tmp/r9/config.json
+      - name: PGO build
+        run: |
+          set -euxo pipefail
+          ROOT="$GITHUB_WORKSPACE/arena"
+          cd /tmp/r9
+          RUSTFLAGS="-C target-cpu=x86-64-v3 -Cprofile-generate=$PWD/pgo" cargo build --release --locked
+          target/release/sokonanoda config.json < "$ROOT/_build/tests/init-prelude.ndjson" >/dev/null
+          nix shell nixpkgs#llvm -c llvm-profdata merge -o "$PWD/pgo/merged.profdata" "$PWD/pgo"
+          rm -rf target
+          RUSTFLAGS="-C target-cpu=x86-64-v3 -Cprofile-use=$PWD/pgo/merged.profdata" cargo build --release --locked
+      - name: Profile Std retained9
+        run: |
+          set -euxo pipefail
+          cd arena
+          nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/r9.callgrind /tmp/r9/target/release/sokonanoda /tmp/r9/config.json < _build/tests/std.ndjson >/dev/null
+          nix shell nixpkgs#valgrind -c callgrind_annotate --inclusive=no --threshold=0.02 /tmp/r9.callgrind > /tmp/self.txt
+          nix shell nixpkgs#valgrind -c callgrind_annotate --inclusive=yes --threshold=0.05 /tmp/r9.callgrind > /tmp/inclusive.txt
+          grep '^summary:' /tmp/r9.callgrind | tee /tmp/summary.txt
+          echo '===== TOP SELF ====='
+          head -n 220 /tmp/self.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v4-step25-retained9-profile
+          path: |
+            /tmp/r9.callgrind
+            /tmp/self.txt
+            /tmp/inclusive.txt
+            /tmp/summary.txt
