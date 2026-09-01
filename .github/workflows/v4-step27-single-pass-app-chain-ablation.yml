@@ -29,7 +29,7 @@ jobs:
           curl -L https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/9930bd398cf576f61a3d625e72c2c1490deb59fd/experiments/apply_v4_step21_prune_retention.py -o /tmp/retention.py
           curl -L https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/10d9de63a59e2c0e5c667f2445aefd0c77e69370/experiments/apply_v4_step24_eval_open_cache_fusion.py -o /tmp/fuse.py
           curl -L https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/42728476688204e80b21cb8a258cdfc72b1a4f12/experiments/apply_v4_step26_smallvec_app_chain.py -o /tmp/step26.py
-          curl -L https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/daf93984fac7e66754e0afc52493ff5163c49929/experiments/apply_v4_step27_single_pass_app_chain.py -o /tmp/step27.py
+          curl -L https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/5beba09cb55cd2865959f052f4c24c31b698b0bd/experiments/apply_v4_step27_single_pass_app_chain.py -o /tmp/step27.py
           for k in base cand; do
             python3 /tmp/apply.py /tmp/$k
             sed -i 's/WHNF_ADMIT_THRESHOLD: u8 = 2/WHNF_ADMIT_THRESHOLD: u8 = 1/' /tmp/$k/src/eval.rs
