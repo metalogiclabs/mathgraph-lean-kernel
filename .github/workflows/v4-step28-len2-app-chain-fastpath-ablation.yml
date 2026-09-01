@@ -1,0 +1,94 @@
+name: V4 Step28 len2 app-chain fastpath ablation
+on:
+  workflow_dispatch:
+  push:
+    branches: [mathgraph-v4-bvdecide-residual]
+    paths: ['.github/workflows/v4-step28-len2-app-chain-fastpath-ablation.yml']
+jobs:
+  ablation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Build Arena corpora
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena
+          nix develop -c ./lka.py build-test init-prelude
+          nix develop -c ./lka.py build-test std
+      - name: Materialize retained10 and candidate
+        run: |
+          set -euxo pipefail
+          git clone https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/base
+          git -C /tmp/base checkout 2de1895a52d21ad266b77002defe3e6bc69bbcfd
+          cp -a /tmp/base /tmp/cand
+          curl -L https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/5a1485ae13a0623ca8b7001aee9e0e155381daad/experiments/apply_v4_retained6.py -o /tmp/apply.py
+          curl -L https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/9930bd398cf576f61a3d625e72c2c1490deb59fd/experiments/apply_v4_step21_prune_retention.py -o /tmp/retention.py
+          curl -L https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/10d9de63a59e2c0e5c667f2445aefd0c77e69370/experiments/apply_v4_step24_eval_open_cache_fusion.py -o /tmp/fuse.py
+          curl -L https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/42728476688204e80b21cb8a258cdfc72b1a4f12/experiments/apply_v4_step26_smallvec_app_chain.py -o /tmp/step26.py
+          curl -L https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/03ee557871fd929c92436b52c02560f24c329234/experiments/apply_v4_step28_len2_app_chain_fastpath.py -o /tmp/step28.py
+          for k in base cand; do
+            python3 /tmp/apply.py /tmp/$k
+            sed -i 's/WHNF_ADMIT_THRESHOLD: u8 = 2/WHNF_ADMIT_THRESHOLD: u8 = 1/' /tmp/$k/src/eval.rs
+            python3 /tmp/retention.py /tmp/$k nocold
+            python3 /tmp/fuse.py /tmp/$k
+            python3 /tmp/step26.py /tmp/$k
+            printf '%s\n' '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}' > /tmp/$k/config.json
+          done
+          python3 /tmp/step28.py /tmp/cand
+          git -C /tmp/cand diff -- src > /tmp/candidate.diff
+      - name: PGO builds and semantic smoke
+        run: |
+          set -euxo pipefail
+          ROOT="$GITHUB_WORKSPACE/arena"
+          for k in base cand; do
+            cd /tmp/$k
+            RUSTFLAGS="-C target-cpu=x86-64-v3 -Cprofile-generate=$PWD/pgo" cargo build --release --locked
+            target/release/sokonanoda config.json < "$ROOT/_build/tests/init-prelude.ndjson" >/dev/null
+            nix shell nixpkgs#llvm -c llvm-profdata merge -o "$PWD/pgo/merged.profdata" "$PWD/pgo"
+            rm -rf target
+            RUSTFLAGS="-C target-cpu=x86-64-v3 -Cprofile-use=$PWD/pgo/merged.profdata" cargo build --release --locked
+          done
+      - name: Deterministic Std Callgrind
+        run: |
+          set -euxo pipefail
+          cd arena
+          for k in base cand; do
+            nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file=/tmp/${k}.callgrind /tmp/${k}/target/release/sokonanoda /tmp/${k}/config.json < _build/tests/std.ndjson >/dev/null
+            grep '^summary:' /tmp/${k}.callgrind | awk '{print $2}' > /tmp/${k}.ir
+          done
+          b=$(cat /tmp/base.ir); c=$(cat /tmp/cand.ir)
+          python3 -c "b=$b;c=$c;print(f'RETAINED10_IR={b}\nCAND_IR={c}\nDELTA={c-b}\nDELTA_PCT={(c/b-1)*100:.6f}\nV4_STEP28={'PASS' if c < b else 'FAIL'}')" | tee /tmp/result.txt
+      - name: Alternating wall sanity
+        run: |
+          set -euxo pipefail
+          cd arena
+          : > /tmp/wall.tsv
+          for i in 1 2 3; do
+            for k in base cand; do
+              /usr/bin/time -f "$k\t%e" -o /tmp/one.time /tmp/${k}/target/release/sokonanoda /tmp/${k}/config.json < _build/tests/std.ndjson >/dev/null
+              cat /tmp/one.time >> /tmp/wall.tsv
+            done
+          done
+          cat /tmp/wall.tsv | tee -a /tmp/result.txt
+          python3 - <<'PY' | tee -a /tmp/result.txt
+          import statistics
+          d={'base':[],'cand':[]}
+          for line in open('/tmp/wall.tsv'):
+              k,v=line.split(); d[k].append(float(v))
+          b=statistics.median(d['base']); c=statistics.median(d['cand'])
+          print(f'RETAINED10_WALL_MEDIAN={b}')
+          print(f'CAND_WALL_MEDIAN={c}')
+          print(f'WALL_DELTA_PCT={(c/b-1)*100:.6f}')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v4-step28-len2-app-chain-fastpath
+          path: |
+            /tmp/result.txt
+            /tmp/candidate.diff
+            /tmp/*.callgrind
+            /tmp/*.ir
