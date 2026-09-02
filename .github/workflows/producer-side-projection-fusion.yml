@@ -1,32 +1,31 @@
-name: var-terminal prefix bypass v17
+name: var-terminal direct projection v18
 
 on:
   push:
-    branches: [experiment/var-terminal-prefix-bypass-v17]
+    branches: [experiment/var-terminal-direct-projection-v18]
     paths:
       - '.github/workflows/producer-side-projection-fusion.yml'
-      - 'experiments/run_var_terminal_prefix_bypass_v17.sh'
-      - 'experiments/var-terminal-prefix-bypass-v17.trigger'
+      - 'experiments/run_var_terminal_direct_projection_v18.sh'
   workflow_dispatch:
 
 jobs:
-  challenger:
+  tournament:
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
         with: {fetch-depth: 0}
       - uses: cachix/install-nix-action@v31
-      - name: Execute v17 exact semantic and Callgrind challenger
+      - name: Execute v18 exact semantic and Callgrind tournament
         shell: bash
-        run: bash experiments/run_var_terminal_prefix_bypass_v17.sh
+        run: bash experiments/run_var_terminal_direct_projection_v18.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: var-terminal-prefix-bypass-v17
+          name: var-terminal-direct-projection-v18
           path: |
-            /tmp/v17-semantic.txt
-            /tmp/v17-callgrind.csv
-            /tmp/v17-decision.txt
-            /tmp/v17-generation.json
-            /tmp/v17-*.err
+            /tmp/v18-semantic.txt
+            /tmp/v18-callgrind.csv
+            /tmp/v18-decision.txt
+            /tmp/v18-generation.json
+            /tmp/v18-*.err
