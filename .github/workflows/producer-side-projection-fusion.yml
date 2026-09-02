@@ -1,32 +1,31 @@
-name: recursor fire subfamily atlas v13 registered
+name: dominant recursor prefix causal separator v15
 
 on:
   push:
-    branches: [experiment/recursor-fire-subfamily-atlas-v13]
+    branches: [experiment/recursor-prefix-causal-v15]
     paths:
       - '.github/workflows/producer-side-projection-fusion.yml'
-      - 'experiments/run_recursor_fire_subfamily_atlas_v13.sh'
-      - 'experiments/recursor-fire-subfamily-atlas-v13.trigger'
+      - 'experiments/run_recursor_prefix_causal_v15.sh'
   workflow_dispatch:
 
 jobs:
-  atlas:
+  prefix_causal:
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+        with: {fetch-depth: 0}
       - uses: cachix/install-nix-action@v31
-      - name: Execute recursor fire subfamily atlas
+      - name: Execute dominant recursor prefix causal separator
         shell: bash
-        run: bash experiments/run_recursor_fire_subfamily_atlas_v13.sh
+        run: bash experiments/run_recursor_prefix_causal_v15.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: recursor-fire-subfamily-atlas-v13
+          name: recursor-prefix-causal-v15
           path: |
-            /tmp/v13-atlas.json
-            /tmp/v13-ranking.csv
-            /tmp/v13-residual.json
-            /tmp/v13-decision.txt
+            /tmp/v15-census.json
+            /tmp/v15-residual.json
+            /tmp/v15-decision.txt
+            /tmp/v15-prefix-cost.txt
+            /tmp/v15-callgrind.txt
