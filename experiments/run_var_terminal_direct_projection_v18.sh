@@ -114,7 +114,7 @@ v18='''    pub(crate) fn apply_many(&mut self, depth: u32, f0: V<'t>, args: &[V<
                         let v = if d < supplied {
                             args[first_i + supplied - 1 - d]
                         } else {
-                            clo.env.lookup((d - supplied) as u32).expect("apply_many v18: loose bvar")
+                            clo.env.lookup((d - supplied) as u16).expect("apply_many v18: loose bvar")
                         };
                         f = self.force_thunk(depth, v);
                         i = scan_i;
