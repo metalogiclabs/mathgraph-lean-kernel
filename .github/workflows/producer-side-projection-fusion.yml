@@ -8,6 +8,7 @@ on:
       - 'experiments/run_var_terminal_direct_projection_v18.sh'
   workflow_dispatch:
 
+# corrected lookup-index trigger
 jobs:
   tournament:
     runs-on: ubuntu-24.04
