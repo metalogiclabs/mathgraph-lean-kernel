@@ -86,7 +86,7 @@ p.write_text(s)
 m=Path('src/main.rs'); t=m.read_text()
 needle='    match out {'
 assert t.count(needle)==1
-t=t.replace(needle,'    sokonanoda::tc::v15_report();\n'+needle,1)
+t=t.replace(needle,'    sokonanoda::eval::v15_report();\n'+needle,1)
 m.write_text(t)
 PY
 CARGO_TARGET_DIR=/tmp/v15-target RUSTFLAGS='-C target-cpu=x86-64 -C debuginfo=1' cargo build --release --locked
