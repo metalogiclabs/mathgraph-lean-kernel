@@ -1,0 +1,107 @@
+name: V4 retained10 current Arena gate
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [mathgraph-v4-bvdecide-residual]
+    paths: ['.github/workflows/v4-retained10-current-arena.yml']
+
+jobs:
+  retained10-current-arena:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+
+      - name: Clone exact current official Arena
+        run: |
+          set -euxo pipefail
+          git clone https://github.com/leanprover/lean-kernel-arena.git arena
+          git -C arena checkout 06eecc0fa5007083acb035b3a99aedd44abbc0be
+          git -C arena rev-parse HEAD | tee /tmp/arena-rev.txt
+
+      - name: Materialize retained10 from exact 2de
+        run: |
+          set -euxo pipefail
+          git clone https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/retained10
+          git -C /tmp/retained10 checkout 2de1895a52d21ad266b77002defe3e6bc69bbcfd
+          python3 experiments/apply_v4_retained10.py /tmp/retained10
+          git -C /tmp/retained10 diff --check
+          git -C /tmp/retained10 diff -- src | tee /tmp/retained10.diff
+          git -C /tmp/retained10 add src
+          git -C /tmp/retained10 -c user.name=ci -c user.email=ci@example.invalid commit -m 'Materialize V4 retained10 candidate'
+          git -C /tmp/retained10 branch -f retained10-local HEAD
+          git -C /tmp/retained10 rev-parse HEAD | tee /tmp/candidate-rev.txt
+
+      - name: Register runner-local retained10 checker
+        run: |
+          set -euxo pipefail
+          REV=$(cat /tmp/candidate-rev.txt)
+          cat > arena/checkers/retained10-private.yaml <<'EOF'
+          description: runner-local V4 retained10 qualification candidate
+          url: file:///tmp/retained10
+          ref: retained10-local
+          rev: __REV__
+          build: |
+            cat > config.json <<__END__
+             {
+               "use_stdin": true,
+               "nat_extension": true,
+               "string_extension": true,
+               "unpermitted_axiom_hard_error": false,
+               "unsafe_permit_all_axioms": true,
+               "num_threads": 4
+             }
+            __END__
+            ROOT=$(cd ../../../.. && pwd)
+            "$ROOT/lka.py" build-test init-prelude
+            RUSTFLAGS="-C target-cpu=native -Cprofile-generate=$PWD/pgo" cargo build --release
+            target/release/sokonanoda config.json < "$ROOT/_build/tests/init-prelude.ndjson" >/dev/null
+            llvm-profdata merge -o "$PWD/pgo/merged.profdata" "$PWD/pgo"
+            RUSTFLAGS="-C target-cpu=native -Cprofile-use=$PWD/pgo/merged.profdata" cargo build --release
+          run: |
+            target/release/sokonanoda config.json < "$IN" || exit 1
+          EOF
+          sed -i "s/__REV__/$REV/" arena/checkers/retained10-private.yaml
+
+      - name: Build retained10 with current official harness
+        run: |
+          set -euxo pipefail
+          cd arena
+          nix develop -c ./lka.py build-checker retained10-private
+
+      - name: Generate current official tests
+        run: |
+          set -euxo pipefail
+          cd arena
+          nix develop -c ./lka.py build-test --skip-declined-by retained10-private
+
+      - name: Run retained10 on current official tests
+        run: |
+          set -euxo pipefail
+          cd arena
+          nix develop -c ./lka.py run --checker retained10-private
+
+      - name: Pack current official results
+        if: always()
+        run: |
+          set -euxo pipefail
+          cd arena
+          nix develop -c ./lka.py ci-pack --outdir /tmp/arena-results --results || true
+          echo "ARENA_REV=$(cat /tmp/arena-rev.txt)" | tee /tmp/summary.txt
+          echo "RETAINED10_REV=$(cat /tmp/candidate-rev.txt)" | tee -a /tmp/summary.txt
+          find _build _out /tmp/arena-results -maxdepth 5 -type f -print 2>/dev/null | sort | tee /tmp/result-files.txt || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v4-retained10-current-arena
+          path: |
+            /tmp/summary.txt
+            /tmp/arena-rev.txt
+            /tmp/candidate-rev.txt
+            /tmp/retained10.diff
+            /tmp/result-files.txt
+            /tmp/arena-results
+            arena/_build/results
