@@ -1,0 +1,71 @@
+{
+  "generation_id": "v16",
+  "frozen_target": "Reduce verified Lean-kernel instruction cost without semantic regression",
+  "residual_before": {
+    "source": "v15",
+    "statement": "Dominant recursor prefix is a 3-argument lambda chain; key_env/prune_env_cold is the largest measured internal cost basin",
+    "evidence": {
+      "grind_ring_5_dom_calls": 47803,
+      "key_env_calls": 95606,
+      "prune_env_cold_inclusive_instructions": 557793144,
+      "prune_env_cold_share_pct": 19.24,
+      "semantic_replay": "EXACT"
+    }
+  },
+  "candidate_actions": [
+    {
+      "id": "PUSH_A",
+      "class": "PUSH",
+      "proposal": "Exploit existing key_env/prune_env machinery directly with a narrowly-scoped reuse fast path for repeated identical body/env demand",
+      "target_rationale": "Directly attacks the measured 19.24% basin",
+      "risk": "May repeat prior memoization failures if key identity is unstable"
+    },
+    {
+      "id": "PROBE_A",
+      "class": "PROBE",
+      "proposal": "Measure demand-mask distribution for the 95,606 key_env calls in the dominant recursor-prefix subfamily",
+      "target_rationale": "Determines whether pruning repeatedly computes a small recurring support pattern that can be compiled",
+      "expected_information": "High"
+    },
+    {
+      "id": "PROBE_B",
+      "class": "PROBE",
+      "proposal": "Measure cold-vs-hit/repeated-key structure for key_env/prune_env calls using structural rather than pointer identity",
+      "target_rationale": "Separates reuse opportunity from irreducible unique pruning work",
+      "expected_information": "High"
+    },
+    {
+      "id": "PROBE_C",
+      "class": "PROBE",
+      "proposal": "Partition final-eval body shape after the three-prefix lambda chain",
+      "target_rationale": "Tests whether pruning cost can be bypassed for bodies with simple or closed demand",
+      "expected_information": "Medium"
+    },
+    {
+      "id": "REFRAME_A",
+      "class": "REFRAME",
+      "proposal": "Represent lambda application by an environment-demand signature instead of repeated key_env traversal",
+      "target_rationale": "Could eliminate repeated support discovery if probes establish stable demand equivalence",
+      "gate": "Only execute after coverage/reuse evidence"
+    },
+    {
+      "id": "REFRAME_B",
+      "class": "REFRAME",
+      "proposal": "Producer-side compile of body support mask attached to lambda/closure creation",
+      "target_rationale": "Moves demand computation from hot consumer path to producer path",
+      "gate": "Requires evidence that masks are stable and producer-side metadata cost amortizes"
+    },
+    {
+      "id": "META_A",
+      "class": "META",
+      "proposal": "Change residual policy to require proposal portfolios and matched value-per-cost ranking before selecting a next experiment",
+      "target_rationale": "Prevents single-path fixation and makes the developmental controller itself closer to the recursive optimizer specification",
+      "gate": "Evaluate separately from kernel optimization outcome"
+    }
+  ],
+  "directness_policy": ["PUSH", "PROBE", "REFRAME", "META"],
+  "selection_rule": "Prefer the lowest-level action with high expected target value per cost; because prior generic key_env/prune memoization attempts exist and may have failed, first discriminate demand-mask and structural-repeat geometry before a new fast path",
+  "selected_action": "PROBE_A+PROBE_B",
+  "selection_reason": "Two complementary probes can be collected in one instrumentation pass and directly determine whether PUSH_A or a representation change is licensed",
+  "next_generation_rule": "If repeated small support masks dominate, propose compiled/support-mask candidates; if structural key repetition dominates, propose reuse candidates; if neither, partition final body shape; if all are diffuse, reframe away from repeated key_env traversal. Do not hard-code a v17 mechanism before the v16 verifier result."
+}
