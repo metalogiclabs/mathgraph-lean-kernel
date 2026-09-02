@@ -1,31 +1,30 @@
-name: iota descend/fire separator v12
+name: recursor fire subfamily atlas v13
 
 on:
   push:
-    branches: [experiment/iota-descend-fire-separator-v12]
+    branches: [experiment/recursor-fire-subfamily-atlas-v13]
     paths:
       - '.github/workflows/verified-law-tournament-v10.yml'
-      - 'experiments/run_iota_descend_fire_separator_v12.sh'
+      - 'experiments/run_recursor_fire_subfamily_atlas_v13.sh'
   workflow_dispatch:
 
 jobs:
-  separator:
+  atlas:
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
         with: {fetch-depth: 0}
       - uses: cachix/install-nix-action@v31
-      - name: Execute residual-driven iota separator and cost decomposition
+      - name: Execute recursor fire subfamily atlas
         shell: bash
-        run: bash experiments/run_iota_descend_fire_separator_v12.sh
+        run: bash experiments/run_recursor_fire_subfamily_atlas_v13.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: iota-descend-fire-separator-v12
+          name: recursor-fire-subfamily-atlas-v13
           path: |
-            /tmp/v12-census.json
-            /tmp/v12-residual.json
-            /tmp/v12-decision.txt
-            /tmp/v12-iota-cost.txt
-            /tmp/v12-callgrind.txt
+            /tmp/v13-atlas.json
+            /tmp/v13-ranking.csv
+            /tmp/v13-residual.json
+            /tmp/v13-decision.txt
