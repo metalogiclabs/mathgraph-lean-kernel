@@ -1,30 +1,31 @@
-name: force_all operational basin census v11
+name: iota descend/fire separator v12
 
 on:
   push:
-    branches: [experiment/force-operational-basin-census-v11]
+    branches: [experiment/iota-descend-fire-separator-v12]
     paths:
       - '.github/workflows/verified-law-tournament-v10.yml'
-      - 'experiments/force-operational-basin-census-v11.trigger'
-      - 'experiments/run_force_operational_basin_census_v11.sh'
+      - 'experiments/run_iota_descend_fire_separator_v12.sh'
   workflow_dispatch:
 
 jobs:
-  census:
+  separator:
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
         with: {fetch-depth: 0}
       - uses: cachix/install-nix-action@v31
-      - name: Execute residual-driven operational basin census
+      - name: Execute residual-driven iota separator and cost decomposition
         shell: bash
-        run: bash experiments/run_force_operational_basin_census_v11.sh
+        run: bash experiments/run_iota_descend_fire_separator_v12.sh
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: force-operational-basin-census-v11
+          name: iota-descend-fire-separator-v12
           path: |
-            /tmp/v11-census.json
-            /tmp/v11-ranking.csv
-            /tmp/v11-residual.json
-            /tmp/v11-decision.txt
+            /tmp/v12-census.json
+            /tmp/v12-residual.json
+            /tmp/v12-decision.txt
+            /tmp/v12-iota-cost.txt
+            /tmp/v12-callgrind.txt
