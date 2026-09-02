@@ -1,43 +1,32 @@
-name: key_env residual proposal portfolio v16
+name: var-terminal prefix bypass v17
 
 on:
   push:
-    branches: [experiment/key-env-proposal-portfolio-v16]
+    branches: [experiment/var-terminal-prefix-bypass-v17]
     paths:
       - '.github/workflows/producer-side-projection-fusion.yml'
-      - 'experiments/run_key_env_proposal_portfolio_v16.sh'
-      - 'experiments/key_env_proposal_portfolio_v16.json'
-      - 'experiments/key-env-proposal-portfolio-v16.trigger'
+      - 'experiments/run_var_terminal_prefix_bypass_v17.sh'
+      - 'experiments/var-terminal-prefix-bypass-v17.trigger'
   workflow_dispatch:
 
 jobs:
-  proposal_portfolio:
+  challenger:
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
         with: {fetch-depth: 0}
       - uses: cachix/install-nix-action@v31
-      - name: Patch v16 instrumentation pointer key
+      - name: Execute v17 exact semantic and Callgrind challenger
         shell: bash
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          p=Path('experiments/run_key_env_proposal_portfolio_v16.sh')
-          s=p.read_text()
-          old="let ep=e as *const crate::expr::Expr<'t> as usize as u64;"
-          new="let ep=e.as_ref() as *const crate::expr::Expr<'t> as usize as u64;"
-          assert old in s
-          p.write_text(s.replace(old,new,1))
-          PY
-      - name: Execute subset-conditioned proposal portfolio
-        shell: bash
-        run: bash experiments/run_key_env_proposal_portfolio_v16.sh
+        run: bash experiments/run_var_terminal_prefix_bypass_v17.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: key-env-proposal-portfolio-v16
+          name: var-terminal-prefix-bypass-v17
           path: |
-            /tmp/v16-census.json
-            /tmp/v16-generation.json
-            /tmp/v16-decision.txt
+            /tmp/v17-semantic.txt
+            /tmp/v17-callgrind.csv
+            /tmp/v17-decision.txt
+            /tmp/v17-generation.json
+            /tmp/v17-*.err
