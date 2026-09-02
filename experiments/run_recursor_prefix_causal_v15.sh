@@ -84,13 +84,9 @@ assert old in s; s=s.replace(old,new,1)
 p.write_text(s)
 
 m=Path('src/main.rs'); t=m.read_text()
-needle='    checker.print_stats();'
-if needle in t:
-    t=t.replace(needle,needle+'\n    sokonanoda::tc::v15_report();',1)
-else:
-    # Same robust anchor used in prior census generations.
-    i=t.rfind('}')
-    t=t[:i]+'    sokonanoda::tc::v15_report();\n'+t[i:]
+needle='    match out {'
+assert t.count(needle)==1
+t=t.replace(needle,'    sokonanoda::tc::v15_report();\n'+needle,1)
 m.write_text(t)
 PY
 CARGO_TARGET_DIR=/tmp/v15-target RUSTFLAGS='-C target-cpu=x86-64 -C debuginfo=1' cargo build --release --locked
@@ -119,7 +115,6 @@ print('SEMANTIC_REPLAY=EXACT')
 json.dump(agg,open('/tmp/v15-census.json','w'),indent=2)
 g=agg.get('perf/grind-ring-5',{})
 if not g or g.get('dom_call',0)==0: raise SystemExit('dominant group not observed')
-# Exact causal constraints from the copied apply_many semantics.
 if g['head_nonlam']==0 and g['head_lam']==g['dom_call'] and g['inner_lam']>=g['dom_call']:
     status='DOMINANT_PREFIX_IS_LAMBDA_CHAIN'
     grammar=['key_env demand mask','prune cache hit-vs-cold','final eval body shape']
