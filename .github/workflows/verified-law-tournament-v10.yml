@@ -1,0 +1,203 @@
+name: Verified force_all law tournament v10
+
+on:
+  push:
+    branches: [experiment/verified-law-tournament-v10]
+    paths:
+      - '.github/workflows/verified-law-tournament-v10.yml'
+      - 'experiments/verified-law-tournament-v10.trigger'
+  workflow_dispatch:
+
+jobs:
+  tournament:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: cachix/install-nix-action@v31
+
+      - name: Freeze base, prove structural license boundary, generate candidates
+        shell: bash
+        run: |
+          set -euxo pipefail
+          BASE=2de1895a52d21ad266b77002defe3e6bc69bbcfd
+          git worktree add /tmp/v10-base "$BASE"
+          cp -a /tmp/v10-base /tmp/v10-work
+          cd /tmp/v10-base
+          cargo test --locked
+          CARGO_TARGET_DIR=/tmp/v10-base-target RUSTFLAGS='-C target-cpu=x86-64' cargo build --release --locked
+          cp /tmp/v10-base-target/release/sokonanoda /tmp/v10-base-bin
+          python3 - <<'PY'
+          from pathlib import Path
+          import itertools,json
+          src=Path('/tmp/v10-base/src/eval.rs').read_text()
+          # Structural certificate tied to the frozen source: these are exactly
+          # the forms force_all actively reduces before its Done fallthrough.
+          required=[
+            'Value::Thunk { .. } => cur = self.force_thunk(depth, cur)',
+            'Value::Unfold { .. } => {',
+            'RigidHead::Recursor(..) | RigidHead::QuotConst(..)',
+            '_ => ForceStep::Done',
+          ]
+          assert all(x in src for x in required), 'force_all reduction boundary changed'
+          licensed={
+            'lam':'Value::Lam { .. }','sort':'Value::Sort { .. }',
+            'nat':'Value::NatLit { .. }','str':'Value::StrLit { .. }',
+            'bvar':'Value::Rigid { head: RigidHead::BVar(..), .. }',
+            'axiom':'Value::Rigid { head: RigidHead::Axiom(..), .. }',
+            'ctor':'Value::Rigid { head: RigidHead::Ctor(..), .. }',
+            'inductive':'Value::Rigid { head: RigidHead::Inductive(..), .. }',
+          }
+          pi='Value::Pi { .. }'
+          c=[]
+          # incumbent plus all single and pair additions to Pi (1 + 8 + 28)
+          c.append({'name':'incumbent_pi','pattern':pi,'licensed':True,'added':[]})
+          keys=list(licensed)
+          for r in (1,2):
+            for combo in itertools.combinations(keys,r):
+              c.append({'name':'pi_plus_'+'_'.join(combo),
+                        'pattern':' | '.join([pi]+[licensed[k] for k in combo]),
+                        'licensed':True,'added':list(combo)})
+          # Three broader lawful concepts test compression/generalization.
+          c += [
+            {'name':'pi_plus_terminal4','pattern':' | '.join([pi]+[licensed[k] for k in ['lam','sort','nat','str']]),'licensed':True,'added':['lam','sort','nat','str']},
+            {'name':'pi_plus_rigid_safe4','pattern':' | '.join([pi]+[licensed[k] for k in ['bvar','axiom','ctor','inductive']]),'licensed':True,'added':['bvar','axiom','ctor','inductive']},
+            {'name':'pi_plus_all_licensed8','pattern':' | '.join([pi]+list(licensed.values())),'licensed':True,'added':keys},
+          ]
+          # Active forms are falsification sentinels. They may empirically pass,
+          # but can never be promoted by this controller.
+          unsafe={
+            'thunk':'Value::Thunk { .. }','unfold':'Value::Unfold { .. }',
+            'recursor':'Value::Rigid { head: RigidHead::Recursor(..), .. }',
+            'quot':'Value::Rigid { head: RigidHead::QuotConst(..), .. }',
+          }
+          for k,p in unsafe.items():
+            c.append({'name':'pi_plus_UNLICENSED_'+k,'pattern':pi+' | '+p,'licensed':False,'added':[k]})
+          assert len(c)==44,len(c)
+          Path('/tmp/v10-candidates.json').write_text(json.dumps(c,indent=2))
+          Path('/tmp/v10-license.txt').write_text(
+            'LICENSED_TERMINAL_FORMS=Pi,Lam,Sort,NatLit,StrLit,Rigid(BVar,Axiom,Ctor,Inductive)\n'
+            'ACTIVE_UNLICENSED_FORMS=Thunk,Unfold,Rigid(Recursor),Rigid(QuotConst)\n'
+            'SOURCE_BOUNDARY_CERTIFIED=true\n')
+          print('CANDIDATES',len(c),'LICENSED',sum(x['licensed'] for x in c),'UNLICENSED',sum(not x['licensed'] for x in c))
+          PY
+          printf '%s\n' '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}' >/tmp/v10-checker.json
+
+      - name: Build frozen Arena workloads
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone https://github.com/leanprover/lean-kernel-arena /tmp/v10-arena
+          cd /tmp/v10-arena
+          git checkout f0fe3b379dbce91537417b529140d0ca250f271c
+          for T in perf/app-lam perf/beta-ladder perf/let-ladder perf/grind-ring-5; do nix develop -c ./lka.py build-test "$T"; done
+
+      - name: Exact semantic replay of all candidates
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,subprocess,shutil,os
+          src0=Path('/tmp/v10-work/src/eval.rs').read_text()
+          anchor="""    pub(crate) fn force_all(&mut self, depth: u32, v: V<'t>) -> V<'t> {\n        if let Some(r) = self.store_lookup(depth, v) {"""
+          assert anchor in src0
+          cs=json.loads(Path('/tmp/v10-candidates.json').read_text())
+          arena=Path('/tmp/v10-arena'); tests=['app-lam','beta-ladder','let-ladder','grind-ring-5']
+          for t in tests:
+            f=arena/f'_build/tests/perf/{t}.ndjson'; out=Path(f'/tmp/v10-base-{t}.out')
+            with f.open('rb') as i,out.open('wb') as o: subprocess.run(['/tmp/v10-base-bin','/tmp/v10-checker.json'],stdin=i,stdout=o,stderr=subprocess.DEVNULL,check=True)
+          results=[]
+          for idx,c in enumerate(cs):
+            patch=f"""    pub(crate) fn force_all(&mut self, depth: u32, v: V<'t>) -> V<'t> {{\n        if matches!(v, {c['pattern']}) {{ return v; }}\n        if let Some(r) = self.store_lookup(depth, v) {{"""
+            Path('/tmp/v10-work/src/eval.rs').write_text(src0.replace(anchor,patch,1))
+            env=os.environ.copy();env['CARGO_TARGET_DIR']='/tmp/v10-target';env['RUSTFLAGS']='-C target-cpu=x86-64'
+            p=subprocess.run(['cargo','build','--release','--locked'],cwd='/tmp/v10-work',env=env,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
+            ok=p.returncode==0
+            if ok:
+              binp=f'/tmp/v10-bin-{idx:02d}';shutil.copy('/tmp/v10-target/release/sokonanoda',binp)
+              for t in tests:
+                f=arena/f'_build/tests/perf/{t}.ndjson';out=Path(f'/tmp/v10-{idx:02d}-{t}.out')
+                with f.open('rb') as i,out.open('wb') as o:r=subprocess.run([binp,'/tmp/v10-checker.json'],stdin=i,stdout=o,stderr=subprocess.DEVNULL)
+                if r.returncode or out.read_bytes()!=Path(f'/tmp/v10-base-{t}.out').read_bytes():ok=False;break
+            status='LICENSED_SURVIVOR' if ok and c['licensed'] else ('UNLICENSED_EMPIRICAL_SURVIVOR' if ok else 'REJECTED')
+            results.append({**c,'idx':idx,'semantic_equal':ok,'status':status})
+            print(f"{idx:02d} {c['name']} {status}")
+          Path('/tmp/v10-semantic.json').write_text(json.dumps(results,indent=2))
+          print('SUMMARY', {s:sum(r['status']==s for r in results) for s in ['LICENSED_SURVIVOR','UNLICENSED_EMPIRICAL_SURVIVOR','REJECTED']})
+          PY
+
+      - name: Deterministic incremental tournament versus retained Pi law
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/v10-arena
+          nix shell github:NixOS/nixpkgs/0ad6f47ea4fe188f4bc8f0380f93ae8523337c6c#valgrind -c valgrind --version
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,subprocess,csv
+          rs=json.loads(Path('/tmp/v10-semantic.json').read_text()); arena=Path('/tmp/v10-arena'); tests=['beta-ladder','app-lam']
+          lawful=[r for r in rs if r['status']=='LICENSED_SURVIVOR']
+          inc=next(r for r in lawful if r['name']=='incumbent_pi')
+          def ir(idx,t,tag):
+            f=arena/f'_build/tests/perf/{t}.ndjson';cg=Path(f'/tmp/v10-{tag}-{t}.cg')
+            cmd=['nix','shell','github:NixOS/nixpkgs/0ad6f47ea4fe188f4bc8f0380f93ae8523337c6c#valgrind','-c','valgrind','--tool=callgrind',f'--callgrind-out-file={cg}',f'/tmp/v10-bin-{idx:02d}','/tmp/v10-checker.json']
+            with f.open('rb') as i:subprocess.run(cmd,stdin=i,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True)
+            return int(next(x.split()[1] for x in cg.read_text().splitlines() if x.startswith('summary:')))
+          ib={t:ir(inc['idx'],t,'inc') for t in tests}; rows=[]
+          for r in lawful:
+            vals={t:ir(r['idx'],t,f"c{r['idx']:02d}") for t in tests}
+            d={t:(vals[t]/ib[t]-1)*100 for t in tests};mean=sum(d.values())/2;worst=max(d.values())
+            rows.append({**r,'beta':vals['beta-ladder'],'app':vals['app-lam'],'inc_beta_delta':d['beta-ladder'],'inc_app_delta':d['app-lam'],'incremental_mean':mean,'incremental_worst':worst})
+          rows.sort(key=lambda r:(r['incremental_mean'],r['incremental_worst'],len(r['added'])))
+          with open('/tmp/v10-ranking.csv','w',newline='') as f:w=csv.DictWriter(f,fieldnames=rows[0].keys());w.writeheader();w.writerows(rows)
+          champ=rows[0]; Path('/tmp/v10-champion.json').write_text(json.dumps(champ,indent=2))
+          print('INCUMBENT_PI',ib)
+          for r in rows[:12]:print(f"{r['name']} betaΔ={r['inc_beta_delta']:+.4f}% appΔ={r['inc_app_delta']:+.4f}% meanΔ={r['incremental_mean']:+.4f}% worstΔ={r['incremental_worst']:+.4f}%")
+          print('CHAMPION',champ['name'],'INCREMENTAL_MEAN',f"{champ['incremental_mean']:+.4f}%")
+          PY
+
+      - name: Lawbook retention, negative evidence, and next-grammar residual
+        shell: bash
+        run: |
+          python3 - <<'PY' | tee /tmp/v10-decision.txt
+          from pathlib import Path
+          import json
+          rs=json.loads(Path('/tmp/v10-semantic.json').read_text()); c=json.loads(Path('/tmp/v10-champion.json').read_text())
+          unlicensed=[r['name'] for r in rs if r['status']=='UNLICENSED_EMPIRICAL_SURVIVOR']
+          rejected=[r['name'] for r in rs if r['status']=='REJECTED']
+          mean=float(c['incremental_mean']);worst=float(c['incremental_worst'])
+          print('CHAMPION='+c['name']); print(f'INCREMENTAL_MEAN_DELTA={mean:+.6f}%');print(f'INCREMENTAL_WORST_DELTA={worst:+.6f}%')
+          print('UNLICENSED_EMPIRICAL_SURVIVORS='+','.join(unlicensed));print('REJECTED='+','.join(rejected))
+          if c['name']=='incumbent_pi' or mean >= -0.10 or worst > 0.20:
+            decision='NO_NEW_MATERIAL_LAW__RETAIN_PI__CHANGE_GRAMMAR'
+          elif mean <= -1.0:
+            decision='PROMOTE_LICENSED_EXTENSION__MATERIAL_INCREMENTAL_GAIN'
+          else:
+            decision='PROMOTE_LICENSED_EXTENSION__SMALL_INCREMENTAL_GAIN'
+          print('DECISION='+decision)
+          # The residual is generated from the evidence, not a claimed winner.
+          residual={
+            'incumbent':'Pi terminality',
+            'decision':decision,
+            'negative_evidence':{'active_forms_rejected_or_unlicensed':rejected+unlicensed},
+            'residual':'variant-membership search is exhausted when licensed additions give little incremental gain',
+            'next_candidate_grammar':['reducibility predicate','pending-spine-action predicate','deferred-evaluation predicate','demand/continuation-conditioned predicate'],
+            'promotion_rule':'structural license AND exact replay AND incremental non-regression',
+          }
+          Path('/tmp/v10-lawbook.json').write_text(json.dumps({'promoted':None if decision.startswith('NO_NEW') else c,'retained_incumbent':'Pi','residual':residual},indent=2))
+          print('NEXT_GRAMMAR=operational_reducibility_not_constructor_list')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-law-tournament-v10
+          path: |
+            /tmp/v10-candidates.json
+            /tmp/v10-license.txt
+            /tmp/v10-semantic.json
+            /tmp/v10-ranking.csv
+            /tmp/v10-champion.json
+            /tmp/v10-lawbook.json
+            /tmp/v10-decision.txt
