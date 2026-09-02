@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/producer-side-projection-fusion.yml'
       - 'experiments/run_recursor_prefix_causal_v15.sh'
+      - 'experiments/recursor-prefix-causal-v15.trigger'
   workflow_dispatch:
 
 jobs:
