@@ -18,6 +18,18 @@ jobs:
       - uses: actions/checkout@v4
         with: {fetch-depth: 0}
       - uses: cachix/install-nix-action@v31
+      - name: Patch v16 instrumentation pointer key
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('experiments/run_key_env_proposal_portfolio_v16.sh')
+          s=p.read_text()
+          old="let ep=e as *const crate::expr::Expr<'t> as usize as u64;"
+          new="let ep=e.as_ref() as *const crate::expr::Expr<'t> as usize as u64;"
+          assert old in s
+          p.write_text(s.replace(old,new,1))
+          PY
       - name: Execute subset-conditioned proposal portfolio
         shell: bash
         run: bash experiments/run_key_env_proposal_portfolio_v16.sh
