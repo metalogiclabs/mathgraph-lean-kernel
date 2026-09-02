@@ -1,33 +1,31 @@
-name: dominant recursor prefix causal separator v15
+name: key_env residual proposal portfolio v16
 
 on:
   push:
-    branches: [experiment/recursor-prefix-causal-v15]
+    branches: [experiment/key-env-proposal-portfolio-v16]
     paths:
       - '.github/workflows/producer-side-projection-fusion.yml'
-      - 'experiments/run_recursor_prefix_causal_v15.sh'
-      - 'experiments/recursor-prefix-causal-v15.trigger'
+      - 'experiments/run_key_env_proposal_portfolio_v16.sh'
+      - 'experiments/key_env_proposal_portfolio_v16.json'
+      - 'experiments/key-env-proposal-portfolio-v16.trigger'
   workflow_dispatch:
 
 jobs:
-  prefix_causal:
+  proposal_portfolio:
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
         with: {fetch-depth: 0}
       - uses: cachix/install-nix-action@v31
-      - name: Execute dominant recursor prefix causal separator
+      - name: Execute subset-conditioned proposal portfolio
         shell: bash
-        run: bash experiments/run_recursor_prefix_causal_v15.sh
+        run: bash experiments/run_key_env_proposal_portfolio_v16.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: recursor-prefix-causal-v15
+          name: key-env-proposal-portfolio-v16
           path: |
-            /tmp/v15-census.json
-            /tmp/v15-residual.json
-            /tmp/v15-decision.txt
-            /tmp/v15-prefix-cost.txt
-            /tmp/v15-callgrind.txt
-# v15 corrected reporter path trigger
+            /tmp/v16-census.json
+            /tmp/v16-generation.json
+            /tmp/v16-decision.txt
