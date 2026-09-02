@@ -1,0 +1,105 @@
+name: Law-first defeq reflexivity
+
+on:
+  push:
+    branches: [experiment/law-first-defeq-reflexivity]
+    paths:
+      - '.github/workflows/law-first-defeq-reflexivity.yml'
+      - 'experiments/law-first-defeq-reflexivity.trigger'
+
+jobs:
+  separator:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+      - name: Build exact base and law-first arm
+        run: |
+          set -euxo pipefail
+          BASE=2de1895a52d21ad266b77002defe3e6bc69bbcfd
+          git worktree add /tmp/law-base "$BASE"
+          cp -a /tmp/law-base /tmp/law-candidate
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/law-candidate/src/conv.rs')
+          s=p.read_text()
+          old='''    pub(crate) fn def_eq_core(&mut self, x: ExprPtr<'t>, y: ExprPtr<'t>) -> bool {\n        let depth = 0u32;'''
+          new='''    pub(crate) fn def_eq_core(&mut self, x: ExprPtr<'t>, y: ExprPtr<'t>) -> bool {\n        // Definitional equality is reflexive. If the exact syntax node is shared,\n        // the verifier already knows the answer; evaluating either side is redundant.\n        if x == y {\n            return true;\n        }\n        let depth = 0u32;'''
+          assert old in s, 'def_eq_core anchor changed'
+          p.write_text(s.replace(old,new,1))
+          PY
+          for arm in base candidate; do
+            (cd /tmp/law-$arm && cargo test --locked)
+            (cd /tmp/law-$arm && CARGO_TARGET_DIR=/tmp/law-$arm-target RUSTFLAGS='-C target-cpu=x86-64' cargo build --release --locked)
+            cp /tmp/law-$arm-target/release/sokonanoda /tmp/law-$arm-bin
+          done
+          printf '%s\n' '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}' >/tmp/checker.json
+      - name: Build deciding Arena workloads
+        run: |
+          set -euxo pipefail
+          git clone https://github.com/leanprover/lean-kernel-arena /tmp/law-arena
+          cd /tmp/law-arena
+          # Freeze the same Arena revision used by the prior V6 causal separator.
+          git checkout f0fe3b379dbce91537417b529140d0ca250f271c
+          for T in perf/app-lam perf/beta-ladder perf/let-ladder perf/grind-ring-5; do
+            nix develop -c ./lka.py build-test "$T"
+          done
+      - name: Exact semantic equality gate
+        run: |
+          set -euxo pipefail
+          cd /tmp/law-arena
+          for T in app-lam beta-ladder let-ladder grind-ring-5; do
+            F="_build/tests/perf/$T.ndjson"
+            /tmp/law-base-bin /tmp/checker.json < "$F" > "/tmp/law-base-$T.out" 2> "/tmp/law-base-$T.err"
+            /tmp/law-candidate-bin /tmp/checker.json < "$F" > "/tmp/law-candidate-$T.out" 2> "/tmp/law-candidate-$T.err"
+            cmp "/tmp/law-base-$T.out" "/tmp/law-candidate-$T.out"
+          done
+      - name: Deterministic Callgrind separator
+        run: |
+          set -euxo pipefail
+          cd /tmp/law-arena
+          printf 'test,arm,instructions\n' >/tmp/law-callgrind.csv
+          nix shell github:NixOS/nixpkgs/0ad6f47ea4fe188f4bc8f0380f93ae8523337c6c#valgrind -c bash -lc '
+            set -euo pipefail
+            for T in app-lam beta-ladder let-ladder grind-ring-5; do
+              F="_build/tests/perf/$T.ndjson"
+              for arm in base candidate; do
+                cf="/tmp/law-$T-$arm.cg"
+                valgrind --tool=callgrind --callgrind-out-file="$cf" "/tmp/law-$arm-bin" /tmp/checker.json < "$F" >/dev/null 2>"/tmp/law-$T-$arm.vg"
+                ir=$(awk "/^summary:/ {print \$2; exit}" "$cf")
+                test -n "$ir"
+                printf "%s,%s,%s\n" "$T" "$arm" "$ir" >>/tmp/law-callgrind.csv
+              done
+            done
+          '
+          python3 - <<'PY' | tee /tmp/law-decision.txt
+          import csv
+          rows=list(csv.DictReader(open('/tmp/law-callgrind.csv')))
+          d={(r['test'],r['arm']):int(r['instructions']) for r in rows}
+          best=0.0
+          regress=0.0
+          for t in ('app-lam','beta-ladder','let-ladder','grind-ring-5'):
+              b=d[(t,'base')]; c=d[(t,'candidate')]
+              delta=(c/b-1)*100
+              best=min(best,delta)
+              regress=max(regress,delta)
+              print(f'{t} base={b} candidate={c} delta={delta:+.4f}%')
+          if best <= -1.0 and regress <= 0.2:
+              print('DECISION=PROMOTE__LAW_FIRST_REFLEXIVITY_MATERIAL')
+          elif best < -0.1 and regress <= 0.2:
+              print('DECISION=WEAK_POSITIVE__KEEP_AS_MICRO_LAW_AND_MOVE_DEEPER')
+          else:
+              print('DECISION=REFLEXIVITY_NOT_MAJOR_RESIDUAL__BUILD_CONVERTIBILITY_WITNESS_CENSUS')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: law-first-defeq-reflexivity
+          path: |
+            /tmp/law-callgrind.csv
+            /tmp/law-decision.txt
+            /tmp/law-*.err
