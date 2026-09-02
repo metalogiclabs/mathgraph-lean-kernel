@@ -23,16 +23,23 @@ assert a in s; s=s.replace(a,i,1)
 old="""    pub(crate) fn force_all(&mut self, depth: u32, v: V<'t>) -> V<'t> {\n        if let Some(r) = self.store_lookup(depth, v) {\n            return r;\n        }\n        let mut cur = v;"""
 new="""    pub(crate) fn force_all(&mut self, depth: u32, v: V<'t>) -> V<'t> {\n        FC_CALLS.fetch_add(1, Ordering::Relaxed);\n        if let Some(r) = self.store_lookup(depth, v) { FC_CACHE.fetch_add(1, Ordering::Relaxed); if std::ptr::eq(r,v){FC_CACHE_SAME.fetch_add(1,Ordering::Relaxed);} return r; }\n        let basin=match v { Value::Thunk{..}=>{FC_THUNK.fetch_add(1,Ordering::Relaxed);1u8}, Value::Unfold{..}=>{FC_UNFOLD.fetch_add(1,Ordering::Relaxed);2u8}, Value::Rigid{head:RigidHead::Recursor(..)|RigidHead::QuotConst(..),..}=>{FC_IOTA.fetch_add(1,Ordering::Relaxed);3u8}, _=>{FC_TERMINAL.fetch_add(1,Ordering::Relaxed);0u8} };\n        let mut cur = v;"""
 assert old in s; s=s.replace(old,new,1)
-s=s.replace('Value::Thunk { .. } => cur = self.force_thunk(depth, cur),','Value::Thunk { .. } => { FC_THUNK_FORCE.fetch_add(1,Ordering::Relaxed); cur=self.force_thunk(depth,cur) },',1)
-s=s.replace('Value::Unfold { .. } => {\n                        let next = self.unfold_value(depth, cur);','Value::Unfold { .. } => {\n                        FC_UNFOLD_TRY.fetch_add(1,Ordering::Relaxed); let next=self.unfold_value(depth,cur);',1)
-s=s.replace('steps += 1;\n                        cur = next;','steps += 1; FC_UNFOLD_REDUCED.fetch_add(1,Ordering::Relaxed);\n                        cur = next;',1)
-s=s.replace('ForceStep::Reduced(next) => {\n                    steps += 1;','ForceStep::Reduced(next) => {\n                    FC_IOTA_REDUCED.fetch_add(1,Ordering::Relaxed); steps += 1;',1)
-s=s.replace('ForceStep::Descend(major) => {\n                    waiting.push(cur);','ForceStep::Descend(major) => {\n                    FC_IOTA_DESCEND.fetch_add(1,Ordering::Relaxed); waiting.push(cur);',1)
-s=s.replace('Some(res) => {\n                                self.tc_cache.iota_cache.insert(key, res);','Some(res) => {\n                                FC_FIRE_SUCCESS.fetch_add(1,Ordering::Relaxed); self.tc_cache.iota_cache.insert(key,res);',1)
-s=s.replace('None => {\n                                self.tc_cache.iota_stuck.insert(key);','None => {\n                                FC_FIRE_STUCK.fetch_add(1,Ordering::Relaxed); self.tc_cache.iota_stuck.insert(key);',1)
+# Scope all instrumentation edits to force_all so similarly shaped code in whnf_head cannot be touched.
+start=s.index("    pub(crate) fn force_all")
+end=s.find("\n    pub(crate) fn ", start+1)
+if end < 0: end=len(s)
+pre,seg,post=s[:start],s[start:end],s[end:]
+seg=seg.replace('Value::Thunk { .. } => cur = self.force_thunk(depth, cur),','Value::Thunk { .. } => { FC_THUNK_FORCE.fetch_add(1,Ordering::Relaxed); cur=self.force_thunk(depth,cur) },',1)
+seg=seg.replace('Value::Unfold { .. } => {\n                        let next = self.unfold_value(depth, cur);','Value::Unfold { .. } => {\n                        FC_UNFOLD_TRY.fetch_add(1,Ordering::Relaxed); let next=self.unfold_value(depth,cur);',1)
+seg=seg.replace('steps += 1;\n                        cur = next;','steps += 1; FC_UNFOLD_REDUCED.fetch_add(1,Ordering::Relaxed);\n                        cur = next;',1)
+seg=seg.replace('ForceStep::Reduced(next) => {\n                    steps += 1;','ForceStep::Reduced(next) => {\n                    FC_IOTA_REDUCED.fetch_add(1,Ordering::Relaxed); steps += 1;',1)
+seg=seg.replace('ForceStep::Descend(major) => {\n                    waiting.push(cur);','ForceStep::Descend(major) => {\n                    FC_IOTA_DESCEND.fetch_add(1,Ordering::Relaxed); waiting.push(cur);',1)
+seg=seg.replace('Some(res) => {\n                                self.tc_cache.iota_cache.insert(key, res);','Some(res) => {\n                                FC_FIRE_SUCCESS.fetch_add(1,Ordering::Relaxed); self.tc_cache.iota_cache.insert(key,res);',1)
+seg=seg.replace('None => {\n                                self.tc_cache.iota_stuck.insert(key);','None => {\n                                FC_FIRE_STUCK.fetch_add(1,Ordering::Relaxed); self.tc_cache.iota_stuck.insert(key);',1)
 e='''        self.note_whnf(depth, v, result, steps);\n        result'''
 r='''        if steps==0{FC_ZERO_STEP.fetch_add(1,Ordering::Relaxed);} if std::ptr::eq(result,v){match basin{0=>{FC_TERMINAL_SAME.fetch_add(1,Ordering::Relaxed);},1=>{FC_THUNK_SAME.fetch_add(1,Ordering::Relaxed);},2=>{FC_UNFOLD_SAME.fetch_add(1,Ordering::Relaxed);},3=>{FC_IOTA_SAME.fetch_add(1,Ordering::Relaxed);},_=>{}}}\n        self.note_whnf(depth, v, result, steps);\n        result'''
-assert e in s; p.write_text(s.replace(e,r,1))
+assert e in seg
+seg=seg.replace(e,r,1)
+p.write_text(pre+seg+post)
 p=Path('src/main.rs'); s=p.read_text(); a='''    match out {\n        Ok(Some(msg)) => println!("{}", msg),'''; r='''    sokonanoda::eval::force_census_report();\n    match out {\n        Ok(Some(msg)) => println!("{}", msg),'''; assert a in s; p.write_text(s.replace(a,r,1))
 PY
 CARGO_TARGET_DIR=/tmp/v11-target RUSTFLAGS='-C target-cpu=x86-64' cargo build --release --locked
