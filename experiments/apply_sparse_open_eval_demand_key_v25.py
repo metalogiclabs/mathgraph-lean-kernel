@@ -51,7 +51,7 @@ old="""        if matches!(
             let te = self.key_env(env, e);
             let key = (te as *const value::Env<'t> as usize, e);
             if let Some(v) = self.tc_cache.open_eval_cache.get(&key) {
-                return *v;
+                return v;
             }
             let v = self.eval_no_cache(depth, te, e);
             self.tc_cache.open_eval_cache.insert(key, v);
@@ -88,7 +88,7 @@ new="""        if matches!(
                             let lsub = env.lsub().map_or(0usize, |ls| ls as *const value::LevelSub<'t> as usize);
                             let key = (e, mask, p0, p1, lsub);
                             if let Some(v) = self.tc_cache.sparse_open_eval_cache.get(&key) {
-                                return *v;
+                                return v;
                             }
                             let v = self.eval_no_cache(depth, env, e);
                             self.tc_cache.sparse_open_eval_cache.insert(key, v);
@@ -100,7 +100,7 @@ new="""        if matches!(
             let te = self.key_env(env, e);
             let key = (te as *const value::Env<'t> as usize, e);
             if let Some(v) = self.tc_cache.open_eval_cache.get(&key) {
-                return *v;
+                return v;
             }
             let v = self.eval_no_cache(depth, te, e);
             self.tc_cache.open_eval_cache.insert(key, v);
