@@ -3,10 +3,6 @@ name: Arena halving atlas tournament v29
 on:
   push:
     branches: [experiment/arena-halving-atlas-tournament-v29]
-    paths:
-      - 'experiments/run_arena_halving_atlas_tournament_v29.sh'
-      - 'experiments/run_arena_walltime_incumbent_v28.sh'
-      - '.github/workflows/arena-halving-atlas-v29.yml'
   workflow_dispatch:
 
 jobs:
