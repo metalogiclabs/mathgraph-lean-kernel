@@ -1,12 +1,12 @@
-name: Framed two-slot prune v24
+name: Sparse open eval demand key v25
 
 on:
   push:
-    branches: [experiment/framed-two-slot-prune-v24]
+    branches: [experiment/sparse-open-eval-demand-key-v25]
     paths:
       - '.github/workflows/producer-side-projection-fusion.yml'
-      - 'experiments/run_framed_two_slot_prune_v24.sh'
-      - 'experiments/apply_framed_two_slot_prune_v24.py'
+      - 'experiments/run_sparse_open_eval_demand_key_v25.sh'
+      - 'experiments/apply_sparse_open_eval_demand_key_v25.py'
       - 'experiments/run_post_compound_self_cost_atlas_v21.sh'
   workflow_dispatch:
 
@@ -18,17 +18,17 @@ jobs:
       - uses: actions/checkout@v4
         with: {fetch-depth: 0}
       - uses: cachix/install-nix-action@v31
-      - name: Execute v24 framed two-slot materialized prune tournament
+      - name: Execute v25 sparse open eval demand key tournament
         shell: bash
-        run: bash experiments/run_framed_two_slot_prune_v24.sh
+        run: bash experiments/run_sparse_open_eval_demand_key_v25.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: framed-two-slot-prune-v24
+          name: sparse-open-eval-demand-key-v25
           path: |
-            /tmp/v24-semantic.txt
-            /tmp/v24-decision.txt
-            /tmp/v24-self.txt
-            /tmp/v24.vg
-            /tmp/v24.err
+            /tmp/v25-semantic.txt
+            /tmp/v25-decision.txt
+            /tmp/v25-self.txt
+            /tmp/v25.vg
+            /tmp/v25.err
             /tmp/v21-self-hotspots.txt
