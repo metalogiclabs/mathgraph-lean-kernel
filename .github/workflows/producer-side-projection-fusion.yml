@@ -1,32 +1,34 @@
-name: Post-incumbent prune shape census v26
+name: One-Cons to Framed prune fastpath v27
 
 on:
   push:
-    branches: [experiment/post-incumbent-prune-shape-census-v26]
+    branches: [experiment/one-cons-framed-prune-fastpath-v27]
     paths:
       - '.github/workflows/producer-side-projection-fusion.yml'
-      - 'experiments/run_post_incumbent_prune_shape_census_v26.sh'
+      - 'experiments/run_one_cons_framed_prune_fastpath_v27.sh'
+      - 'experiments/apply_one_cons_framed_prune_fastpath_v27.py'
       - 'experiments/run_post_compound_self_cost_atlas_v21.sh'
   workflow_dispatch:
 
 jobs:
-  census:
+  tournament:
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
         with: {fetch-depth: 0}
       - uses: cachix/install-nix-action@v31
-      - name: Execute v26 post-incumbent prune shape census
+      - name: Execute v27 one-Cons to Framed prune tournament
         shell: bash
-        run: bash experiments/run_post_incumbent_prune_shape_census_v26.sh
+        run: bash experiments/run_one_cons_framed_prune_fastpath_v27.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: post-incumbent-prune-shape-census-v26
+          name: one-cons-framed-prune-fastpath-v27
           path: |
-            /tmp/v26-semantic.txt
-            /tmp/v26-shape.txt
-            /tmp/v26-decision.txt
-            /tmp/v26.err
+            /tmp/v27-semantic.txt
+            /tmp/v27-decision.txt
+            /tmp/v27-self.txt
+            /tmp/v27.vg
+            /tmp/v27.err
             /tmp/v21-self-hotspots.txt
