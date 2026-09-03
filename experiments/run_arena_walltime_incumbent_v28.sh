@@ -94,7 +94,8 @@ git clone https://github.com/leanprover/lean-kernel-arena /tmp/v28-arena
 cd /tmp/v28-arena
 ARENA_SHA=$(git rev-parse HEAD)
 echo "ARENA_SHA=$ARENA_SHA" | tee /tmp/v28-provenance.txt
-nix develop -c ./lka.py build-test init-prelude mathlib
+nix develop -c ./lka.py build-test init-prelude
+nix develop -c ./lka.py build-test mathlib
 INIT=/tmp/v28-arena/_build/tests/init-prelude.ndjson
 MATHLIB=/tmp/v28-arena/_build/tests/mathlib.ndjson
 
@@ -116,13 +117,11 @@ auto_build() {
 auto_build base
 auto_build inc
 
-# Correctness gate on the exact Arena Mathlib export.
 /tmp/v28-base-bin /tmp/v28-config.json < "$MATHLIB" >/tmp/v28-base.out 2>/tmp/v28-base.err
 /tmp/v28-inc-bin /tmp/v28-config.json < "$MATHLIB" >/tmp/v28-inc.out 2>/tmp/v28-inc.err
 cmp /tmp/v28-base.out /tmp/v28-inc.out
 echo V28_MATHLIB_SEMANTIC_REPLAY=EXACT | tee /tmp/v28-semantic.txt
 
-# One unmeasured warm-up per arm, then six matched alternating runs: AB BA AB.
 /tmp/v28-base-bin /tmp/v28-config.json < "$MATHLIB" >/dev/null 2>/dev/null
 /tmp/v28-inc-bin /tmp/v28-config.json < "$MATHLIB" >/dev/null 2>/dev/null
 
