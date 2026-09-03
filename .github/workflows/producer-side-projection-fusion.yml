@@ -1,12 +1,12 @@
-name: Lazy framed subprojection v23
+name: Framed two-slot prune v24
 
 on:
   push:
-    branches: [experiment/lazy-framed-subprojection-v23]
+    branches: [experiment/framed-two-slot-prune-v24]
     paths:
       - '.github/workflows/producer-side-projection-fusion.yml'
-      - 'experiments/run_lazy_framed_subprojection_v23.sh'
-      - 'experiments/apply_lazy_framed_subprojection_v23.py'
+      - 'experiments/run_framed_two_slot_prune_v24.sh'
+      - 'experiments/apply_framed_two_slot_prune_v24.py'
       - 'experiments/run_post_compound_self_cost_atlas_v21.sh'
   workflow_dispatch:
 
@@ -18,17 +18,17 @@ jobs:
       - uses: actions/checkout@v4
         with: {fetch-depth: 0}
       - uses: cachix/install-nix-action@v31
-      - name: Execute v23 lazy subprojection tournament
+      - name: Execute v24 framed two-slot materialized prune tournament
         shell: bash
-        run: bash experiments/run_lazy_framed_subprojection_v23.sh
+        run: bash experiments/run_framed_two_slot_prune_v24.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: lazy-framed-subprojection-v23
+          name: framed-two-slot-prune-v24
           path: |
-            /tmp/v23-semantic.txt
-            /tmp/v23-decision.txt
-            /tmp/v23-self.txt
-            /tmp/v23.vg
-            /tmp/v23.err
+            /tmp/v24-semantic.txt
+            /tmp/v24-decision.txt
+            /tmp/v24-self.txt
+            /tmp/v24.vg
+            /tmp/v24.err
             /tmp/v21-self-hotspots.txt
