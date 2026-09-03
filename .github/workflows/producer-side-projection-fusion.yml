@@ -1,32 +1,30 @@
-name: Pi plus v18 full incumbent gate v20
+name: Post-compound self-cost atlas v21
 
 on:
   push:
-    branches: [experiment/pi-v18-full-incumbent-gate-v20]
+    branches: [experiment/post-compound-self-cost-atlas-v21]
     paths:
       - '.github/workflows/producer-side-projection-fusion.yml'
-      - 'experiments/run_pi_v18_full_incumbent_gate_v20.sh'
+      - 'experiments/run_post_compound_self_cost_atlas_v21.sh'
   workflow_dispatch:
 
 jobs:
-  gate:
+  atlas:
     runs-on: ubuntu-24.04
-    timeout-minutes: 180
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
         with: {fetch-depth: 0}
       - uses: cachix/install-nix-action@v31
-      - name: Execute v20 full incumbent gate and residual atlas
+      - name: Execute v21 exclusive self-cost atlas
         shell: bash
-        run: bash experiments/run_pi_v18_full_incumbent_gate_v20.sh
+        run: bash experiments/run_post_compound_self_cost_atlas_v21.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: pi-v18-full-incumbent-gate-v20
+          name: post-compound-self-cost-atlas-v21
           path: |
-            /tmp/v20-full-arena-results.tsv
-            /tmp/v20-full-arena-decision.txt
-            /tmp/v20-full-arena-failures.txt
-            /tmp/v20-residual-decision.txt
-            /tmp/v20-compound-hotspots.txt
-            /tmp/v20-*-grind.vg
+            /tmp/v21-semantic.txt
+            /tmp/v21-self-hotspots.txt
+            /tmp/v21-decision.txt
+            /tmp/v21-compound.vg
