@@ -1,34 +1,33 @@
-name: One-Cons to Framed prune fastpath v27
+name: Arena Mathlib wall-time incumbent v28
 
 on:
   push:
-    branches: [experiment/one-cons-framed-prune-fastpath-v27]
+    branches: [experiment/arena-walltime-incumbent-v28]
     paths:
       - '.github/workflows/producer-side-projection-fusion.yml'
-      - 'experiments/run_one_cons_framed_prune_fastpath_v27.sh'
-      - 'experiments/apply_one_cons_framed_prune_fastpath_v27.py'
-      - 'experiments/run_post_compound_self_cost_atlas_v21.sh'
+      - 'experiments/run_arena_walltime_incumbent_v28.sh'
   workflow_dispatch:
 
 jobs:
   tournament:
     runs-on: ubuntu-24.04
-    timeout-minutes: 120
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
         with: {fetch-depth: 0}
       - uses: cachix/install-nix-action@v31
-      - name: Execute v27 one-Cons to Framed prune tournament
+      - name: Execute v28 Arena Mathlib wall-time tournament
         shell: bash
-        run: bash experiments/run_one_cons_framed_prune_fastpath_v27.sh
+        run: bash experiments/run_arena_walltime_incumbent_v28.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: one-cons-framed-prune-fastpath-v27
+          name: arena-walltime-incumbent-v28
           path: |
-            /tmp/v27-semantic.txt
-            /tmp/v27-decision.txt
-            /tmp/v27-self.txt
-            /tmp/v27.vg
-            /tmp/v27.err
-            /tmp/v21-self-hotspots.txt
+            /tmp/v28-provenance.txt
+            /tmp/v28-semantic.txt
+            /tmp/v28-decision.txt
+            /tmp/v28-base-*.time
+            /tmp/v28-inc-*.time
+            /tmp/v28-base-*.err
+            /tmp/v28-inc-*.err
