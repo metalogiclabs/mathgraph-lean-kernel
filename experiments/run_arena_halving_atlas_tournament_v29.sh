@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euxo pipefail
+# v29 trigger: wall-time halving atlas + factorial candidate tournament
 
 # Reuse the exact v28 full-Mathlib/PGO verifier first. It leaves the arena export,
 # base/incumbent binaries, configs and timings in /tmp for the atlas below.
@@ -16,9 +17,6 @@ for n in 1 2 4; do
 done
 
 # ---- Parsing/materialization lower-bound probe -------------------------------
-# parse_only is part of the export config. If the current Config schema accepts
-# it at top level this gives a direct wall lower bound; otherwise record N/A and
-# do not fail the scientific tournament.
 printf '%s\n' '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false,"parse_only":true}' >/tmp/v29-parse.json
 set +e
 /usr/bin/time -f '%e %U %S %M' -o /tmp/v29-parse.time /tmp/v28-inc-bin /tmp/v29-parse.json < "$MATHLIB" >/tmp/v29-parse.out 2>/tmp/v29-parse.err
@@ -38,7 +36,6 @@ from pathlib import Path
 pi_old="""    pub(crate) fn force_all(&mut self, depth: u32, v: V<'t>) -> V<'t> {\n        if let Some(r) = self.store_lookup(depth, v) {"""
 pi_new="""    pub(crate) fn force_all(&mut self, depth: u32, v: V<'t>) -> V<'t> {\n        if matches!(v, Value::Pi { .. }) {\n            return v;\n        }\n        if let Some(r) = self.store_lookup(depth, v) {"""
 p=Path('/tmp/v29-pi/src/eval.rs'); s=p.read_text(); assert s.count(pi_old)==1; p.write_text(s.replace(pi_old,pi_new,1))
-
 old='''    pub(crate) fn apply_many(&mut self, depth: u32, f0: V<'t>, args: &[V<'t>]) -> V<'t> {
         let mut f = f0;
         let mut i = 0usize;
@@ -131,40 +128,33 @@ for arm in pi v18; do
   echo "V29_${arm^^}_SEMANTIC_REPLAY=EXACT"
 done
 
-# One matched tournament pass is enough to rank candidates cheaply; v28 already
-# has three-run medians for base and compound. Alternate order to reduce drift.
 /usr/bin/time -f '%e %U %S %M' -o /tmp/v29-pi.time /tmp/v29-pi-bin /tmp/v28-config.json < "$MATHLIB" >/dev/null 2>/tmp/v29-pi.measure.err
 /usr/bin/time -f '%e %U %S %M' -o /tmp/v29-v18.time /tmp/v29-v18-bin /tmp/v28-config.json < "$MATHLIB" >/dev/null 2>/tmp/v29-v18.measure.err
 
 python3 - <<'PY' | tee /tmp/v29-decision.txt
 from pathlib import Path
 import statistics
-
 def row(path):
     e,u,s,r=Path(path).read_text().split(); return float(e),float(u)+float(s),int(r)
 def v28(arm):
-    xs=[]
-    for i in range(1,4): xs.append(row(f'/tmp/v28-{arm}-{i}.time'))
+    xs=[row(f'/tmp/v28-{arm}-{i}.time') for i in range(1,4)]
     return statistics.median(x[0] for x in xs), statistics.median(x[1] for x in xs)
 base_w,base_c=v28('base'); comp_w,comp_c=v28('inc')
 pi_w,pi_c,_=row('/tmp/v29-pi.time'); v18_w,v18_c,_=row('/tmp/v29-v18.time')
 threads={n:row(f'/tmp/v29-thread-{n}.time') for n in (1,2,4)}
-print('V29_BASE_WALL_MEDIAN=%.3f'%base_w)
-print('V29_PI_WALL=%.3f'%pi_w)
-print('V29_V18_WALL=%.3f'%v18_w)
-print('V29_COMPOUND_WALL_MEDIAN=%.3f'%comp_w)
+print(f'V29_BASE_WALL_MEDIAN={base_w:.3f}')
+print(f'V29_PI_WALL={pi_w:.3f}')
+print(f'V29_V18_WALL={v18_w:.3f}')
+print(f'V29_COMPOUND_WALL_MEDIAN={comp_w:.3f}')
 for name,w in [('PI',pi_w),('V18',v18_w),('COMPOUND',comp_w)]: print(f'V29_{name}_VS_BASE_PCT={(w-base_w)/base_w*100:+.3f}')
 for n,(w,c,r) in threads.items(): print(f'V29_THREADS_{n}_WALL={w:.3f} CPU={c:.3f} RSS_KB={r}')
 print(f'V29_4THREAD_EFFECTIVE_CORES={threads[4][1]/threads[4][0]:.3f}')
 print(f'V29_SAME_WORK_PERFECT_4CORE_FLOOR={threads[4][1]/4:.3f}')
 print(f'V29_CPU_REDUCTION_NEEDED_FOR_2X_AT_4CORES={max(0,1-(base_w/2*4)/threads[4][1])*100:.3f}%')
-parse=Path('/tmp/v29-parse.time')
-if parse.exists() and Path('/tmp/v29-atlas.txt').read_text().splitlines()[0].endswith('=0'):
+if Path('/tmp/v29-parse.time').exists() and Path('/tmp/v29-atlas.txt').read_text().splitlines()[0].endswith('=0'):
     pw,pc,pr=row('/tmp/v29-parse.time'); print(f'V29_PARSE_ONLY_WALL={pw:.3f} CPU={pc:.3f} RSS_KB={pr}')
 else: print('V29_PARSE_ONLY_WALL=NA')
-# winner is only a routing signal from this cheap factorial pass.
 vals={'PI':pi_w,'V18':v18_w,'COMPOUND':comp_w}
-winner=min(vals,key=vals.get)
-print('V29_FACTORIAL_WINNER='+winner)
+print('V29_FACTORIAL_WINNER='+min(vals,key=vals.get))
 print('DECISION=V29_ROUTE_FROM_MEASURED_WALLTIME__NO_HOTSPOT_PROXY')
 PY
