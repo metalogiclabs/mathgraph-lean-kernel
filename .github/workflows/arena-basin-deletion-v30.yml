@@ -1,0 +1,30 @@
+name: Arena basin deletion census v30
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'experiments/run_arena_basin_deletion_census_v30.sh'
+  workflow_dispatch:
+
+jobs:
+  census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: cachix/install-nix-action@v31
+      - name: Execute v30 consequence-first basin census
+        shell: bash
+        run: bash experiments/run_arena_basin_deletion_census_v30.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: arena-basin-deletion-v30
+          path: |
+            /tmp/v30-census.txt
+            /tmp/v30-decision.txt
+            /tmp/v30-std.err
+            /tmp/v30-cedar.err
+            /tmp/v30-mathlib.err
