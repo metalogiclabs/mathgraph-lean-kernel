@@ -1,0 +1,36 @@
+name: Arena halving atlas tournament v29
+
+on:
+  push:
+    branches: [experiment/arena-halving-atlas-tournament-v29]
+    paths:
+      - 'experiments/run_arena_halving_atlas_tournament_v29.sh'
+      - 'experiments/run_arena_walltime_incumbent_v28.sh'
+      - '.github/workflows/arena-halving-atlas-v29.yml'
+  workflow_dispatch:
+
+jobs:
+  tournament:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: cachix/install-nix-action@v31
+      - name: Execute v29 Arena halving atlas tournament
+        shell: bash
+        run: bash experiments/run_arena_halving_atlas_tournament_v29.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: arena-halving-atlas-tournament-v29
+          path: |
+            /tmp/v28-provenance.txt
+            /tmp/v28-semantic.txt
+            /tmp/v28-decision.txt
+            /tmp/v29-atlas.txt
+            /tmp/v29-decision.txt
+            /tmp/v29-thread-*.time
+            /tmp/v29-parse.*
+            /tmp/v29-pi.time
+            /tmp/v29-v18.time
