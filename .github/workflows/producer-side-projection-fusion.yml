@@ -1,31 +1,32 @@
-name: Pi plus v18 compound Cedar v19
+name: Pi plus v18 full incumbent gate v20
 
 on:
   push:
-    branches: [experiment/pi-v18-compound-cedar-v19]
+    branches: [experiment/pi-v18-full-incumbent-gate-v20]
     paths:
       - '.github/workflows/producer-side-projection-fusion.yml'
-      - 'experiments/run_pi_v18_compound_cedar_v19.sh'
+      - 'experiments/run_pi_v18_full_incumbent_gate_v20.sh'
   workflow_dispatch:
 
 jobs:
   gate:
     runs-on: ubuntu-24.04
-    timeout-minutes: 120
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
         with: {fetch-depth: 0}
       - uses: cachix/install-nix-action@v31
-      - name: Execute v19 compound Cedar gate
+      - name: Execute v20 full incumbent gate and residual atlas
         shell: bash
-        run: bash experiments/run_pi_v18_compound_cedar_v19.sh
+        run: bash experiments/run_pi_v18_full_incumbent_gate_v20.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: pi-v18-compound-cedar-v19
+          name: pi-v18-full-incumbent-gate-v20
           path: |
-            /tmp/v19-semantic.txt
-            /tmp/v19-callgrind.csv
-            /tmp/v19-decision.txt
-            /tmp/v19-generation.json
-            /tmp/v19-*.err
+            /tmp/v20-full-arena-results.tsv
+            /tmp/v20-full-arena-decision.txt
+            /tmp/v20-full-arena-failures.txt
+            /tmp/v20-residual-decision.txt
+            /tmp/v20-compound-hotspots.txt
+            /tmp/v20-*-grind.vg
