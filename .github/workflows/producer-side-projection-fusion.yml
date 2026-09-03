@@ -1,32 +1,34 @@
-name: Post-compound prune line atlas v22
+name: Lazy framed subprojection v23
 
 on:
   push:
-    branches: [experiment/post-compound-prune-line-atlas-v22]
+    branches: [experiment/lazy-framed-subprojection-v23]
     paths:
       - '.github/workflows/producer-side-projection-fusion.yml'
-      - 'experiments/run_post_compound_prune_line_atlas_v22.sh'
+      - 'experiments/run_lazy_framed_subprojection_v23.sh'
+      - 'experiments/apply_lazy_framed_subprojection_v23.py'
       - 'experiments/run_post_compound_self_cost_atlas_v21.sh'
   workflow_dispatch:
 
 jobs:
-  atlas:
+  tournament:
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
         with: {fetch-depth: 0}
       - uses: cachix/install-nix-action@v31
-      - name: Execute v22 source-line phase atlas
+      - name: Execute v23 lazy subprojection tournament
         shell: bash
-        run: bash experiments/run_post_compound_prune_line_atlas_v22.sh
+        run: bash experiments/run_lazy_framed_subprojection_v23.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: post-compound-prune-line-atlas-v22
+          name: lazy-framed-subprojection-v23
           path: |
-            /tmp/v21-semantic.txt
+            /tmp/v23-semantic.txt
+            /tmp/v23-decision.txt
+            /tmp/v23-self.txt
+            /tmp/v23.vg
+            /tmp/v23.err
             /tmp/v21-self-hotspots.txt
-            /tmp/v22-line-annotate.txt
-            /tmp/v22-decision.txt
-            /tmp/v21-compound.vg
