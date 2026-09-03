@@ -1,0 +1,28 @@
+name: Deferred open pre-hit tournament v31
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'experiments/run_deferred_open_prehit_tournament_v31.sh'
+  workflow_dispatch:
+
+jobs:
+  tournament:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: cachix/install-nix-action@v31
+      - name: Execute v31 deferred open pre-hit tournament
+        shell: bash
+        run: bash experiments/run_deferred_open_prehit_tournament_v31.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: deferred-open-prehit-v31
+          path: |
+            /tmp/v31-decision.txt
+            /tmp/v31-*.time
+            /tmp/v31-*.err
