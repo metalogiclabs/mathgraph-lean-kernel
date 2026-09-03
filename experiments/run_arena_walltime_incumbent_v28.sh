@@ -108,7 +108,7 @@ auto_build() {
   mkdir -p "$pgo"
   (cd "$src" && CARGO_TARGET_DIR="$tgt" RUSTFLAGS="-C target-cpu=native -Cprofile-generate=$pgo" cargo build --release --locked)
   "$tgt/release/sokonanoda" /tmp/v28-config.json < "$INIT" >/dev/null
-  llvm-profdata merge -o "$pgo/merged.profdata" "$pgo"
+  nix develop -c llvm-profdata merge -o "$pgo/merged.profdata" "$pgo"
   rm -rf "$tgt"
   (cd "$src" && CARGO_TARGET_DIR="$tgt" RUSTFLAGS="-C target-cpu=native -Cprofile-use=$pgo/merged.profdata" cargo build --release --locked)
   cp "$tgt/release/sokonanoda" "/tmp/v28-$arm-bin"
