@@ -1,34 +1,32 @@
-name: Sparse open eval demand key v25
+name: Post-incumbent prune shape census v26
 
 on:
   push:
-    branches: [experiment/sparse-open-eval-demand-key-v25]
+    branches: [experiment/post-incumbent-prune-shape-census-v26]
     paths:
       - '.github/workflows/producer-side-projection-fusion.yml'
-      - 'experiments/run_sparse_open_eval_demand_key_v25.sh'
-      - 'experiments/apply_sparse_open_eval_demand_key_v25.py'
+      - 'experiments/run_post_incumbent_prune_shape_census_v26.sh'
       - 'experiments/run_post_compound_self_cost_atlas_v21.sh'
   workflow_dispatch:
 
 jobs:
-  tournament:
+  census:
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
         with: {fetch-depth: 0}
       - uses: cachix/install-nix-action@v31
-      - name: Execute v25 sparse open eval demand key tournament
+      - name: Execute v26 post-incumbent prune shape census
         shell: bash
-        run: bash experiments/run_sparse_open_eval_demand_key_v25.sh
+        run: bash experiments/run_post_incumbent_prune_shape_census_v26.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: sparse-open-eval-demand-key-v25
+          name: post-incumbent-prune-shape-census-v26
           path: |
-            /tmp/v25-semantic.txt
-            /tmp/v25-decision.txt
-            /tmp/v25-self.txt
-            /tmp/v25.vg
-            /tmp/v25.err
+            /tmp/v26-semantic.txt
+            /tmp/v26-shape.txt
+            /tmp/v26-decision.txt
+            /tmp/v26.err
             /tmp/v21-self-hotspots.txt
