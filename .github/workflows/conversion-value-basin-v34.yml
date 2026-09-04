@@ -1,0 +1,28 @@
+name: Conversion value basin census v34
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'experiments/run_conversion_value_basin_census_v34.sh'
+  workflow_dispatch:
+
+jobs:
+  census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: cachix/install-nix-action@v31
+      - name: Execute v34 conversion value basin census
+        shell: bash
+        run: bash experiments/run_conversion_value_basin_census_v34.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: conversion-value-basin-v34
+          path: |
+            /tmp/v34-census.txt
+            /tmp/v34-decision.txt
+            /tmp/v34-*.err
