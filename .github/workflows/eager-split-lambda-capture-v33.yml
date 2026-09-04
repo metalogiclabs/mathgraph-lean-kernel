@@ -1,0 +1,28 @@
+name: Eager split Lambda capture v33
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'experiments/run_eager_split_lambda_capture_v33.sh'
+  workflow_dispatch:
+
+jobs:
+  tournament:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: cachix/install-nix-action@v31
+      - name: Execute v33 eager split Lambda capture tournament
+        shell: bash
+        run: bash experiments/run_eager_split_lambda_capture_v33.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eager-split-lambda-capture-v33
+          path: |
+            /tmp/v33-decision.txt
+            /tmp/v33-*.time
+            /tmp/v33-*.err
