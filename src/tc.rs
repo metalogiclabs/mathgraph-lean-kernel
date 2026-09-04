@@ -43,24 +43,9 @@ pub(crate) enum InferFlag {
 
 pub struct TypeChecker<'x, 't, 'p> {
     pub(crate) ctx: &'x mut TcCtx<'t, 'p>,
-    /// An immutable reference to an environment, which contains declarations and notation.
-    /// To accommodate the temporary declarations created while checking nested inductives,
-    /// the environment may have a temporary extension which also holds declarations, and
-    /// is searched before the persistent environment.
-    ///
-    /// This is stored as a field in `TypeChecker` rather than being placed in `TcCtx` so
-    /// that the borrow checker will allow us to mutably reference `TcCtx` while we have
-    /// outstanding references to environment declarations. Rust can tell that borrows
-    /// of different struct fields are exclusive, but it can't analyze what fields of a given
-    /// field's type are being exclusively borrowed.
     pub(crate) env: &'x Env<'x, 't>,
-    /// The caches for things like inference, reduction, and equality checking.
     pub(crate) tc_cache: &'x mut TcCache<'t, 't>,
     pub(crate) arena: &'t bumpalo::Bump,
-    /// If this type checker is being used to check a simple declaration, this field will
-    /// contain the universe parameters of that declaration. This is used in a couple of places
-    /// to make sure that all of the universe paramters actually used in a declaration `d` are
-    /// properly represented in the declaration's uparams info.
     pub(crate) declar_info: Option<DeclarInfo<'t>>,
     pub(crate) nat_extension: bool,
 }
@@ -156,9 +141,6 @@ impl<'p> ExportFile<'p> {
     /// prefix-visibility semantics used by a full replay. This is sound only when
     /// declarations before `start` have already been kernel-verified and are being
     /// treated as the immutable trusted prefix for the candidate suffix.
-    ///
-    /// The method deliberately runs serially: AI-loop candidate suffixes are expected
-    /// to be tiny, and the microbenchmarks show thread setup dominates at that scale.
     pub fn check_declars_from(&self, start: usize) {
         let total = self.declars.len();
         assert!(start <= total, "suffix start exceeds declaration count");
@@ -176,11 +158,22 @@ impl<'p> ExportFile<'p> {
     }
 
     /// Convenience entry point for the common AI-loop case: an immutable verified
-    /// prefix plus exactly one newly appended declaration.
+    /// prefix plus exactly one newly appended declaration, using the session runner.
     pub fn check_last_declar(&self) {
         let total = self.declars.len();
         assert!(total > 0, "cannot check last declaration of an empty export");
         self.check_declars_from(total - 1);
+    }
+
+    /// Direct single-declaration path for the AI loop. This invokes the exact existing
+    /// `check_declar` implementation (and therefore `EnvLimit::ByName`) but avoids
+    /// creating the worker thread and range scheduler used for bulk checking.
+    /// The trusted-prefix requirement is identical to `check_last_declar`.
+    pub fn check_last_declar_direct(&self) {
+        let total = self.declars.len();
+        assert!(total > 0, "cannot check last declaration of an empty export");
+        let (_, d) = self.declars.get_index(total - 1).expect("last declaration missing");
+        self.check_declar(d);
     }
 
     /// Check all declarations in this export file using a single thread.
@@ -279,6 +272,7 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
         let env = self.empty_env();
         let ctx = self.empty_ctx();
         let ty = self.infer_value(InferOnly, depth, env, ctx, e);
+        self.is_prop_type(depth, ty);
         self.is_prop_type(depth, ty)
     }
 }
