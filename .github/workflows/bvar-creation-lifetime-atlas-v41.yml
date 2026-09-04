@@ -1,0 +1,29 @@
+name: BVar creation lifetime atlas v41
+
+on:
+  pull_request:
+    branches: [ master ]
+    paths:
+      - 'experiments/run_bvar_creation_lifetime_atlas_v41.sh'
+      - '.github/workflows/bvar-creation-lifetime-atlas-v41.yml'
+  workflow_dispatch:
+
+jobs:
+  census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Run v41 BVar creation lifetime atlas
+        run: bash experiments/run_bvar_creation_lifetime_atlas_v41.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bvar-creation-lifetime-v41
+          path: |
+            /tmp/v41-census.txt
+            /tmp/v41-decision.txt
+            /tmp/v41-*.err
