@@ -1,0 +1,28 @@
+name: BVar creation origin atlas v42
+
+on:
+  pull_request:
+    branches: [master]
+
+jobs:
+  census:
+    if: github.head_ref == 'experiment/bvar-creation-origin-atlas-v42'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+        with:
+          enable_kvm: true
+          set_as_trusted_user: true
+      - name: Run v42 BVar creation origin atlas
+        run: bash experiments/run_bvar_creation_origin_atlas_v42.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bvar-creation-origin-v42
+          path: |
+            /tmp/v42-census.txt
+            /tmp/v42-decision.txt
+            /tmp/v42-*.err
