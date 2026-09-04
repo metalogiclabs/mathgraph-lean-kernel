@@ -1,0 +1,28 @@
+name: Unfold same1 full Mathlib gate v36
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'experiments/run_unfold_same1_mathlib_gate_v36.sh'
+  workflow_dispatch:
+
+jobs:
+  gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: cachix/install-nix-action@v31
+      - name: Execute v36 same1 full Mathlib gate
+        shell: bash
+        run: bash experiments/run_unfold_same1_mathlib_gate_v36.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unfold-same1-mathlib-v36
+          path: |
+            /tmp/v36-decision.txt
+            /tmp/v36-*.time
+            /tmp/v36-*.err
