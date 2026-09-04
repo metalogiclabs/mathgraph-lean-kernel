@@ -1,0 +1,28 @@
+name: Relevance nondependent telescope v50
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'experiments/run_relevance_nondependent_telescope_v50.sh'
+      - '.github/workflows/relevance-nondependent-telescope-v50.yml'
+permissions:
+  contents: read
+jobs:
+  tournament:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Run v50 relevance nondependent telescope bypass
+        run: bash experiments/run_relevance_nondependent_telescope_v50.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: relevance-nondependent-telescope-v50
+          path: |
+            /tmp/v50-decision.txt
+            /tmp/v50-*.time
+            /tmp/v50-*.err
