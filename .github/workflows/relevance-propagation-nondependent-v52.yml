@@ -1,0 +1,27 @@
+name: Relevance propagation nondependent v52
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  tournament:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+        with:
+          enable_kvm: true
+      - name: Run v52 isolated bypass Mathlib interaction gate
+        run: bash experiments/run_relevance_propagation_nondependent_v52.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: relevance-propagation-nondependent-v52
+          path: |
+            /tmp/v52-decision.txt
+            /tmp/v52-*.time
+            /tmp/v52-*.err
