@@ -60,10 +60,6 @@ where
     }
 }
 
-// Benchmark/AI-loop probe: parse the config once, then execute the exact verifier
-// repeatedly in one OS process. Each repetition still gets a fresh arena, parser,
-// environment, and typecheck, so this changes no verification semantics. It only
-// removes process/config startup from the measured loop.
 fn use_config_repeated(config_path: &Path, repeats: usize) -> Result<Option<String>, Box<dyn Error>> {
     let cfg = Config::try_from(config_path)?;
     if cfg.use_stdin {
@@ -76,9 +72,6 @@ fn use_config_repeated(config_path: &Path, repeats: usize) -> Result<Option<Stri
     Ok(last)
 }
 
-// Same verification semantics as --repeat, but measures the two dominant kernel
-// phases from inside the live process: export parsing/environment construction and
-// declaration typechecking. This is deliberately diagnostic-only.
 fn use_config_profiled(config_path: &Path, repeats: usize) -> Result<Option<String>, Box<dyn Error>> {
     let cfg = Config::try_from(config_path)?;
     if cfg.use_stdin {
@@ -111,10 +104,10 @@ fn use_config_profiled(config_path: &Path, repeats: usize) -> Result<Option<Stri
     )))
 }
 
-// AI-loop suffix experiment. The export is still reparsed from scratch on every
-// repetition, but only its last declaration is kernel-checked. This models the sound
-// fast path after declarations [0,last) have already been accepted by a full replay
-// and frozen as the trusted prefix. Full replay remains the equivalence oracle.
+// AI-loop suffix experiment. The export is reparsed from scratch on every repetition,
+// but only the last declaration is kernel-checked. The direct checker invokes the exact
+// existing `check_declar` path and its `EnvLimit::ByName` environment semantics while
+// avoiding the worker-thread/range-scheduler overhead used for bulk replay.
 fn use_config_profiled_last(config_path: &Path, repeats: usize) -> Result<Option<String>, Box<dyn Error>> {
     let cfg = Config::try_from(config_path)?;
     if cfg.use_stdin {
@@ -131,14 +124,14 @@ fn use_config_profiled_last(config_path: &Path, repeats: usize) -> Result<Option
         declarations = export_file.declaration_count();
         if !export_file.config.parse_only {
             let t_check = Instant::now();
-            export_file.check_last_declar();
+            export_file.check_last_declar_direct();
             check_total += t_check.elapsed();
         }
     }
     let parse_ns = parse_total.as_nanos() / repeats as u128;
     let check_ns = check_total.as_nanos() / repeats as u128;
     Ok(Some(format!(
-        "PROFILE_LAST repeats={} declarations={} parse_ns_per={} check_ns_per={} total_ns_per={}",
+        "PROFILE_LAST_DIRECT repeats={} declarations={} parse_ns_per={} check_ns_per={} total_ns_per={}",
         repeats,
         declarations,
         parse_ns,
@@ -147,14 +140,12 @@ fn use_config_profiled_last(config_path: &Path, repeats: usize) -> Result<Option
     )))
 }
 
-// Returns an optional success message.
 fn use_config(config_path: &Path) -> Result<Option<String>, Box<dyn Error>> {
     let cfg = Config::try_from(config_path)?;
     use_config_value(cfg)
 }
 
 fn use_config_value(cfg: Config) -> Result<Option<String>, Box<dyn Error>> {
-    // Make sure the target pretty printer destination is accessible before doing any real work.
     let mut pp_destination = cfg.get_pp_destination()?;
     let global_arena = Arena::new();
     let (export_file, skipped_axioms) = cfg.to_export_file(global_arena.as_arena_ref())?;
