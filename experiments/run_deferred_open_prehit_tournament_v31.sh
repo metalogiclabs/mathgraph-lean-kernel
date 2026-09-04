@@ -44,7 +44,6 @@ assert old in s; s=s.replace(old,new,1)
 old="""            open_eval_cache: session_fx_hash_map(),\n            open_eval_seen: small_fx_hash_set(),"""
 new="""            open_eval_cache: session_fx_hash_map(),\n            open_prehit2: session_fx_hash_map(),\n            open_eval_seen: small_fx_hash_set(),"""
 assert old in s; s=s.replace(old,new,1)
-# There are clear() and clear_session() occurrences. Clear wherever open_eval_cache is cleared/shrunk.
 s=s.replace("        self.open_eval_cache.clear();\n        self.open_eval_seen.clear();",
             "        self.open_eval_cache.clear();\n        self.open_prehit2.clear();\n        self.open_eval_seen.clear();")
 s=s.replace("        shrink_map(&mut self.open_eval_cache);\n", "        shrink_map(&mut self.open_eval_cache);\n        shrink_map(&mut self.open_prehit2);\n")
@@ -130,7 +129,7 @@ done
 # Alternating wall measurements to reduce order bias.
 for t in std cedar; do
   for arm in base pi app piapp piapp app pi base; do
-    n=$(ls /tmp/v31-${t}-${arm}-*.time 2>/dev/null | wc -l); n=$((n+1))
+    n=$(find /tmp -maxdepth 1 -type f -name "v31-${t}-${arm}-*.time" | wc -l); n=$((n+1))
     /usr/bin/time -f '%e %U %S %M' -o "/tmp/v31-${t}-${arm}-${n}.time" "/tmp/v31-$arm-bin" /tmp/v31-config.json < "/tmp/v31-arena/_build/tests/$t.ndjson" >/dev/null 2>"/tmp/v31-${t}-${arm}-${n}.err"
   done
 done
