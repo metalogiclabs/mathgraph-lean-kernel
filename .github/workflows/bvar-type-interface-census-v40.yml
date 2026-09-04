@@ -1,0 +1,29 @@
+name: BVar type interface census v40
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'experiments/run_bvar_type_interface_census_v40.sh'
+      - '.github/workflows/bvar-type-interface-census-v40.yml'
+  workflow_dispatch:
+
+jobs:
+  census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: cachix/install-nix-action@v31
+      - name: Execute v40 BVar type interface census
+        shell: bash
+        run: bash experiments/run_bvar_type_interface_census_v40.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bvar-type-interface-v40
+          path: |
+            /tmp/v40-census.txt
+            /tmp/v40-decision.txt
+            /tmp/v40-*.err
