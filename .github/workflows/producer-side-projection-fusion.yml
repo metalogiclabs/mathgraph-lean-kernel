@@ -1,112 +1,36 @@
-name: Producer-side projection fusion separator
+name: Arena halving atlas tournament v29
 
 on:
-  pull_request:
-    branches: [master]
+  push:
+    branches: [experiment/arena-halving-atlas-tournament-v29]
+    paths:
+      - '.github/workflows/producer-side-projection-fusion.yml'
+      - 'experiments/run_arena_halving_atlas_tournament_v29.sh'
+      - 'experiments/run_arena_walltime_incumbent_v28.sh'
   workflow_dispatch:
 
 jobs:
-  separator:
+  tournament:
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+        with: {fetch-depth: 0}
       - uses: cachix/install-nix-action@v31
-
-      - name: Build exact V1 baseline and isolated inference candidate
-        run: |
-          set -euxo pipefail
-          V1=1e209dad266d59b4d43cdea189876bc6ea551339
-          git worktree add /tmp/base "$V1"
-          git worktree add /tmp/cand "$V1"
-
-          python3 - <<'PY'
-          from pathlib import Path
-          p=Path('/tmp/cand/src/infer.rs')
-          s=p.read_text()
-          old="""        let key = (self.key_env(env, e) as *const value::Env<'t> as usize, e);"""
-          new="""        let key_env = self.key_env(env, e);
-        let key = (key_env as *const value::Env<'t> as usize, e);"""
-          assert s.count(old) == 1
-          s=s.replace(old,new,1)
-          old2="""                let clo = Closure::mk_infer(self.key_env(env, e), ctx, body);"""
-          new2="""                let clo = Closure::mk_infer(key_env, ctx, body);"""
-          assert s.count(old2) == 1
-          s=s.replace(old2,new2,1)
-          p.write_text(s)
-          PY
-
-          for A in base cand; do
-            cd /tmp/$A
-            cargo test --locked
-            cargo build --release --locked
-            cp target/release/sokonanoda /tmp/$A-bin
-          done
-
-          cat >/tmp/checker.json <<'EOF'
-          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
-          EOF
-
-      - name: Build focused Arena tests
-        run: |
-          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
-          cd /tmp/arena
-          for T in perf/grind-ring-5 perf/app-lam perf/beta-ladder perf/let-ladder; do
-            nix develop -c ./lka.py build-test "$T"
-          done
-
-      - name: Semantic equality gate
-        run: |
-          set -euxo pipefail
-          cd /tmp/arena
-          for T in grind-ring-5 app-lam beta-ladder let-ladder; do
-            /tmp/base-bin /tmp/checker.json < _build/tests/perf/$T.ndjson > /tmp/base-$T.out 2>/tmp/base-$T.err
-            /tmp/cand-bin /tmp/checker.json < _build/tests/perf/$T.ndjson > /tmp/cand-$T.out 2>/tmp/cand-$T.err
-            cmp /tmp/base-$T.out /tmp/cand-$T.out
-          done
-
-      - name: Callgrind instruction separator
-        run: |
-          set -euxo pipefail
-          cd /tmp/arena
-          nix shell nixpkgs#valgrind -c bash -lc '
-            for T in grind-ring-5 app-lam beta-ladder let-ladder; do
-              valgrind --tool=callgrind --callgrind-out-file=/tmp/base-$T.cg /tmp/base-bin /tmp/checker.json < _build/tests/perf/$T.ndjson >/dev/null 2>/tmp/base-$T.vg
-              valgrind --tool=callgrind --callgrind-out-file=/tmp/cand-$T.cg /tmp/cand-bin /tmp/checker.json < _build/tests/perf/$T.ndjson >/dev/null 2>/tmp/cand-$T.vg
-            done
-          '
-          python3 - <<'PY' | tee /tmp/decision.txt
-          from pathlib import Path
-          def ir(path):
-              for line in Path(path).read_text(errors='ignore').splitlines():
-                  if line.startswith('summary:'):
-                      return int(line.split()[1])
-              raise RuntimeError(path)
-          ratios={}
-          for t in ['grind-ring-5','app-lam','beta-ladder','let-ladder']:
-              b=ir(f'/tmp/base-{t}.cg'); c=ir(f'/tmp/cand-{t}.cg')
-              d=(c-b)/b
-              ratios[t]=d
-              print(f'{t} base={b} cand={c} delta={d:.6%}')
-          target=min(ratios['grind-ring-5'], ratios['app-lam'])
-          protected=max(ratios['beta-ladder'], ratios['let-ladder'])
-          if target <= -0.05 and protected <= 0.01:
-              decision='PROMOTE__INFER_PROJECTION_DUPLICATION_DELETED'
-          elif target <= -0.01 and protected <= 0.01:
-              decision='REAL_GAIN__ESCALATE_REALWORLD'
-          else:
-              decision='KILL__INFER_DUPLICATE_PROJECTION_NOT_MATERIAL'
-          print('DECISION='+decision)
-          PY
-
+      - name: Execute v29 Arena halving atlas tournament
+        shell: bash
+        run: bash experiments/run_arena_halving_atlas_tournament_v29.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: infer-projection-fusion
+          name: arena-halving-atlas-tournament-v29
           path: |
-            /tmp/decision.txt
-            /tmp/*.cg
-            /tmp/*.vg
-            /tmp/*.err
+            /tmp/v28-provenance.txt
+            /tmp/v28-semantic.txt
+            /tmp/v28-decision.txt
+            /tmp/v29-atlas.txt
+            /tmp/v29-decision.txt
+            /tmp/v29-thread-*.time
+            /tmp/v29-parse.*
+            /tmp/v29-pi.time
+            /tmp/v29-v18.time
