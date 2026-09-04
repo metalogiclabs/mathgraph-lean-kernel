@@ -1,0 +1,28 @@
+name: Split Lambda capture v32
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'experiments/run_split_lambda_capture_v32.sh'
+  workflow_dispatch:
+
+jobs:
+  tournament:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: cachix/install-nix-action@v31
+      - name: Execute v32 split Lambda capture tournament
+        shell: bash
+        run: bash experiments/run_split_lambda_capture_v32.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: split-lambda-capture-v32
+          path: |
+            /tmp/v32-decision.txt
+            /tmp/v32-*.time
+            /tmp/v32-*.err
