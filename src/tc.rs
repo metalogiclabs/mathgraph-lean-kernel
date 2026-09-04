@@ -272,7 +272,6 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
         let env = self.empty_env();
         let ctx = self.empty_ctx();
         let ty = self.infer_value(InferOnly, depth, env, ctx, e);
-        self.is_prop_type(depth, ty);
         self.is_prop_type(depth, ty)
     }
 }
