@@ -1,6 +1,7 @@
 use sokonanoda::util::Config;
 use std::error::Error;
 use std::path::Path;
+use std::time::{Duration, Instant};
 use stumpalo::Arena;
 
 #[global_allocator]
@@ -18,17 +19,21 @@ fn main() {
             return
         }
         [p] => run_caught(|| use_config(Path::new(p))),
-        [flag, n, p] if flag == "--repeat" => {
+        [flag, n, p] if flag == "--repeat" || flag == "--profile-repeat" => {
             let repeats = match n.parse::<usize>() {
                 Ok(0) | Err(_) => {
-                    eprintln!("--repeat expects a positive integer");
+                    eprintln!("{} expects a positive integer", flag);
                     std::process::exit(EXIT_REJECT)
                 }
                 Ok(n) => n,
             };
-            run_caught(|| use_config_repeated(Path::new(p), repeats))
+            if flag == "--profile-repeat" {
+                run_caught(|| use_config_profiled(Path::new(p), repeats))
+            } else {
+                run_caught(|| use_config_repeated(Path::new(p), repeats))
+            }
         }
-        _ => Err(Box::from("Expected CONFIG or --repeat N CONFIG.".to_string())),
+        _ => Err(Box::from("Expected CONFIG, --repeat N CONFIG, or --profile-repeat N CONFIG.".to_string())),
     };
     match out {
         Ok(Some(msg)) => println!("{}", msg),
@@ -65,6 +70,41 @@ fn use_config_repeated(config_path: &Path, repeats: usize) -> Result<Option<Stri
         last = use_config_value(cfg.clone())?;
     }
     Ok(last)
+}
+
+// Same verification semantics as --repeat, but measures the two dominant kernel
+// phases from inside the live process: export parsing/environment construction and
+// declaration typechecking. This is deliberately diagnostic-only.
+fn use_config_profiled(config_path: &Path, repeats: usize) -> Result<Option<String>, Box<dyn Error>> {
+    let cfg = Config::try_from(config_path)?;
+    if cfg.use_stdin {
+        return Err(Box::from("--profile-repeat requires export_file_path".to_string()));
+    }
+    let mut parse_total = Duration::ZERO;
+    let mut check_total = Duration::ZERO;
+    let mut declarations = 0usize;
+    for _ in 0..repeats {
+        let global_arena = Arena::new();
+        let t_parse = Instant::now();
+        let (export_file, _skipped_axioms) = cfg.clone().to_export_file(global_arena.as_arena_ref())?;
+        parse_total += t_parse.elapsed();
+        declarations = export_file.declars.len();
+        if !export_file.config.parse_only {
+            let t_check = Instant::now();
+            export_file.check_all_declars();
+            check_total += t_check.elapsed();
+        }
+    }
+    let parse_ns = parse_total.as_nanos() / repeats as u128;
+    let check_ns = check_total.as_nanos() / repeats as u128;
+    Ok(Some(format!(
+        "PROFILE repeats={} declarations={} parse_ns_per={} check_ns_per={} total_ns_per={}",
+        repeats,
+        declarations,
+        parse_ns,
+        check_ns,
+        parse_ns + check_ns
+    )))
 }
 
 // Returns an optional success message.
@@ -114,7 +154,7 @@ const HELP_LONG: &str = concat!(
     "\n\n",
     env!("CARGO_PKG_DESCRIPTION"),
     "\n\n",
-    "Usage: sokonanoda CONFIG | sokonanoda --repeat N CONFIG\n\n",
+    "Usage: sokonanoda CONFIG | sokonanoda --repeat N CONFIG | sokonanoda --profile-repeat N CONFIG\n\n",
     "get more help at ",
     env!("CARGO_PKG_REPOSITORY"),
     "\n\n",
