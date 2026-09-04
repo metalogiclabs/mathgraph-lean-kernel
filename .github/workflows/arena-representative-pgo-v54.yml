@@ -20,6 +20,10 @@ jobs:
         with:
           enable_kvm: true
           set_as_trusted_user: true
+      - name: Put llvm-profdata on PATH
+        run: |
+          LLVM_OUT=$(nix build 'github:NixOS/nixpkgs/nixos-26.05#llvmPackages_21.llvm' --no-link --print-out-paths)
+          echo "$LLVM_OUT/bin" >> "$GITHUB_PATH"
       - name: Run v54 representative PGO held-out Mathlib gate
         run: bash experiments/run_arena_representative_pgo_v54.sh
       - uses: actions/upload-artifact@v4
