@@ -1,0 +1,28 @@
+name: Relevance result propagation marginal v48
+
+on:
+  pull_request:
+    branches: [master]
+
+jobs:
+  tournament:
+    if: github.head_ref == 'experiment/relevance-result-propagation-marginal-v48'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+        with:
+          enable_kvm: true
+          set_as_trusted_user: true
+      - name: Run v48 relevance result propagation marginal test
+        run: bash experiments/run_relevance_result_propagation_marginal_v48.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: relevance-result-propagation-marginal-v48
+          path: |
+            /tmp/v48-decision.txt
+            /tmp/v48-*.time
+            /tmp/v48-*.err
