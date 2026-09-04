@@ -1,0 +1,28 @@
+name: Relevance subsystem ablation v43
+
+on:
+  pull_request:
+    branches: [master]
+
+jobs:
+  ablation:
+    if: github.head_ref == 'experiment/relevance-ablation-v43'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+        with:
+          enable_kvm: true
+          set_as_trusted_user: true
+      - name: Run v43 relevance ablation
+        run: bash experiments/run_relevance_ablation_v43_fixed.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: relevance-ablation-v43
+          path: |
+            /tmp/v43-decision.txt
+            /tmp/v43-*.time
+            /tmp/v43-*.err

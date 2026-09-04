@@ -1,0 +1,28 @@
+name: Relevance BVar type erasure v44
+
+on:
+  pull_request:
+    branches: [master]
+
+jobs:
+  tournament:
+    if: github.head_ref == 'experiment/relevance-bvar-type-erasure-v44'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+        with:
+          enable_kvm: true
+          set_as_trusted_user: true
+      - name: Run v44 relevance BVar type-erasure tournament
+        run: bash experiments/run_relevance_bvar_type_erasure_v44.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: relevance-bvar-type-erasure-v44
+          path: |
+            /tmp/v44-decision.txt
+            /tmp/v44-*.time
+            /tmp/v44-*.err
