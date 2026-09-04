@@ -1,0 +1,27 @@
+name: Arena thread oracle v53
+on:
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+jobs:
+  tournament:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+        with:
+          enable_kvm: true
+          set_as_trusted_user: true
+      - name: Run v53 thread oracle census
+        run: bash experiments/run_arena_thread_oracle_v53.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: arena-thread-oracle-v53
+          path: |
+            /tmp/v53-decision.txt
+            /tmp/v53-*.time
+            /tmp/v53-*.err
