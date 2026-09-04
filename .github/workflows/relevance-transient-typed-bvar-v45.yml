@@ -1,0 +1,28 @@
+name: Relevance transient typed BVar v45
+
+on:
+  pull_request:
+    branches: [master]
+
+jobs:
+  tournament:
+    if: github.head_ref == 'experiment/relevance-transient-typed-bvar-v45'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+        with:
+          enable_kvm: true
+          set_as_trusted_user: true
+      - name: Run v45 transient typed relevance BVar tournament
+        run: bash experiments/run_relevance_transient_typed_bvar_v45.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: relevance-transient-typed-bvar-v45
+          path: |
+            /tmp/v45-decision.txt
+            /tmp/v45-*.time
+            /tmp/v45-*.err
