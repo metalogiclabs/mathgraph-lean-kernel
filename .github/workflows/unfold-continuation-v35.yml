@@ -1,0 +1,28 @@
+name: Unfold continuation tournament v35
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'experiments/run_unfold_continuation_tournament_v35.sh'
+  workflow_dispatch:
+
+jobs:
+  tournament:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: cachix/install-nix-action@v31
+      - name: Execute v35 native Unfold continuation tournament
+        shell: bash
+        run: bash experiments/run_unfold_continuation_tournament_v35.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unfold-continuation-v35
+          path: |
+            /tmp/v35-decision.txt
+            /tmp/v35-*.time
+            /tmp/v35-*.err
