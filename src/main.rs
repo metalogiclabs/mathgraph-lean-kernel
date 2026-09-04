@@ -19,7 +19,8 @@ fn main() {
             return
         }
         [p] => run_caught(|| use_config(Path::new(p))),
-        [flag, n, p] if flag == "--repeat" || flag == "--profile-repeat" => {
+        [flag, n, p]
+            if flag == "--repeat" || flag == "--profile-repeat" || flag == "--profile-last-repeat" => {
             let repeats = match n.parse::<usize>() {
                 Ok(0) | Err(_) => {
                     eprintln!("{} expects a positive integer", flag);
@@ -27,13 +28,16 @@ fn main() {
                 }
                 Ok(n) => n,
             };
-            if flag == "--profile-repeat" {
-                run_caught(|| use_config_profiled(Path::new(p), repeats))
-            } else {
-                run_caught(|| use_config_repeated(Path::new(p), repeats))
+            match flag.as_str() {
+                "--profile-repeat" => run_caught(|| use_config_profiled(Path::new(p), repeats)),
+                "--profile-last-repeat" => run_caught(|| use_config_profiled_last(Path::new(p), repeats)),
+                _ => run_caught(|| use_config_repeated(Path::new(p), repeats)),
             }
         }
-        _ => Err(Box::from("Expected CONFIG, --repeat N CONFIG, or --profile-repeat N CONFIG.".to_string())),
+        _ => Err(Box::from(
+            "Expected CONFIG, --repeat N CONFIG, --profile-repeat N CONFIG, or --profile-last-repeat N CONFIG."
+                .to_string(),
+        )),
     };
     match out {
         Ok(Some(msg)) => println!("{}", msg),
@@ -88,7 +92,7 @@ fn use_config_profiled(config_path: &Path, repeats: usize) -> Result<Option<Stri
         let t_parse = Instant::now();
         let (export_file, _skipped_axioms) = cfg.clone().to_export_file(global_arena.as_arena_ref())?;
         parse_total += t_parse.elapsed();
-        declarations = export_file.declars.len();
+        declarations = export_file.declaration_count();
         if !export_file.config.parse_only {
             let t_check = Instant::now();
             export_file.check_all_declars();
@@ -99,6 +103,42 @@ fn use_config_profiled(config_path: &Path, repeats: usize) -> Result<Option<Stri
     let check_ns = check_total.as_nanos() / repeats as u128;
     Ok(Some(format!(
         "PROFILE repeats={} declarations={} parse_ns_per={} check_ns_per={} total_ns_per={}",
+        repeats,
+        declarations,
+        parse_ns,
+        check_ns,
+        parse_ns + check_ns
+    )))
+}
+
+// AI-loop suffix experiment. The export is still reparsed from scratch on every
+// repetition, but only its last declaration is kernel-checked. This models the sound
+// fast path after declarations [0,last) have already been accepted by a full replay
+// and frozen as the trusted prefix. Full replay remains the equivalence oracle.
+fn use_config_profiled_last(config_path: &Path, repeats: usize) -> Result<Option<String>, Box<dyn Error>> {
+    let cfg = Config::try_from(config_path)?;
+    if cfg.use_stdin {
+        return Err(Box::from("--profile-last-repeat requires export_file_path".to_string()));
+    }
+    let mut parse_total = Duration::ZERO;
+    let mut check_total = Duration::ZERO;
+    let mut declarations = 0usize;
+    for _ in 0..repeats {
+        let global_arena = Arena::new();
+        let t_parse = Instant::now();
+        let (export_file, _skipped_axioms) = cfg.clone().to_export_file(global_arena.as_arena_ref())?;
+        parse_total += t_parse.elapsed();
+        declarations = export_file.declaration_count();
+        if !export_file.config.parse_only {
+            let t_check = Instant::now();
+            export_file.check_last_declar();
+            check_total += t_check.elapsed();
+        }
+    }
+    let parse_ns = parse_total.as_nanos() / repeats as u128;
+    let check_ns = check_total.as_nanos() / repeats as u128;
+    Ok(Some(format!(
+        "PROFILE_LAST repeats={} declarations={} parse_ns_per={} check_ns_per={} total_ns_per={}",
         repeats,
         declarations,
         parse_ns,
@@ -119,19 +159,19 @@ fn use_config_value(cfg: Config) -> Result<Option<String>, Box<dyn Error>> {
     let global_arena = Arena::new();
     let (export_file, skipped_axioms) = cfg.to_export_file(global_arena.as_arena_ref())?;
     if export_file.config.parse_only {
-        return Ok(Some(format!("Parsed {} declarations", export_file.declars.len())))
+        return Ok(Some(format!("Parsed {} declarations", export_file.declaration_count())))
     }
     export_file.check_all_declars();
     let pp_errs = export_file.pp_selected_declars(pp_destination.as_mut());
     if export_file.config.print_success_message {
         if pp_errs.is_empty() {
             if skipped_axioms.is_empty() {
-                Ok(Some(format!("Checked {} declarations with no errors", export_file.declars.len())))
+                Ok(Some(format!("Checked {} declarations with no errors", export_file.declaration_count())))
             } else {
-                Ok(Some(format!("Checked {} declarations with no errors, skipping exported but unpermitted axioms {:?}", export_file.declars.len(), skipped_axioms)))
+                Ok(Some(format!("Checked {} declarations with no errors, skipping exported but unpermitted axioms {:?}", export_file.declaration_count(), skipped_axioms)))
             }
         } else {
-            Ok(Some(format!("Checked {} declarations with no typechecker errors, {} pretty printer errors: {:#?}", export_file.declars.len(), pp_errs.len(), pp_errs)))
+            Ok(Some(format!("Checked {} declarations with no typechecker errors, {} pretty printer errors: {:#?}", export_file.declaration_count(), pp_errs.len(), pp_errs)))
         }
     } else if skipped_axioms.is_empty() {
         Ok(None)
@@ -154,7 +194,7 @@ const HELP_LONG: &str = concat!(
     "\n\n",
     env!("CARGO_PKG_DESCRIPTION"),
     "\n\n",
-    "Usage: sokonanoda CONFIG | sokonanoda --repeat N CONFIG | sokonanoda --profile-repeat N CONFIG\n\n",
+    "Usage: sokonanoda CONFIG | sokonanoda --repeat N CONFIG | sokonanoda --profile-repeat N CONFIG | sokonanoda --profile-last-repeat N CONFIG\n\n",
     "get more help at ",
     env!("CARGO_PKG_REPOSITORY"),
     "\n\n",
