@@ -17,7 +17,7 @@ jobs:
           enable_kvm: true
           set_as_trusted_user: true
       - name: Run v42 BVar creation origin atlas
-        run: bash experiments/run_bvar_creation_origin_atlas_v42.sh
+        run: bash experiments/run_bvar_creation_origin_atlas_v42_fixed.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
