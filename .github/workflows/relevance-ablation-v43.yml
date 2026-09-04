@@ -17,7 +17,7 @@ jobs:
           enable_kvm: true
           set_as_trusted_user: true
       - name: Run v43 relevance ablation
-        run: bash experiments/run_relevance_ablation_v43.sh
+        run: bash experiments/run_relevance_ablation_v43_fixed.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
