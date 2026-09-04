@@ -1,0 +1,28 @@
+name: Relevance minimal core v49
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'experiments/run_relevance_minimal_core_v49.sh'
+      - '.github/workflows/relevance-minimal-core-v49.yml'
+permissions:
+  contents: read
+jobs:
+  tournament:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Run v49 relevance minimal core tournament
+        run: bash experiments/run_relevance_minimal_core_v49.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: relevance-minimal-core-v49
+          path: |
+            /tmp/v49-decision.txt
+            /tmp/v49-*.time
+            /tmp/v49-*.err
