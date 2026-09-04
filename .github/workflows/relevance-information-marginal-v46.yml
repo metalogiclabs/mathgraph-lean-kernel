@@ -1,0 +1,28 @@
+name: Relevance information marginal v46
+
+on:
+  pull_request:
+    branches: [master]
+
+jobs:
+  tournament:
+    if: github.head_ref == 'experiment/relevance-information-marginal-v46'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+        with:
+          enable_kvm: true
+          set_as_trusted_user: true
+      - name: Run v46 relevance information marginal tournament
+        run: bash experiments/run_relevance_information_marginal_v46.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: relevance-information-marginal-v46
+          path: |
+            /tmp/v46-decision.txt
+            /tmp/v46-*.time
+            /tmp/v46-*.err
