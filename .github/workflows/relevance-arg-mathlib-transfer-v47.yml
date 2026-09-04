@@ -1,0 +1,28 @@
+name: Relevance argument Mathlib transfer v47
+
+on:
+  pull_request:
+    branches: [master]
+
+jobs:
+  tournament:
+    if: github.head_ref == 'experiment/relevance-arg-mathlib-transfer-v47'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+        with:
+          enable_kvm: true
+          set_as_trusted_user: true
+      - name: Run v47 relevance argument Mathlib transfer gate
+        run: bash experiments/run_relevance_arg_mathlib_transfer_v47.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: relevance-arg-mathlib-transfer-v47
+          path: |
+            /tmp/v47-decision.txt
+            /tmp/v47-*.time
+            /tmp/v47-*.err
