@@ -14,8 +14,11 @@ python3 - "$arm" <<'PY'
 from pathlib import Path
 import sys
 p=Path(f'/tmp/v32-{sys.argv[1]}/src/eval.rs'); s=p.read_text()
-old="""    pub(crate) fn force_all(&mut self, depth: u32, v: V<'t>) -> V<'t> {\n        if let Some(r) = self.store_lookup(depth, v) {"""
-new="""    pub(crate) fn force_all(&mut self, depth: u32, v: V<'t>) -> V<'t> {\n        if matches!(v, Value::Pi { .. }) { return v; }\n        if let Some(r) = self.store_lookup(depth, v) {"""
+old="""    pub(crate) fn force_all(&mut self, depth: u32, v: V<'t>) -> V<'t> {
+        if let Some(r) = self.store_lookup(depth, v) {"""
+new="""    pub(crate) fn force_all(&mut self, depth: u32, v: V<'t>) -> V<'t> {
+        if matches!(v, Value::Pi { .. }) { return v; }
+        if let Some(r) = self.store_lookup(depth, v) {"""
 assert s.count(old)==1
 p.write_text(s.replace(old,new,1))
 PY
@@ -47,13 +50,60 @@ s=s.replace("        binder_type: ExprPtr<'t>,\n        body: Closure<'t>,", "  
 s=s.replace("        let key = (binder_type, body.env as *const value::Env<'t> as usize, body.body);",
             "        let key = (binder_type as *const Value<'t> as usize, body.env as *const value::Env<'t> as usize, body.body);",1)
 
-old="""            Expr::Lambda { binder_name, binder_style, binder_type, body, .. } =>\n                {\n                let ce = self.key_env(env, e);\n                value::mk_lam(self.arena, binder_name, binder_style, binder_type, Closure::mk_eval(ce, body))\n            }"""
-new="""            Expr::Lambda { binder_name, binder_style, binder_type, body, .. } => {\n                let bt_env = self.key_env(env, binder_type);\n                let bt = value::mk_thunk(self.arena, bt_env, binder_type);\n                let bm = crate::expr::body_mask(body);\n                let body_env = if body.num_loose_bvars() <= 1 {\n                    self.lsub_base(env.lsub())\n                } else if body.num_loose_bvars() > 65 {\n                    env\n                } else {\n                    self.prune_env(env, bm)\n                };\n                value::mk_lam(self.arena, binder_name, binder_style, bt, Closure::mk_eval(body_env, body))\n            }"""
+old="""            Expr::Lambda { binder_name, binder_style, binder_type, body, .. } =>
+                {
+                let ce = self.key_env(env, e);
+                value::mk_lam(self.arena, binder_name, binder_style, binder_type, Closure::mk_eval(ce, body))
+            }"""
+new="""            Expr::Lambda { binder_name, binder_style, binder_type, body, .. } => {
+                let bt_env = self.key_env(env, binder_type);
+                let bt = value::mk_thunk(self.arena, bt_env, binder_type);
+                let bm = crate::expr::body_mask(body);
+                let body_env = if body.num_loose_bvars() <= 1 {
+                    self.lsub_base(env.lsub())
+                } else if body.num_loose_bvars() > 65 {
+                    env
+                } else {
+                    self.prune_env(env, bm)
+                };
+                value::mk_lam(self.arena, binder_name, binder_style, bt, Closure::mk_eval(body_env, body))
+            }"""
 assert old in s
 s=s.replace(old,new,1)
 
-old="""            Value::Lam { binder_type, body, .. } => {\n                let addr = v as *const Value<'t> as usize;\n                if let Some(d) = self.tc_cache.lam_domain_cache.get(&addr) {\n                    return d;\n                }\n                let e = body.env;\n                let bt = *binder_type;\n                let d = self.eval(depth, e, bt);\n                self.tc_cache.lam_domain_cache.insert(addr, d);\n                d\n            }"""
-new="""            Value::Lam { binder_type, .. } => {\n                let addr = v as *const Value<'t> as usize;\n                if let Some(d) = self.tc_cache.lam_domain_cache.get(&addr) { return d; }\n                let d = self.force_thunk(depth, binder_type);\n                self.tc_cache.lam_domain_cache.insert(addr, d);\n                d\n            }"""
+old="""            Value::Lam { binder_type, body, .. } => {
+                let addr = v as *const Value<'t> as usize;
+                if let Some(d) = self.tc_cache.lam_domain_cache.get(&addr) {
+                    return d;
+                }
+                let e = body.env;
+                let bt = *binder_type;
+                let d = self.eval(depth, e, bt);
+                self.tc_cache.lam_domain_cache.insert(addr, d);
+                d
+            }"""
+new="""            Value::Lam { binder_type, .. } => {
+                let addr = v as *const Value<'t> as usize;
+                if let Some(d) = self.tc_cache.lam_domain_cache.get(&addr) { return d; }
+                let d = self.force_thunk(depth, binder_type);
+                self.tc_cache.lam_domain_cache.insert(addr, d);
+                d
+            }"""
+assert old in s
+s=s.replace(old,new,1)
+
+# global_key is another consumer of the Lam binder domain. It must key the
+# semantic value now, not pass it to binder_key as if it were an ExprPtr.
+old="""            Value::Lam { binder_name, binder_style, binder_type, body, .. } => {
+                let h = self.binder_key(11, *binder_name, *binder_style, Some(*binder_type));
+                self.closure_key(h, body, depth)
+            }"""
+new="""            Value::Lam { binder_name, binder_style, binder_type, body, .. } => {
+                let h = self.binder_key(11, *binder_name, *binder_style, None);
+                let (d, dc) = self.global_key(binder_type, depth)?;
+                let (k, cc) = self.closure_key(mix(h, d), body, depth)?;
+                Ok((k, dc && cc))
+            }"""
 assert old in s
 s=s.replace(old,new,1)
 p.write_text(s)
