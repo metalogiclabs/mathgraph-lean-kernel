@@ -149,6 +149,40 @@ impl<'p> ExportFile<'p> {
         }
     }
 
+    /// Number of declarations represented by this export file.
+    pub fn declaration_count(&self) -> usize { self.declars.len() }
+
+    /// Check only declarations in `[start, declaration_count)`, under the same
+    /// prefix-visibility semantics used by a full replay. This is sound only when
+    /// declarations before `start` have already been kernel-verified and are being
+    /// treated as the immutable trusted prefix for the candidate suffix.
+    ///
+    /// The method deliberately runs serially: AI-loop candidate suffixes are expected
+    /// to be tiny, and the microbenchmarks show thread setup dominates at that scale.
+    pub fn check_declars_from(&self, start: usize) {
+        let total = self.declars.len();
+        assert!(start <= total, "suffix start exceeds declaration count");
+        if start == total {
+            return
+        }
+        std::thread::scope(|sco| {
+            std::thread::Builder::new()
+                .stack_size(crate::STACK_SIZE)
+                .spawn_scoped(sco, || self.run_session((start, total), || None))
+                .unwrap()
+                .join()
+                .expect("suffix checker thread panicked");
+        });
+    }
+
+    /// Convenience entry point for the common AI-loop case: an immutable verified
+    /// prefix plus exactly one newly appended declaration.
+    pub fn check_last_declar(&self) {
+        let total = self.declars.len();
+        assert!(total > 0, "cannot check last declaration of an empty export");
+        self.check_declars_from(total - 1);
+    }
+
     /// Check all declarations in this export file using a single thread.
     pub(crate) fn check_all_declars_serial(&self) {
         let total = self.declars.len();
@@ -232,13 +266,6 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
     pub fn assert_def_eq(&mut self, u: ExprPtr<'t>, v: ExprPtr<'t>) {
         assert!(self.def_eq_core(u, v), "def_eq failed");
     }
-
-
-
-
-
-
-
 
     pub fn is_proposition(&mut self, e: ExprPtr<'t>) -> bool {
         let depth = 0u32;
