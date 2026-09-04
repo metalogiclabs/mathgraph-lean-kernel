@@ -1,0 +1,26 @@
+name: Relevance propagation Mathlib v51
+
+on:
+  pull_request:
+    branches: [master]
+
+jobs:
+  tournament:
+    if: github.head_ref == 'experiment/relevance-propagation-mathlib-v51'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Run v51 propagation Mathlib transfer gate
+        run: bash experiments/run_relevance_propagation_mathlib_v51.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: relevance-propagation-mathlib-v51
+          path: |
+            /tmp/v51-decision.txt
+            /tmp/v51-*.time
+            /tmp/v51-*.err
