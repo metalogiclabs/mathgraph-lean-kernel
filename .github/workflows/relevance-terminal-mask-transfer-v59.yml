@@ -1,0 +1,29 @@
+name: Relevance terminal mask transfer v59
+
+on:
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  transfer:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Put llvm-profdata on PATH
+        run: |
+          LLVM_OUT=$(nix build 'github:NixOS/nixpkgs/nixos-26.05#llvmPackages_21.llvm' --no-link --print-out-paths)
+          echo "$LLVM_OUT/bin" >> "$GITHUB_PATH"
+      - name: Run v59 relevance terminal mask transfer
+        run: bash experiments/run_relevance_terminal_mask_transfer_v59.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: relevance-terminal-mask-transfer-v59
+          path: |
+            /tmp/v59-decision.txt
+            /tmp/v59-*.time
+            /tmp/v59-*.err
