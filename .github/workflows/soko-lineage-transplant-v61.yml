@@ -1,0 +1,29 @@
+name: Soko lineage transplant v61
+
+on:
+  pull_request:
+    branches: [ master ]
+    paths:
+      - 'experiments/run_soko_lineage_transplant_v61.sh'
+      - '.github/workflows/soko-lineage-transplant-v61.yml'
+  workflow_dispatch:
+
+jobs:
+  experiment:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+      - name: Run v61 four-arm lineage tournament
+        run: bash experiments/run_soko_lineage_transplant_v61.sh
+      - name: Upload v61 results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: soko-lineage-transplant-v61
+          path: v61-artifact
+          if-no-files-found: warn
