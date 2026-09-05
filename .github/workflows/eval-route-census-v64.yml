@@ -1,0 +1,30 @@
+name: Eval route census v64
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'experiments/run_eval_route_census_v64.sh'
+      - '.github/workflows/eval-route-census-v64.yml'
+
+jobs:
+  census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Run v64 eval route census
+        run: bash experiments/run_eval_route_census_v64.sh
+      - name: Upload v64 census
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-route-census-v64
+          path: |
+            /tmp/v64/out
+            /tmp/v64/decision.txt
+          if-no-files-found: warn
