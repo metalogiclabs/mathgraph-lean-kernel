@@ -1,0 +1,30 @@
+name: Open miss shape census v65
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'experiments/run_open_miss_shape_census_v65.sh'
+      - '.github/workflows/open-miss-shape-census-v65.yml'
+
+jobs:
+  census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Run v65 open-miss shape census
+        run: bash experiments/run_open_miss_shape_census_v65.sh
+      - name: Upload v65 census
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: open-miss-shape-census-v65
+          path: |
+            /tmp/v65/out
+            /tmp/v65/decision.txt
+          if-no-files-found: warn
