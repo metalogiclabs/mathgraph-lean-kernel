@@ -41,12 +41,15 @@ llvm-profdata merge -o /tmp/v54-current-pgo/merged.profdata /tmp/v54-current-pgo
   RUSTFLAGS="-C target-cpu=native -Cprofile-use=/tmp/v54-current-pgo/merged.profdata" cargo build --release --locked)
 cp /tmp/v54-current/target/release/sokonanoda /tmp/v54-current-bin
 
-# Representative PGO: train on two real Arena classes, holding Mathlib out for transfer.
+# Representative PGO: preserve init-prelude coverage, then add bounded deterministic
+# prefixes from Std and Cedar. Full Std instrumentation segfaulted before profile merge;
+# this is the smallest corpus-size distinction that failure forces. Mathlib stays held out.
 mkdir -p /tmp/v54-rep-pgo
 (cd /tmp/v54-rep && \
   RUSTFLAGS="-C target-cpu=native -Cprofile-generate=/tmp/v54-rep-pgo" cargo build --release --locked)
-/tmp/v54-rep/target/release/sokonanoda /tmp/v54-config.json < /tmp/v54-arena/_build/tests/std.ndjson >/dev/null 2>/tmp/v54-rep-std-train.err
-/tmp/v54-rep/target/release/sokonanoda /tmp/v54-config.json < /tmp/v54-arena/_build/tests/cedar.ndjson >/dev/null 2>/tmp/v54-rep-cedar-train.err
+/tmp/v54-rep/target/release/sokonanoda /tmp/v54-config.json < /tmp/v54-arena/_build/tests/init-prelude.ndjson >/dev/null 2>/tmp/v54-rep-init-train.err
+head -n 250000 /tmp/v54-arena/_build/tests/std.ndjson | /tmp/v54-rep/target/release/sokonanoda /tmp/v54-config.json >/dev/null 2>/tmp/v54-rep-std-train.err
+head -n 250000 /tmp/v54-arena/_build/tests/cedar.ndjson | /tmp/v54-rep/target/release/sokonanoda /tmp/v54-config.json >/dev/null 2>/tmp/v54-rep-cedar-train.err
 llvm-profdata merge -o /tmp/v54-rep-pgo/merged.profdata /tmp/v54-rep-pgo
 (cd /tmp/v54-rep && \
   RUSTFLAGS="-C target-cpu=native -Cprofile-use=/tmp/v54-rep-pgo/merged.profdata" cargo build --release --locked)
