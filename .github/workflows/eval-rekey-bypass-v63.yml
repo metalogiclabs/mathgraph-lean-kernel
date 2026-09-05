@@ -1,0 +1,29 @@
+name: Eval re-key bypass v63
+
+on:
+  pull_request:
+    paths:
+      - 'experiments/run_eval_rekey_bypass_v63.sh'
+      - '.github/workflows/eval-rekey-bypass-v63.yml'
+  workflow_dispatch:
+
+jobs:
+  tournament:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Run v63 eval re-key bypass tournament
+        run: bash experiments/run_eval_rekey_bypass_v63.sh
+      - name: Upload v63 results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-rekey-bypass-v63
+          path: |
+            /tmp/v63/timings.csv
+            /tmp/v63/summary.txt
+          if-no-files-found: warn
