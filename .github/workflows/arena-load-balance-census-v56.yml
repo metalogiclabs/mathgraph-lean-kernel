@@ -1,0 +1,36 @@
+name: Arena load-balance census v56
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'experiments/run_arena_load_balance_census_v56.sh'
+      - '.github/workflows/arena-load-balance-census-v56.yml'
+  workflow_dispatch:
+
+jobs:
+  census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+        with:
+          enable_kvm: true
+          set_as_trusted_user: true
+      - name: Put llvm-profdata on PATH
+        run: |
+          LLVM_OUT=$(nix build 'github:NixOS/nixpkgs/nixos-26.05#llvmPackages_21.llvm' --no-link --print-out-paths)
+          echo "$LLVM_OUT/bin" >> "$GITHUB_PATH"
+      - name: Run v56 Arena load-balance census
+        run: bash experiments/run_arena_load_balance_census_v56.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: arena-load-balance-census-v56
+          path: |
+            /tmp/v56-decision.txt
+            /tmp/v56-*-census.err
+            /tmp/v56-*-train.err
