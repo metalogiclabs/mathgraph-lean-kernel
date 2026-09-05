@@ -1,0 +1,27 @@
+name: Current incumbent hotspot atlas v60
+
+on:
+  pull_request:
+    paths:
+      - 'experiments/run_current_incumbent_hotspot_atlas_v60.sh'
+      - '.github/workflows/current-incumbent-hotspot-atlas-v60.yml'
+  workflow_dispatch:
+
+jobs:
+  hotspot-atlas:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Run v60 current-incumbent hotspot atlas
+        run: bash experiments/run_current_incumbent_hotspot_atlas_v60.sh
+      - name: Upload v60 hotspot atlas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: current-incumbent-hotspot-atlas-v60
+          path: /tmp/v60-hotspot-atlas
+          if-no-files-found: warn
