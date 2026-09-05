@@ -1,0 +1,27 @@
+name: Promoted incumbent hotspot atlas v62
+
+on:
+  pull_request:
+    paths:
+      - 'experiments/run_promoted_incumbent_hotspot_atlas_v62.sh'
+      - '.github/workflows/promoted-incumbent-hotspot-atlas-v62.yml'
+  workflow_dispatch:
+
+jobs:
+  hotspot-atlas:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Run v62 promoted-incumbent hotspot atlas
+        run: bash experiments/run_promoted_incumbent_hotspot_atlas_v62.sh
+      - name: Upload v62 hotspot atlas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: promoted-incumbent-hotspot-atlas-v62
+          path: /tmp/v62/atlas
+          if-no-files-found: warn
