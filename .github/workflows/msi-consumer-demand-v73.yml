@@ -1,0 +1,25 @@
+name: MSI consumer demand v73
+on:
+  push:
+    branches: [experiment/msi-consumer-demand-v73]
+    paths:
+      - 'experiments/run_msi_consumer_demand_v73.sh'
+      - '.github/workflows/msi-consumer-demand-v73.yml'
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run MSI consumer-demand test
+        run: bash experiments/run_msi_consumer_demand_v73.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: msi-consumer-demand-v73
+          path: |
+            /tmp/v73/timings.csv
+            /tmp/v73/summary.txt
+            /tmp/v73/out
