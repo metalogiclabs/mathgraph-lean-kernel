@@ -1,0 +1,25 @@
+name: MSI single-dependency env v71
+on:
+  push:
+    branches: [experiment/number-one-tournament-v70]
+    paths:
+      - 'experiments/run_msi_single_dependency_env_v71.sh'
+      - '.github/workflows/msi-single-dependency-env-v71.yml'
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run MSI env quotient test
+        run: bash experiments/run_msi_single_dependency_env_v71.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: msi-single-dependency-env-v71
+          path: |
+            /tmp/v71/timings.csv
+            /tmp/v71/summary.txt
+            /tmp/v71/out
