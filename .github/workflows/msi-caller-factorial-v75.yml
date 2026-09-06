@@ -1,0 +1,25 @@
+name: MSI caller factorial v75
+on:
+  push:
+    branches: [experiment/msi-caller-factorial-v75]
+    paths:
+      - 'experiments/run_msi_caller_factorial_v75.sh'
+      - '.github/workflows/msi-caller-factorial-v75.yml'
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run MSI caller factorial tournament
+        run: bash experiments/run_msi_caller_factorial_v75.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: msi-caller-factorial-v75
+          path: |
+            /tmp/v75/timings.csv
+            /tmp/v75/summary.txt
+            /tmp/v75/out
