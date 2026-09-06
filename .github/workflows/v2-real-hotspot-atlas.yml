@@ -1,0 +1,27 @@
+name: V2 real-workload hotspot atlas
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/run_v2_real_hotspot_atlas.sh'
+      - '.github/workflows/v2-real-hotspot-atlas.yml'
+  workflow_dispatch:
+
+jobs:
+  hotspot-atlas:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Run exact-V2 real-workload hotspot atlas
+        run: bash scripts/run_v2_real_hotspot_atlas.sh
+      - name: Upload hotspot atlas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v2-real-workload-hotspot-atlas
+          path: /tmp/hotspot-atlas
+          if-no-files-found: warn
