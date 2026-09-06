@@ -1,0 +1,26 @@
+name: Semantic JOIN Test 2b frozen score
+on:
+  pull_request:
+    branches: [mathgraph]
+    paths:
+      - 'experiments/semantic_join_sealed_world/test2b_frozen_llm_join.json'
+      - 'experiments/semantic_join_sealed_world/test2b_score.py'
+      - '.github/workflows/semantic-join-test2b-score.yml'
+  workflow_dispatch:
+jobs:
+  score:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Score frozen LLM JOIN on downstream targets
+        run: |
+          set -euxo pipefail
+          mkdir -p /tmp/test2b-score
+          cd experiments/semantic_join_sealed_world
+          python3 test2b_score.py | tee /tmp/test2b-score/summary.txt
+          cp test2b_results.json /tmp/test2b-score/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: semantic-join-test2b-frozen-score
+          path: /tmp/test2b-score/

@@ -1,0 +1,26 @@
+name: Semantic JOIN sealed-world Test 2a
+
+on:
+  pull_request:
+    branches: [mathgraph]
+  workflow_dispatch:
+
+jobs:
+  assay:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run heterogeneous semantic-JOIN assay
+        run: |
+          set -euxo pipefail
+          mkdir -p /tmp/semantic-join
+          python3 experiments/semantic_join_sealed_world/run.py \
+            --worlds 512 \
+            --out /tmp/semantic-join/results.csv \
+            | tee /tmp/semantic-join/summary.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: semantic-join-sealed-world-test2a
+          path: /tmp/semantic-join/
