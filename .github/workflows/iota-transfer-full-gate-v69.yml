@@ -1,0 +1,27 @@
+name: Iota transfer full gate v69
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'experiments/run_iota_transfer_full_gate_v69.sh'
+      - '.github/workflows/iota-transfer-full-gate-v69.yml'
+  workflow_dispatch:
+jobs:
+  gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Run v69 iota transfer full gate
+        run: bash experiments/run_iota_transfer_full_gate_v69.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: iota-transfer-full-gate-v69
+          path: |
+            /tmp/v69/timings.csv
+            /tmp/v69/summary.txt
+            /tmp/v69/out
