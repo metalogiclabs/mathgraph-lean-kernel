@@ -1,0 +1,27 @@
+name: Unfold continuation depth census
+
+on:
+  pull_request:
+    branches: [mathgraph]
+    paths:
+      - 'scripts/run_unfold_continuation_depth_census.sh'
+      - '.github/workflows/unfold-continuation-depth-census.yml'
+  workflow_dispatch:
+
+jobs:
+  census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Run full-Mathlib continuation depth census
+        run: bash scripts/run_unfold_continuation_depth_census.sh
+      - name: Upload census
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unfold-continuation-depth-census
+          path: unfold-continuation-depth-census.txt
