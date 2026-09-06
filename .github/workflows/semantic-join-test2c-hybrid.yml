@@ -1,0 +1,26 @@
+name: Semantic JOIN Test 2c hybrid
+on:
+  pull_request:
+    branches: [mathgraph]
+    paths:
+      - 'experiments/semantic_join_sealed_world/test2c_hybrid_score.py'
+      - '.github/workflows/semantic-join-test2c-hybrid.yml'
+  workflow_dispatch:
+jobs:
+  score:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run hybrid semantic rule + exact closure score
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p /tmp/test2c
+          cd experiments/semantic_join_sealed_world
+          python3 test2c_hybrid_score.py | tee /tmp/test2c/summary.txt
+          cp test2c_results.json /tmp/test2c/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: semantic-join-test2c-hybrid
+          path: /tmp/test2c/

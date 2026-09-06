@@ -1,0 +1,30 @@
+{
+  "protocol": "EXTERNAL_VALIDITY_CLICK_2939_V1",
+  "external_repo": "pallets/click",
+  "external_ref": "8.2.1",
+  "evidence_used": [
+    "Public bug report #2939 reproducer and observed SystemExit(1)/Aborted behavior",
+    "Click 8.2.1 src/click/testing.py only",
+    "No upstream fixing PR/patch inspected"
+  ],
+  "J": "The failing CLI command and CliRunner are not semantically disagreeing about click.File; the test harness has changed the iterator EOF contract of its synthetic stdin. _NamedTextIOWrapper.__next__ converts normal iterator exhaustion (StopIteration) into EOFError. File.readlines()/iteration legitimately relies on StopIteration, while Click's top-level command handling interprets EOFError as an interactive abort.",
+  "K": {
+    "required": [
+      "Preserve normal Python iterator exhaustion semantics for the CliRunner synthetic stdin",
+      "Preserve ordinary TextIOWrapper behavior for file iteration/readlines",
+      "Do not change click.File or command-level EOF handling",
+      "Keep isolated stdin name/mode behavior intact"
+    ],
+    "forbidden": [
+      "Special-case click.File",
+      "Catch/suppress EOFError at command level",
+      "Change user-visible EOF handling globally",
+      "Patch the reproducer"
+    ]
+  },
+  "Sigma": "The causal work to remove is the harness-only StopIteration->EOFError transformation. Any patch that leaves that conversion on the readlines/iterator path does not close the cause, even if it masks the symptom elsewhere.",
+  "closure_gap": "Existing command/file-level handling is semantically correct for real stdin; the missing operator is restoration of the native iterator contract at the synthetic stream boundary.",
+  "O_new": "Remove the _NamedTextIOWrapper.__next__ override so io.TextIOWrapper.__next__ supplies native StopIteration at iterator exhaustion.",
+  "ablation_prediction": "Restoring the override should restore the regression.",
+  "transfer_prediction": "The same patch should repair any CliRunner command that consumes '-' through iteration/readlines, while preserving the upstream Click 8.2.1 test suite."
+}

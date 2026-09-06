@@ -1,0 +1,25 @@
+name: End-to-end developmental jump
+on:
+  pull_request:
+    paths:
+      - 'experiments/end_to_end_developmental_jump/**'
+      - '.github/workflows/end-to-end-developmental-jump.yml'
+  workflow_dispatch:
+jobs:
+  run:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run frozen end-to-end assay
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p /tmp/end-to-end-developmental-jump
+          cd experiments/end_to_end_developmental_jump
+          python3 run.py | tee /tmp/end-to-end-developmental-jump/summary.txt
+          cp results.json frozen_controller.json /tmp/end-to-end-developmental-jump/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: end-to-end-developmental-jump
+          path: /tmp/end-to-end-developmental-jump/

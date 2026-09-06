@@ -1,0 +1,12 @@
+{
+  "run": 2,
+  "observed": "The frozen intervention repaired the public reproducer and two source-distinct iterator variants. The upstream suite then had exactly three failures, all parameterizations of tests/test_chain.py::test_pipeline.",
+  "classification": [
+    "external-test-oracle-staleness",
+    "expected-behavior-changed-by-bug-fix",
+    "not-an-unrelated-regression"
+  ],
+  "evidence": "The failing upstream test explicitly comments that the last two output lines are blank + 'Aborted!' and slices them away. That assertion encodes the 8.2.1 regression as expected behavior. With the intervention the abort disappears, so slicing the last two legitimate output lines yields an empty list.",
+  "new_constraint": "External regression validation must preserve all unaffected upstream tests while replacing only assertions that explicitly encode the defect being repaired.",
+  "next_test": "Run the complete upstream suite except test_pipeline, run every other test in test_chain.py, and independently verify the corrected chain-pipeline behavior with no Aborted/SystemExit. Keep reproducer, source-distinct transfer, and ablation gates."
+}
