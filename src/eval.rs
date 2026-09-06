@@ -1246,6 +1246,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
     }
 
     pub(crate) fn force_all(&mut self, depth: u32, v: V<'t>) -> V<'t> {
+        if matches!(v, Value::Pi { .. }) { return v; }
         if let Some(r) = self.store_lookup(depth, v) {
             return r;
         }
