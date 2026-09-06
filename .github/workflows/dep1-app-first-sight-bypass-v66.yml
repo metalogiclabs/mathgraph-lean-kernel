@@ -1,0 +1,31 @@
+name: Dep1 App first-sight bypass v66
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'experiments/run_dep1_app_first_sight_bypass_v66.sh'
+      - '.github/workflows/dep1-app-first-sight-bypass-v66.yml'
+
+jobs:
+  gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Run v66 first-sight bypass gate
+        run: bash experiments/run_dep1_app_first_sight_bypass_v66.sh
+      - name: Upload v66 results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dep1-app-first-sight-bypass-v66
+          path: |
+            /tmp/v66/out
+            /tmp/v66/timings.csv
+            /tmp/v66/summary.txt
+          if-no-files-found: warn
