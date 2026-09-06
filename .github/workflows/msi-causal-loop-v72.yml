@@ -1,0 +1,25 @@
+name: MSI causal loop v72
+on:
+  push:
+    branches: [experiment/msi-causal-loop-v72]
+    paths:
+      - 'experiments/run_msi_causal_loop_v72.sh'
+      - '.github/workflows/msi-causal-loop-v72.yml'
+  workflow_dispatch:
+jobs:
+  causal-test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run MSI residual to repair causal loop
+        run: bash experiments/run_msi_causal_loop_v72.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: msi-causal-loop-v72
+          path: |
+            /tmp/v72/timings.csv
+            /tmp/v72/summary.txt
+            /tmp/v72/out
