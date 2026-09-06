@@ -1,0 +1,28 @@
+name: MSI code layout causality v80
+
+on:
+  push:
+    branches:
+      - experiment/msi-code-layout-causality-v80
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run v80 code-layout causality tournament
+        run: bash experiments/run_msi_code_layout_causality_v80.sh
+      - name: Upload v80 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: msi-code-layout-causality-v80
+          path: |
+            /tmp/v80/summary.txt
+            /tmp/v80/timings.csv
+            /tmp/v80/binary_fingerprints.csv
+            /tmp/v80/disasm
+            /tmp/v80/out
