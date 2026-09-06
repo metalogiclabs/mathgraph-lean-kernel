@@ -1,0 +1,21 @@
+name: MSI v77 causal attachment v79
+on:
+  push:
+    branches: [experiment/msi-v77-causal-attachment-v79]
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run v79 causal attachment test
+        run: bash experiments/run_msi_v77_attachment_v79.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: msi-v77-attachment-v79
+          path: |
+            /tmp/v79/summary.txt
+            /tmp/v79/out
