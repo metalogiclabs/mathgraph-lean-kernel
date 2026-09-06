@@ -1,0 +1,25 @@
+name: MSI spine position v77
+
+on:
+  push:
+    branches:
+      - experiment/msi-spine-position-v77
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run MSI spine position factorial
+        run: bash experiments/run_msi_spine_position_v77.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: msi-spine-position-v77
+          path: |
+            /tmp/v77/timings.csv
+            /tmp/v77/summary.txt
+            /tmp/v77/out
