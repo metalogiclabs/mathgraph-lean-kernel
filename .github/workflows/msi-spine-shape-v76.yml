@@ -1,0 +1,25 @@
+name: MSI spine source-shape v76
+on:
+  push:
+    branches: [experiment/msi-spine-shape-v76]
+    paths:
+      - 'experiments/run_msi_spine_shape_v76.sh'
+      - '.github/workflows/msi-spine-shape-v76.yml'
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run MSI spine source-shape tournament
+        run: bash experiments/run_msi_spine_shape_v76.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: msi-spine-shape-v76
+          path: |
+            /tmp/v76/timings.csv
+            /tmp/v76/summary.txt
+            /tmp/v76/out
