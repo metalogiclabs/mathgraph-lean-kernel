@@ -1,0 +1,29 @@
+name: Number one tournament v70
+on:
+  push:
+    branches: [experiment/number-one-tournament-v70]
+    paths:
+      - 'experiments/run_number_one_tournament_v70.sh'
+      - '.github/workflows/number-one-tournament-v70.yml'
+  workflow_dispatch:
+jobs:
+  tournament:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Run v70 tournament
+        run: bash experiments/run_number_one_tournament_v70.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: number-one-tournament-v70
+          path: |
+            /tmp/v70/smoke.csv
+            /tmp/v70/smoke-summary.txt
+            /tmp/v70/final.csv
+            /tmp/v70/summary.txt
+            /tmp/v70/out
