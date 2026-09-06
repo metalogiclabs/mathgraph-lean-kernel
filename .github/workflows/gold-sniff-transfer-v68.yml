@@ -1,0 +1,27 @@
+name: Gold sniff transfer v68
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'experiments/run_gold_sniff_transfer_v68.sh'
+      - '.github/workflows/gold-sniff-transfer-v68.yml'
+  workflow_dispatch:
+jobs:
+  sniff:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Run v68 gold sniff
+        run: bash experiments/run_gold_sniff_transfer_v68.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gold-sniff-transfer-v68
+          path: |
+            /tmp/v68/timings.csv
+            /tmp/v68/summary.txt
+            /tmp/v68/out
