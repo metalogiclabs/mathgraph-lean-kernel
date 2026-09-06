@@ -1,0 +1,25 @@
+name: MSI caller context v74
+on:
+  push:
+    branches: [experiment/msi-caller-context-v74]
+    paths:
+      - 'experiments/run_msi_caller_context_v74.sh'
+      - '.github/workflows/msi-caller-context-v74.yml'
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run MSI caller-context test
+        run: bash experiments/run_msi_caller_context_v74.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: msi-caller-context-v74
+          path: |
+            /tmp/v74/timings.csv
+            /tmp/v74/summary.txt
+            /tmp/v74/out
