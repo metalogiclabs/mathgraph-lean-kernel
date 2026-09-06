@@ -1,0 +1,31 @@
+name: Dep1 App first-sight lookup-only bypass v67
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'experiments/run_dep1_app_first_sight_lookup_bypass_v67.sh'
+      - '.github/workflows/dep1-app-first-sight-lookup-bypass-v67.yml'
+
+jobs:
+  gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Run v67 lookup-only bypass gate
+        run: bash experiments/run_dep1_app_first_sight_lookup_bypass_v67.sh
+      - name: Upload v67 results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dep1-app-first-sight-lookup-bypass-v67
+          path: |
+            /tmp/v67/out
+            /tmp/v67/timings.csv
+            /tmp/v67/summary.txt
+          if-no-files-found: warn
