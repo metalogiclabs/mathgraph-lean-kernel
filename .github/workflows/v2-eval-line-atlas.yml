@@ -1,0 +1,27 @@
+name: V2 eval source-line atlas
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/run_v2_eval_line_atlas.sh'
+      - '.github/workflows/v2-eval-line-atlas.yml'
+  workflow_dispatch:
+
+jobs:
+  eval-line-atlas:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Run exact-V2 eval source-line atlas
+        run: bash scripts/run_v2_eval_line_atlas.sh
+      - name: Upload eval source-line atlas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v2-eval-source-line-atlas
+          path: /tmp/eval-line-atlas
+          if-no-files-found: warn
