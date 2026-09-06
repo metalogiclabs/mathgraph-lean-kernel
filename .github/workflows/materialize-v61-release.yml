@@ -1,0 +1,45 @@
+name: Materialize v61 release
+
+on:
+  push:
+    branches:
+      - release/materialize-v61
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build release commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin 7b51784fe4ec9b82bf7a20c71ba6bf803a4ed7c0
+          git checkout --detach 7b51784fe4ec9b82bf7a20c71ba6bf803a4ed7c0
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path('src/eval.rs')
+          s = p.read_text()
+          old = """    pub(crate) fn force_all(&mut self, depth: u32, v: V<'t>) -> V<'t> {\n        if let Some(r) = self.store_lookup(depth, v) {"""
+          new = """    pub(crate) fn force_all(&mut self, depth: u32, v: V<'t>) -> V<'t> {\n        if matches!(v, Value::Pi { .. }) { return v; }\n        if let Some(r) = self.store_lookup(depth, v) {"""
+          assert s.count(old) == 1
+          p.write_text(s.replace(old, new, 1))
+
+          p = Path('src/relevance.rs')
+          s = p.read_text()
+          old = '''                for k in (0..n).rev() {\n                    let Some(s) = dom[k] else { break };\n                    let im = self.ctx.imax(s, r);\n                    r = self.ctx.simplify(im);\n                    result_known |= 1u64 << k;\n                    if self.ctx.is_zero(r) {\n                        prop_result |= 1u64 << k;\n                    }\n                }'''
+          assert s.count(old) == 1
+          p.write_text(s.replace(old, '                let _ = r;', 1))
+          PY
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/eval.rs src/relevance.rs
+          git commit -m 'retain Pi fast path and relevance propagation reduction'
+          git push origin HEAD:refs/heads/mathgraph --force
+          echo "RELEASE_SHA=$(git rev-parse HEAD)"
