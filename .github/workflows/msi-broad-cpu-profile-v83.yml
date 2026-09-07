@@ -1,0 +1,33 @@
+name: MSI broad CPU profile v83
+on:
+  push:
+    branches:
+      - experiment/msi-broad-cpu-profile-v83
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  profile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run frozen-baseline CPU profile
+        run: bash experiments/run_msi_broad_cpu_profile_v83.sh
+      - name: Upload v83 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: msi-broad-cpu-profile-v83
+          path: |
+            /tmp/v83/summary.txt
+            /tmp/v83/sample_counts.csv
+            /tmp/v83/binaries.sha256
+            /tmp/v83/perf-version.txt
+            /tmp/v83/probe.err
+            /tmp/v83/*-report.txt
+            /tmp/v83/*-children.txt
+            /tmp/v83/*-stacks.txt
+            /tmp/v83/out
+          if-no-files-found: warn
