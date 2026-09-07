@@ -1,0 +1,33 @@
+name: MSI structural work v86
+on:
+  push:
+    branches:
+      - experiment/msi-structural-work-v86
+    paths:
+      - experiments/msi_v86/**
+      - .github/workflows/msi-structural-work-v86.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  structural-work:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run measured canonical-spine experiment
+        run: bash experiments/msi_v86/run.sh
+      - name: Upload complete experiment evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: msi-structural-work-v86
+          path: |
+            /tmp/v86/results/summary.json
+            /tmp/v86/results/ledger.jsonl
+            /tmp/v86/results/config.json
+            /tmp/v86/results/logs
+            /tmp/v86/results/champion.patch
+            /tmp/v86/results/champion.bin
+          if-no-files-found: warn
