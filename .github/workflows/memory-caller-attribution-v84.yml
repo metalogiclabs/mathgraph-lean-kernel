@@ -1,0 +1,49 @@
+name: Memory caller attribution v84
+on:
+  push:
+    branches: [experiment/memory-caller-attribution-v84]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  attribute:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reanalyze preserved v83 profiles
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/v84/out
+          gh api repos/metalogiclabs/mathgraph-lean-kernel/actions/artifacts/10003541971/zip > /tmp/v84/source.zip
+          echo 'e523366bccdd3e254ebe47278188588efa0c4ff2f3f0e71c5cb95fa7c43fbb9e  /tmp/v84/source.zip' | sha256sum -c -
+          unzip -q /tmp/v84/source.zip -d /tmp/v84
+          python3 experiments/analyze_memory_callers_v84.py /tmp/v84 | tee /tmp/v84/summary.txt
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          r=Path('/tmp/v84')
+          data=json.loads((r/'memory-callers.json').read_text())
+          for corpus in ('std','cedar','mathlib'):
+              d=data[corpus]
+              assert d['threads']==2
+              assert d['exclusive_accounting']=='EXACT'
+              assert sum(x['ir'] for x in d['top_exclusive']) <= d['total_ir']
+              assert d['targets'], f'{corpus}: no memory target'
+              assert sum(t['exclusive_ir'] for t in d['targets'])>0
+          assert (r/'out/baseline-tests.rc').read_text().strip() == '101'
+          print('V84_SOURCE_PROFILE_ACCOUNTING=PASS')
+          print('V84_BASELINE_TEST_FAILURE_RETAINED')
+          PY
+      - name: Preserve attribution
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: memory-caller-attribution-v84
+          path: |
+            /tmp/v84/summary.txt
+            /tmp/v84/memory-callers.json
+          if-no-files-found: warn
