@@ -1,0 +1,30 @@
+name: MSI bounded optimizer v85
+on:
+  push:
+    branches:
+      - experiment/msi-bounded-optimizer-v85
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  tournament:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run bounded multi-cycle tournament
+        run: bash experiments/msi_v85/run.sh
+      - name: Upload complete experiment evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: msi-bounded-optimizer-v85
+          path: |
+            /tmp/v85/results/summary.json
+            /tmp/v85/results/ledger.jsonl
+            /tmp/v85/results/config.json
+            /tmp/v85/results/logs
+            /tmp/v85/results/champion.patch
+            /tmp/v85/results/champion.bin
+          if-no-files-found: warn
