@@ -1,0 +1,24 @@
+{
+  "training": [
+    {"id":"v61","state":{"blocked":false,"measured_regression":false,"unreachable":false,"needs_replay":true},"action":"REPEAT","outcome":"observed","evidence":["https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/33986304667"],"observation":"V61_TRANSPLANT_GEOMEAN=-1.8086%; repeat Mathlib/Cedar before promotion"},
+    {"id":"v79","state":{"blocked":false,"measured_regression":false,"unreachable":true,"needs_replay":false},"action":"STOP","outcome":"observed","evidence":["https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/34064970268"],"observation":"All four literal-shortcut census cells had zero hits and zero identity hits; stop factorial"},
+    {"id":"v85","state":{"blocked":false,"measured_regression":true,"unreachable":false,"needs_replay":false},"action":"REJECT","outcome":"observed","evidence":["https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/34086097991"],"observation":"Exact replay passed; Std +1.5440%, Cedar +1.6803%, Mathlib +0.5133%; no release promotion"},
+    {"id":"v87-nix","state":{"blocked":true,"measured_regression":false,"unreachable":false,"needs_replay":false},"action":"REPAIR","outcome":"observed","evidence":["https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/34099507703","https://github.com/metalogiclabs/mathgraph-lean-kernel/commit/581e0055442acc7a42464638e7762ca9c1fcfb69"],"observation":"Missing Nix blocked replay; install-Nix repair was committed and subsequent benchmark completed"}
+  ],
+  "heldout": [
+    {"id":"v87","state":{"blocked":false,"measured_regression":true,"unreachable":false,"needs_replay":false},"action":"REJECT","outcome":"observed","evidence":["https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/34159534617"],"observation":"Exact replay passed; Std +0.5991%, Cedar +1.2771%, Mathlib +0.5578%; no release promotion"},
+    {"id":"v88","state":{"blocked":true,"measured_regression":false,"unreachable":false,"needs_replay":false},"action":"REPAIR","outcome":"pending","evidence":["https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/34162953473"],"observation":"Both PGO builds passed, but std.ndjson was absent; init-prelude.ndjson was generated; no replay or timing"}
+  ],
+  "audit_only": [
+    {"id":"v86","state":{"blocked":true,"measured_regression":false,"unreachable":false,"needs_replay":false},"action":"PROBE","outcome":"unknown","evidence":["https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/34087685465"],"observation":"Actual-source patcher rejected an unexpected statement; no verified repair outcome is available in this record"}
+  ],
+  "source_artifacts": {
+    "v61_first":"sha256:8de8dbce701bd55016ef9be1331afcbc9dc493beabf6296e233bd739ad74e705",
+    "v61_repeat":"sha256:0e2c500d826a11c677d7f16f0c2ceb7dbf41414caac57de55436e17df731dba6",
+    "v79":"sha256:60f25445b6dc6b7d5a986866457abad14607906803f6f9e9375f1d9270d571b8",
+    "v85":"sha256:ee8e0b7aef3a5164a29df7ab8e3326bac19381313316e4c11b19da76bbf11bb6",
+    "v87":"sha256:afdbf4ef93fd7965b92eb6b8d1da5da8d72ba881a2a1f3e1e63e2cd7657ab42f",
+    "v88":"sha256:a52cb86a68411b9c92b4905789c40567640b29fe197f94af7d0567b7b0c5d9a4"
+  },
+  "limitations":"Retrospective labels are source-grounded observations, not a randomized causal comparison. Unchosen-action outcomes and costs are unknown."
+}
