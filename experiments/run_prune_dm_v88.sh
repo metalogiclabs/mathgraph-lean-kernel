@@ -38,31 +38,12 @@ if [[ "$MODE" == preflight ]]; then
       grep -Eq 'test result: ok\. 3 passed; 0 failed;' "$OUT/$arm.focused.log"
     fi
     set +e
-    (cd "$ROOT/$arm" && cargo test --locked -- --nocapture) > "$OUT/$arm.tests.log" 2>&1
+    (cd "$ROOT/$arm" && cargo test --locked) > "$OUT/$arm.tests.log" 2>&1
     rc=$?
     set -e
     printf '%s\n' "$rc" > "$OUT/$arm.tests.rc"
   done
-  python3 - "$OUT" <<'PY'
-from pathlib import Path
-import json,re,sys
-r=Path(sys.argv[1]); expected={'tests::util::reject_rec_rule_with_forged_lambda_domains','tests::util::reject_unlisted_recursor'}
-result={'control':{},'candidate':{},'release_qualified':False}
-for arm,n in [('control',42),('candidate',45)]:
-    text=(r/f'{arm}.tests.log').read_text()
-    rows=dict(re.findall(r'^test (\S+?)(?: - should panic)? \.\.\. (ok|FAILED)$',text,re.M))
-    failures={k for k,v in rows.items() if v=='FAILED'}
-    result[arm]={'count':len(rows),'failures':sorted(failures),'rc':int((r/f'{arm}.tests.rc').read_text())}
-    assert len(rows)==n,(arm,len(rows),n)
-    assert failures==expected,(arm,failures)
-    assert result[arm]['rc']==101,(arm,result[arm]['rc'])
-    assert re.search(r'test result: FAILED\.',text),arm
-assert all(k in result['candidate']['failures'] for k in result['control']['failures'])
-result['no_new_test_failures']=True
-(r/'qualification.json').write_text(json.dumps(result,indent=2))
-print('V88_NO_NEW_TEST_FAILURES=PASS')
-print('V88_RELEASE_QUALIFICATION=BLOCKED_KNOWN_FIXTURES')
-PY
+  python3 "$SRC/check_test_results_v88.py" "$OUT"
   exit 0
 fi
 
