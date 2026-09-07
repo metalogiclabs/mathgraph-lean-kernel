@@ -1,0 +1,22 @@
+name: Residual constraint-closure retrospective
+
+on:
+  pull_request:
+    branches: [mathgraph]
+    paths:
+      - 'experiments/residual_constraint_closure_v1.py'
+      - '.github/workflows/residual-constraint-closure.yml'
+  workflow_dispatch:
+
+jobs:
+  retrospective:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run retrospective
+        run: |
+          python3 experiments/residual_constraint_closure_v1.py | tee residual-constraint-closure.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: residual-constraint-closure-retrospective
+          path: residual-constraint-closure.txt
