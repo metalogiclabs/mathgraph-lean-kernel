@@ -1,0 +1,78 @@
+name: Developmental evidence controller v1
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - experiment/developmental-evidence-controller-v1
+    paths:
+      - 'experiments/developmental_evidence_controller/**'
+      - '.github/workflows/developmental-evidence-controller-v1.yml'
+permissions:
+  contents: read
+  actions: read
+jobs:
+  evidence:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      PYTHONOPTIMIZE: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch frozen artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/developmental-evidence
+          cp experiments/developmental_evidence_controller/sources.json /tmp/developmental-evidence/sources.json
+          python3 - <<'PY'
+          import json, os, pathlib, subprocess
+          root=pathlib.Path('/tmp/developmental-evidence')
+          manifest=json.loads((root/'sources.json').read_text())
+          for source in manifest['sources']:
+              url=f"https://api.github.com/repos/{manifest['repo']}/actions/artifacts/{source['artifact']}/zip"
+              subprocess.run(['curl','-fsSL','--retry','3','--retry-all-errors',
+                  '-H','Authorization: Bearer '+os.environ['GH_TOKEN'],
+                  '-H','Accept: application/vnd.github+json',url,
+                  '-o',str(root/(source['id']+'-evidence.zip'))],check=True)
+          PY
+      - name: Compile evidence and test policy ablation
+        run: |
+          set -euo pipefail
+          python3 -m py_compile experiments/developmental_evidence_controller/controller.py
+          python3 -B experiments/developmental_evidence_controller/controller.py /tmp/developmental-evidence --out /tmp/developmental-evidence/results.json
+      - name: Verify fail-closed behavior
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import importlib.util, json, pathlib, tempfile
+          path=pathlib.Path('experiments/developmental_evidence_controller/controller.py')
+          spec=importlib.util.spec_from_file_location('controller',path)
+          c=importlib.util.module_from_spec(spec); spec.loader.exec_module(c)
+          root=pathlib.Path('/tmp/developmental-evidence')
+          manifest=json.loads((root/'sources.json').read_text())
+          records=[c.load_source(s,root) for s in manifest['sources']]
+          assert c.choose(records)['action']=='REPAIR_HARNESS'
+          assert c.choose(records[:2])['action']=='REJECT_CANDIDATE'
+          assert c.choose(records[:1])['action']=='REPEAT_AND_ABLATE'
+          assert c.select_experiment(records[:2],[])['action']=='SEEK_SEPARATOR'
+          assert not any(r['release_qualified'] for r in records)
+          with tempfile.TemporaryDirectory() as td:
+              p=pathlib.Path(td)/'v85-evidence.zip'
+              p.write_bytes((root/p.name).read_bytes()+b'tampered')
+              try:
+                  c.load_source(manifest['sources'][1],pathlib.Path(td))
+              except AssertionError:
+                  pass
+              else:
+                  raise AssertionError('tampered evidence accepted')
+          print('FAIL_CLOSED_TESTS=PASS')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: developmental-evidence-controller-v1
+          path: |
+            /tmp/developmental-evidence/sources.json
+            /tmp/developmental-evidence/results.json
+          if-no-files-found: warn
