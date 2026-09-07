@@ -1,0 +1,1 @@
+The workflow is `.github/workflows/msi-bounded-optimizer-v85.yml` and is triggered by a push to `experiment/msi-bounded-optimizer-v85`. The local command is `bash experiments/msi_v85/run.sh`. No benchmark result is asserted here.
