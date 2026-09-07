@@ -1,0 +1,31 @@
+name: MSI cached Pi specialization v82
+on:
+  push:
+    branches:
+      - experiment/msi-cached-pi-v82
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run v82 cached Pi tournament
+        run: bash experiments/launch_msi_cached_pi_v82.sh
+      - name: Upload v82 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: msi-cached-pi-v82
+          path: |
+            /tmp/v82/summary.txt
+            /tmp/v82/attachment.csv
+            /tmp/v82/timings.csv
+            /tmp/v82/binaries.csv
+            /tmp/v82/out
+            /tmp/v82/candidate/src/eval.rs
+            /tmp/v82/control/src/eval.rs
+          if-no-files-found: warn
