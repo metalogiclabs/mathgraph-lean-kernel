@@ -1,0 +1,64 @@
+name: Cache reset preflight v86
+on:
+  push:
+    branches: [experiment/cache-reset-preflight-v86]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate patcher and compile candidate
+        run: |
+          set -euo pipefail
+          ROOT=/tmp/v86
+          BASE=08ddb26718c86213262943ca19ae8cf1b03fa922
+          mkdir -p "$ROOT/out"
+          rustc --version | tee "$ROOT/out/rust-version.txt"
+          cargo --version | tee -a "$ROOT/out/rust-version.txt"
+          python3 experiments/test_patch_cache_reset_v86.py |& tee "$ROOT/out/patcher-tests.log"
+          git clone -q https://github.com/metalogiclabs/mathgraph-lean-kernel "$ROOT/repo"
+          git -C "$ROOT/repo" checkout -q "$BASE"
+          test "$(git -C "$ROOT/repo" rev-parse HEAD)" = "$BASE"
+          git -C "$ROOT/repo" worktree add -q --detach "$ROOT/control" "$BASE"
+          cd "$ROOT/repo"
+          python3 "$GITHUB_WORKSPACE/experiments/patch_cache_reset_v86.py" src/util.rs --tests
+          git diff --check
+          git diff -- src/util.rs > "$ROOT/out/candidate.patch"
+          export CARGO_TARGET_DIR="$ROOT/target"
+          cargo check --release --locked |& tee "$ROOT/out/cargo-check.log"
+          cargo test --locked --lib cache_reset_preflight_v86 -- --nocapture |& tee "$ROOT/out/focused-tests.log"
+          echo 'V86_COMPILE=PASS'
+          echo 'V86_FOCUSED_TESTS=PASS'
+          cd "$ROOT/control"
+          set +e
+          cargo test --locked > "$ROOT/out/control-tests.log" 2>&1
+          control_rc=$?
+          cd "$ROOT/repo"
+          cargo test --locked > "$ROOT/out/candidate-tests.log" 2>&1
+          candidate_rc=$?
+          set -e
+          printf '%s\n' "$control_rc" > "$ROOT/out/control-tests.rc"
+          printf '%s\n' "$candidate_rc" > "$ROOT/out/candidate-tests.rc"
+          python3 - "$ROOT" <<'PY'
+          import json, pathlib, sys
+          r=pathlib.Path(sys.argv[1]); out=r/'out'
+          missing=[p for p in ('test_resources/RuleDomainMismatch/config.json','test_resources/UnlistedRecursor/config.json') if not (r/'repo'/p).is_file()]
+          result={'control_rc':int((out/'control-tests.rc').read_text()),'candidate_rc':int((out/'candidate-tests.rc').read_text()),'missing_negative_fixtures':missing,'release_qualified':False}
+          result['release_qualified']=result['control_rc']==0 and result['candidate_rc']==0 and not missing
+          (out/'qualification.json').write_text(json.dumps(result,indent=2))
+          print('V86_QUALIFICATION='+('PASS' if result['release_qualified'] else 'FAILED'))
+          print('V86_MISSING_NEGATIVE_FIXTURES='+json.dumps(missing))
+          if not result['release_qualified']:
+              sys.exit(1)
+          PY
+      - name: Preserve preflight evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cache-reset-preflight-v86
+          path: /tmp/v86/out/
+          if-no-files-found: warn
