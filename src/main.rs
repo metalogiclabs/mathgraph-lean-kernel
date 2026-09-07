@@ -17,7 +17,7 @@ fn main() {
         None => Err(Box::from("This program expects a path to a configuration file.".to_string())),
         Some(p) if p == "-h" || p == "--help" => {
             println!("{}", HELP_LONG);
-            return
+            return;
         }
         Some(p) => {
             let path = Path::new(p).to_path_buf();
@@ -41,31 +41,21 @@ fn main() {
 // Returns an optional success message.
 fn use_config(config_path: &Path) -> Result<Option<String>, Box<dyn Error>> {
     let cfg = Config::try_from(config_path)?;
-    // Make sure the target pretty printer destination is accessible before doing any real work.
-    let mut pp_destination = cfg.get_pp_destination()?;
     let global_arena = Arena::new();
     let (export_file, skipped_axioms) = cfg.to_export_file(global_arena.as_arena_ref())?;
     if export_file.config.parse_only {
-        return Ok(Some(format!("Parsed {} declarations", export_file.declars.len())))
+        return Ok(Some(format!("Parsed {} declarations", export_file.declars.len())));
     }
     // Check the environment
     export_file.check_all_declars();
-    // Pretty print as necessary
-    let pp_errs = export_file.pp_selected_declars(pp_destination.as_mut());
     if export_file.config.print_success_message {
-        if pp_errs.is_empty() {
-            if skipped_axioms.is_empty() {
-                Ok(Some(format!("Checked {} declarations with no errors", export_file.declars.len())))
-            } else {
-                Ok(Some(format!("Checked {} declarations with no errors, skipping exported but unpermitted axioms {:?}",
-                export_file.declars.len(), skipped_axioms)))
-            }
+        if skipped_axioms.is_empty() {
+            Ok(Some(format!("Checked {} declarations with no errors", export_file.declars.len())))
         } else {
             Ok(Some(format!(
-                "Checked {} declarations with no typechecker errors, {} pretty printer errors: {:#?}",
+                "Checked {} declarations with no errors, skipping exported but unpermitted axioms {:?}",
                 export_file.declars.len(),
-                pp_errs.len(),
-                pp_errs
+                skipped_axioms
             )))
         }
     } else if skipped_axioms.is_empty() {

@@ -1,4 +1,3 @@
-use crate::expr::BinderStyle;
 use crate::util::{BigUintPtr, ExprPtr, LevelPtr, LevelsPtr, NamePtr, StringPtr};
 use bumpalo::Bump;
 use std::cell::{Cell, OnceCell};
@@ -56,10 +55,7 @@ impl<'a> Elim<'a> {
     pub fn proj(ty_name: NamePtr<'a>, idx: u16) -> Self {
         let addr = ty_name.get_hash();
         debug_assert!(addr >> (Self::IDX_SHIFT - 1) == 0, "name address does not fit alongside a projection index");
-        Elim {
-            bits: (addr << 1) | 1 | (u64::from(idx) << Self::IDX_SHIFT),
-            _ph: std::marker::PhantomData,
-        }
+        Elim { bits: (addr << 1) | 1 | (u64::from(idx) << Self::IDX_SHIFT), _ph: std::marker::PhantomData }
     }
 
     #[inline]
@@ -76,10 +72,7 @@ impl<'a> Elim<'a> {
         } else {
             let mask = (1u64 << Self::IDX_SHIFT) - 1;
             let addr = (self.bits & mask) >> 1;
-            ElimView::Proj {
-                ty_name: NamePtr::from_raw_hash(addr),
-                idx: (self.bits >> Self::IDX_SHIFT) as u16,
-            }
+            ElimView::Proj { ty_name: NamePtr::from_raw_hash(addr), idx: (self.bits >> Self::IDX_SHIFT) as u16 }
         }
     }
 }
@@ -110,16 +103,12 @@ pub enum Value<'a> {
         key: Cell<u64>,
     },
     Lam {
-        binder_name: NamePtr<'a>,
-        binder_style: BinderStyle,
         binder_type: ExprPtr<'a>,
         body: Closure<'a>,
         canon: Cell<bool>,
         key: Cell<u64>,
     },
     Pi {
-        binder_name: NamePtr<'a>,
-        binder_style: BinderStyle,
         domain: V<'a>,
         body: Closure<'a>,
         canon: Cell<bool>,
@@ -212,17 +201,14 @@ impl<'a> Value<'a> {
                 let h = kmix(kmix(10, head.name.get_hash()), head.levels.get_hash());
                 seal(kmix(h, spine.key()), spine.is_closed())
             }
-            Value::Lam { binder_name, binder_style, binder_type, body, .. } => {
+            Value::Lam { binder_type, body, .. } => {
                 let (b, c) = closure_key(body);
-                let h = kmix(
-                    kmix(kmix(11, binder_name.get_hash()), *binder_style as u64),
-                    binder_type.as_ref() as *const crate::expr::Expr<'a> as usize as u64,
-                );
+                let h = kmix(11, binder_type.as_ref() as *const crate::expr::Expr<'a> as usize as u64);
                 seal(kmix(h, b), c)
             }
-            Value::Pi { binder_name, binder_style, domain, body, .. } => {
+            Value::Pi { domain, body, .. } => {
                 let (b, c) = closure_key(body);
-                let h = kmix(kmix(12, binder_name.get_hash()), *binder_style as u64);
+                let h = 12;
                 seal(kmix(kmix(h, domain.digest()), b), c && domain.is_closed())
             }
             Value::Sort { level, .. } => seal(kmix(1, level.get_hash()), true),
@@ -276,7 +262,10 @@ pub struct LevelSub<'a> {
 
 #[derive(Debug)]
 pub enum Env<'a> {
-    Nil { lsub: Option<&'a LevelSub<'a>>, hash: u64 },
+    Nil {
+        lsub: Option<&'a LevelSub<'a>>,
+        hash: u64,
+    },
     Cons {
         v: V<'a>,
         parent: E<'a>,
@@ -324,7 +313,6 @@ impl<'a> Env<'a> {
             Env::Nil { lsub, .. } | Env::Cons { lsub, .. } | Env::Framed { lsub, .. } => *lsub,
         }
     }
-
 }
 
 #[derive(Debug)]
@@ -364,10 +352,8 @@ impl<'a> Spine<'a> {
         }
         let k = match elim.view() {
             ElimView::App(v) => seal(kmix(prev.key(), v.digest()), prev.is_closed() && v.is_closed()),
-            ElimView::Proj { ty_name, idx } => seal(
-                kmix(kmix(prev.key(), ty_name.get_hash()), u64::from(idx) | (1 << 60)),
-                prev.is_closed(),
-            ),
+            ElimView::Proj { ty_name, idx } =>
+                seal(kmix(kmix(prev.key(), ty_name.get_hash()), u64::from(idx) | (1 << 60)), prev.is_closed()),
         };
         key.set(k);
         k
@@ -466,21 +452,12 @@ impl<'a> Spine<'a> {
     }
 }
 
-pub fn env_empty<'a>(arena: &'a Bump) -> E<'a> {
-    arena.alloc(Env::Nil { lsub: None, hash: 0 })
-}
+pub fn env_empty<'a>(arena: &'a Bump) -> E<'a> { arena.alloc(Env::Nil { lsub: None, hash: 0 }) }
 pub fn env_extend<'a>(arena: &'a Bump, parent: E<'a>, v: V<'a>) -> E<'a> {
     let v_hash = v as *const Value<'a> as usize as u64;
     let parent_hash = parent.get_hash();
     let hash = parent_hash.wrapping_mul(0x9E3779B97F4A7C15).wrapping_add(v_hash);
-    arena.alloc(Env::Cons {
-        v,
-        parent,
-        lsub: parent.lsub(),
-        hash,
-        len: parent.len() + 1,
-        prune: Cell::new((0, None)),
-    })
+    arena.alloc(Env::Cons { v, parent, lsub: parent.lsub(), hash, len: parent.len() + 1, prune: Cell::new((0, None)) })
 }
 pub fn ctx_empty<'a>(arena: &'a Bump) -> C<'a> { arena.alloc(Ctx::Nil) }
 pub fn ctx_extend<'a>(arena: &'a Bump, parent: C<'a>, ty: V<'a>) -> C<'a> { arena.alloc(Ctx::Cons { ty, parent }) }
@@ -527,25 +504,20 @@ pub fn mk_unfold_head_with_empty<'a>(
     if let Some(hv) = head_value.get() {
         let _ = forced.set(*hv);
     }
-    arena.alloc(Value::Unfold { head: UnfoldHead { name, levels }, spine: empty, head_value, forced, canon: Cell::new(false), key: Cell::new(0) })
+    arena.alloc(Value::Unfold {
+        head: UnfoldHead { name, levels },
+        spine: empty,
+        head_value,
+        forced,
+        canon: Cell::new(false),
+        key: Cell::new(0),
+    })
 }
-pub fn mk_lam<'a>(
-    arena: &'a Bump,
-    binder_name: NamePtr<'a>,
-    binder_style: BinderStyle,
-    binder_type: ExprPtr<'a>,
-    body: Closure<'a>,
-) -> V<'a> {
-    arena.alloc(Value::Lam { binder_name, binder_style, binder_type, body, canon: Cell::new(false), key: Cell::new(0) })
+pub fn mk_lam<'a>(arena: &'a Bump, binder_type: ExprPtr<'a>, body: Closure<'a>) -> V<'a> {
+    arena.alloc(Value::Lam { binder_type, body, canon: Cell::new(false), key: Cell::new(0) })
 }
-pub fn mk_pi<'a>(
-    arena: &'a Bump,
-    binder_name: NamePtr<'a>,
-    binder_style: BinderStyle,
-    domain: V<'a>,
-    body: Closure<'a>,
-) -> V<'a> {
-    arena.alloc(Value::Pi { binder_name, binder_style, domain, body, canon: Cell::new(false), key: Cell::new(0) })
+pub fn mk_pi<'a>(arena: &'a Bump, domain: V<'a>, body: Closure<'a>) -> V<'a> {
+    arena.alloc(Value::Pi { domain, body, canon: Cell::new(false), key: Cell::new(0) })
 }
 pub fn mk_sort<'a>(arena: &'a Bump, level: LevelPtr<'a>) -> V<'a> {
     arena.alloc(Value::Sort { level, key: Cell::new(0) })

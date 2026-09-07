@@ -1,4 +1,3 @@
-use sokonanoda::pretty_printer::PpOptions;
 use sokonanoda::util::Config;
 use std::fs;
 use std::panic::{self, AssertUnwindSafe};
@@ -73,11 +72,6 @@ fn run_case_inner(export: PathBuf) -> Outcome {
         num_threads: 1,
         nat_extension: true,
         string_extension: true,
-        pp_declars: None,
-        unknown_pp_declar_hard_error: false,
-        pp_options: PpOptions::default(),
-        pp_output_path: None,
-        pp_to_stdout: false,
         print_success_message: false,
         print_axioms: false,
         unsafe_permit_all_axioms: true,

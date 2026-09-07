@@ -1,7 +1,7 @@
 use crate::util::{ExprPtr, FxHashMap, FxIndexMap, LevelsPtr, NamePtr};
+use serde::Deserialize;
 use std::collections::HashSet;
 use std::sync::Arc;
-use serde::Deserialize;
 
 /// Reducibility hints accompany definitions; used to determine how
 /// to unfold expressions in order to most efficiently proceed.
@@ -91,8 +91,7 @@ impl<'a> InductiveData<'a> {
             && self.num_params == other.num_params
             && self.num_indices == other.num_indices
             && self.is_nested == other.is_nested
-            && self.all_ctor_names.iter().collect::<HashSet<_>>()
-                == other.all_ctor_names.iter().collect::<HashSet<_>>()
+            && self.all_ctor_names.iter().collect::<HashSet<_>>() == other.all_ctor_names.iter().collect::<HashSet<_>>()
             && if other.is_nested {
                 self.all_ind_names
                     .iter()
@@ -153,7 +152,7 @@ pub struct RecursorData<'a> {
 }
 
 impl<'a> RecursorData<'a> {
-    /// Compute the index in the recursor's type (in the telescope) where the major premise is located. 
+    /// Compute the index in the recursor's type (in the telescope) where the major premise is located.
     pub fn major_idx(&self) -> usize {
         (self.num_params + self.num_motives + self.num_minors + self.num_indices) as usize
     }
@@ -165,8 +164,7 @@ impl<'a> RecursorData<'a> {
             && self.num_motives == other.num_motives
             && self.num_minors == other.num_minors
             && self.is_k == other.is_k
-            && self.all_inductives.iter().collect::<HashSet<_>>()
-                == other.all_inductives.iter().collect::<HashSet<_>>()
+            && self.all_inductives.iter().collect::<HashSet<_>>() == other.all_inductives.iter().collect::<HashSet<_>>()
     }
 }
 
@@ -212,7 +210,6 @@ pub enum EnvLimit<'a> {
     Empty,
     ByIndex(usize),
     ByName(NamePtr<'a>),
-    PpUnlimited
 }
 
 /// A Lean environment, which consists of a set of declarations that my have a temporary
@@ -248,12 +245,11 @@ impl<'x, 'a: 'x> Env<'x, 'a> {
         declars: &'a DeclarMap<'a>,
         temp_declars: Option<&'x DeclarMap<'a>>,
         notation: &'a NotationMap<'a>,
-        limit: EnvLimit<'a>
+        limit: EnvLimit<'a>,
     ) -> Self {
         let cutoff = match limit {
             EnvLimit::Empty => 0,
             EnvLimit::ByIndex(idx) => idx,
-            EnvLimit::PpUnlimited => declars.len(),
             EnvLimit::ByName(n) => match n.as_ref().decl_idx() {
                 crate::name::NO_DECL => 0,
                 idx => idx as usize,

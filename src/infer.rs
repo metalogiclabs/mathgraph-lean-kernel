@@ -48,7 +48,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
 
     pub(crate) fn ensure_sort_v(&mut self, depth: u32, v: V<'t>) -> LevelPtr<'t> {
         match self.force_all(depth, v) {
-            Value::Sort { level , .. } => *level,
+            Value::Sort { level, .. } => *level,
             _ => panic!("expected a sort"),
         }
     }
@@ -65,9 +65,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         self.ensure_sort_v(depth, t)
     }
 
-    pub(crate) fn arg_value(&mut self, depth: u32, env: E<'t>, a: ExprPtr<'t>) -> V<'t> {
-        self.eval(depth, env, a)
-    }
+    pub(crate) fn arg_value(&mut self, depth: u32, env: E<'t>, a: ExprPtr<'t>) -> V<'t> { self.eval(depth, env, a) }
 
     fn lit_inductive_type(&mut self, n: Option<NamePtr<'t>>) -> V<'t> {
         let name = n.expect("infer: literal type name missing");
@@ -76,14 +74,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         value::mk_rigid_head_with_empty(self.arena, RigidHead::Inductive(name, levels), empty)
     }
 
-    pub(crate) fn infer_value(
-        &mut self,
-        flag: InferFlag,
-        depth: u32,
-        env: E<'t>,
-        ctx: C<'t>,
-        e: ExprPtr<'t>,
-    ) -> V<'t> {
+    pub(crate) fn infer_value(&mut self, flag: InferFlag, depth: u32, env: E<'t>, ctx: C<'t>, e: ExprPtr<'t>) -> V<'t> {
         match self.ctx.read_expr(e) {
             Var { dbj_idx, .. } => return ctx.lookup(dbj_idx).expect("loose bvar in infer"),
             Sort { level, .. } => {
@@ -126,7 +117,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
 
         let r = match self.ctx.read_expr(e) {
             App { .. } => self.infer_app_v(flag, depth, env, ctx, e),
-            Lambda { binder_name, binder_style, binder_type, body, .. } => {
+            Lambda { binder_type, body, .. } => {
                 let dom = self.arg_value(depth, env, binder_type);
                 let mut body_ty = None;
                 if flag == Check {
@@ -146,7 +137,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                     Some(_) => Closure::mk_eval(self.empty_env(), binder_type),
                     None => Closure::mk_infer(self.key_env(env, e), ctx, body),
                 };
-                value::mk_pi(self.arena, binder_name, binder_style, dom, clo)
+                value::mk_pi(self.arena, dom, clo)
             }
             Pi { binder_type, body, .. } => {
                 let l1 = self.infer_sort_of_v(flag, depth, env, ctx, binder_type);
@@ -180,14 +171,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         r
     }
 
-    fn infer_app_v(
-        &mut self,
-        flag: InferFlag,
-        depth: u32,
-        env: E<'t>,
-        ctx: C<'t>,
-        e: ExprPtr<'t>,
-    ) -> V<'t> {
+    fn infer_app_v(&mut self, flag: InferFlag, depth: u32, env: E<'t>, ctx: C<'t>, e: ExprPtr<'t>) -> V<'t> {
         let (fun, mut args) = self.ctx.unfold_apps_stack(self.arena, e);
         let mut fty = self.infer_value(flag, depth, env, ctx, fun);
         while let Some(arg) = args.pop() {
@@ -230,8 +214,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
             _ => panic!("projection structure type is not an inductive"),
         };
         assert!(ind_name == ty_name, "projection type name does not match the structure's inductive");
-        let params =
-            self.spine_apps(depth, spine).expect("projection structure type has a non-applicative spine");
+        let params = self.spine_apps(depth, spine).expect("projection structure type has a non-applicative spine");
         let (num_params, num_indices, ctor_name) = {
             let ind = self.env.get_inductive(&ind_name).expect("projection structure type is not an inductive");
             assert!(ind.all_ctor_names.len() == 1, "projection of an inductive without exactly one constructor");
@@ -250,10 +233,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         for i in 0..idx {
             match self.force_all(depth, cur) {
                 Value::Pi { domain, body, .. } => {
-                    if self.ctx.has_loose_bvar(body.body, 0)
-                        && struct_ty_is_prop
-                        && !self.is_prop_type(depth, domain)
-                    {
+                    if self.ctx.has_loose_bvar(body.body, 0) && struct_ty_is_prop && !self.is_prop_type(depth, domain) {
                         panic!("projection of a non-proof field from a Prop structure")
                     }
                     let prior = self.do_proj(depth, ind_name, i, struct_v);

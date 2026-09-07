@@ -1,11 +1,9 @@
-use crate::value::{Closure, RigidHead, Value, S, V};
 use crate::env::{ConstructorData, Declar, DeclarInfo, DeclarMap, InductiveData, RecRule, RecursorData};
-use crate::expr::{BinderStyle, Expr::*};
-use crate::tc::{TypeChecker};
+use crate::expr::Expr::*;
+use crate::tc::TypeChecker;
 use crate::util::{ExportFile, ExprPtr, FxHashSet, FxIndexMap, LevelPtr, LevelsPtr, NamePtr, TcCtx};
+use crate::value::{Closure, RigidHead, Value, S, V};
 use std::sync::Arc;
-
-type Bndr<'a> = (NamePtr<'a>, BinderStyle, ExprPtr<'a>);
 
 impl<'t, 'p: 't> ExportFile<'p> {
     pub(crate) fn check_inductive_declar(
@@ -17,15 +15,14 @@ impl<'t, 'p: 't> ExportFile<'p> {
     ) {
         let (ind, env_limit) = match d {
             Declar::Inductive(ind) => {
-                let &(start, size) = self
-                    .mutual_block_sizes
-                    .get(&ind.info.name)
-                    .expect("missing inductive block boundaries");
+                let &(start, size) =
+                    self.mutual_block_sizes.get(&ind.info.name).expect("missing inductive block boundaries");
                 let mut physical_ind_names = Vec::new();
                 let mut physical_ctor_types = Vec::new();
                 let mut physical_inductive_types_and_ctors = Vec::new();
                 for idx in start..start + size {
-                    let (_, declar) = self.declars.get_index(idx).expect("inductive block boundary exceeds environment");
+                    let (_, declar) =
+                        self.declars.get_index(idx).expect("inductive block boundary exceeds environment");
                     match declar {
                         Declar::Inductive(inductive) => {
                             physical_ind_names.push(inductive.info.name);
@@ -58,7 +55,7 @@ impl<'t, 'p: 't> ExportFile<'p> {
                         while let Pi { binder_type, body, .. } = ctx.read_expr(ctor_ty) {
                             if ctx.find_const(binder_type, |name| physical_ind_names.contains(&name)) {
                                 found = true;
-                                break 'outer
+                                break 'outer;
                             }
                             ctor_ty = body;
                         }
@@ -68,7 +65,7 @@ impl<'t, 'p: 't> ExportFile<'p> {
                 assert_eq!(ind.is_recursive, is_recursive);
                 (ind, crate::env::EnvLimit::ByIndex(start + size))
             }
-            _ => panic!("expected inductive")
+            _ => panic!("expected inductive"),
         };
         {
             // The **unmodified** types and constructors for all of the types in this mutual block.
@@ -79,7 +76,8 @@ impl<'t, 'p: 't> ExportFile<'p> {
 
             // Initialize the big chunk of state used throughout the process of checking
             // this inductive declaration.
-            let mut st = ctx.with_tc(env_limit, arena, cache, |tc| tc.specialize_nested(ind, unmodified_tys_ctors.clone()));
+            let mut st =
+                ctx.with_tc(env_limit, arena, cache, |tc| tc.specialize_nested(ind, unmodified_tys_ctors.clone()));
 
             // Check the (potentially modified) inductive specs against the base environment.
             ctx.with_tc(env_limit, arena, cache, |tc| tc.check_inductive_specs(&mut st));
@@ -213,13 +211,7 @@ impl<'t, 'p: 't> TcCtx<'t, 'p> {
                     num_params,
                     offset,
                 );
-                self.check_uniform_inductive_occurrences_at(
-                    data.val,
-                    ind_names,
-                    expected_levels,
-                    num_params,
-                    offset,
-                );
+                self.check_uniform_inductive_occurrences_at(data.val, ind_names, expected_levels, num_params, offset);
                 self.check_uniform_inductive_occurrences_at(
                     data.body,
                     ind_names,
@@ -228,13 +220,8 @@ impl<'t, 'p: 't> TcCtx<'t, 'p> {
                     offset.checked_add(1).expect("binder depth exceeds u16"),
                 );
             }
-            Proj { structure, .. } => self.check_uniform_inductive_occurrences_at(
-                structure,
-                ind_names,
-                expected_levels,
-                num_params,
-                offset,
-            ),
+            Proj { structure, .. } =>
+                self.check_uniform_inductive_occurrences_at(structure, ind_names, expected_levels, num_params, offset),
         }
     }
 
@@ -316,8 +303,8 @@ pub(crate) struct InductiveCheckState<'a> {
     /// Needs to be incrementing because you may have more than one specialized
     /// version of a given container type.
     next_ngen_idx: u64,
-    local_params: Vec<Bndr<'a>>,
-    local_indices: Vec<Vec<Bndr<'a>>>,
+    local_params: Vec<ExprPtr<'a>>,
+    local_indices: Vec<Vec<ExprPtr<'a>>>,
     block_codom: Option<LevelPtr<'a>>,
     is_zero: Option<bool>,
     is_nonzero: Option<bool>,
@@ -325,9 +312,9 @@ pub(crate) struct InductiveCheckState<'a> {
     rec_uparams: Option<LevelsPtr<'a>>,
     elim_level: Option<LevelPtr<'a>>,
     k_target: Option<bool>,
-    majors: Vec<Bndr<'a>>,
-    motives: Vec<Bndr<'a>>,
-    minors: Vec<Vec<Bndr<'a>>>,
+    majors: Vec<ExprPtr<'a>>,
+    motives: Vec<ExprPtr<'a>>,
+    minors: Vec<Vec<ExprPtr<'a>>>,
 }
 
 impl<'a> InductiveCheckState<'a> {
@@ -335,7 +322,7 @@ impl<'a> InductiveCheckState<'a> {
         info_uparams: LevelsPtr<'a>,
         num_params: u16,
         new_tys: Vec<IndTyHeader<'a>>,
-        local_params: Vec<Bndr<'a>>,
+        local_params: Vec<ExprPtr<'a>>,
     ) -> Self {
         Self {
             nested_to_unspecialized_ty: crate::util::new_fx_index_map(),
@@ -365,7 +352,7 @@ impl<'a> InductiveCheckState<'a> {
 
     fn minor_base(&self) -> u16 { self.num_params() + self.num_motives() }
 
-    fn flat_minors(&self) -> Vec<Bndr<'a>> { self.minors.iter().flat_map(|v| v.iter().copied()).collect() }
+    fn flat_minors(&self) -> Vec<ExprPtr<'a>> { self.minors.iter().flat_map(|v| v.iter().copied()).collect() }
 }
 
 #[derive(Debug, Clone)]
@@ -381,20 +368,11 @@ struct CtorHeader<'a> {
     ty: ExprPtr<'a>,
 }
 
-
 impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
-    fn assert_block_recursor_names(
-        &mut self,
-        ind_name: NamePtr<'t>,
-        expected: impl IntoIterator<Item = NamePtr<'t>>,
-    ) {
+    fn assert_block_recursor_names(&mut self, ind_name: NamePtr<'t>, expected: impl IntoIterator<Item = NamePtr<'t>>) {
         let expected: FxHashSet<_> = expected.into_iter().collect();
-        let &(start, size) = self
-            .ctx
-            .export_file
-            .mutual_block_sizes
-            .get(&ind_name)
-            .expect("missing inductive block boundaries");
+        let &(start, size) =
+            self.ctx.export_file.mutual_block_sizes.get(&ind_name).expect("missing inductive block boundaries");
         let imported: FxHashSet<_> = (start..start + size)
             .filter_map(|idx| self.ctx.export_file.declars.get_index(idx))
             .filter_map(|(_, declar)| match declar {
@@ -481,20 +459,20 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
         }
     }
 
-    fn get_local_params(&mut self, e: ExprPtr<'t>, num_params: u16) -> (Vec<Bndr<'t>>, ExprPtr<'t>) {
+    fn get_local_params(&mut self, e: ExprPtr<'t>, num_params: u16) -> (Vec<ExprPtr<'t>>, ExprPtr<'t>) {
         let mut depth = 0u32;
         let mut params = Vec::with_capacity(num_params as usize);
         let mut cur = self.value_of(e);
         for _ in 0..num_params {
-            let Some(Value::Pi { binder_name, binder_style, domain, body, .. }) = self.force_pi(depth, cur) else {
+            let Some(Value::Pi { domain, body, .. }) = self.force_pi(depth, cur) else {
                 panic!("exhausted telescope early")
             };
-            let (binder_name, binder_style, domain) = (*binder_name, *binder_style, *domain);
+            let domain = *domain;
             let binder_type = self.quote(depth, domain);
             let fresh = self.mk_bvar_hc(depth, domain);
             cur = self.apply_closure(depth + 1, body, fresh, Some(domain));
             depth += 1;
-            params.push((binder_name, binder_style, binder_type));
+            params.push(binder_type);
         }
         let rest = self.quote(depth, cur);
         (params, rest)
@@ -508,34 +486,34 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
         (0..st.num_params()).map(|i| self.param_var(st, offset, i)).collect()
     }
 
-    fn mk_pis_dep(&mut self, binders: &[Bndr<'t>], gap: u16, mut body: ExprPtr<'t>) -> ExprPtr<'t> {
-        for (i, (binder_name, binder_style, ty)) in binders.iter().copied().enumerate().rev() {
+    fn mk_pis_dep(&mut self, binders: &[ExprPtr<'t>], gap: u16, mut body: ExprPtr<'t>) -> ExprPtr<'t> {
+        for (i, ty) in binders.iter().copied().enumerate().rev() {
             let ty = self.ctx.lift(ty, u16::try_from(i).expect("telescope exceeds u16"), gap);
-            body = self.ctx.mk_pi(binder_name, binder_style, ty, body);
+            body = self.ctx.mk_pi(ty, body);
         }
         body
     }
 
-    fn mk_pis_flat(&mut self, binders: &[Bndr<'t>], mut body: ExprPtr<'t>) -> ExprPtr<'t> {
-        for (i, (binder_name, binder_style, ty)) in binders.iter().copied().enumerate().rev() {
+    fn mk_pis_flat(&mut self, binders: &[ExprPtr<'t>], mut body: ExprPtr<'t>) -> ExprPtr<'t> {
+        for (i, ty) in binders.iter().copied().enumerate().rev() {
             let ty = self.ctx.lift(ty, 0, u16::try_from(i).expect("telescope exceeds u16"));
-            body = self.ctx.mk_pi(binder_name, binder_style, ty, body);
+            body = self.ctx.mk_pi(ty, body);
         }
         body
     }
 
-    fn mk_lambdas_dep(&mut self, binders: &[Bndr<'t>], gap: u16, mut body: ExprPtr<'t>) -> ExprPtr<'t> {
-        for (i, (binder_name, binder_style, ty)) in binders.iter().copied().enumerate().rev() {
+    fn mk_lambdas_dep(&mut self, binders: &[ExprPtr<'t>], gap: u16, mut body: ExprPtr<'t>) -> ExprPtr<'t> {
+        for (i, ty) in binders.iter().copied().enumerate().rev() {
             let ty = self.ctx.lift(ty, u16::try_from(i).expect("telescope exceeds u16"), gap);
-            body = self.ctx.mk_lambda(binder_name, binder_style, ty, body);
+            body = self.ctx.mk_lambda(ty, body);
         }
         body
     }
 
-    fn mk_lambdas_flat(&mut self, binders: &[Bndr<'t>], mut body: ExprPtr<'t>) -> ExprPtr<'t> {
-        for (i, (binder_name, binder_style, ty)) in binders.iter().copied().enumerate().rev() {
+    fn mk_lambdas_flat(&mut self, binders: &[ExprPtr<'t>], mut body: ExprPtr<'t>) -> ExprPtr<'t> {
+        for (i, ty) in binders.iter().copied().enumerate().rev() {
             let ty = self.ctx.lift(ty, 0, u16::try_from(i).expect("telescope exceeds u16"));
-            body = self.ctx.mk_lambda(binder_name, binder_style, ty, body);
+            body = self.ctx.mk_lambda(ty, body);
         }
         body
     }
@@ -551,16 +529,16 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
         let mut cur = self.value_of(ind_ty);
         let mut indices = Vec::new();
         let mut i = 0;
-        while let Some(Value::Pi { binder_name, binder_style, domain, body, .. }) = self.force_pi(depth, cur) {
-            let (binder_name, binder_style, domain) = (*binder_name, *binder_style, *domain);
+        while let Some(Value::Pi { domain, body, .. }) = self.force_pi(depth, cur) {
+            let domain = *domain;
             if i < st.local_params.len() {
-                let stored = st.local_params[i].2;
+                let stored = st.local_params[i];
                 self.tc_cache.clear();
                 let expected = self.eval(depth, env, stored);
                 assert!(self.def_eq_at(depth, domain, expected), "def_eq failed");
             } else {
                 let binder_type = self.quote(depth, domain);
-                indices.push((binder_name, binder_style, binder_type));
+                indices.push(binder_type);
             }
             let fresh = self.mk_bvar_hc(depth, domain);
             env = crate::value::env_extend(self.arena, env, fresh);
@@ -587,11 +565,11 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
         let mut cur = self.value_of(ind.ty);
         let mut indices = Vec::new();
         let mut i = 0;
-        while let Some(Value::Pi { binder_name, binder_style, domain, body, .. }) = self.force_pi(depth, cur) {
-            let (binder_name, binder_style, domain) = (*binder_name, *binder_style, *domain);
+        while let Some(Value::Pi { domain, body, .. }) = self.force_pi(depth, cur) {
+            let domain = *domain;
             if i >= st.local_params.len() {
                 let binder_type = self.quote(depth, domain);
-                indices.push((binder_name, binder_style, binder_type));
+                indices.push(binder_type);
             }
             let fresh = self.mk_bvar_hc(depth, domain);
             cur = self.apply_closure(depth + 1, body, fresh, Some(domain));
@@ -644,7 +622,11 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
                 let cd = self.env.get_constructor(&ctor.name).expect("constructor is not declared");
                 assert_eq!(cd.inductive_name, header.name, "constructor declares the wrong inductive");
                 assert_eq!(usize::from(cd.ctor_idx), ctor_idx, "constructor declares the wrong index");
-                assert_eq!(usize::from(cd.num_params), num_params, "constructor declares the wrong number of parameters");
+                assert_eq!(
+                    usize::from(cd.num_params),
+                    num_params,
+                    "constructor declares the wrong number of parameters"
+                );
                 assert_eq!(
                     usize::from(cd.num_fields),
                     telescope - num_params,
@@ -674,13 +656,13 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
         offset: u16,
     ) -> Option<InductiveData<'t>> {
         if !(matches!(self.ctx.read_expr(e), App { .. })) {
-            return None
+            return None;
         }
         let (_f, name, _levels, args) = self.ctx.unfold_const_apps(self.arena, e)?;
         // If this is an application of an inductive, like `Array A`
         let ind_ty_declar @ InductiveData { num_params, .. } = self.env.get_inductive(&name)?;
         if (*num_params as usize) > args.len() {
-            return None
+            return None;
         }
         let mut inner_bvars = false;
         let mut is_nested = false;
@@ -697,7 +679,7 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
             }
         }
         if !is_nested {
-            return None
+            return None;
         }
         if inner_bvars {
             panic!("a nested type may only be applied to the block's parameters")
@@ -737,7 +719,7 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
             let tester = self.ctx.append_index_after(n, idx);
             if !self.env.get_old_declar(&tester).is_some() {
                 st.next_ngen_idx = idx + 1;
-                return tester
+                return tester;
             }
         }
         panic!("Unable to generate unique name, u64 exhausted")
@@ -847,21 +829,21 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
         } else {
             match self.ctx.read_expr(e) {
                 Var { .. } | Sort { .. } | Const { .. } | NatLit { .. } | StringLit { .. } => e,
-                Pi { binder_name, binder_style, binder_type, body, .. } => {
+                Pi { binder_type, body, .. } => {
                     let binder_type = self.replace_all_nested(binder_type, st, offset);
                     let body = self.replace_all_nested(body, st, offset + 1);
-                    self.ctx.mk_pi(binder_name, binder_style, binder_type, body)
+                    self.ctx.mk_pi(binder_type, body)
                 }
-                Lambda { binder_name, binder_style, binder_type, body, .. } => {
+                Lambda { binder_type, body, .. } => {
                     let binder_type = self.replace_all_nested(binder_type, st, offset);
                     let body = self.replace_all_nested(body, st, offset + 1);
-                    self.ctx.mk_lambda(binder_name, binder_style, binder_type, body)
+                    self.ctx.mk_lambda(binder_type, body)
                 }
-                Let { data: &crate::expr::LetData { binder_name, binder_type, val, body, nondep }, .. } => {
+                Let { data: &crate::expr::LetData { binder_type, val, body, nondep }, .. } => {
                     let binder_type = self.replace_all_nested(binder_type, st, offset);
                     let val = self.replace_all_nested(val, st, offset);
                     let body = self.replace_all_nested(body, st, offset + 1);
-                    self.ctx.mk_let(binder_name, binder_type, val, body, nondep)
+                    self.ctx.mk_let(binder_type, val, body, nondep)
                 }
                 App { fun, arg, .. } => {
                     let fun = self.replace_all_nested(fun, st, offset);
@@ -898,15 +880,14 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
         loop {
             cur = self.force_all(depth, cur);
             if !self.value_has_ind_occ(depth, cur, st.ind_consts.as_ref()) {
-                return
+                return;
             }
             match cur {
-                Value::Pi { binder_name, binder_style, domain, body, .. } => {
-                    let (binder_name, binder_style, domain, body) = (*binder_name, *binder_style, *domain, *body);
+                Value::Pi { domain, body, .. } => {
+                    let (domain, body) = (*domain, *body);
                     if self.value_has_ind_occ(depth, domain, st.ind_consts.as_ref()) {
                         panic!("non-positive occurrence");
                     }
-                    let _ = (binder_name, binder_style);
                     let fresh = self.mk_bvar_hc(depth, domain);
                     cur = self.apply_closure(depth + 1, &body, fresh, Some(domain));
                     depth += 1;
@@ -920,7 +901,6 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
             }
         }
     }
-
 
     // For an expression `E` and a list
     // of names `NS`, recursively search through `E` for a `Const { name, levels }`
@@ -991,8 +971,7 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
             }
             Value::Pi { domain, body, .. } => {
                 let (domain, body) = (*domain, *body);
-                self.value_has_ind_occ(depth, domain, haystack)
-                    || self.closure_has_ind_occ(depth, &body, haystack)
+                self.value_has_ind_occ(depth, domain, haystack) || self.closure_has_ind_occ(depth, &body, haystack)
             }
             Value::Thunk { .. } => unreachable!("ind occurs: thunk after force"),
         };
@@ -1012,7 +991,7 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
         while let crate::value::Spine::Snoc { prev, elim, .. } = cur {
             if let crate::value::ElimView::App(a) = elim.view() {
                 if self.value_has_ind_occ(depth, a, haystack) {
-                    return true
+                    return true;
                 }
             }
             cur = prev;
@@ -1022,17 +1001,17 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
 
     fn closure_has_ind_occ(&mut self, depth: u32, clo: &Closure<'t>, haystack: &[ExprPtr<'t>]) -> bool {
         if self.has_ind_occ(clo.body, haystack) {
-            return true
+            return true;
         }
         let nlb = clo.body.num_loose_bvars();
         let mask = clo.body.as_ref().fv_mask();
         for idx in 0..nlb {
             if idx < 64 && (mask >> idx) & 1 == 0 {
-                continue
+                continue;
             }
             if let Some(slot) = clo.env.lookup(idx) {
                 if self.value_has_ind_occ(depth, slot, haystack) {
-                    return true
+                    return true;
                 }
             }
         }
@@ -1058,21 +1037,21 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
             _ => return None,
         };
         if !self.ctx.eq_antisymm_many(levels, expected_levels) {
-            return None
+            return None;
         }
         let num_params = st.local_params.len();
         if spine.len() as usize != num_params + st.local_indices[pos].len() {
-            return None
+            return None;
         }
         let args = self.spine_apps(depth, spine)?;
         for i in 0..num_params {
             if !Self::is_bvar_at(args[i], u32::try_from(i).expect("parameter count exceeds u32")) {
-                return None
+                return None;
             }
         }
         for ix in &args[num_params..] {
             if self.value_has_ind_occ(depth, ix, &st.ind_consts) {
-                return None
+                return None;
             }
         }
         Some(pos)
@@ -1093,7 +1072,6 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
         name == parent_ind_name && self.which_valid_ind_app_v(st, depth, f).is_some()
     }
 
-
     pub(crate) fn check_ctor(
         &mut self,
         st: &InductiveCheckState<'t>,
@@ -1107,7 +1085,7 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
         for i in 0..st.local_params.len() {
             let Some(Value::Pi { domain, body, .. }) = self.weak_pi(depth, cur) else { panic!() };
             let domain = *domain;
-            let expected = self.eval(depth, env, st.local_params[i].2);
+            let expected = self.eval(depth, env, st.local_params[i]);
             assert!(self.def_eq_at(depth, domain, expected), "def_eq failed");
             let fresh = self.mk_bvar_hc(depth, domain);
             env = crate::value::env_extend(self.arena, env, fresh);
@@ -1178,8 +1156,10 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
             }
         }
 
-        let non_prop_ctor_telescope_elems: Vec<ExprPtr<'t>> =
-            non_prop_levels.iter().map(|l| self.ctx.mk_var(u16::try_from(depth - 1 - l).expect("depth exceeds u16"))).collect();
+        let non_prop_ctor_telescope_elems: Vec<ExprPtr<'t>> = non_prop_levels
+            .iter()
+            .map(|l| self.ctx.mk_var(u16::try_from(depth - 1 - l).expect("depth exceeds u16")))
+            .collect();
         let end_of_telescope = self.quote(depth, cur);
         let (_, ind_ty_params_and_indices) = self.ctx.unfold_apps(self.arena, end_of_telescope);
 
@@ -1195,7 +1175,7 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
     fn large_elim_test(&mut self, st: &InductiveCheckState<'t>) -> bool {
         if st.is_nonzero.unwrap() {
             // If our inductive is in `Type <n>`, it's large eliminating
-            return true
+            return true;
         }
 
         match st.all_inductives_incl_specialized.as_slice() {
@@ -1220,7 +1200,7 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
     fn gen_elim_level(&mut self, st: &InductiveCheckState<'t>) -> NamePtr<'t> {
         let p = self.ctx.str1("u");
         if !self.ctx.contains_param(st.uparams, p) {
-            return p
+            return p;
         }
         // Lean's pretty printer starts at 1 for universes.
         let mut i = 1u64;
@@ -1229,7 +1209,7 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
             if self.ctx.contains_param(st.uparams, candidate) {
                 i += 1;
             } else {
-                return candidate
+                return candidate;
             }
         }
     }
@@ -1276,26 +1256,16 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
             let index_vars: Vec<ExprPtr<'t>> = (0..num_indices).map(|k| self.ctx.mk_var(num_indices - 1 - k)).collect();
             let mut ty = self.ctx.foldl_apps(ind_const, param_vars.into_iter());
             ty = self.ctx.foldl_apps(ty, index_vars.into_iter());
-            let t = self.ctx.str1("t");
-            st.majors.push((t, BinderStyle::Default, ty));
+            st.majors.push(ty);
         }
     }
 
-    fn mk_motive_dep(&mut self, st: &InductiveCheckState<'t>, ind_type_idx: usize) -> Bndr<'t> {
+    fn mk_motive_dep(&mut self, st: &InductiveCheckState<'t>, ind_type_idx: usize) -> ExprPtr<'t> {
         let elim_sort = self.ctx.mk_sort(st.elim_level.unwrap());
         let major = st.majors[ind_type_idx];
-        let w_major = self.ctx.mk_pi(major.0, major.1, major.2, elim_sort);
+        let w_major = self.ctx.mk_pi(major, elim_sort);
         let indices = st.local_indices[ind_type_idx].clone();
-        let motive_type = self.mk_pis_dep(indices.as_slice(), 0, w_major);
-        let motive_name_base = self.ctx.str1("motive");
-        let motive_name = if st.all_inductives_incl_specialized.len() > 1 {
-            // Lean uses 1-based indexing for these, so we try to match for the pretty printer output.
-            self.ctx.append_index_after(motive_name_base, ind_type_idx as u64 + 1)
-        } else {
-            motive_name_base
-        };
-
-        (motive_name, BinderStyle::Implicit, motive_type)
+        self.mk_pis_dep(indices.as_slice(), 0, w_major)
     }
 
     fn mk_motives(&mut self, st: &mut InductiveCheckState<'t>) {
@@ -1318,21 +1288,17 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
         self.which_valid_ind_app_v(st, depth, cur)
     }
 
-    fn handle_rec_args_aux(
-        &mut self,
-        cursor: V<'t>,
-        depth0: u32,
-    ) -> (ExprPtr<'t>, Vec<(NamePtr<'t>, BinderStyle, ExprPtr<'t>)>, V<'t>, u32) {
+    fn handle_rec_args_aux(&mut self, cursor: V<'t>, depth0: u32) -> (ExprPtr<'t>, Vec<ExprPtr<'t>>, V<'t>, u32) {
         let mut depth = depth0;
         let mut cur = cursor;
         let mut xs = Vec::new();
-        while let Some(Value::Pi { binder_name, binder_style, domain, body, .. }) = self.force_pi(depth, cur) {
-            let (binder_name, binder_style, domain) = (*binder_name, *binder_style, *domain);
+        while let Some(Value::Pi { domain, body, .. }) = self.force_pi(depth, cur) {
+            let domain = *domain;
             let dom_e = self.quote(depth, domain);
             let fresh = self.mk_bvar_hc(depth, domain);
             cur = self.apply_closure(depth + 1, body, fresh, Some(domain));
             depth += 1;
-            xs.push((binder_name, binder_style, dom_e));
+            xs.push(dom_e);
         }
         let cur = self.force_all(depth, cur);
         let end = self.quote_weak(depth, cur);
@@ -1344,8 +1310,8 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
         st: &InductiveCheckState<'t>,
         ctor_type_cursor: ExprPtr<'t>,
         depth0: u32,
-    ) -> (ExprPtr<'t>, V<'t>, u32, Vec<Bndr<'t>>, Vec<(usize, V<'t>)>) {
-        let mut all_args: Vec<Bndr<'t>> = Vec::new();
+    ) -> (ExprPtr<'t>, V<'t>, u32, Vec<ExprPtr<'t>>, Vec<(usize, V<'t>)>) {
+        let mut all_args: Vec<ExprPtr<'t>> = Vec::new();
         let mut rec_positions = Vec::new();
         self.tc_cache.clear();
         let mut depth = depth0;
@@ -1356,8 +1322,8 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
             let lv = self.mk_bvar_hc(u32::try_from(i).expect("parameter count exceeds u32"), domain);
             cur = self.apply_closure(depth, body, lv, Some(domain));
         }
-        while let Some(Value::Pi { binder_name, binder_style, domain, body, .. }) = self.weak_pi(depth, cur) {
-            let (binder_name, binder_style, domain) = (*binder_name, *binder_style, *domain);
+        while let Some(Value::Pi { domain, body, .. }) = self.weak_pi(depth, cur) {
+            let domain = *domain;
             let binder_type = self.quote(depth, domain);
             let is_rec = self.is_rec_argument_v(st, domain, depth).is_some();
             let fresh = self.mk_bvar_hc(depth, domain);
@@ -1365,7 +1331,7 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
             if is_rec {
                 rec_positions.push((all_args.len(), domain));
             }
-            all_args.push((binder_name, binder_style, binder_type));
+            all_args.push(binder_type);
             depth += 1;
         }
         let end = self.quote(depth, cur);
@@ -1375,11 +1341,10 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
     fn handle_rec_args_minor(
         &mut self,
         st: &InductiveCheckState<'t>,
-        ctor_idx: usize,
         rec_args: &[(usize, V<'t>)],
         ctor_args_base: u32,
         base_depth: u32,
-    ) -> Vec<Bndr<'t>> {
+    ) -> Vec<ExprPtr<'t>> {
         let mut out = Vec::new();
         for (i, (pos, dom_v)) in rec_args.iter().copied().enumerate() {
             self.tc_cache.clear();
@@ -1400,23 +1365,19 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
                 self.ctx.mk_app(lhs, u_app)
             };
             let v_i_ty = self.mk_pis_dep(xs.as_slice(), 0, motive_base);
-            let v_name = self.ctx.str1("v");
-            // rec_arg often has a hygienic name
-            let v_name = self.ctx.append_index_after(v_name, ctor_idx as u64);
-            let v_name = self.ctx.append_index_after(v_name, i as u64);
-            out.push((v_name, BinderStyle::Default, v_i_ty));
+            out.push(v_i_ty);
         }
         out
     }
 
-    fn mk_minors1group(&mut self, st: &InductiveCheckState<'t>, ctors: &[CtorHeader<'t>]) -> Vec<Bndr<'t>> {
+    fn mk_minors1group(&mut self, st: &InductiveCheckState<'t>, ctors: &[CtorHeader<'t>]) -> Vec<ExprPtr<'t>> {
         let mut out = Vec::new();
         let base = u32::from(st.minor_base());
-        for (ctor_idx, ctor) in ctors.iter().copied().enumerate() {
+        for ctor in ctors.iter().copied() {
             let (stripd, stripd_v, args_depth, all_ctor_args, rec_ctor_args) =
                 self.sep_nonrec_rec_ctor_args(st, ctor.ty, base);
             let (ind_ty_idx, applied_indices) = self.get_i_indices_at(st, stripd, stripd_v, args_depth);
-            let v = self.handle_rec_args_minor(st, ctor_idx, rec_ctor_args.as_slice(), base, args_depth);
+            let v = self.handle_rec_args_minor(st, rec_ctor_args.as_slice(), base, args_depth);
             let n_args = u16::try_from(all_ctor_args.len()).expect("telescope exceeds u16");
             let n_v = u16::try_from(v.len()).expect("telescope exceeds u16");
             let total = u16::try_from(args_depth).expect("depth exceeds u16") + n_v;
@@ -1437,16 +1398,7 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
 
             let minor_type = self.mk_pis_dep(v.as_slice(), 0, c_app);
             let minor_type = self.mk_pis_dep(all_ctor_args.as_slice(), 0, minor_type);
-            let minor_name = match self.ctx.read_name(ctor.name) {
-                // Use the constructor's name if it's available;
-                crate::name::Name::Str(_, sfx, _) => self.ctx.str(self.ctx.anonymous(), sfx),
-                // If the constructor name isn't available for some reason, use a generic one
-                _ => {
-                    let minor_name = self.ctx.str1("m");
-                    self.ctx.append_index_after(minor_name, ctor_idx as u64)
-                }
-            };
-            out.push((minor_name, BinderStyle::Default, minor_type));
+            out.push(minor_type);
         }
         out
     }
@@ -1501,7 +1453,7 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
         &mut self,
         st: &InductiveCheckState<'t>,
         ctor: CtorHeader<'t>,
-        flat_mapped_minors: &[Bndr<'t>],
+        flat_mapped_minors: &[ExprPtr<'t>],
         minor_idx: u16,
     ) -> RecRule<'t> {
         let num_minors = u16::try_from(flat_mapped_minors.len()).expect("too many minors");
@@ -1535,7 +1487,7 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
         st: &InductiveCheckState<'t>,
         rec_name: NamePtr<'t>,
         ctor: CtorHeader<'t>,
-        flat_mapped_minors: &[Bndr<'t>],
+        flat_mapped_minors: &[ExprPtr<'t>],
     ) -> ExprPtr<'t> {
         let num_minors = u16::try_from(flat_mapped_minors.len()).expect("too many minors");
         let ctor_args_base = u32::from(st.minor_base() + num_minors);
@@ -1553,8 +1505,7 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
         let param_vars = self.param_vars(st, total - st.num_params());
         let motive_vars: Vec<_> =
             (0..st.num_motives()).map(|i| self.ctx.mk_var(total - 1 - (st.num_params() + i))).collect();
-        let minor_vars: Vec<_> =
-            (0..num_minors).map(|i| self.ctx.mk_var(total - 1 - (st.minor_base() + i))).collect();
+        let minor_vars: Vec<_> = (0..num_minors).map(|i| self.ctx.mk_var(total - 1 - (st.minor_base() + i))).collect();
         let arg_vars: Vec<_> = (0..n_args).map(|i| self.ctx.mk_var(n_args - 1 - i)).collect();
 
         let ctor_app = self.ctx.mk_const(ctor.name, st.uparams);
@@ -1586,20 +1537,9 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
                 assert_eq!(rule.ctor_telescope_size_wo_params, expected_fields);
                 let lhs = self.mk_rec_rule_lhs(st, recursor.info.name, ctor, minors.as_slice());
                 self.tc_cache.clear();
-                let lhs_ty = self.infer_value(
-                    crate::tc::InferFlag::Check,
-                    0,
-                    self.empty_env(),
-                    self.empty_ctx(),
-                    lhs,
-                );
-                let rhs_ty = self.infer_value(
-                    crate::tc::InferFlag::Check,
-                    0,
-                    self.empty_env(),
-                    self.empty_ctx(),
-                    rule.val,
-                );
+                let lhs_ty = self.infer_value(crate::tc::InferFlag::Check, 0, self.empty_env(), self.empty_ctx(), lhs);
+                let rhs_ty =
+                    self.infer_value(crate::tc::InferFlag::Check, 0, self.empty_env(), self.empty_ctx(), rule.val);
                 assert!(
                     self.conv_types_at(0, lhs_ty, rhs_ty),
                     "generated recursor computation rule is not type-preserving"
@@ -1682,14 +1622,15 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
             match (self.env.get_old_declar(&new_rec.info().name), new_rec) {
                 (
                     Some(old @ Declar::Recursor(old_r @ RecursorData { rec_rules: old_rec_rules, .. })),
-                    new @ Declar::Recursor(new_r @ RecursorData { rec_rules: new_rec_rules, .. })
+                    new @ Declar::Recursor(new_r @ RecursorData { rec_rules: new_rec_rules, .. }),
                 ) => {
                     self.tc_cache.clear();
                     assert!(old_r.aux_data_ck(new_r));
                     assert!(!std::ptr::eq(old, new));
                     // Should be structurally != because they come from different envs.
                     assert_ne!(old, new);
-                    let imported_w_new_uparams = self.ctx.subst_expr_levels(old.info().ty, old.info().uparams, st.rec_uparams.unwrap());
+                    let imported_w_new_uparams =
+                        self.ctx.subst_expr_levels(old.info().ty, old.info().uparams, st.rec_uparams.unwrap());
                     self.assert_def_eq(imported_w_new_uparams, new.info().ty);
                     assert_eq!(old_rec_rules.len(), new_rec_rules.len());
                     for (r_old, r_new) in old_rec_rules.iter().zip(new_rec_rules.iter()) {
@@ -1706,9 +1647,9 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
         st: &InductiveCheckState<'t>,
         ind_name: NamePtr<'t>,
         motive_idx: u16,
-        major: Bndr<'t>,
-        local_indices: &[Bndr<'t>],
-        flat_mapped_minors: &[Bndr<'t>],
+        major: ExprPtr<'t>,
+        local_indices: &[ExprPtr<'t>],
+        flat_mapped_minors: &[ExprPtr<'t>],
         rec_rules: &[RecRule<'t>],
     ) -> Declar<'t> {
         let num_indices = u16::try_from(local_indices.len()).expect("index count exceeds u16");
@@ -1723,8 +1664,8 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
         let motive_app_base = self.ctx.foldl_apps(motive, index_vars.into_iter());
         let motive_app = self.ctx.mk_app(motive_app_base, major_var);
 
-        let major_ty = self.ctx.lift(major.2, num_indices, gap);
-        let rec_ty = self.ctx.mk_pi(major.0, major.1, major_ty, motive_app);
+        let major_ty = self.ctx.lift(major, num_indices, gap);
+        let rec_ty = self.ctx.mk_pi(major_ty, motive_app);
         let rec_ty = self.mk_pis_dep(local_indices, gap, rec_ty);
         let rec_ty = self.mk_pis_flat(flat_mapped_minors, rec_ty);
         let motives = st.motives.clone();
@@ -1858,7 +1799,7 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
             Some(out) => out,
             None => match self.ctx.read_expr(e) {
                 Var { .. } | Sort { .. } | Const { .. } | StringLit { .. } | NatLit { .. } => e,
-                Lambda { binder_name, binder_style, binder_type, body, .. } => {
+                Lambda { binder_type, body, .. } => {
                     let binder_type = self.restore_replace(
                         binder_type,
                         num_params,
@@ -1866,11 +1807,16 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
                         st,
                         specialized_rec_names_to_unspecialized_rec_names,
                     );
-                    let body =
-                        self.restore_replace(body, num_params, depth + 1, st, specialized_rec_names_to_unspecialized_rec_names);
-                    self.ctx.mk_lambda(binder_name, binder_style, binder_type, body)
+                    let body = self.restore_replace(
+                        body,
+                        num_params,
+                        depth + 1,
+                        st,
+                        specialized_rec_names_to_unspecialized_rec_names,
+                    );
+                    self.ctx.mk_lambda(binder_type, body)
                 }
-                Pi { binder_name, binder_style, binder_type, body, .. } => {
+                Pi { binder_type, body, .. } => {
                     let binder_type = self.restore_replace(
                         binder_type,
                         num_params,
@@ -1878,11 +1824,16 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
                         st,
                         specialized_rec_names_to_unspecialized_rec_names,
                     );
-                    let body =
-                        self.restore_replace(body, num_params, depth + 1, st, specialized_rec_names_to_unspecialized_rec_names);
-                    self.ctx.mk_pi(binder_name, binder_style, binder_type, body)
+                    let body = self.restore_replace(
+                        body,
+                        num_params,
+                        depth + 1,
+                        st,
+                        specialized_rec_names_to_unspecialized_rec_names,
+                    );
+                    self.ctx.mk_pi(binder_type, body)
                 }
-                Let { data: &crate::expr::LetData { binder_name, binder_type, val, body, nondep }, .. } => {
+                Let { data: &crate::expr::LetData { binder_type, val, body, nondep }, .. } => {
                     let binder_type = self.restore_replace(
                         binder_type,
                         num_params,
@@ -1890,11 +1841,21 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
                         st,
                         specialized_rec_names_to_unspecialized_rec_names,
                     );
-                    let val =
-                        self.restore_replace(val, num_params, depth, st, specialized_rec_names_to_unspecialized_rec_names);
-                    let body =
-                        self.restore_replace(body, num_params, depth + 1, st, specialized_rec_names_to_unspecialized_rec_names);
-                    self.ctx.mk_let(binder_name, binder_type, val, body, nondep)
+                    let val = self.restore_replace(
+                        val,
+                        num_params,
+                        depth,
+                        st,
+                        specialized_rec_names_to_unspecialized_rec_names,
+                    );
+                    let body = self.restore_replace(
+                        body,
+                        num_params,
+                        depth + 1,
+                        st,
+                        specialized_rec_names_to_unspecialized_rec_names,
+                    );
+                    self.ctx.mk_let(binder_type, val, body, nondep)
                 }
                 Proj { ty_name, idx, structure, .. } => {
                     let structure = self.restore_replace(
@@ -1907,10 +1868,20 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
                     self.ctx.mk_proj(ty_name, idx, structure)
                 }
                 App { fun, arg, .. } => {
-                    let fun =
-                        self.restore_replace(fun, num_params, depth, st, specialized_rec_names_to_unspecialized_rec_names);
-                    let arg =
-                        self.restore_replace(arg, num_params, depth, st, specialized_rec_names_to_unspecialized_rec_names);
+                    let fun = self.restore_replace(
+                        fun,
+                        num_params,
+                        depth,
+                        st,
+                        specialized_rec_names_to_unspecialized_rec_names,
+                    );
+                    let arg = self.restore_replace(
+                        arg,
+                        num_params,
+                        depth,
+                        st,
+                        specialized_rec_names_to_unspecialized_rec_names,
+                    );
                     self.ctx.mk_app(fun, arg)
                 }
             },
@@ -1941,7 +1912,7 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
         if let Const { name, levels, .. } = self.ctx.read_expr(e) {
             // If e was `Const(_nested.Array_1.rec)`, return `Const(Lean.Syntax.rec_1)`
             if let Some(rec_name) = specialized_rec_names_to_unspecialized_rec_names.get(&name) {
-                return Some(self.ctx.mk_const(*rec_name, levels))
+                return Some(self.ctx.mk_const(*rec_name, levels));
             }
         }
         let (_, c_name, _, e_args) = self.ctx.unfold_const_apps(self.arena, e)?;
@@ -1959,7 +1930,7 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
             let nested = *nested;
             let inner = self.inst_params_at(nested, num_params, depth);
             let outer = self.ctx.foldl_apps(inner, e_args.iter().copied().skip(st.num_params as usize));
-            return Some(outer)
+            return Some(outer);
         }
         let (nested_no_inst, aux_i_name) = self.get_nested_if_aux_ctor(st, c_name)?;
 
@@ -1992,17 +1963,14 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
         let is_pi = matches!(self.ctx.read_expr(e), Pi { .. });
         let num_params = st.local_params.len();
         let mut cur = self.value_of(e);
-        let mut binders: Vec<(NamePtr<'t>, BinderStyle, ExprPtr<'t>)> = Vec::with_capacity(num_params);
+        let mut binders: Vec<ExprPtr<'t>> = Vec::with_capacity(num_params);
         for level in 0..num_params {
             let depth = u32::try_from(level).expect("parameter count exceeds u32");
             let f = self.force_thunk(depth, cur);
-            let (binder_name, binder_style, dom) = match f {
-                Value::Pi { binder_name, binder_style, domain, .. } => (*binder_name, *binder_style, *domain),
+            let dom = match f {
+                Value::Pi { domain, .. } => *domain,
                 // Also match on Lambda for restoring recursor rules.
-                Value::Lam { binder_name, binder_style, .. } => {
-                    let d = self.lam_domain(depth, f);
-                    (*binder_name, *binder_style, d)
-                }
+                Value::Lam { .. } => self.lam_domain(depth, f),
                 _ => panic!("malformed recursor"),
             };
             let dom_e = self.quote(depth, dom);
@@ -2012,17 +1980,13 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
                 Value::Lam { body, .. } => self.apply_closure(depth + 1, body, fresh, None),
                 _ => unreachable!(),
             };
-            binders.push((binder_name, binder_style, dom_e));
+            binders.push(dom_e);
         }
         let body_depth = u32::try_from(num_params).expect("parameter count exceeds u32");
         let body = self.quote(body_depth, cur);
         let mut out = self.restore_replace(body, num_params, 0, st, nested_rec_name_to_rec_name);
-        while let Some((binder_name, binder_style, dom_e)) = binders.pop() {
-            out = if is_pi {
-                self.ctx.mk_pi(binder_name, binder_style, dom_e, out)
-            } else {
-                self.ctx.mk_lambda(binder_name, binder_style, dom_e, out)
-            };
+        while let Some(dom_e) = binders.pop() {
+            out = if is_pi { self.ctx.mk_pi(dom_e, out) } else { self.ctx.mk_lambda(dom_e, out) };
         }
         out
     }
@@ -2141,10 +2105,7 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
         let base_rec_names = self.base_recursor_names(ind_names_no_specialized);
         self.assert_block_recursor_names(
             ind_names_no_specialized[0],
-            base_rec_names
-                .iter()
-                .copied()
-                .chain(specialized_to_unspecialized_rec_names.values().copied()),
+            base_rec_names.iter().copied().chain(specialized_to_unspecialized_rec_names.values().copied()),
         );
         for unmodified_ind_type in unmodified_mutuals.iter() {
             match (

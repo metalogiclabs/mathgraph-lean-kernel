@@ -1,5 +1,5 @@
 use crate::env::{Declar, RecursorData};
-use crate::expr::{BinderStyle, Expr};
+use crate::expr::Expr;
 use crate::tc::{NatBinOp, TypeChecker};
 use crate::util::{
     nat_div, nat_gcd, nat_land, nat_lor, nat_mod, nat_shl, nat_shr, nat_sub, nat_xor, BigUintPtr, ExprPtr, LevelPtr,
@@ -79,13 +79,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         u
     }
 
-    fn intern_frame(
-        &mut self,
-        hash: u64,
-        mask: u64,
-        slots: &[V<'t>],
-        lsub: Option<&'t value::LevelSub<'t>>,
-    ) -> E<'t> {
+    fn intern_frame(&mut self, hash: u64, mask: u64, slots: &[V<'t>], lsub: Option<&'t value::LevelSub<'t>>) -> E<'t> {
         let lsub_addr = lsub.map_or(0, |l| l as *const value::LevelSub<'t> as usize);
         if let Some(e) = self.tc_cache.frames.find(hash, |e: &E<'t>| match e {
             value::Env::Framed { mask: m, slots: sl, lsub: l, .. } =>
@@ -150,7 +144,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
             value::Env::Nil { .. } => return e,
             value::Env::Framed { mask: m, prune, .. } => {
                 if *m & mask == *m {
-                    return e
+                    return e;
                 }
                 let (m, r) = prune.get();
                 if m == mask {
@@ -175,8 +169,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         if ent.0 == e as *const value::Env<'t> as usize && ent.1 == mask {
             if let Some(hit) = ent.2 {
                 match e {
-                    value::Env::Cons { prune, .. } | value::Env::Framed { prune, .. } =>
-                        prune.set((mask, Some(hit))),
+                    value::Env::Cons { prune, .. } | value::Env::Framed { prune, .. } => prune.set((mask, Some(hit))),
                     value::Env::Nil { .. } => {}
                 }
                 return hit;
@@ -296,20 +289,14 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
     }
 
     #[inline]
-    fn mk_lam_hc(
-        &mut self,
-        binder_name: NamePtr<'t>,
-        binder_style: BinderStyle,
-        binder_type: ExprPtr<'t>,
-        body: Closure<'t>,
-    ) -> V<'t> {
+    fn mk_lam_hc(&mut self, binder_type: ExprPtr<'t>, body: Closure<'t>) -> V<'t> {
         debug_assert!(body.ctx.is_none());
         let key = (binder_type, body.env as *const value::Env<'t> as usize, body.body);
         let arena = self.arena;
         match self.tc_cache.lam_hc.entry(key) {
             Entry::Occupied(o) => *o.get(),
             Entry::Vacant(slot) => {
-                let v = value::mk_lam(arena, binder_name, binder_style, binder_type, body);
+                let v = value::mk_lam(arena, binder_type, body);
                 v.mark_canonical();
                 *slot.insert(v)
             }
@@ -361,14 +348,12 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
 
     fn canon_compute(&mut self, v: V<'t>) -> V<'t> {
         match v {
-            Value::Lam { binder_name, binder_style, binder_type, body, .. } =>
-                self.mk_lam_hc(*binder_name, *binder_style, *binder_type, *body),
-            Value::Pi { binder_name, binder_style, domain, body , ..} =>
-                self.mk_pi_hc(*binder_name, *binder_style, domain, *body),
-            Value::Sort { level , ..} => self.canon_content(0, level.get_hash(), v),
-            Value::NatLit { ptr , ..} => self.canon_content(1, ptr.get_hash(), v),
-            Value::StrLit { ptr , ..} => self.canon_content(2, ptr.get_hash(), v),
-            Value::Rigid { head, spine , ..} => {
+            Value::Lam { binder_type, body, .. } => self.mk_lam_hc(*binder_type, *body),
+            Value::Pi { domain, body, .. } => self.mk_pi_hc(domain, *body),
+            Value::Sort { level, .. } => self.canon_content(0, level.get_hash(), v),
+            Value::NatLit { ptr, .. } => self.canon_content(1, ptr.get_hash(), v),
+            Value::StrLit { ptr, .. } => self.canon_content(2, ptr.get_hash(), v),
+            Value::Rigid { head, spine, .. } => {
                 let cspine = self.canon_spine(spine);
                 self.mk_rigid_hc(*head, cspine)
             }
@@ -382,13 +367,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
     }
 
     #[inline]
-    fn mk_pi_hc(
-        &mut self,
-        binder_name: NamePtr<'t>,
-        binder_style: BinderStyle,
-        domain: V<'t>,
-        body: Closure<'t>,
-    ) -> V<'t> {
+    fn mk_pi_hc(&mut self, domain: V<'t>, body: Closure<'t>) -> V<'t> {
         let key = (
             domain as *const Value<'t> as usize,
             body.env as *const value::Env<'t> as usize,
@@ -399,7 +378,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         match self.tc_cache.pi_hc.entry(key) {
             Entry::Occupied(o) => *o.get(),
             Entry::Vacant(slot) => {
-                let v = value::mk_pi(arena, binder_name, binder_style, domain, body);
+                let v = value::mk_pi(arena, domain, body);
                 v.mark_canonical();
                 *slot.insert(v)
             }
@@ -432,9 +411,7 @@ fn select_ranks(sub: u64, sup: u64) -> u64 {
 }
 
 #[inline]
-fn mix(a: u128, b: u128) -> u128 {
-    (a ^ b).wrapping_mul(0x9E37_79B9_7F4A_7C15_BF58_476D_1CE4_E5B9).rotate_left(47)
-}
+fn mix(a: u128, b: u128) -> u128 { (a ^ b).wrapping_mul(0x9E37_79B9_7F4A_7C15_BF58_476D_1CE4_E5B9).rotate_left(47) }
 
 const WHNF_ADMIT_THRESHOLD: u8 = 2;
 
@@ -502,7 +479,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                         }
                         _ => self.eval(depth, env, first_fun),
                     };
-                    if let Value::Rigid { head, spine , ..} = f_val {
+                    if let Value::Rigid { head, spine, .. } = f_val {
                         let head_copy = *head;
                         let head_spine = *spine;
                         let is_nat_ctor = nat_ext && matches!(head_copy, RigidHead::Ctor(_, _));
@@ -546,7 +523,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                         last_f_val = Some(v);
                         v
                     };
-                    if let Value::Rigid { head, spine , ..} = f_val {
+                    if let Value::Rigid { head, spine, .. } = f_val {
                         let head_copy = *head;
                         let is_nat_ctor = nat_ext && matches!(head_copy, RigidHead::Ctor(_, _));
                         if !is_nat_ctor {
@@ -591,16 +568,15 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 self.eval_const(name, levels)
             }
             Expr::App { .. } => unreachable!(),
-            Expr::Lambda { binder_name, binder_style, binder_type, body, .. } =>
-                {
+            Expr::Lambda { binder_type, body, .. } => {
                 let ce = self.key_env(env, e);
-                value::mk_lam(self.arena, binder_name, binder_style, binder_type, Closure::mk_eval(ce, body))
+                value::mk_lam(self.arena, binder_type, Closure::mk_eval(ce, body))
             }
-            Expr::Pi { binder_name, binder_style, binder_type, body, .. } => {
+            Expr::Pi { binder_type, body, .. } => {
                 let dom = self.eval(depth, env, binder_type);
                 {
                     let ce = self.key_env(env, e);
-                    value::mk_pi(self.arena, binder_name, binder_style, dom, Closure::mk_eval(ce, body))
+                    value::mk_pi(self.arena, dom, Closure::mk_eval(ce, body))
                 }
             }
             Expr::Let { .. } => {
@@ -647,16 +623,13 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 let cell = &*self.arena.alloc(OnceCell::new());
                 value::mk_unfold_head_with_empty(self.arena, name, levels, cell, empty)
             }
-            ConstKind::Ctor =>
-                value::mk_rigid_head_with_empty(self.arena, RigidHead::Ctor(name, levels), empty),
+            ConstKind::Ctor => value::mk_rigid_head_with_empty(self.arena, RigidHead::Ctor(name, levels), empty),
             ConstKind::Recursor =>
                 value::mk_rigid_head_with_empty(self.arena, RigidHead::Recursor(name, levels), empty),
-            ConstKind::Quot =>
-                value::mk_rigid_head_with_empty(self.arena, RigidHead::QuotConst(name, levels), empty),
+            ConstKind::Quot => value::mk_rigid_head_with_empty(self.arena, RigidHead::QuotConst(name, levels), empty),
             ConstKind::Inductive =>
                 value::mk_rigid_head_with_empty(self.arena, RigidHead::Inductive(name, levels), empty),
-            ConstKind::Axiom =>
-                value::mk_rigid_head_with_empty(self.arena, RigidHead::Axiom(name, levels), empty),
+            ConstKind::Axiom => value::mk_rigid_head_with_empty(self.arena, RigidHead::Axiom(name, levels), empty),
         };
         self.tc_cache.const_head_value_cache.insert((name, levels), v);
         v
@@ -677,7 +650,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                     cur = self.apply_closure(binder_depth + 1, body, fresh, Some(domain));
                     binder_depth += 1;
                 }
-                Value::Sort { level , ..} => {
+                Value::Sort { level, .. } => {
                     let l = self.ctx.simplify(*level);
                     self.tc_cache.const_result_level_cache.insert((name, levels), l);
                     return Some(l);
@@ -702,7 +675,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
 
     #[inline]
     pub(crate) fn force_thunk(&mut self, depth: u32, v: V<'t>) -> V<'t> {
-        if let Value::Thunk { env, expr, forced , ..} = v {
+        if let Value::Thunk { env, expr, forced, .. } = v {
             if let Some(r) = forced.get() {
                 return r;
             }
@@ -740,7 +713,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 let env = value::env_extend(self.arena, clo_env, a);
                 self.eval(depth, env, clo_body)
             }
-            Value::Rigid { head, spine , ..} => {
+            Value::Rigid { head, spine, .. } => {
                 let head_copy = *head;
                 if self.nat_extension {
                     if let RigidHead::Ctor(name, _) = head_copy {
@@ -784,7 +757,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
             let Value::Lam { body: clo, .. } = f else {
                 f = self.apply(depth, f, args[i]);
                 i += 1;
-                continue
+                continue;
             };
             let mut env = value::env_extend(self.arena, clo.env, args[i]);
             let mut body = clo.body;
@@ -800,13 +773,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         f
     }
 
-    pub(crate) fn apply_closure(
-        &mut self,
-        depth: u32,
-        clo: &Closure<'t>,
-        v: V<'t>,
-        binder_ty: Option<V<'t>>,
-    ) -> V<'t> {
+    pub(crate) fn apply_closure(&mut self, depth: u32, clo: &Closure<'t>, v: V<'t>, binder_ty: Option<V<'t>>) -> V<'t> {
         let env = value::env_extend(self.arena, clo.env, v);
         match clo.ctx {
             None => self.eval(depth, env, clo.body),
@@ -849,7 +816,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         if !structural_on_second || args.len() != 2 {
             return false;
         }
-        if let Value::NatLit { ptr , ..} = self.force_thunk(depth, args[1]) {
+        if let Value::NatLit { ptr, .. } = self.force_thunk(depth, args[1]) {
             self.ctx.read_bignum(*ptr).map(|n| n.bits() > 8).unwrap_or(false)
         } else {
             false
@@ -859,7 +826,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
     pub(crate) fn value_type(&mut self, depth: u32, v: V<'t>) -> V<'t> {
         let v = self.force_thunk(depth, v);
         match v {
-            Value::Sort { level , ..} => {
+            Value::Sort { level, .. } => {
                 let s = self.ctx.succ(*level);
                 value::mk_sort(self.arena, self.ctx.simplify(s))
             }
@@ -873,7 +840,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 let levels = self.ctx.alloc_levels_slice(&[]);
                 value::mk_rigid_head_with_empty(self.arena, RigidHead::Inductive(n, levels), self.empty_spine())
             }
-            Value::Rigid { head, spine , ..} => {
+            Value::Rigid { head, spine, .. } => {
                 let head_ty = self.rigid_head_type(depth, *head);
                 let prev = value::mk_rigid_head_with_empty(self.arena, *head, self.empty_spine());
                 self.spine_type_with_value(depth, head_ty, prev, spine)
@@ -917,7 +884,9 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                     prev = self.apply(depth, prev, a);
                 }
                 ElimView::Proj { ty_name, idx } => {
-                    ty = self.proj_field_type_with(depth, prev, ty, ty_name, idx).expect("spine_type_with_value: bad proj");
+                    ty = self
+                        .proj_field_type_with(depth, prev, ty, ty_name, idx)
+                        .expect("spine_type_with_value: bad proj");
                     prev = self.do_proj(depth, ty_name, idx, prev);
                 }
             }
@@ -942,14 +911,15 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                     steps += 1;
                     cur = next;
                 }
-                Value::Rigid { head: RigidHead::Recursor(..) | RigidHead::QuotConst(..), .. } =>
+                Value::Rigid { head: RigidHead::Recursor(..) | RigidHead::QuotConst(..), .. } => {
                     match self.iota_value(depth, cur) {
                         Some(next) => {
                             steps += 1;
                             cur = next;
                         }
                         None => break cur,
-                    },
+                    }
+                }
                 _ => break cur,
             }
         };
@@ -989,7 +959,6 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         self.tc_cache.whnf_store.insert(k, (full, q));
     }
 
-
     #[inline]
     fn shallow_head_key(v: V<'t>) -> Option<u64> {
         let (h, spine) = match v {
@@ -999,8 +968,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 (value::kmix(7, value::kmix(n.get_hash(), ls.get_hash())), *spine),
             Value::Rigid { head: RigidHead::QuotConst(n, ls), spine, .. } =>
                 (value::kmix(8, value::kmix(n.get_hash(), ls.get_hash())), *spine),
-            Value::Thunk { expr, .. } =>
-                return Some(value::kmix(13, expr.as_ref() as *const Expr<'t> as usize as u64)),
+            Value::Thunk { expr, .. } => return Some(value::kmix(13, expr.as_ref() as *const Expr<'t> as usize as u64)),
             _ => return None,
         };
         Some(value::kmix(h, u64::from(spine.len())))
@@ -1042,10 +1010,10 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
 
     fn global_key_uncached(&mut self, v: V<'t>, depth: u32) -> Result<(u128, bool), u8> {
         match v {
-            Value::Sort { level , ..} => Ok((mix(1, u128::from(level.get_hash())), true)),
-            Value::NatLit { ptr , ..} => Ok((mix(2, u128::from(ptr.get_hash())), true)),
-            Value::StrLit { ptr , ..} => Ok((mix(3, u128::from(ptr.get_hash())), true)),
-            Value::Rigid { head, spine , ..} => {
+            Value::Sort { level, .. } => Ok((mix(1, u128::from(level.get_hash())), true)),
+            Value::NatLit { ptr, .. } => Ok((mix(2, u128::from(ptr.get_hash())), true)),
+            Value::StrLit { ptr, .. } => Ok((mix(3, u128::from(ptr.get_hash())), true)),
+            Value::Rigid { head, spine, .. } => {
                 let (h, c) = match *head {
                     RigidHead::BVar(lvl, ty) => {
                         if lvl >= depth {
@@ -1066,12 +1034,12 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 let h = self.head_key(10, head.name, head.levels);
                 self.spine_key(h, true, spine, depth)
             }
-            Value::Lam { binder_name, binder_style, binder_type, body, .. } => {
-                let h = self.binder_key(11, *binder_name, *binder_style, Some(*binder_type));
+            Value::Lam { binder_type, body, .. } => {
+                let h = mix(11, binder_type.as_ref() as *const Expr<'t> as usize as u128);
                 self.closure_key(h, body, depth)
             }
-            Value::Pi { binder_name, binder_style, domain, body , ..} => {
-                let h = self.binder_key(12, *binder_name, *binder_style, None);
+            Value::Pi { domain, body, .. } => {
+                let h = 12;
                 let (d, dc) = self.global_key(domain, depth)?;
                 let (k, cc) = self.closure_key(mix(h, d), body, depth)?;
                 Ok((k, dc && cc))
@@ -1081,20 +1049,6 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 self.env_key(acc, true, env, depth, expr.num_loose_bvars())
             }
         }
-    }
-
-    fn binder_key(
-        &mut self,
-        tag: u128,
-        n: NamePtr<'t>,
-        style: crate::expr::BinderStyle,
-        ty: Option<ExprPtr<'t>>,
-    ) -> u128 {
-        let mut acc = mix(mix(tag, u128::from(n.get_hash())), style as u128);
-        if let Some(t) = ty {
-            acc = mix(acc, t.as_ref() as *const Expr<'t> as usize as u128);
-        }
-        acc
     }
 
     fn closure_key(&mut self, tag: u128, clo: &Closure<'t>, depth: u32) -> Result<(u128, bool), u8> {
@@ -1162,11 +1116,11 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 }
                 self.proj_extend_spine(ty_name, idx, v)
             }
-            Value::NatLit { ptr , ..} => {
+            Value::NatLit { ptr, .. } => {
                 let ctor = self.nat_lit_to_ctor_val(depth, *ptr).expect("do_proj: nat_lit_to_ctor_val failed");
                 self.do_proj(depth, ty_name, idx, ctor)
             }
-            Value::StrLit { ptr , ..} => {
+            Value::StrLit { ptr, .. } => {
                 let ctor = self.str_lit_to_ctor_val(depth, *ptr).expect("do_proj: str_lit_to_ctor_val failed");
                 self.do_proj(depth, ty_name, idx, ctor)
             }
@@ -1178,7 +1132,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
 
     fn proj_extend_spine(&mut self, ty_name: NamePtr<'t>, idx: u16, v: V<'t>) -> V<'t> {
         match v {
-            Value::Rigid { head, spine , ..} => {
+            Value::Rigid { head, spine, .. } => {
                 let (h, sp) = (*head, *spine);
                 let ns = self.spine_snoc_hc(sp, Elim::proj(ty_name, idx));
                 self.mk_rigid_hc(h, ns)
@@ -1193,7 +1147,8 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
     }
 
     pub(crate) fn proj_field_type_with(
-        &mut self, depth: u32,
+        &mut self,
+        depth: u32,
         struct_value: V<'t>,
         struct_ty: V<'t>,
         ty_name: NamePtr<'t>,
@@ -1268,7 +1223,8 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 }
             }
             let step = match cur {
-                Value::Rigid { head: RigidHead::Recursor(..) | RigidHead::QuotConst(..), .. } => self.iota_step(depth, cur),
+                Value::Rigid { head: RigidHead::Recursor(..) | RigidHead::QuotConst(..), .. } =>
+                    self.iota_step(depth, cur),
                 _ => ForceStep::Done,
             };
             match step {
@@ -1318,7 +1274,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
             return ForceStep::Reduced(c);
         }
         match v {
-            Value::Rigid { head: RigidHead::Recursor(name, levels), spine , ..} => {
+            Value::Rigid { head: RigidHead::Recursor(name, levels), spine, .. } => {
                 let env = self.env;
                 let rec = match env.get_recursor(name) {
                     Some(r) => r,
@@ -1350,7 +1306,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                     }
                 }
             }
-            Value::Rigid { head: RigidHead::QuotConst(name, _), spine , ..} => {
+            Value::Rigid { head: RigidHead::QuotConst(name, _), spine, .. } => {
                 let cache = self.ctx.export_file.name_cache;
                 let qmk_pos = if Some(*name) == cache.quot_lift {
                     5
@@ -1417,7 +1373,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
 
     fn fire_value(&mut self, depth: u32, rec_val: V<'t>, major: V<'t>) -> Option<V<'t>> {
         match rec_val {
-            Value::Rigid { head: RigidHead::Recursor(name, levels), spine , ..} => {
+            Value::Rigid { head: RigidHead::Recursor(name, levels), spine, .. } => {
                 let env = self.env;
                 let rec = env.get_recursor(name)?;
                 let args = self.spine_apps(depth, spine)?;
@@ -1426,7 +1382,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 }
                 self.fire_recursor(depth, &rec, *levels, &args, major)
             }
-            Value::Rigid { head: RigidHead::QuotConst(name, _), spine , ..} => {
+            Value::Rigid { head: RigidHead::QuotConst(name, _), spine, .. } => {
                 let args = self.spine_apps(depth, spine)?;
                 self.fire_quot(depth, *name, &args, major)
             }
@@ -1441,7 +1397,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
     }
 
     fn unfold_value_go(&mut self, depth: u32, v: V<'t>, force: bool) -> V<'t> {
-        if let Value::Unfold { head, spine, head_value, forced , ..} = v {
+        if let Value::Unfold { head, spine, head_value, forced, .. } = v {
             if let Some(f) = forced.get() {
                 return f;
             }
@@ -1550,7 +1506,13 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         Some(out)
     }
 
-    fn do_recursor_iota(&mut self, depth: u32, name: NamePtr<'t>, levels: LevelsPtr<'t>, args: &[V<'t>]) -> Option<V<'t>> {
+    fn do_recursor_iota(
+        &mut self,
+        depth: u32,
+        name: NamePtr<'t>,
+        levels: LevelsPtr<'t>,
+        args: &[V<'t>],
+    ) -> Option<V<'t>> {
         let env = self.env;
         let rec = env.get_recursor(&name)?;
         if args.len() <= rec.major_idx() {
@@ -1563,7 +1525,13 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         self.fire_recursor(depth, &rec, levels, args, major)
     }
 
-    fn k_pre_reduce(&mut self, depth: u32, rec: &RecursorData<'t>, levels: LevelsPtr<'t>, args: &[V<'t>]) -> Option<V<'t>> {
+    fn k_pre_reduce(
+        &mut self,
+        depth: u32,
+        rec: &RecursorData<'t>,
+        levels: LevelsPtr<'t>,
+        args: &[V<'t>],
+    ) -> Option<V<'t>> {
         if !rec.is_k {
             return None;
         }
@@ -1573,7 +1541,8 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
     }
 
     fn fire_recursor(
-        &mut self, depth: u32,
+        &mut self,
+        depth: u32,
         rec: &RecursorData<'t>,
         levels: LevelsPtr<'t>,
         args: &[V<'t>],
@@ -1582,7 +1551,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         if self.ctx.export_file.config.nat_extension
             && rec.all_inductives.first().copied() == self.ctx.export_file.name_cache.nat
         {
-            if let Value::NatLit { ptr , ..} = major {
+            if let Value::NatLit { ptr, .. } = major {
                 return Some(self.nat_rec_natlit(depth, args, *ptr, rec, levels));
             }
         }
@@ -1611,7 +1580,8 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
     }
 
     fn nat_rec_natlit(
-        &mut self, depth: u32,
+        &mut self,
+        depth: u32,
         args: &[V<'t>],
         n_ptr: BigUintPtr<'t>,
         rec: &RecursorData<'t>,
@@ -1660,7 +1630,8 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
     }
 
     fn try_struct_eta_reduce_uncached(
-        &mut self, depth: u32,
+        &mut self,
+        depth: u32,
         major: V<'t>,
         rec: &RecursorData<'t>,
         rec_induct: NamePtr<'t>,
@@ -1736,8 +1707,8 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
 
     fn major_to_ctor(&mut self, depth: u32, major: V<'t>) -> Option<V<'t>> {
         match major {
-            Value::NatLit { ptr , ..} => self.nat_lit_to_ctor_val(depth, *ptr),
-            Value::StrLit { ptr , ..} => self.str_lit_to_ctor_val(depth, *ptr),
+            Value::NatLit { ptr, .. } => self.nat_lit_to_ctor_val(depth, *ptr),
+            Value::StrLit { ptr, .. } => self.str_lit_to_ctor_val(depth, *ptr),
             _ => None,
         }
     }
@@ -1937,14 +1908,16 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         r
     }
 
-    pub(crate) fn value_to_bignum(&mut self, depth: u32, v: V<'t>) -> Option<BigUint> { self.value_to_bignum_at(depth, v, true) }
+    pub(crate) fn value_to_bignum(&mut self, depth: u32, v: V<'t>) -> Option<BigUint> {
+        self.value_to_bignum_at(depth, v, true)
+    }
 
     fn value_to_bignum_at(&mut self, depth: u32, v: V<'t>, deep: bool) -> Option<BigUint> {
         let mut succs: u64 = 0;
         let mut cur = self.force_thunk(depth, v);
         loop {
             match cur {
-                Value::NatLit { ptr , ..} => {
+                Value::NatLit { ptr, .. } => {
                     return self.ctx.read_bignum(*ptr).cloned().map(|n| n + succs);
                 }
                 Value::Rigid { head: RigidHead::Ctor(name, _), spine, .. } => {
@@ -1963,7 +1936,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                     return None;
                 }
                 Value::Unfold { head_value, .. } => {
-                    if let Some(Value::NatLit { ptr , ..}) = head_value.get() {
+                    if let Some(Value::NatLit { ptr, .. }) = head_value.get() {
                         return self.ctx.read_bignum(*ptr).cloned().map(|n| n + succs);
                     }
                     if !deep {
@@ -1988,7 +1961,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         }
         let f = self.force_all(depth, v);
         match f {
-            Value::NatLit { ptr , ..} => self.ctx.read_bignum(*ptr).cloned(),
+            Value::NatLit { ptr, .. } => self.ctx.read_bignum(*ptr).cloned(),
             Value::Rigid { head: RigidHead::Ctor(name, _), .. }
                 if Some(*name) == self.ctx.export_file.name_cache.nat_zero
                     || Some(*name) == self.ctx.export_file.name_cache.nat_succ =>

@@ -15,7 +15,6 @@ pub mod infer;
 pub mod level;
 pub mod name;
 pub mod parser;
-pub mod pretty_printer;
 pub mod quot;
 pub mod quote;
 pub mod relevance;
@@ -26,5 +25,3 @@ pub mod util;
 pub mod value;
 
 pub(crate) const STACK_SIZE: usize = 2 * 1024 * 1024 * 1024;
-
-

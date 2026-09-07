@@ -16,11 +16,6 @@ fn test_config(config_path: Option<&Path>) -> Result<Config, Box<dyn Error>> {
             parse_only: false,
             nat_extension: false,
             string_extension: false,
-            pp_declars: None,
-            pp_options: crate::pretty_printer::PpOptions::default(),
-            unknown_pp_declar_hard_error: true,
-            pp_output_path: None,
-            pp_to_stdout: false,
             num_threads: 1,
             print_success_message: true,
             print_axioms: true,
@@ -85,94 +80,73 @@ fn check_empty() -> Result<(), Box<dyn Error>> {
 /// must resolve references via the explicit indices, not insertion position.
 #[test]
 fn check_level_index_out_of_order() -> Result<(), Box<dyn Error>> {
-    test_export_file(
-        Some(Path::new("test_resources/LevelIndexOutOfOrder/config.json")),
-        |export| {
-            assert_eq!(export.declars.len(), 1);
-            for declar in export.declars.values() {
-                export.check_declar(declar);
-            }
-        },
-    )
+    test_export_file(Some(Path::new("test_resources/LevelIndexOutOfOrder/config.json")), |export| {
+        assert_eq!(export.declars.len(), 1);
+        for declar in export.declars.values() {
+            export.check_declar(declar);
+        }
+    })
 }
 
 /// `SparseNameIndex` uses name index 2 and expression index 4 with gaps (no name
 /// index 1, no expressions 0..=3). The parser must tolerate sparse explicit indices.
 #[test]
 fn check_sparse_name_index() -> Result<(), Box<dyn Error>> {
-    test_export_file(
-        Some(Path::new("test_resources/SparseNameIndex/config.json")),
-        |export| {
-            assert_eq!(export.declars.len(), 1);
-            for declar in export.declars.values() {
-                export.check_declar(declar);
-            }
-        },
-    )
+    test_export_file(Some(Path::new("test_resources/SparseNameIndex/config.json")), |export| {
+        assert_eq!(export.declars.len(), 1);
+        for declar in export.declars.values() {
+            export.check_declar(declar);
+        }
+    })
 }
 
 #[test]
 #[should_panic(expected = "def_eq failed")]
 fn check_k_reduce_depth_alias() {
-    test_export_file_should_panic(
-        Some(Path::new("test_resources/KReduceDepthAlias/config.json")),
-        |export| {
-            for declar in export.declars.values() {
-                export.check_declar(declar);
-            }
-        },
-    )
+    test_export_file_should_panic(Some(Path::new("test_resources/KReduceDepthAlias/config.json")), |export| {
+        for declar in export.declars.values() {
+            export.check_declar(declar);
+        }
+    })
 }
 
 #[test]
 fn check_proof_irrel_under_bvar() -> Result<(), Box<dyn Error>> {
-    test_export_file(
-        Some(Path::new("test_resources/ProofIrrelUnderBVar/config.json")),
-        |export| {
-            for declar in export.declars.values() {
-                export.check_declar(declar);
-            }
-        },
-    )
+    test_export_file(Some(Path::new("test_resources/ProofIrrelUnderBVar/config.json")), |export| {
+        for declar in export.declars.values() {
+            export.check_declar(declar);
+        }
+    })
 }
 
 #[test]
 #[should_panic(expected = "non-proof field from a Prop structure")]
 fn check_proj_from_prop() {
-    test_export_file_should_panic(
-        Some(Path::new("test_resources/ProjFromProp/config.json")),
-        |export| {
-            for declar in export.declars.values() {
-                export.check_declar(declar);
-            }
-        },
-    )
+    test_export_file_should_panic(Some(Path::new("test_resources/ProjFromProp/config.json")), |export| {
+        for declar in export.declars.values() {
+            export.check_declar(declar);
+        }
+    })
 }
 
 #[test]
 #[should_panic(expected = "imported recursor rule does not match the reconstructed rule")]
 fn reject_rec_rule_with_forged_lambda_domains() {
-    test_export_file_should_panic(
-        Some(Path::new("test_resources/RuleDomainMismatch/config.json")),
-        |export| {
-            for declar in export.declars.values() {
-                export.check_declar(declar);
-            }
-        },
-    )
+    test_export_file_should_panic(Some(Path::new("test_resources/RuleDomainMismatch/config.json")), |export| {
+        for declar in export.declars.values() {
+            export.check_declar(declar);
+        }
+    })
 }
 
 #[test]
 #[should_panic(expected = "imported inductive block contains an underived recursor")]
 fn reject_unlisted_recursor() {
-    test_export_file_should_panic(
-        Some(Path::new("test_resources/UnlistedRecursor/config.json")),
-        |export| {
-            for declar in export.declars.values() {
-                export.check_declar(declar);
-            }
-        },
-    )
+    test_export_file_should_panic(Some(Path::new("test_resources/UnlistedRecursor/config.json")), |export| {
+        for declar in export.declars.values() {
+            export.check_declar(declar);
+        }
+    })
 }
 
 #[test]
@@ -194,14 +168,13 @@ fn reject_nonuniform_inductive_occurrence_before_reduction() {
     test_export_file_should_panic(None, |export| {
         export.with_ctx(|ctx, _cache, _arena| {
             let ind_name = ctx.str1("E");
-            let param_name = ctx.str1("p");
             let levels = ctx.alloc_levels_slice(&[]);
             let ind = ctx.mk_const(ind_name, levels);
             let prop = ctx.prop();
             let bad_occurrence = ctx.mk_app(ind, prop);
             let one = ctx.succ(ctx.zero());
             let param_type = ctx.mk_sort(one);
-            let ctor_type = ctx.mk_pi(param_name, crate::expr::BinderStyle::Default, param_type, bad_occurrence);
+            let ctor_type = ctx.mk_pi(param_type, bad_occurrence);
 
             ctx.check_uniform_inductive_occurrences(ctor_type, &[ind_name], levels, 1);
         });

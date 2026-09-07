@@ -128,33 +128,20 @@ impl<'x, 't, 'p> std::fmt::Debug for DebugPrinter<'x, 't, 'p, ExprPtr<'t>> {
                 write!(f, "{:?}.{:?}", self.ctx.debug_print(name), self.ctx.debug_print(levels.as_ref()))
             }
             App { fun, arg, .. } => write!(f, "({:?} {:?})", self.ctx.debug_print(fun), self.ctx.debug_print(arg)),
-            Let { data: &crate::expr::LetData { binder_name, val, binder_type: binder, body, .. }, .. } => {
+            Let { data: &crate::expr::LetData { val, binder_type: binder, body, .. }, .. } => {
                 write!(
                     f,
-                    "let {:?} : {:?} := {:?} in {:?}",
-                    self.ctx.debug_print(binder_name),
+                    "let _ : {:?} := {:?} in {:?}",
                     self.ctx.debug_print(binder),
                     self.ctx.debug_print(val),
                     self.ctx.debug_print(body)
                 )
             }
-            Pi { binder_name, binder_type, body, .. } => {
-                write!(
-                    f,
-                    "Pi ({:?} : {:?}), {:?}",
-                    self.ctx.debug_print(binder_name),
-                    self.ctx.debug_print(binder_type),
-                    self.ctx.debug_print(body)
-                )
+            Pi { binder_type, body, .. } => {
+                write!(f, "Pi (_ : {:?}), {:?}", self.ctx.debug_print(binder_type), self.ctx.debug_print(body))
             }
-            Lambda { binder_name, binder_type, body, .. } => {
-                write!(
-                    f,
-                    "fun ({:?} : {:?}) => {:?}",
-                    self.ctx.debug_print(binder_name),
-                    self.ctx.debug_print(binder_type),
-                    self.ctx.debug_print(body)
-                )
+            Lambda { binder_type, body, .. } => {
+                write!(f, "fun (_ : {:?}) => {:?}", self.ctx.debug_print(binder_type), self.ctx.debug_print(body))
             }
             Proj { idx, structure, .. } => {
                 write!(f, "%({:?}).{}", self.ctx.debug_print(structure), idx)
