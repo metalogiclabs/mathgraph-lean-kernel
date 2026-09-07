@@ -41,6 +41,12 @@ jobs:
           print('V87_PREFLIGHT=PASS')
           print('V87_RELEASE_QUALIFICATION=FAILED_KNOWN_FIXTURES')
           PY
+      - uses: cachix/install-nix-action@v31
+      - name: Verify Nix is available
+        run: |
+          set -euo pipefail
+          command -v nix
+          nix --version
       - name: Full-corpus exact replay and five alternating native timing passes
         run: |
           set -euo pipefail
