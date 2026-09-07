@@ -15,6 +15,7 @@ def parse(path):
     total = None
     positions = None
     events = None
+    skip_edge = False
     for line in Path(path).read_text(errors='replace').splitlines():
         if line.startswith('positions: '):
             positions = len(line.split()) - 1
@@ -30,9 +31,14 @@ def parse(path):
                     symbols[current] = match.group(2)
             else:
                 current = line[3:]
+        elif line.startswith(('calls=', 'jump=', 'jcnd=')):
+            skip_edge = True
         elif current is not None and positions is not None and events == ['Ir']:
             fields = line.split()
             if len(fields) == positions + 1 and all(re.fullmatch(r'(?:0x[0-9a-fA-F]+|[+\-*]|[+-]?\d+)', x) for x in fields[:positions]):
+                if skip_edge:
+                    skip_edge = False
+                    continue
                 costs[current] += int(fields[-1].replace(',', ''))
     if total is None or events != ['Ir']:
         raise ValueError(f'{path}: missing or unsupported instruction totals')
