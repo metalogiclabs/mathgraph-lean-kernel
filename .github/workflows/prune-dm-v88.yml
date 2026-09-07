@@ -1,0 +1,43 @@
+name: Prune memo retention v88
+on:
+  push:
+    branches: [experiment/prune-dm-retention-v88]
+    paths:
+      - 'experiments/*prune_dm_v88*'
+      - '.github/workflows/prune-dm-v88.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  experiment:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Verify pinned Arena toolchain
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/v88/out
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/v88/arena
+          git -C /tmp/v88/arena checkout -q 91f376e4baacf2df0c478e7173bccb2a6adac5c5
+          cd /tmp/v88/arena
+          nix develop -c sh -c 'rustc --version; cargo --version'
+          nix shell 'github:NixOS/nixpkgs/0ad6f47ea4fe188f4bc8f0380f93ae8523337c6c#llvmPackages_21.llvm' -c llvm-profdata --version
+      - name: Compile and test frozen-source candidate
+        run: |
+          set -euo pipefail
+          cd /tmp/v88/arena
+          nix develop -c bash "$GITHUB_WORKSPACE/experiments/run_prune_dm_v88.sh" preflight
+      - name: Full-corpus replay and fresh-PGO wall time
+        run: |
+          set -euo pipefail
+          cd /tmp/v88/arena
+          nix develop -c bash "$GITHUB_WORKSPACE/experiments/run_prune_dm_v88.sh" benchmark |& tee /tmp/v88/out/summary.txt
+      - name: Preserve evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prune-dm-v88
+          path: /tmp/v88/out/
+          if-no-files-found: warn
