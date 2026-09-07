@@ -1,0 +1,54 @@
+name: Cache reuse benchmark v87
+on:
+  push:
+    branches: [experiment/cache-reuse-evidence-v87]
+    paths: ['.github/workflows/cache-reuse-benchmark-v87.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  benchmark:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify completed preflight and its evidence
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/v87-benchmark/out
+          gh api repos/metalogiclabs/mathgraph-lean-kernel/actions/runs/34099123014 > /tmp/v87-benchmark/out/preflight-run.json
+          gh api repos/metalogiclabs/mathgraph-lean-kernel/actions/artifacts/10009791146/zip > /tmp/v87-benchmark/out/preflight.zip
+          python3 - <<'PY'
+          import hashlib, json, pathlib, zipfile
+          r=pathlib.Path('/tmp/v87-benchmark/out')
+          run=json.loads((r/'preflight-run.json').read_text())
+          assert run['head_sha']=='5f471e90ee10bcd80033e95856f71bdc764a2300'
+          assert run['status']=='completed' and run['conclusion']=='success'
+          data=(r/'preflight.zip').read_bytes()
+          assert hashlib.sha256(data).hexdigest()=='d81f34036d3ef85027b2730823df62c18566873f15a54d5b0b7e0ba357dd23b9'
+          with zipfile.ZipFile(r/'preflight.zip') as z:
+              q=json.loads(z.read('qualification.json'))
+              patch=z.read('candidate.patch')
+          expected={'tests::util::reject_rec_rule_with_forged_lambda_domains','tests::util::reject_unlisted_recursor'}
+          assert q['no_new_test_failures'] is True
+          assert set(q['control_failures'])==set(q['candidate_failures'])==expected
+          assert q['control_test_count']==42 and q['candidate_test_count']==45
+          assert q['release_qualified'] is False
+          assert b'fvar_cache.clear()' in patch
+          print('V87_PREFLIGHT=PASS')
+          print('V87_RELEASE_QUALIFICATION=FAILED_KNOWN_FIXTURES')
+          PY
+      - name: Full-corpus exact replay and five alternating native timing passes
+        run: |
+          set -euo pipefail
+          bash experiments/run_cache_reuse_benchmark_v87.sh |& tee /tmp/v87-benchmark/out/summary.txt
+      - name: Preserve benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cache-reuse-benchmark-v87
+          path: /tmp/v87-benchmark/out/
+          if-no-files-found: warn
