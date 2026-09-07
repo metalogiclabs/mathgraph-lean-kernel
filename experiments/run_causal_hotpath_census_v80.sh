@@ -15,10 +15,9 @@ labels=['FORCE_TOTAL','FORCE_PI','FORCE_THUNK','FORCE_UNFOLD','FORCE_IOTA','FORC
 header='''use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
 static V80: [AtomicU64; N] = [const { AtomicU64::new(0) }; N];
 #[inline] fn v80(n:usize) { V80[n].fetch_add(1,Relaxed); }
-pub fn dump_v80() { for (i,name) in LABELS.iter().enumerate() { eprintln!("V80_{}={}",name,V80[i].load(Relaxed)); } }
-'''.replace('N]',str(len(labels))+']').replace('; N]',f'; {len(labels)}]').replace('LABELS',str(labels).replace("'",'"'))
-# Rust constants are generated from the single ordered counter schema.
-header='const V80_LABELS: &[&str] = &['+','.join('"'+x+'"' for x in labels)+'];\n'+header.replace(str(labels).replace("'",'"'),'V80_LABELS')
+pub fn dump_v80() { for (i,name) in V80_LABELS.iter().enumerate() { eprintln!("V80_{}={}",name,V80[i].load(Relaxed)); } }
+'''.replace('N]',str(len(labels))+']')
+header='const V80_LABELS: &[&str] = &['+','.join('"'+x+'"' for x in labels)+'];\n'+header
 anchor='use std::collections::hash_map::Entry;\n'
 assert s.count(anchor)==1
 s=s.replace(anchor,anchor+header,1)
@@ -32,7 +31,6 @@ def wrapper(signature,inner,body):
     s=s.replace(signature,signature.replace('fn '+inner+'(', 'fn '+inner+'_inner('),1)
     pos=s.index(signature.replace('fn '+inner+'(', 'fn '+inner+'_inner('))
     s=s[:pos]+signature+'\n'+body+'\n    }\n\n'+s[pos:]
-# A wrapper counts the actual result; the original implementation remains intact.
 wrapper("    pub(crate) fn force_all(&mut self, depth: u32, v: V<'t>) -> V<'t> {",'force_all', '''        v80(0);
         match v { Value::Pi{..}=>v80(1), Value::Thunk{..}=>v80(2), Value::Unfold{..}=>v80(3), Value::Rigid{head:RigidHead::Recursor(..)|RigidHead::QuotConst(..),..}=>v80(4), _=>v80(5) }
         let r=self.force_all_inner(depth,v);
@@ -51,7 +49,6 @@ replace_once("    fn prune_env_cold(&mut self, e: E<'t>, mask: u64, slot: usize)
 replace_once("        if k == 0 {\n            return self.lsub_base(env.lsub());","        if k == 0 {\n            v80(18);\n            return self.lsub_base(env.lsub());")
 replace_once("        if k > 64 {\n            return env;","        if k > 64 {\n            v80(19);\n            return env;")
 replace_once("        self.prune_env(env, e.as_ref().fv_mask())","        v80(20);\n        self.prune_env(env, e.as_ref().fv_mask())")
-# Count actual frame interning outcomes, not merely calls to the helper.
 needle='''        }) {
             return e;
         }
@@ -131,8 +128,6 @@ for c,d in data.items():
         print(f'V80_{c.upper()}_{k}={d[k]}')
 print('V80_DECISION=REACHABILITY_CENSUS_COMPLETE__COST_SAMPLING_REQUIRED_BEFORE_REPAIR')
 PY
-# Sample the unmodified release, not the instrumented binary. Performance
-# counters may be unavailable on hosted runners; record that explicitly.
 if command -v perf >/dev/null 2>&1; then
   for corpus in std cedar mathlib; do
     perf record -q -F 99 -g --call-graph dwarf,16384 -o "$ROOT/out/$corpus.perf.data" -- "$ROOT/base.bin" "$ROOT/config.json" < "$ROOT/arena/_build/tests/$corpus.ndjson" > "$ROOT/out/perf-$corpus.out" 2> "$ROOT/out/perf-$corpus.err" || true
