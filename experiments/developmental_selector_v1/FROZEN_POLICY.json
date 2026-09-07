@@ -1,0 +1,32 @@
+{
+  "consensus": {
+    "0000": null,
+    "0001": "REPEAT",
+    "0010": "STOP",
+    "0011": null,
+    "0100": "REJECT",
+    "0101": null,
+    "0110": null,
+    "0111": null,
+    "1000": "REPAIR",
+    "1001": null,
+    "1010": null,
+    "1011": null,
+    "1100": null,
+    "1101": null,
+    "1110": null,
+    "1111": null
+  },
+  "mdl": 7,
+  "optimal_policy_count": 24,
+  "policy": {
+    "clauses": [
+      ["measured_regression", "REJECT"],
+      ["unreachable", "STOP"],
+      ["needs_replay", "REPEAT"]
+    ],
+    "default": "REPAIR"
+  },
+  "training_errors": 0,
+  "training_records": 4
+}
