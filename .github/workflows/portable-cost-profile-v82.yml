@@ -1,0 +1,34 @@
+name: Portable cost profile v82
+on:
+  push:
+    branches: [experiment/portable-cost-profile-v82]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  profile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Install instruction profiler
+        run: sudo apt-get update -qq && sudo apt-get install -y valgrind
+      - name: Measure portable instruction cost
+        run: bash experiments/run_portable_cost_profile_v82.sh
+      - name: Preserve profiles and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: portable-cost-profile-v82
+          path: |
+            /tmp/v82/summary.txt
+            /tmp/v82/cost-profile.json
+            /tmp/v82/out/*.annotated.txt
+            /tmp/v82/out/*.callgrind*
+            /tmp/v82/out/*.profile.err
+            /tmp/v82/out/*.reference.err
+            /tmp/v82/out/*.prefix.ndjson
+            /tmp/v82/out/baseline-tests.*
+            /tmp/v82/out/valgrind-version.txt
+          if-no-files-found: warn
