@@ -1,0 +1,33 @@
+name: Causal hot-path census v80
+on:
+  push:
+    branches: [experiment/causal-hotpath-census-v80]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+        with:
+          enable_kvm: true
+      - name: Run reachable hot-path census
+        run: bash experiments/run_causal_hotpath_census_v80.sh
+      - name: Preserve census and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: causal-hotpath-census-v80
+          path: |
+            /tmp/v80/census.json
+            /tmp/v80/summary.txt
+            /tmp/v80/out/*.census
+            /tmp/v80/out/*.err
+            /tmp/v80/out/*.perf.txt
+            /tmp/v80/out/perf-*.out
+            /tmp/v80/out/base-*.out
+            /tmp/v80/out/probe-*.out
+          if-no-files-found: warn
