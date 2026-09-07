@@ -1,0 +1,76 @@
+name: Cache reuse preflight v87
+on:
+  push:
+    branches: [experiment/cache-reuse-evidence-v87]
+    paths:
+      - 'experiments/patch_fvar_reuse_v87.py'
+      - 'experiments/test_patch_fvar_reuse_v87.py'
+      - 'experiments/fvar_reuse_v87.rs'
+      - '.github/workflows/cache-reuse-preflight-v87.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile and test exact frozen-source candidate
+        run: |
+          set -euo pipefail
+          ROOT=/tmp/v87
+          BASE=08ddb26718c86213262943ca19ae8cf1b03fa922
+          mkdir -p "$ROOT/out" "$ROOT/control" "$ROOT/candidate"
+          rustc --version | tee "$ROOT/out/toolchain.txt"
+          cargo --version | tee -a "$ROOT/out/toolchain.txt"
+          git fetch --quiet --depth=1 origin "$BASE"
+          git archive "$BASE" | tar -x -C "$ROOT/control"
+          cp -a "$ROOT/control/." "$ROOT/candidate/"
+          cp experiments/fvar_reuse_v87.rs "$ROOT/candidate/src/tests/fvar_reuse_v87.rs"
+          cp experiments/patch_fvar_reuse_v87.py experiments/test_patch_fvar_reuse_v87.py "$ROOT/candidate/experiments/" 2>/dev/null || {
+            mkdir -p "$ROOT/candidate/experiments"
+            cp experiments/patch_fvar_reuse_v87.py experiments/test_patch_fvar_reuse_v87.py "$ROOT/candidate/experiments/"
+          }
+          (cd "$ROOT/candidate" && python3 -m unittest discover -s experiments -p test_patch_fvar_reuse_v87.py -v) |& tee "$ROOT/out/source-tests.log"
+          python3 experiments/patch_fvar_reuse_v87.py "$ROOT/candidate" |& tee "$ROOT/out/patch.log"
+          diff -u "$ROOT/control/src/util.rs" "$ROOT/candidate/src/util.rs" > "$ROOT/out/candidate.patch" || test "$?" -eq 1
+          (cd "$ROOT/candidate" && CARGO_TARGET_DIR="$ROOT/target-candidate" cargo check --release --locked) |& tee "$ROOT/out/cargo-check.log"
+          (cd "$ROOT/candidate" && CARGO_TARGET_DIR="$ROOT/target-candidate" cargo test --locked --lib fvar_reuse_v87 -- --nocapture) |& tee "$ROOT/out/focused-tests.log"
+          echo 'V87_COMPILE=PASS'
+          echo 'V87_FOCUSED_TESTS=PASS'
+          set +e
+          (cd "$ROOT/control" && CARGO_TARGET_DIR="$ROOT/target-control" cargo test --locked --lib -- --test-threads=1) > "$ROOT/out/control-tests.log" 2>&1
+          control_rc=$?
+          (cd "$ROOT/candidate" && CARGO_TARGET_DIR="$ROOT/target-candidate" cargo test --locked --lib -- --test-threads=1) > "$ROOT/out/candidate-tests.log" 2>&1
+          candidate_rc=$?
+          set -e
+          printf '%s\n' "$control_rc" > "$ROOT/out/control-tests.rc"
+          printf '%s\n' "$candidate_rc" > "$ROOT/out/candidate-tests.rc"
+          python3 - "$ROOT" <<'PY'
+          import json, pathlib, re, sys
+          r=pathlib.Path(sys.argv[1]); out=r/'out'
+          expected={'tests::util::reject_rec_rule_with_forged_lambda_domains','tests::util::reject_unlisted_recursor'}
+          def failures(name):
+              text=(out/name).read_text()
+              return set(re.findall(r'^test (\S+) \.\.\. FAILED$',text,re.M))
+          control_rc=int((out/'control-tests.rc').read_text())
+          candidate_rc=int((out/'candidate-tests.rc').read_text())
+          control=failures('control-tests.log'); candidate=failures('candidate-tests.log')
+          missing=[p for p in ('test_resources/RuleDomainMismatch/config.json','test_resources/UnlistedRecursor/config.json') if not (r/'candidate'/p).is_file()]
+          no_regression=control==candidate and (control_rc==0)==(candidate_rc==0) and (control_rc==0 or control==expected)
+          qualified=control_rc==candidate_rc==0 and not missing
+          result={'control_rc':control_rc,'candidate_rc':candidate_rc,'control_failures':sorted(control),'candidate_failures':sorted(candidate),'missing_negative_fixtures':missing,'no_new_test_failures':no_regression,'release_qualified':qualified}
+          (out/'qualification.json').write_text(json.dumps(result,indent=2))
+          print('V87_NO_NEW_TEST_FAILURES='+str(no_regression).upper())
+          print('V87_QUALIFICATION='+('PASS' if qualified else 'FAILED'))
+          print('V87_MISSING_NEGATIVE_FIXTURES='+json.dumps(missing))
+          if not no_regression: sys.exit(1)
+          PY
+      - name: Preserve preflight evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cache-reuse-preflight-v87
+          path: /tmp/v87/out/
+          if-no-files-found: warn
