@@ -1,0 +1,29 @@
+name: Cache reuse source v87
+on:
+  push:
+    branches: [experiment/cache-reuse-evidence-v87]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 08ddb26718c86213262943ca19ae8cf1b03fa922
+      - name: Verify and package frozen source
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = 08ddb26718c86213262943ca19ae8cf1b03fa922
+          mkdir -p /tmp/v87
+          git archive --format=tar HEAD | gzip -n > /tmp/v87/source.tar.gz
+          sha256sum /tmp/v87/source.tar.gz > /tmp/v87/source.sha256
+          git rev-parse HEAD > /tmp/v87/source.commit
+      - name: Preserve source
+        uses: actions/upload-artifact@v4
+        with:
+          name: cache-reuse-source-v87
+          path: /tmp/v87/
+          if-no-files-found: error
