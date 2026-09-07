@@ -1,0 +1,32 @@
+name: Cache reset v85
+on:
+  push:
+    branches: [experiment/memory-caller-attribution-v84]
+    paths:
+      - experiments/run_cache_reset_v85.sh
+      - .github/workflows/cache-reset-v85.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  benchmark:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Test bounded cache reset
+        run: bash experiments/run_cache_reset_v85.sh
+      - name: Preserve benchmark and qualification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cache-reset-v85
+          path: |
+            /tmp/v85/out/results.json
+            /tmp/v85/out/baseline-tests.*
+            /tmp/v85/out/*.reference.stdout
+            /tmp/v85/out/*.reference.stderr
+            /tmp/v85/out/*.candidate.stdout
+            /tmp/v85/out/*.candidate.stderr
+          if-no-files-found: warn
