@@ -1,0 +1,33 @@
+name: Complete cost profile v83
+on:
+  push:
+    branches: [experiment/complete-cost-profile-v83]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  profile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Install instruction profiler
+        run: sudo apt-get update -qq && sudo apt-get install -y valgrind
+      - name: Measure all-thread exclusive cost
+        run: bash experiments/run_complete_cost_profile_v83.sh
+      - name: Preserve profiles and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: complete-cost-profile-v83
+          path: |
+            /tmp/v83/summary.txt
+            /tmp/v83/cost-profile.json
+            /tmp/v83/out/*.callgrind*
+            /tmp/v83/out/*.profile.err
+            /tmp/v83/out/*.reference.err
+            /tmp/v83/out/*.prefix.ndjson
+            /tmp/v83/out/baseline-tests.*
+            /tmp/v83/out/valgrind-version.txt
+          if-no-files-found: warn
