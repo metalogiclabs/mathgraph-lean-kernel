@@ -19,8 +19,13 @@ old=s[a:b]
 # Only the per-declaration cache reset changes. All entries are still invalidated.
 new=old
 new=re.sub(r'self\.(\w+)\.clear\(\);',r'shrink_map(&mut self.\1);',new)
-for field in ('conv_cache_pos','conv_cache_neg','conv_cache_neg_probe','open_eval_seen','iota_stuck','fvar_cache','ind_occ_cache'):
+for field in ('conv_cache_pos','conv_cache_neg','conv_cache_neg_probe','open_eval_seen','iota_stuck'):
     new=new.replace('shrink_map(&mut self.'+field+');','shrink_set(&mut self.'+field+');')
+# fvar_cache and ind_occ_cache are FxHashMap<usize, bool>, not sets.
+for field in ('fvar_cache','ind_occ_cache'):
+    assert 'pub(crate) '+field+': FxHashMap<usize, bool>' in s
+    assert 'shrink_map(&mut self.'+field+');' in new
+    assert 'shrink_set(&mut self.'+field+');' not in new
 new=new.replace('shrink_map(&mut self.frames);','if self.frames.capacity() > KEEP_CAP {\n            self.frames = hashbrown::HashTable::new();\n        } else {\n            self.frames.clear();\n        }')
 assert 'self.prune_dm.fill((0, 0, None));' in new
 assert 'self.frames.clear();' in new
@@ -63,7 +68,7 @@ PY
 cd "$ROOT"
 python3 - "$ROOT" <<'PY'
 from pathlib import Path
-import subprocess,sys,hashlib,json,time,os,statistics,random
+import subprocess,sys,hashlib,json,time,statistics
 r=Path(sys.argv[1]); out=r/'out'; cfg=r/'config.json'
 results={}
 for corpus in ('std','cedar','mathlib'):
