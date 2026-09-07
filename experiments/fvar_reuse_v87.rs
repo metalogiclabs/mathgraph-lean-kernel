@@ -19,7 +19,8 @@ fn fvar_reuse_v87_retains_only_structural_memo() {
             assert_eq!(tc.tc_cache.fvar_cache.get(&sort_key), Some(&false));
             assert_eq!(tc.tc_cache.fvar_cache.get(&bvar_key), Some(&true));
             tc.tc_cache.ind_occ_cache.insert(17, true);
-            tc.tc_cache.prune_dm[0] = (1, 2, Some(tc.empty_env()));
+            let empty = tc.empty_env();
+            tc.tc_cache.prune_dm[0] = (1, 2, Some(empty));
             tc.tc_cache.clear();
             assert_eq!(tc.tc_cache.fvar_cache.get(&sort_key), Some(&false));
             assert_eq!(tc.tc_cache.fvar_cache.get(&bvar_key), Some(&true));
