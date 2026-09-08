@@ -20,13 +20,15 @@ prepare() {
 from pathlib import Path
 import sys,json
 r=Path(sys.argv[1]);sys.path.insert(0,sys.argv[2])
-from patch_epoch_v91 import blob,BASE,CANDIDATE,transform
+from patch_epoch_v91 import blob,BASE,transform
 a=(r/'control/src/util.rs').read_bytes(); b=(r/'candidate/src/util.rs').read_bytes()
-assert blob(a)==BASE and blob(b)==CANDIDATE
+assert blob(a)==BASE
 assert transform(a.decode()).encode()==b
 assert (r/'control/src/eval.rs').read_bytes()==(r/'candidate/src/eval.rs').read_bytes()
-(r/'out/source-evidence.json').write_text(json.dumps({'base':'08ddb26718c86213262943ca19ae8cf1b03fa922','control_util_blob':BASE,'candidate_util_blob':CANDIDATE,'source_transform':'DETERMINISTIC_EXACT','production_change':'epoch_invalidation_for_get_insert_caches','release_promoted':False},indent=2))
+candidate_blob=blob(b)
+(r/'out/source-evidence.json').write_text(json.dumps({'base':'08ddb26718c86213262943ca19ae8cf1b03fa922','control_util_blob':BASE,'candidate_util_blob':candidate_blob,'source_transform':'DETERMINISTIC_EXACT','production_change':'epoch_invalidation_for_get_insert_caches','release_promoted':False},indent=2))
 print('V91_EXACT_SOURCE_TRANSFORM=PASS')
+print('V91_CANDIDATE_UTIL_BLOB='+candidate_blob)
 PY
 }
 if [[ "$MODE" == preflight ]]; then
@@ -46,7 +48,15 @@ out=Path(sys.argv[1]);sys.path.insert(0,sys.argv[2])
 from check_test_results_v88 import parse,EXPECTED
 r={'release_qualified':False}
 for arm in ('control','candidate'):
-    q=parse((out/f'{arm}.tests.log').read_text(),42); q['rc']=int((out/f'{arm}.tests.rc').read_text())
+    log=(out/f'{arm}.tests.log').read_text()
+    try:
+        q=parse(log,42)
+    except Exception:
+        print(f'V91_{arm.upper()}_TEST_LOG_TAIL_BEGIN')
+        print('\n'.join(log.splitlines()[-120:]))
+        print(f'V91_{arm.upper()}_TEST_LOG_TAIL_END')
+        raise
+    q['rc']=int((out/f'{arm}.tests.rc').read_text())
     assert q['rc']==101 and set(q['failures'])==EXPECTED and q['passed']==40
     r[arm]=q
 r['no_new_test_failures']=True
