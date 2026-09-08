@@ -41,12 +41,13 @@ pub(crate) fn test_export_file<A>(
 
 #[allow(dead_code)]
 pub(crate) fn test_export_file_should_panic<A>(config_path: Option<&Path>, f: impl FnOnce(&ExportFile) -> A) {
-    let Ok(config) = test_config(config_path) else { return };
+    // A missing or malformed fixture must not count as the expected rejection.
+    // The caller's should_panic(expected = ...) must match the kernel's error.
+    let config = test_config(config_path).expect("negative test fixture configuration failed");
     let arena = Arena::new();
-    let result = config.to_export_file(arena.as_arena_ref());
-    if let Ok((export_file, _)) = result {
-        f(&export_file);
-    }
+    let (export_file, _) = config.to_export_file(arena.as_arena_ref())
+        .expect("negative test fixture failed to load");
+    f(&export_file);
 }
 
 pub(crate) fn test_ctx<'p, A>(path: Option<&Path>, f: impl FnOnce(&mut TcCtx) -> A) -> Result<A, Box<dyn Error>> {
@@ -176,6 +177,15 @@ fn reject_unlisted_recursor() {
 }
 
 #[test]
+#[should_panic(expected = "negative test fixture configuration failed")]
+fn reject_missing_negative_fixture() {
+    test_export_file_should_panic(
+        Some(Path::new("test_resources/DefinitelyMissingNegativeFixture/config.json")),
+        |_| (),
+    )
+}
+
+#[test]
 #[should_panic(expected = "expected a sort")]
 fn reject_is_prop_when_inferred_type_is_not_a_sort() {
     test_export_file_should_panic(None, |export| {
@@ -230,6 +240,7 @@ fn hash_test0() -> Result<(), Box<dyn Error>> {
                 }
                 for _ in 0..100 {
                     let s = rng.gen_biguint(size as u64);
+                    assert_eq!(hash64!(s.clone()), hash64!(s.clone()));
                     let (l, r) = (ctx.mk_nat_lit_quick(s.clone()), ctx.mk_nat_lit_quick(s));
                     assert_eq!(hash64!(l), hash64!(r));
                     assert_eq!(l, r)
