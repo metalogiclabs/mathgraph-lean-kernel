@@ -1,0 +1,51 @@
+name: Work removal v90
+on:
+  push:
+    branches: [experiment/work-removal-v90]
+    paths:
+      - '.github/workflows/work-removal-v90.yml'
+      - 'experiments/install_work_removal_v90.py'
+      - 'experiments/run_work_removal_v90.sh'
+      - 'experiments/measure_work_removal_v90.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  benchmark:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PYTHONOPTIMIZE: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Verify scripts and pinned toolchain
+        run: |
+          set -euo pipefail
+          python3 -m py_compile experiments/install_work_removal_v90.py experiments/measure_work_removal_v90.py
+          bash -n experiments/run_work_removal_v90.sh
+          mkdir -p /tmp/v90/out
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/v90/arena
+          git -C /tmp/v90/arena checkout -q 91f376e4baacf2df0c478e7173bccb2a6adac5c5
+          cd /tmp/v90/arena
+          nix develop -c sh -c 'rustc --version; cargo --version'
+          nix shell 'github:NixOS/nixpkgs/0ad6f47ea4fe188f4bc8f0380f93ae8523337c6c#llvmPackages_21.llvm' -c llvm-profdata --version
+      - name: Verify exact source ablation and correctness
+        run: |
+          set -euo pipefail
+          cd /tmp/v90/arena
+          nix develop -c bash "$GITHUB_WORKSPACE/experiments/run_work_removal_v90.sh" preflight |& tee /tmp/v90/out/preflight-summary.txt
+      - name: Full-corpus exact replay and fresh-PGO timing
+        run: |
+          set -euo pipefail
+          cd /tmp/v90/arena
+          nix develop -c bash "$GITHUB_WORKSPACE/experiments/run_work_removal_v90.sh" benchmark |& tee /tmp/v90/out/summary.txt
+      - name: Preserve evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: work-removal-v90
+          path: /tmp/v90/out/
+          if-no-files-found: warn
