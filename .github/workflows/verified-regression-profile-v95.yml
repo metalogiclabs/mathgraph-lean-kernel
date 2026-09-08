@@ -1,0 +1,28 @@
+name: Verified regression profile v95
+on:
+  push:
+    paths:
+      - 'experiments/verified_regression_profile_v95.py'
+      - '.github/workflows/verified-regression-profile-v95.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  recover-residual:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Recover nonempty source-level residual
+        run: python3 experiments/verified_regression_profile_v95.py
+      - name: Preserve evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verified-regression-profile-v95
+          path: |
+            /tmp/v95/residual-profile.json
+            /tmp/v95/profile/*.json
+            /tmp/v95/*.out
+            /tmp/v95/*.err
