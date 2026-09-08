@@ -6,6 +6,7 @@ mismatched-data warnings prevent using their sum as a call count. This run
 uses independent, conservation-checked counters. No kernel change is promoted
 by the driver; the measured candidate remains isolated until reviewed.
 """
+import difflib
 import hashlib
 import json
 import math
@@ -79,8 +80,9 @@ pub fn dump() {
 '''
 
 
-def run(*args, cwd=None, env=None, stdout=None, stderr=None):
-    return subprocess.run(args, cwd=cwd, env=env, stdout=stdout, stderr=stderr, check=True)
+def run(*args, cwd=None, env=None, stdin=None, stdout=None, stderr=None):
+    return subprocess.run(args, cwd=cwd, env=env, stdin=stdin,
+                          stdout=stdout, stderr=stderr, check=True)
 
 
 def shell(script, cwd):
@@ -188,8 +190,10 @@ def main():
     candidate_hash = apply_candidate(candidate / 'src/eval.rs')
     apply_probe(probe)
     (ROOT / 'candidate-eval.rs').write_bytes((candidate / 'src/eval.rs').read_bytes())
-    (ROOT / 'candidate-diff.txt').write_text(subprocess.check_output(
-        ['diff', '-u', str(source / 'src/eval.rs'), str(candidate / 'src/eval.rs')], text=True) if False else NEW)
+    (ROOT / 'candidate-diff.txt').write_text(''.join(difflib.unified_diff(
+        (source / 'src/eval.rs').read_text().splitlines(keepends=True),
+        (candidate / 'src/eval.rs').read_text().splitlines(keepends=True),
+        fromfile='control/src/eval.rs', tofile='candidate/src/eval.rs')))
     config = ROOT / 'config.json'
     config.write_text(json.dumps(dict(use_stdin=True, nat_extension=True, string_extension=True,
         unpermitted_axiom_hard_error=False, unsafe_permit_all_axioms=True,
