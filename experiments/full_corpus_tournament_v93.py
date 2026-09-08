@@ -120,7 +120,8 @@ def qualify(winner,summary):
     (ROOT/'candidate/src/util.rs').write_text(u)
     v.qualification()
     summary['qualification']=json.loads((OUT/'qualification.json').read_text())
-    binaries = {arm:v.build_pgo(arm) for arm in ['control','candidate']}
+    # The baseline was already trained independently in build_search; do not rebuild it.
+    binaries = {'control':summary['binaries']['control'],'candidate':v.build_pgo('candidate')}
     summary['qualification_binaries']=binaries
     save(summary)
     scores,rows = race(binaries,['candidate'],'qualification_race',3,summary)
