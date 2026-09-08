@@ -1,0 +1,47 @@
+name: Rapid kernel search v92
+on:
+  push:
+    branches: [experiment/rapid-kernel-v92]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  search:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      PYTHONOPTIMIZE: '0'
+      V92_ROOT: /tmp/v92
+      V89_ROOT: /tmp/v92
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify search source
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python3 -B experiments/rapid_kernel_v92.py --self-test
+          python3 -m py_compile experiments/rapid_kernel_v92.py
+          git diff --exit-code -- src/
+      - uses: cachix/install-nix-action@v31
+        with:
+          enable_kvm: true
+      - uses: actions/cache@v4
+        with:
+          path: /tmp/v92/arena
+          key: v92-arena-91f376e4baacf2df0c478e7173bccb2a6adac5c5-corpora-20260908
+      - name: Rapid search and conditional full qualification
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/v92/out
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/v92/toolchain-arena
+          git -C /tmp/v92/toolchain-arena checkout -q 91f376e4baacf2df0c478e7173bccb2a6adac5c5
+          test "$(git -C /tmp/v92/toolchain-arena rev-parse HEAD)" = 91f376e4baacf2df0c478e7173bccb2a6adac5c5
+          cd /tmp/v92/toolchain-arena
+          nix develop -c python3 -B "$GITHUB_WORKSPACE/experiments/rapid_kernel_v92.py" |& tee /tmp/v92/out/ci.log
+      - name: Preserve evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rapid-kernel-v92
+          path: /tmp/v92/out/
+          if-no-files-found: warn
