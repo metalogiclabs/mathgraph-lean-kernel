@@ -20,12 +20,12 @@ OLD = '''            let te = self.key_env(env, e);
 '''
 NEW = '''            // An exact environment hit needs no relevance projection.
             let raw_key = (env as *const value::Env<'t> as usize, e);
-            if let Some(v) = self.tc_cache.open_eval_cache.get(&raw_key) {
+            if let Some(v) = self.tc_cache.open_eval_cache.get(&raw_key).copied() {
                 return v;
             }
             let te = self.key_env(env, e);
             let key = (te as *const value::Env<'t> as usize, e);
-            if let Some(v) = self.tc_cache.open_eval_cache.get(&key) {
+            if let Some(v) = self.tc_cache.open_eval_cache.get(&key).copied() {
                 if raw_key != key {
                     self.tc_cache.open_eval_cache.insert(raw_key, v);
                 }
