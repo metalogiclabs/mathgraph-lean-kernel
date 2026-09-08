@@ -1,0 +1,44 @@
+name: Evaluation raw-cache v90
+on:
+  push:
+    branches: [experiment/eval-raw-cache-v90]
+    paths:
+      - 'experiments/eval_raw_v90.py'
+      - '.github/workflows/eval-raw-cache-v90.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  experiment:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      PYTHONOPTIMIZE: '0'
+      V90_ROOT: /tmp/v90
+      V89_ROOT: /tmp/v90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify source patch
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python3 -B experiments/eval_raw_v90.py --self-test
+          python3 -m py_compile experiments/eval_raw_v90.py
+          git diff --exit-code -- src/
+      - uses: cachix/install-nix-action@v31
+      - name: Paired native release benchmark and complete unit tests
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/v90/out
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/v90/toolchain-arena
+          git -C /tmp/v90/toolchain-arena checkout -q 91f376e4baacf2df0c478e7173bccb2a6adac5c5
+          test "$(git -C /tmp/v90/toolchain-arena rev-parse HEAD)" = 91f376e4baacf2df0c478e7173bccb2a6adac5c5
+          cd /tmp/v90/toolchain-arena
+          nix develop -c python3 -B "$GITHUB_WORKSPACE/experiments/eval_raw_v90.py" |& tee /tmp/v90/out/ci.log
+      - name: Preserve evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-raw-cache-v90
+          path: /tmp/v90/out/
+          if-no-files-found: warn
