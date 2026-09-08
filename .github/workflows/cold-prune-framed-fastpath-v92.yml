@@ -1,0 +1,29 @@
+name: Cold-prune framed fast-path v92
+on:
+  push:
+    branches: [experiment/cold-prune-framed-fastpath-v92]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  benchmark:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+        with:
+          enable_kvm: true
+      - name: Run source-guarded framed fast-path benchmark
+        run: bash experiments/run_cold_prune_framed_fastpath_v92.sh
+      - name: Preserve v92 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cold-prune-framed-fastpath-v92
+          path: |
+            /tmp/v92/results.json
+            /tmp/v92/summary.txt
+            /tmp/v92/out/*.err
+            /tmp/v92/out/*.out
+          if-no-files-found: warn
