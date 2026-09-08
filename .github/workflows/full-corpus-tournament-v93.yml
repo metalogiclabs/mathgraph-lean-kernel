@@ -32,13 +32,14 @@ jobs:
           enable_kvm: true
       - uses: actions/cache/restore@v4
         with:
-          path: /tmp/v93/fixtures
+          path: /tmp/v92/fixtures
           key: v92-frozen-inputs-91f376e4baacf2df0c478e7173bccb2a6adac5c5-v1
           fail-on-cache-miss: true
       - name: Full-corpus tournament and conditional qualification
         run: |
           set -euo pipefail
           mkdir -p /tmp/v93/out
+          ln -s /tmp/v92/fixtures /tmp/v93/fixtures
           git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/v93/toolchain-arena
           git -C /tmp/v93/toolchain-arena checkout -q 91f376e4baacf2df0c478e7173bccb2a6adac5c5
           test "$(git -C /tmp/v93/toolchain-arena rev-parse HEAD)" = 91f376e4baacf2df0c478e7173bccb2a6adac5c5
