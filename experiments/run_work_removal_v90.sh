@@ -23,7 +23,20 @@ prepare() {
   git -C "$GITHUB_WORKSPACE" archive "$RAW" | tar -x -C "$ROOT/ablated"
   python3 "$SRC/install_work_removal_v90.py" "$ROOT/candidate" upstream
   python3 "$SRC/install_work_removal_v90.py" "$ROOT/ablated" raw
-  diff -qr "$ROOT/control" "$ROOT/ablated" > "$OUT/ablation.diff"
+  # The frozen release has a different README. Verify both immutable blobs,
+  # then compare every executable/source file without treating branding as code.
+  python3 - "$ROOT" <<'PY'
+from pathlib import Path
+import hashlib,sys
+r=Path(sys.argv[1])
+def blob(p):
+    b=p.read_bytes()
+    return hashlib.sha1(b'blob '+str(len(b)).encode()+b'\0'+b).hexdigest()
+assert blob(r/'control/README.md')=='b9ad8ce20a8976eae2ec0602400196f3533fce6b'
+assert blob(r/'ablated/README.md')=='c49c7cc9b5d8e028ccef34f6090a8e8b3886fb6d'
+print('V90_README_PROVENANCE=PASS')
+PY
+  diff -qr -x README.md "$ROOT/control" "$ROOT/ablated" > "$OUT/ablation.diff"
   echo 'V90_EXACT_SOURCE_ABLATION=PASS'
   git -C "$GITHUB_WORKSPACE" diff "$RAW" "$UPSTREAM" -- src > "$OUT/upstream.patch"
   python3 - "$ROOT" <<'PY'
@@ -34,8 +47,9 @@ def manifest(p):
     return {str(f.relative_to(p)):hashlib.sha256(f.read_bytes()).hexdigest()
             for f in sorted(p.rglob('*')) if f.is_file()}
 a=manifest(r/'control');b=manifest(r/'candidate');c=manifest(r/'ablated')
-assert a==c and a!=b
-assert set(a)==set(b), 'source file set changed'
+assert a!=b
+assert {k:v for k,v in a.items() if k!='README.md'}=={k:v for k,v in c.items() if k!='README.md'}
+assert set(a)==set(b)==set(c), 'source file set changed'
 (r/'out'/'source-manifest.json').write_text(json.dumps({'control':a,'candidate':b,'ablated':c},indent=2)+'\n')
 print('V90_SOURCE_MANIFEST=PASS')
 PY
