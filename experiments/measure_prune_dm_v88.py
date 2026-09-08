@@ -16,7 +16,9 @@ def run(arm,corpus,data,tag):
 try:
     deltas=[]
     for corpus in ('std','cedar','mathlib'):
-        data=(r/'arena'/'_build/tests'/f'{corpus}.ndjson').read_bytes()
+        # The Arena build-test target for Std is named init-prelude.
+        export_name='init-prelude' if corpus=='std' else corpus
+        data=(r/'arena'/'_build/tests'/f'{export_name}.ndjson').read_bytes()
         assert data,corpus
         entry={'input_sha256':hashlib.sha256(data).hexdigest(),'runs':[]}
         results['corpora'][corpus]=entry;save()
