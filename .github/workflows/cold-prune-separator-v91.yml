@@ -1,0 +1,32 @@
+name: Cold-prune separator v91
+on:
+  push:
+    branches: [experiment/cold-prune-separator-v91]
+    paths:
+      - 'experiments/run_cold_prune_separator_v91.sh'
+      - '.github/workflows/cold-prune-separator-v91.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  separator:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+        with:
+          enable_kvm: true
+      - name: Run source-guarded cold-prune separator
+        run: bash experiments/run_cold_prune_separator_v91.sh
+      - name: Preserve separator evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cold-prune-separator-v91
+          path: |
+            /tmp/v91/separator.json
+            /tmp/v91/summary.txt
+            /tmp/v91/out/*.err
+            /tmp/v91/out/*.out
+          if-no-files-found: warn
