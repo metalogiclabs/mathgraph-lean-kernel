@@ -1,0 +1,29 @@
+name: Direct-framed retain and profile v94
+on:
+  push:
+    branches:
+      - experiment/direct-framed-retain-and-profile-v94
+  workflow_dispatch:
+jobs:
+  qualify-and-profile:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+        with:
+          enable_kvm: true
+          set_as_trusted_user: true
+      - name: Run direct-only retention and profile
+        run: bash experiments/run_direct_framed_retain_and_profile_v94.sh
+      - name: Preserve v94 evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: direct-framed-retain-and-profile-v94
+          path: |
+            /tmp/v94/results.json
+            /tmp/v94/summary.txt
+            /tmp/v94/residual-profile.json
+            /tmp/v94/profile/*.perfstat
+            /tmp/v94/profile/*.hot.txt
+            /tmp/v94/out/*.out
+            /tmp/v94/out/*.err
