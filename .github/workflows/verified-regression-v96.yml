@@ -1,0 +1,33 @@
+name: Verified regression v96
+on:
+  push:
+    paths:
+      - 'experiments/verified_regression_v96.py'
+      - 'tests/test_verified_regression_v96.py'
+      - '.github/workflows/verified-regression-v96.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate driver and negative controls
+        run: python3 -m unittest discover -s tests -p 'test_verified_regression_v96.py' -v
+      - uses: cachix/install-nix-action@v31
+      - name: Probe, replay, and benchmark frozen kernel
+        run: python3 experiments/verified_regression_v96.py
+      - name: Preserve evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verified-regression-v96
+          path: |
+            /tmp/v96/*.json
+            /tmp/v96/*.txt
+            /tmp/v96/candidate-eval.rs
+            /tmp/v96/*.out
+            /tmp/v96/*.err
+          if-no-files-found: warn
