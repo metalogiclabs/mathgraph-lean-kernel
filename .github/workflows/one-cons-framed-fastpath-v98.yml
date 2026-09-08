@@ -1,0 +1,29 @@
+name: One-Cons Framed fastpath v98
+on:
+  push:
+    paths:
+      - 'experiments/verified_regression_v98.py'
+      - '.github/workflows/one-cons-framed-fastpath-v98.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run isolated v98 qualification
+        run: python3 experiments/verified_regression_v98.py
+      - name: Preserve evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: one-cons-framed-fastpath-v98
+          path: |
+            /tmp/v98/results.json
+            /tmp/v98/candidate-diff.txt
+            /tmp/v98/*.out
+            /tmp/v98/*.err
+          if-no-files-found: warn
