@@ -4,6 +4,8 @@ on:
     paths:
       - 'experiments/restore_recursor_negative_fixtures_v97.py'
       - 'src/tests/util.rs'
+      - 'test_resources/RuleDomainMismatch/**'
+      - 'test_resources/UnlistedRecursor/**'
       - '.github/workflows/restore-recursor-negative-tests-v97.yml'
   workflow_dispatch:
 permissions:
@@ -15,6 +17,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: cachix/install-nix-action@v31
+      - name: Pin Arena toolchain
+        run: |
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/v97-arena
+          git -C /tmp/v97-arena checkout -q 91f376e4baacf2df0c478e7173bccb2a6adac5c5
+          test "$(git -C /tmp/v97-arena rev-parse HEAD)" = 91f376e4baacf2df0c478e7173bccb2a6adac5c5
       - name: Restore missing fixtures and verify structural mutations
         run: |
           python3 experiments/restore_recursor_negative_fixtures_v97.py
@@ -30,19 +37,21 @@ jobs:
           PY
       - name: Run exact negative rejection tests in release
         run: |
-          nix develop -c cargo test --release --locked --lib -- --exact tests::util::reject_rec_rule_with_forged_lambda_domains --nocapture
-          nix develop -c cargo test --release --locked --lib -- --exact tests::util::reject_unlisted_recursor --nocapture
-          nix develop -c cargo test --release --locked --lib -- --exact tests::util::reject_missing_negative_fixture --nocapture
+          set -euo pipefail
+          for name in reject_rec_rule_with_forged_lambda_domains reject_unlisted_recursor reject_missing_negative_fixture; do
+            nix develop /tmp/v97-arena -c cargo test --release --locked --lib -- --exact "tests::util::$name" --nocapture 2>&1 | tee "/tmp/v97-$name.log"
+            grep -q '^test result: ok. 1 passed; 0 failed;' "/tmp/v97-$name.log"
+          done
           echo V97_RELEASE_NEGATIVES=PASS
       - name: Run complete release suite
         run: |
-          nix develop -c cargo test --release --locked
+          nix develop /tmp/v97-arena -c cargo test --release --locked
           echo V97_RELEASE_SUITE=PASS
       - name: Run complete debug suite
         run: |
-          nix develop -c cargo test --locked
+          nix develop /tmp/v97-arena -c cargo test --locked
           echo V97_DEBUG_SUITE=PASS
-      - name: Preserve generated fixtures
+      - name: Preserve generated fixtures and negative-test logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -50,4 +59,5 @@ jobs:
           path: |
             test_resources/RuleDomainMismatch/
             test_resources/UnlistedRecursor/
+            /tmp/v97-*.log
           if-no-files-found: warn
