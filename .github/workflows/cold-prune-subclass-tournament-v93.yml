@@ -1,0 +1,29 @@
+name: Cold-prune subclass tournament v93
+on:
+  push:
+    branches: [experiment/cold-prune-subclass-tournament-v93]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  tournament:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+        with:
+          enable_kvm: true
+      - name: Run source-guarded cold-prune subclass tournament
+        run: bash experiments/run_cold_prune_subclass_tournament_v93.sh
+      - name: Preserve v93 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cold-prune-subclass-tournament-v93
+          path: |
+            /tmp/v93/results.json
+            /tmp/v93/summary.txt
+            /tmp/v93/out/*.err
+            /tmp/v93/out/*.out
+          if-no-files-found: warn
