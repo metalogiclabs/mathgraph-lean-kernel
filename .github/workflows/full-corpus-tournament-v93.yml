@@ -24,17 +24,18 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           python3 -B experiments/rapid_kernel_v92.py --self-test
+          python3 -B experiments/rapid_kernel_v92_freeze.py --self-test
           python3 -B experiments/full_corpus_tournament_v93.py --self-test
-          python3 -m py_compile experiments/full_corpus_tournament_v93.py
+          python3 -m py_compile experiments/full_corpus_tournament_v93.py experiments/rapid_kernel_v92_freeze.py
           git diff --exit-code -- src/
       - uses: cachix/install-nix-action@v31
         with:
           enable_kvm: true
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache@v4
         with:
           path: /tmp/v93/fixtures
-          key: v92-frozen-inputs-91f376e4baacf2df0c478e7173bccb2a6adac5c5-v1
-          fail-on-cache-miss: true
+          key: v93-frozen-inputs-91f376e4baacf2df0c478e7173bccb2a6adac5c5-v1
+          save-always: true
       - name: Full-corpus tournament and conditional qualification
         run: |
           set -euo pipefail
