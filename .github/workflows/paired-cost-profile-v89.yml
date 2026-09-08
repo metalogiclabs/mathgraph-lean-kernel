@@ -1,0 +1,42 @@
+name: Paired cost profile v89
+on:
+  push:
+    branches: [experiment/paired-cost-profile-v89]
+    paths:
+      - 'experiments/profile_v89.py'
+      - '.github/workflows/paired-cost-profile-v89.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  experiment:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    env:
+      PYTHONOPTIMIZE: '0'
+      V89_ROOT: /tmp/v89
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify experiment source and parser
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python3 -B experiments/profile_v89.py --self-test
+          python3 -m py_compile experiments/profile_v89.py
+          git diff --exit-code -- src/
+      - uses: cachix/install-nix-action@v31
+      - name: Run frozen paired PGO comparison and CPU profile
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/v89/out
+          nix develop -c nix shell 'github:NixOS/nixpkgs/0ad6f47ea4fe188f4bc8f0380f93ae8523337c6c#linuxPackages.perf' -c python3 -B experiments/profile_v89.py |& tee /tmp/v89/out/ci.log
+      - name: Preserve evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: paired-cost-profile-v89
+          path: |
+            /tmp/v89/out/
+            /tmp/v89/*.data
+            /tmp/v89/*.json
+          if-no-files-found: warn
