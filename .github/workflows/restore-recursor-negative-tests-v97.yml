@@ -30,9 +30,9 @@ jobs:
           PY
       - name: Run exact negative rejection tests in release
         run: |
-          nix develop -c cargo test --release --locked reject_rec_rule_with_forged_lambda_domains -- --exact tests::util::reject_rec_rule_with_forged_lambda_domains --nocapture
-          nix develop -c cargo test --release --locked reject_unlisted_recursor -- --exact tests::util::reject_unlisted_recursor --nocapture
-          nix develop -c cargo test --release --locked reject_missing_negative_fixture -- --exact tests::util::reject_missing_negative_fixture --nocapture
+          nix develop -c cargo test --release --locked --lib -- --exact tests::util::reject_rec_rule_with_forged_lambda_domains --nocapture
+          nix develop -c cargo test --release --locked --lib -- --exact tests::util::reject_unlisted_recursor --nocapture
+          nix develop -c cargo test --release --locked --lib -- --exact tests::util::reject_missing_negative_fixture --nocapture
           echo V97_RELEASE_NEGATIVES=PASS
       - name: Run complete release suite
         run: |
