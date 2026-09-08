@@ -218,10 +218,12 @@ def main():
         print('V96_' + corpus.upper() + '_EMPTY=' + str(payloads[0]['empty']), flush=True)
     print('V96_CONSERVATION=PASS', flush=True)
     (ROOT / 'profile.json').write_text(json.dumps(result['profile'], indent=2))
-    # Timed binaries are uninstrumented, identical-build-flags siblings.
+    # The repository contains debug-assertion negative tests whose expected panics
+    # are intentionally absent in --release. Validate the source semantics in the
+    # profile those tests are written for, then build the timed siblings in release.
     flags = "RUSTFLAGS='-C target-cpu=native'"
     for arm in (source, candidate):
-        shell('cd ' + str(arm) + ' && ' + flags + ' cargo test --release --locked -q', arena)
+        shell('cd ' + str(arm) + ' && ' + flags + ' cargo test --locked -q', arena)
         shell('cd ' + str(arm) + ' && ' + flags + ' cargo build --release --locked -q', arena)
     print('V96_RUST_TESTS=PASS', flush=True)
     for corpus in CORPORA:
