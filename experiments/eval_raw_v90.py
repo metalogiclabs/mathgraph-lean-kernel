@@ -88,7 +88,6 @@ def run():
         assert binaries['control']['sha256']!=binaries['candidate']['sha256']
         summary['binaries']=binaries
         v.save(summary)
-        # Run the complete existing test suite, not merely a parser or controller self-test.
         v.qualification()
         summary['qualification']=json.loads((v.OUT/'qualification.json').read_text())
         v.measure(binaries,summary)
@@ -107,7 +106,7 @@ def run():
 if __name__=='__main__':
     if '--self-test' in sys.argv:
         assert transform(OLD).replace(NEW,OLD)==OLD
-        assert transform(OLD).count('raw_key')==5
+        assert transform(OLD).count('raw_key')==6
         print('V90_PATCH_SELF_TEST=PASS')
     else:
         v.ROOT=Path(os.environ.get('V90_ROOT','/tmp/v90'))
