@@ -1,0 +1,53 @@
+name: Restore recursor negative tests v97
+on:
+  push:
+    paths:
+      - 'experiments/restore_recursor_negative_fixtures_v97.py'
+      - 'src/tests/util.rs'
+      - '.github/workflows/restore-recursor-negative-tests-v97.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Restore missing fixtures and verify structural mutations
+        run: |
+          python3 experiments/restore_recursor_negative_fixtures_v97.py
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path('test_resources')
+          for name in ('RuleDomainMismatch', 'UnlistedRecursor'):
+              records = [json.loads(x) for x in (root/name/'export').read_text().splitlines()]
+              assert len(records[-1]['inductive']['types']) == 1
+              assert records[-1]['inductive']['types'][0]['name'] == 1
+              print('V97_STRUCTURE_' + name + '=PASS')
+          PY
+      - name: Run exact negative rejection tests in release
+        run: |
+          nix develop -c cargo test --release --locked reject_rec_rule_with_forged_lambda_domains -- --exact tests::util::reject_rec_rule_with_forged_lambda_domains --nocapture
+          nix develop -c cargo test --release --locked reject_unlisted_recursor -- --exact tests::util::reject_unlisted_recursor --nocapture
+          nix develop -c cargo test --release --locked reject_missing_negative_fixture -- --exact tests::util::reject_missing_negative_fixture --nocapture
+          echo V97_RELEASE_NEGATIVES=PASS
+      - name: Run complete release suite
+        run: |
+          nix develop -c cargo test --release --locked
+          echo V97_RELEASE_SUITE=PASS
+      - name: Run complete debug suite
+        run: |
+          nix develop -c cargo test --locked
+          echo V97_DEBUG_SUITE=PASS
+      - name: Preserve generated fixtures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: restored-recursor-negative-fixtures-v97
+          path: |
+            test_resources/RuleDomainMismatch/
+            test_resources/UnlistedRecursor/
+          if-no-files-found: warn
