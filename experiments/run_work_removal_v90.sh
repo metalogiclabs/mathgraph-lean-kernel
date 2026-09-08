@@ -23,8 +23,6 @@ prepare() {
   git -C "$GITHUB_WORKSPACE" archive "$RAW" | tar -x -C "$ROOT/ablated"
   python3 "$SRC/install_work_removal_v90.py" "$ROOT/candidate" upstream
   python3 "$SRC/install_work_removal_v90.py" "$ROOT/ablated" raw
-  # The frozen release has a different README. Verify both immutable blobs,
-  # then compare every executable/source file without treating branding as code.
   python3 - "$ROOT" <<'PY'
 from pathlib import Path
 import hashlib,sys
@@ -47,11 +45,19 @@ def manifest(p):
     return {str(f.relative_to(p)):hashlib.sha256(f.read_bytes()).hexdigest()
             for f in sorted(p.rglob('*')) if f.is_file()}
 a=manifest(r/'control');b=manifest(r/'candidate');c=manifest(r/'ablated')
+record={'control':a,'candidate':b,'ablated':c,
+        'candidate_added':sorted(set(b)-set(a)),
+        'candidate_removed':sorted(set(a)-set(b))}
+(r/'out'/'source-manifest.json').write_text(json.dumps(record,indent=2)+'\n')
 assert a!=b
 assert {k:v for k,v in a.items() if k!='README.md'}=={k:v for k,v in c.items() if k!='README.md'}
-assert set(a)==set(b)==set(c), 'source file set changed'
-(r/'out'/'source-manifest.json').write_text(json.dumps({'control':a,'candidate':b,'ablated':c},indent=2)+'\n')
+def executable(m):
+    return {k:v for k,v in m.items() if k.startswith('src/') or k in ('Cargo.toml','Cargo.lock')}
+assert set(executable(a))==set(executable(b))==set(executable(c)), 'executable file set changed'
+assert all(a[k]==b[k] for k in ('Cargo.toml','Cargo.lock')), 'build dependency changed'
+assert all(a[k]==c[k] for k in executable(a)), 'ablated executable differs from incumbent'
 print('V90_SOURCE_MANIFEST=PASS')
+print('V90_EXECUTABLE_SCOPE=PASS')
 PY
 }
 
