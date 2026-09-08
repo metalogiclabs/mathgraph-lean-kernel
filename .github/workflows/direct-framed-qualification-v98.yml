@@ -1,0 +1,29 @@
+name: Direct framed qualification v98
+on:
+  push:
+    paths:
+      - 'experiments/run_direct_framed_qualification_v98.sh'
+      - '.github/workflows/direct-framed-qualification-v98.yml'
+      - 'test_resources/RuleDomainMismatch/**'
+      - 'test_resources/UnlistedRecursor/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run v98 qualification
+        run: bash experiments/run_direct_framed_qualification_v98.sh
+      - name: Preserve evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: direct-framed-qualification-v98
+          path: |
+            /tmp/v98/results.json
+            /tmp/v98/out/
+          if-no-files-found: warn
