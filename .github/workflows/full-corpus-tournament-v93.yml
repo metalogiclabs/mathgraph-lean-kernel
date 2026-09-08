@@ -52,3 +52,11 @@ jobs:
           name: full-corpus-tournament-v93
           path: /tmp/v93/out/
           if-no-files-found: warn
+      - name: Preserve exact corpus bytes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-corpus-tournament-v93-inputs
+          path: /tmp/v93/fixtures/
+          if-no-files-found: warn
+          compression-level: 1
