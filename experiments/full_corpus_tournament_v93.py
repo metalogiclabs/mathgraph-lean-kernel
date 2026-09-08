@@ -187,8 +187,9 @@ if __name__=='__main__':
         assert len(VARIANTS)==8 and len(set(VARIANTS))==8
         assert r.transform(r.leaf.OLD,True,True).replace('        // Direct evaluation of selected leaves.','        // Leaf values need neither environment projection nor cache dispatch.')==r.leaf.NEW
         sample=[{'arm':'a','corpus':c,'ratio':0.9} for c in CORPORA]
-        assert abs(score(sample,['a'])['geomean_delta_percent']+10)<1e-9
-        assert score(sample,['a'])['max_regression_percent']<0
+        result=score(sample,['a'])['a']
+        assert abs(result['geomean_delta_percent']+10)<1e-9
+        assert result['max_regression_percent']<0
         print('V93_TOURNAMENT_SELF_TEST=PASS',flush=True)
     else:
         main()
