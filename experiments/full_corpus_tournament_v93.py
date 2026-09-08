@@ -13,9 +13,14 @@ import rapid_kernel_v92 as r
 ROOT = Path(os.environ.get('V93_ROOT', '/tmp/v93'))
 OUT = ROOT / 'out'
 CORPORA = ('init-prelude', 'cedar', 'mathlib')
-FROZEN = {'init-prelude':'fc440bd35aa4ecb244836eef0c2e31c578ac4460f42665f4e8305cbc2cd2104d',
-          'cedar':'577288c46213303b2e9f948d4014a4f622b496d3bbad19476e81f3ff82eb08a6',
-          'mathlib':'ca2ec20fd063b61e71867b2975c81bd989af9f879b4886b8f08cd23c767a47bb'}
+# Historical evidence, not a recipe for regenerating byte-identical inputs.
+HISTORICAL_V92 = {'init-prelude':'fc440bd35aa4ecb244836eef0c2e31c578ac4460f42665f4e8305cbc2cd2104d',
+                  'cedar':'577288c46213303b2e9f948d4014a4f622b496d3bbad19476e81f3ff82eb08a6',
+                  'mathlib':'ca2ec20fd063b61e71867b2975c81bd989af9f879b4886b8f08cd23c767a47bb'}
+SOURCE_TEST_HASHES = {'cedar':'4e5c4a350c280cf082a10d46b473052dd9a6e08a926a4080e33f20b81c27e10a',
+                      'init-prelude':'4a962d8b3e0e9b1931d07e329c5478310a0852cc44955ac1b72686755f25e5f0',
+                      'mathlib':'9096bfbf183366d967c60d8c58120654715a63f27bf90b62912607b8c01c25cf'}
+FROZEN = dict(HISTORICAL_V92)
 VARIANTS = {x[0]:x for x in r.VARIANTS}
 COMMON = '-C target-cpu=native -C debuginfo=1 -C force-frame-pointers=yes'
 
@@ -23,19 +28,30 @@ def save(obj, name='summary.json'):
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT/name).write_text(json.dumps(obj, indent=2, sort_keys=True)+'\n')
 
+def select_fixtures(manifest):
+    assert manifest['arena'] == v.ARENA
+    assert manifest['source_test_hashes'] == SOURCE_TEST_HASHES
+    inputs = dict(manifest['inputs'])
+    assert set(inputs) == set(CORPORA)
+    assert all(isinstance(h, str) and len(h) == 64 and all(c in '0123456789abcdef' for c in h) for h in inputs.values())
+    identity = {'arena':v.ARENA, 'inputs':inputs, 'source_test_hashes':SOURCE_TEST_HASHES}
+    fixture_id = v.sha(json.dumps(identity, sort_keys=True, separators=(',',':')).encode())
+    return inputs, fixture_id
+
 def setup():
+    global FROZEN
     ROOT.mkdir(parents=True, exist_ok=True)
     OUT.mkdir(parents=True, exist_ok=True)
     v.ROOT = r.ROOT = ROOT
     v.OUT = r.OUT = OUT
-    r.EXPECTED = dict(FROZEN)
-    # The cache is optional. Rebuild missing fixtures, then require the exact
-    # previously observed bytes before any source is built or timed.
+    # Rebuilding can produce different bytes. Preserve the historical hashes,
+    # but give the newly observed, archived bytes their own fixture identity.
     from rapid_kernel_v92_freeze import freeze
     freeze()
     fixtures = ROOT/'fixtures'
     manifest = json.loads((fixtures/'manifest.json').read_text())
-    assert manifest['arena'] == v.ARENA and manifest['inputs'] == FROZEN, 'Frozen corpus mismatch'
+    FROZEN, fixture_id = select_fixtures(manifest)
+    r.EXPECTED = dict(FROZEN)
     arena = ROOT/'arena'
     if not (arena/'.git').exists():
         v.call(['git','clone','-q','https://github.com/leanprover/lean-kernel-arena',str(arena)])
@@ -45,15 +61,21 @@ def setup():
     dest.mkdir(parents=True,exist_ok=True)
     for corpus,sha in FROZEN.items():
         src = fixtures/(corpus+'.ndjson')
-        assert v.sha_file(src) == sha
+        assert src.is_file() and v.sha_file(src) == sha
         shutil.copy2(src,dest/src.name)
         assert v.sha_file(dest/src.name) == sha
     r.setup()
-    save({'base':v.BASE,'arena':v.ARENA,'inputs':FROZEN,
-          'source_commit':os.environ.get('GITHUB_SHA'),
-          'variants':list(VARIANTS),'build':'shared-baseline-PGO-then-fresh-finalist-PGO',
-          'screen':'complete frozen corpora; no prefixes'},'source.json')
+    source = {'base':v.BASE,'arena':v.ARENA,'inputs':FROZEN,
+              'historical_v92_inputs':HISTORICAL_V92,'fixture_set_id':fixture_id,
+              'changed_from_v92':FROZEN != HISTORICAL_V92,
+              'source_test_hashes':SOURCE_TEST_HASHES,
+              'source_commit':os.environ.get('GITHUB_SHA'),
+              'variants':list(VARIANTS),'build':'shared-baseline-PGO-then-fresh-finalist-PGO',
+              'screen':'complete frozen corpora; no prefixes'}
+    save(source,'source.json')
     print('V93_FROZEN_INPUTS=PASS',flush=True)
+    print('V93_FIXTURE_SET_ID='+fixture_id,flush=True)
+    print('V93_CHANGED_FROM_V92='+str(FROZEN != HISTORICAL_V92).lower(),flush=True)
 
 def build_search():
     # Train once on the frozen prelude, then use the same profile for every arm.
@@ -190,6 +212,9 @@ if __name__=='__main__':
         result=score(sample,['a'])['a']
         assert abs(result['geomean_delta_percent']+10)<1e-9
         assert result['max_regression_percent']<0
+        old_id=select_fixtures({'arena':v.ARENA,'inputs':HISTORICAL_V92,'source_test_hashes':SOURCE_TEST_HASHES})[1]
+        changed=dict(HISTORICAL_V92);changed['cedar']='75f512b4ab68319cdfaca5d53c6bff25a95a702567bbf293060df735498aaa24'
+        assert select_fixtures({'arena':v.ARENA,'inputs':changed,'source_test_hashes':SOURCE_TEST_HASHES})[1]!=old_id
         print('V93_TOURNAMENT_SELF_TEST=PASS',flush=True)
     else:
         main()
