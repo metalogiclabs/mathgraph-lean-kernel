@@ -1,0 +1,72 @@
+name: Prune memo v88 independent repeat and ablation
+on:
+  push:
+    branches: [experiment/prune-dm-repeat-ablation-v89]
+    paths:
+      - 'experiments/verify_prune_dm_ablation_v89.py'
+      - 'experiments/decide_prune_dm_repeat_v89.py'
+      - '.github/workflows/prune-dm-repeat-ablation-v89.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: prune-dm-repeat-ablation-v89
+  cancel-in-progress: false
+jobs:
+  experiment:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    env:
+      PYTHONOPTIMIZE: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Verify pinned Arena toolchain
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/v88/out
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/v88/arena
+          git -C /tmp/v88/arena checkout -q 91f376e4baacf2df0c478e7173bccb2a6adac5c5
+          cd /tmp/v88/arena
+          nix develop -c sh -c 'rustc --version; cargo --version'
+          nix shell 'github:NixOS/nixpkgs/0ad6f47ea4fe188f4bc8f0380f93ae8523337c6c#llvmPackages_21.llvm' -c llvm-profdata --version
+      - name: Freeze first-run evidence and check decision code
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 -m py_compile experiments/verify_prune_dm_ablation_v89.py experiments/decide_prune_dm_repeat_v89.py
+          python3 -B experiments/decide_prune_dm_repeat_v89.py --self-test
+          curl -fsSL --retry 3 --retry-all-errors -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' https://api.github.com/repos/metalogiclabs/mathgraph-lean-kernel/actions/artifacts/10036840243/zip -o /tmp/v88/out/first-run.zip
+          python3 - <<'PY'
+          import hashlib
+          from pathlib import Path
+          assert hashlib.sha256(Path('/tmp/v88/out/first-run.zip').read_bytes()).hexdigest() == '3e2bf2036962f99578eafa3cb0350006bda8884e1b6c82b3140ac4e310a0e4b3'
+          print('V89_FIRST_EVIDENCE_INTEGRITY=PASS')
+          PY
+      - name: Compile and test the unchanged frozen candidate
+        run: |
+          set -euo pipefail
+          cd /tmp/v88/arena
+          nix develop -c bash "$GITHUB_WORKSPACE/experiments/run_prune_dm_v88.sh" preflight
+      - name: Prove exact source ablation
+        run: |
+          set -euo pipefail
+          python3 -B experiments/verify_prune_dm_ablation_v89.py /tmp/v88
+      - name: Independent full-corpus replay and fresh-PGO wall time
+        run: |
+          set -euo pipefail
+          cd /tmp/v88/arena
+          nix develop -c bash "$GITHUB_WORKSPACE/experiments/run_prune_dm_v88.sh" benchmark |& tee /tmp/v88/out/summary.txt
+      - name: Adjudicate the independent repeat
+        run: |
+          set -euo pipefail
+          python3 -B experiments/decide_prune_dm_repeat_v89.py /tmp/v88
+      - name: Preserve evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prune-dm-v89-repeat-ablation
+          path: /tmp/v88/out/
+          if-no-files-found: warn
