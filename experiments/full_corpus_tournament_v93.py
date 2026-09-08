@@ -29,9 +29,13 @@ def setup():
     v.ROOT = r.ROOT = ROOT
     v.OUT = r.OUT = OUT
     r.EXPECTED = dict(FROZEN)
+    # The cache is optional. Rebuild missing fixtures, then require the exact
+    # previously observed bytes before any source is built or timed.
+    from rapid_kernel_v92_freeze import freeze
+    freeze()
     fixtures = ROOT/'fixtures'
     manifest = json.loads((fixtures/'manifest.json').read_text())
-    assert manifest['arena'] == v.ARENA and manifest['inputs'] == FROZEN
+    assert manifest['arena'] == v.ARENA and manifest['inputs'] == FROZEN, 'Frozen corpus mismatch'
     arena = ROOT/'arena'
     if not (arena/'.git').exists():
         v.call(['git','clone','-q','https://github.com/leanprover/lean-kernel-arena',str(arena)])
@@ -128,7 +132,6 @@ def qualify(winner,summary):
     result = scores['candidate']
     summary['qualification_score']=result
     good = result['geomean_delta_percent'] <= -2 and result['max_regression_percent'] <= 1
-    # A favorable median alone is not enough: require at least two favorable paired rounds.
     round_gains=[]
     for i in range(3):
         ds=[next(x['ratio'] for x in rows if x['pass']==i and x['corpus']==c) for c in CORPORA]
@@ -151,7 +154,6 @@ def main():
         names=[n for n in VARIANTS if n!='control']
         first,_=race(binaries,names,'round1',1,summary)
         ranked=sorted(names,key=lambda n:first[n]['geomean_delta_percent'])
-        # Full-corpus screening is a nomination, not a release result.
         finalists=[n for n in ranked if first[n]['geomean_delta_percent'] <= -0.5 and first[n]['max_regression_percent']<=2.5][:3]
         summary['ranking']=ranked
         summary['finalists']=finalists
@@ -185,8 +187,8 @@ if __name__=='__main__':
         assert len(VARIANTS)==8 and len(set(VARIANTS))==8
         assert r.transform(r.leaf.OLD,True,True).replace('        // Direct evaluation of selected leaves.','        // Leaf values need neither environment projection nor cache dispatch.')==r.leaf.NEW
         sample=[{'arm':'a','corpus':c,'ratio':0.9} for c in CORPORA]
-        assert abs(score(sample,['a'])['a']['geomean_delta_percent']+10)<1e-9
-        assert score(sample,['a'])['a']['max_regression_percent']<0
+        assert abs(score(sample,['a'])['geomean_delta_percent']+10)<1e-9
+        assert score(sample,['a'])['max_regression_percent']<0
         print('V93_TOURNAMENT_SELF_TEST=PASS',flush=True)
     else:
         main()
