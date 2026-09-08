@@ -2,7 +2,11 @@ name: Epoch invalidation v91
 on:
   push:
     branches: [experiment/epoch-invalidation-v91]
-    paths: ['.github/workflows/epoch-invalidation-v91.yml']
+    paths:
+      - '.github/workflows/epoch-invalidation-v91.yml'
+      - 'experiments/patch_epoch_v91.py'
+      - 'experiments/run_epoch_v91.sh'
+      - 'experiments/measure_prune_dm_v88.py'
   workflow_dispatch:
 permissions:
   contents: read
