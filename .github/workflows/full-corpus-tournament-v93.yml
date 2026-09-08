@@ -1,0 +1,53 @@
+name: Full-corpus kernel tournament v93
+on:
+  push:
+    branches: [experiment/full-corpus-tournament-v93]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: full-corpus-tournament-v93
+  cancel-in-progress: false
+jobs:
+  tournament:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      PYTHONOPTIMIZE: '0'
+      V93_ROOT: /tmp/v93
+      V89_ROOT: /tmp/v93
+      V92_ROOT: /tmp/v93
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify source and tournament rules
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python3 -B experiments/rapid_kernel_v92.py --self-test
+          python3 -B experiments/full_corpus_tournament_v93.py --self-test
+          python3 -m py_compile experiments/full_corpus_tournament_v93.py
+          git diff --exit-code -- src/
+      - uses: cachix/install-nix-action@v31
+        with:
+          enable_kvm: true
+      - uses: actions/cache/restore@v4
+        with:
+          path: /tmp/v93/fixtures
+          key: v92-frozen-inputs-91f376e4baacf2df0c478e7173bccb2a6adac5c5-v1
+          fail-on-cache-miss: true
+      - name: Full-corpus tournament and conditional qualification
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/v93/out
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/v93/toolchain-arena
+          git -C /tmp/v93/toolchain-arena checkout -q 91f376e4baacf2df0c478e7173bccb2a6adac5c5
+          test "$(git -C /tmp/v93/toolchain-arena rev-parse HEAD)" = 91f376e4baacf2df0c478e7173bccb2a6adac5c5
+          cd /tmp/v93/toolchain-arena
+          nix develop -c python3 -B "$GITHUB_WORKSPACE/experiments/full_corpus_tournament_v93.py" |& tee /tmp/v93/out/ci.log
+      - name: Preserve evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-corpus-tournament-v93
+          path: /tmp/v93/out/
+          if-no-files-found: warn
