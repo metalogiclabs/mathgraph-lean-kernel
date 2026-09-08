@@ -5,9 +5,10 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: full-corpus-tournament-v93
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   tournament:
     runs-on: ubuntu-24.04
@@ -26,16 +27,20 @@ jobs:
           python3 -B experiments/rapid_kernel_v92.py --self-test
           python3 -B experiments/rapid_kernel_v92_freeze.py --self-test
           python3 -B experiments/full_corpus_tournament_v93.py --self-test
-          python3 -m py_compile experiments/full_corpus_tournament_v93.py experiments/rapid_kernel_v92_freeze.py
+          python3 -B experiments/stable_tournament_v93.py --self-test
+          python3 -m py_compile experiments/full_corpus_tournament_v93.py experiments/rapid_kernel_v92_freeze.py experiments/stable_tournament_v93.py
           git diff --exit-code -- src/
+      - name: Restore exact archived corpus
+        uses: actions/download-artifact@v4
+        with:
+          name: full-corpus-tournament-v93-inputs
+          repository: metalogiclabs/mathgraph-lean-kernel
+          run-id: 34269495716
+          github-token: ${{ github.token }}
+          path: /tmp/v93/fixtures
       - uses: cachix/install-nix-action@v31
         with:
           enable_kvm: true
-      - uses: actions/cache@v4
-        with:
-          path: /tmp/v93/fixtures
-          key: v93-frozen-inputs-91f376e4baacf2df0c478e7173bccb2a6adac5c5-v1
-          save-always: true
       - name: Full-corpus tournament and conditional qualification
         run: |
           set -euo pipefail
@@ -44,7 +49,7 @@ jobs:
           git -C /tmp/v93/toolchain-arena checkout -q 91f376e4baacf2df0c478e7173bccb2a6adac5c5
           test "$(git -C /tmp/v93/toolchain-arena rev-parse HEAD)" = 91f376e4baacf2df0c478e7173bccb2a6adac5c5
           cd /tmp/v93/toolchain-arena
-          nix develop -c python3 -B "$GITHUB_WORKSPACE/experiments/full_corpus_tournament_v93.py" |& tee /tmp/v93/out/ci.log
+          nix develop -c python3 -B "$GITHUB_WORKSPACE/experiments/stable_tournament_v93.py" |& tee /tmp/v93/out/ci.log
       - name: Preserve evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -52,11 +57,3 @@ jobs:
           name: full-corpus-tournament-v93
           path: /tmp/v93/out/
           if-no-files-found: warn
-      - name: Preserve exact corpus bytes
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: full-corpus-tournament-v93-inputs
-          path: /tmp/v93/fixtures/
-          if-no-files-found: warn
-          compression-level: 1
