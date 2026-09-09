@@ -1,0 +1,30 @@
+name: Direct framed heldout v98
+on:
+  push:
+    paths:
+      - 'experiments/run_direct_framed_holdout_v98.py'
+      - '.github/workflows/direct-framed-holdout-v98.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run independent heldout qualification
+        run: python3 experiments/run_direct_framed_holdout_v98.py
+      - name: Preserve evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: direct-framed-holdout-v98
+          path: |
+            /tmp/v98-holdout/results.json
+            /tmp/v98-holdout/candidate-diff.txt
+            /tmp/v98-holdout/*-tests.log
+            /tmp/v98-holdout/*.out
+            /tmp/v98-holdout/*.err
+          if-no-files-found: warn
