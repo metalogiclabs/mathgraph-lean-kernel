@@ -37,7 +37,7 @@ cd "$ROOT/checker"
 rm -rf pgo
 RUSTFLAGS="-C target-cpu=native -Cprofile-generate=$ROOT/checker/pgo" cargo build --release --locked -q
 target/release/sokonanoda "$ROOT/config.json" < "$ROOT/arena/_build/tests/init-prelude.ndjson" >/dev/null
-llvm-profdata merge -o "$ROOT/checker/pgo/merged.profdata" "$ROOT/checker/pgo"
+cd "$ROOT/arena"\nnix develop -c llvm-profdata merge -o "$ROOT/checker/pgo/merged.profdata" "$ROOT/checker/pgo"\ncd "$ROOT/checker"
 RUSTFLAGS="-C target-cpu=native -Cprofile-use=$ROOT/checker/pgo/merged.profdata" cargo build --release --locked -q
 
 python3 - "$ROOT" <<'PY'
