@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: [current, upstream]
+        variant: [compact]
     env:
       V99_VARIANT: ${{ matrix.variant }}
     steps:
