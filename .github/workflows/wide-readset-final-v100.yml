@@ -1,0 +1,29 @@
+name: Wide read-set final qualification v100
+on:
+  push:
+    paths:
+      - 'experiments/run_wide_readset_final_v100.sh'
+      - '.github/workflows/wide-readset-final-v100.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run exact PGO semantic and con-leche qualification
+        run: bash experiments/run_wide_readset_final_v100.sh
+      - name: Preserve v100 final evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wide-readset-final-v100
+          path: |
+            /tmp/v100-final/small-gate.json
+            /tmp/v100-final/input-sha256.txt
+            /tmp/v100-final/results.json
+            /tmp/v100-final/out/
+          if-no-files-found: warn
