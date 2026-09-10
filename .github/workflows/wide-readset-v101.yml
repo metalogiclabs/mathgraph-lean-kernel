@@ -1,0 +1,26 @@
+name: Wide read-set quick gate v101
+on:
+  push:
+    paths:
+      - 'src/eval.rs'
+      - 'experiments/run_wide_readset_v101.sh'
+      - '.github/workflows/wide-readset-v101.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run exact PGO app-lam and con-leche gate
+        run: bash experiments/run_wide_readset_v101.sh
+      - name: Preserve v101 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wide-readset-v101
+          path: /tmp/v101-quick/out/
+          if-no-files-found: warn
