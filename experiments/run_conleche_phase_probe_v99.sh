@@ -3,6 +3,7 @@ set -euo pipefail
 
 CURRENT=08ddb26718c86213262943ca19ae8cf1b03fa922
 UPSTREAM=ceaabb593e830dd318bfefd1675be3142fad8eb7
+COMPACT=c54878290f5aacf57b540ce27dab388106250a7d
 ARENA=92fba121dcd26902a0193c40485b3140af95e898
 VARIANT=${V99_VARIANT:-current}
 ROOT="/tmp/v99-phase-${VARIANT}"
@@ -16,6 +17,10 @@ case "$VARIANT" in
   upstream)
     REPO=https://github.com/intgrah/sokonanoda
     REV=$UPSTREAM
+    ;;
+  compact)
+    REPO=https://github.com/metalogiclabs/mathgraph-lean-kernel
+    REV=$COMPACT
     ;;
   *)
     echo "unknown V99_VARIANT=$VARIANT" >&2
