@@ -49,34 +49,33 @@ enum ForceStep<'a> {
 
 const MAX_WIDE_USE_WORDS: usize = 8;
 
-fn collect_loose_uses<'t>(e: ExprPtr<'t>, depth: u32, out: &mut [u64]) {
-    match *e.as_ref() {
-        Expr::Var { dbj_idx, .. } => {
-            let i = u32::from(dbj_idx);
-            if i >= depth {
-                let loose = (i - depth) as usize;
-                let wi = loose / 64;
-                if let Some(word) = out.get_mut(wi) {
-                    *word |= 1u64 << (loose % 64);
-                }
-            }
-        }
-        Expr::App { fun, arg, .. } => {
-            collect_loose_uses(fun, depth, out);
-            collect_loose_uses(arg, depth, out);
-        }
-        Expr::Pi { binder_type, body, .. } | Expr::Lambda { binder_type, body, .. } => {
-            collect_loose_uses(binder_type, depth, out);
-            collect_loose_uses(body, depth + 1, out);
-        }
-        Expr::Let { data, .. } => {
-            collect_loose_uses(data.binder_type, depth, out);
-            collect_loose_uses(data.val, depth, out);
-            collect_loose_uses(data.body, depth + 1, out);
-        }
-        Expr::Proj { structure, .. } => collect_loose_uses(structure, depth, out),
-        Expr::Sort { .. } | Expr::Const { .. } | Expr::StringLit { .. } | Expr::NatLit { .. } => {}
+fn merge_use_words(mut a: Vec<u64>, b: Vec<u64>) -> Vec<u64> {
+    if a.len() < b.len() {
+        a.resize(b.len(), 0);
     }
+    for (x, y) in a.iter_mut().zip(b) {
+        *x |= y;
+    }
+    while matches!(a.last(), Some(0)) {
+        a.pop();
+    }
+    a
+}
+
+fn under_binder_words(mut words: Vec<u64>) -> Vec<u64> {
+    for i in 0..words.len() {
+        let hi = words.get(i + 1).copied().unwrap_or(0);
+        words[i] = (words[i] >> 1) | (hi << 63);
+    }
+    while matches!(words.last(), Some(0)) {
+        words.pop();
+    }
+    words
+}
+
+#[inline]
+fn wide_bit(words: &[u64], idx: usize) -> bool {
+    words.get(idx / 64).is_some_and(|w| ((w >> (idx % 64)) & 1) != 0)
 }
 
 impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
@@ -188,12 +187,40 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         if let Some(words) = self.tc_cache.wide_uses_cache.get(&e) {
             return Some(words.to_vec());
         }
-        let k = usize::from(e.num_loose_bvars());
-        if k > 64 * MAX_WIDE_USE_WORDS {
+        if usize::from(e.num_loose_bvars()) > 64 * MAX_WIDE_USE_WORDS {
             return None;
         }
-        let mut words = vec![0u64; (k + 63) / 64];
-        collect_loose_uses(e, 0, &mut words);
+        let node = *self.ctx.read_expr_ref(e);
+        let mut words = match node {
+            Expr::Var { dbj_idx, .. } => {
+                let i = usize::from(dbj_idx);
+                if i >= 64 * MAX_WIDE_USE_WORDS {
+                    return None;
+                }
+                let mut w = vec![0u64; i / 64 + 1];
+                w[i / 64] = 1u64 << (i % 64);
+                w
+            }
+            Expr::App { fun, arg, .. } => {
+                let a = self.exact_wide_uses(fun)?;
+                let b = self.exact_wide_uses(arg)?;
+                merge_use_words(a, b)
+            }
+            Expr::Pi { binder_type, body, .. } | Expr::Lambda { binder_type, body, .. } => {
+                let d = self.exact_wide_uses(binder_type)?;
+                let b = under_binder_words(self.exact_wide_uses(body)?);
+                merge_use_words(d, b)
+            }
+            Expr::Let { data, .. } => {
+                let d = *data;
+                let t = self.exact_wide_uses(d.binder_type)?;
+                let v = self.exact_wide_uses(d.val)?;
+                let b = under_binder_words(self.exact_wide_uses(d.body)?);
+                merge_use_words(merge_use_words(t, v), b)
+            }
+            Expr::Proj { structure, .. } => self.exact_wide_uses(structure)?,
+            Expr::Sort { .. } | Expr::Const { .. } | Expr::StringLit { .. } | Expr::NatLit { .. } => Vec::new(),
+        };
         while matches!(words.last(), Some(0)) {
             words.pop();
         }
@@ -205,16 +232,51 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         if words.is_empty() {
             return self.lsub_base(e.lsub());
         }
+        let last = *words.last().unwrap();
+        let highest = (words.len() - 1) * 64 + (63 - last.leading_zeros() as usize);
         let mut slots = Vec::with_capacity(words.iter().map(|w| w.count_ones() as usize).sum());
-        for (wi, &word) in words.iter().enumerate() {
-            let mut bits = word;
-            while bits != 0 {
-                let bi = bits.trailing_zeros() as usize;
-                bits &= bits - 1;
-                let idx = wi * 64 + bi;
-                let Ok(idx) = u16::try_from(idx) else { return e };
-                let Some(v) = e.lookup(idx) else { return e };
-                slots.push(v);
+        let mut cur = e;
+        let mut offset = 0usize;
+
+        while offset <= highest {
+            match cur {
+                value::Env::Nil { .. } => return e,
+                value::Env::Cons { v, parent, .. } => {
+                    if wide_bit(words, offset) {
+                        slots.push(*v);
+                    }
+                    offset += 1;
+                    cur = parent;
+                }
+                value::Env::Framed { mask, slots: frame_slots, .. } => {
+                    for j in 0..=highest - offset {
+                        if !wide_bit(words, offset + j) {
+                            continue;
+                        }
+                        if j >= 64 || ((*mask >> j) & 1) == 0 {
+                            return e;
+                        }
+                        let below = if j == 0 { 0 } else { *mask & ((1u64 << j) - 1) };
+                        slots.push(frame_slots[below.count_ones() as usize]);
+                    }
+                    offset = highest + 1;
+                }
+                value::Env::WideFramed { words: frame_words, slots: frame_slots, .. } => {
+                    for j in 0..=highest - offset {
+                        if !wide_bit(words, offset + j) {
+                            continue;
+                        }
+                        if !wide_bit(frame_words, j) {
+                            return e;
+                        }
+                        let wi = j / 64;
+                        let bi = j % 64;
+                        let before: usize = frame_words[..wi].iter().map(|w| w.count_ones() as usize).sum();
+                        let below = if bi == 0 { 0 } else { frame_words[wi] & ((1u64 << bi) - 1) };
+                        slots.push(frame_slots[before + below.count_ones() as usize]);
+                    }
+                    offset = highest + 1;
+                }
             }
         }
         self.intern_wide_frame(words, &slots, e.lsub())
