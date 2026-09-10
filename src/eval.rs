@@ -47,6 +47,38 @@ enum ForceStep<'a> {
     Done,
 }
 
+const MAX_WIDE_USE_WORDS: usize = 8;
+
+fn collect_loose_uses<'t>(e: ExprPtr<'t>, depth: u32, out: &mut [u64]) {
+    match *e.as_ref() {
+        Expr::Var { dbj_idx, .. } => {
+            let i = u32::from(dbj_idx);
+            if i >= depth {
+                let loose = (i - depth) as usize;
+                let wi = loose / 64;
+                if let Some(word) = out.get_mut(wi) {
+                    *word |= 1u64 << (loose % 64);
+                }
+            }
+        }
+        Expr::App { fun, arg, .. } => {
+            collect_loose_uses(fun, depth, out);
+            collect_loose_uses(arg, depth, out);
+        }
+        Expr::Pi { binder_type, body, .. } | Expr::Lambda { binder_type, body, .. } => {
+            collect_loose_uses(binder_type, depth, out);
+            collect_loose_uses(body, depth + 1, out);
+        }
+        Expr::Let { data, .. } => {
+            collect_loose_uses(data.binder_type, depth, out);
+            collect_loose_uses(data.val, depth, out);
+            collect_loose_uses(data.body, depth + 1, out);
+        }
+        Expr::Proj { structure, .. } => collect_loose_uses(structure, depth, out),
+        Expr::Sort { .. } | Expr::Const { .. } | Expr::StringLit { .. } | Expr::NatLit { .. } => {}
+    }
+}
+
 impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
     #[inline]
     pub(crate) fn mk_bvar_hc(&mut self, level: u32, ty: V<'t>) -> V<'t> {
@@ -110,6 +142,84 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         e
     }
 
+    fn intern_wide_frame(
+        &mut self,
+        words: &[u64],
+        slots: &[V<'t>],
+        lsub: Option<&'t value::LevelSub<'t>>,
+    ) -> E<'t> {
+        debug_assert!(!words.is_empty());
+        debug_assert_ne!(*words.last().unwrap(), 0);
+        let lsub_addr = lsub.map_or(0, |l| l as *const value::LevelSub<'t> as usize);
+        let mut hash = (lsub_addr as u64) ^ 0xD1B5_4A32_D192_ED03;
+        for &w in words {
+            hash = hash.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(w);
+        }
+        for &v in slots {
+            hash = hash
+                .wrapping_mul(0xD6E8_FEB8_6659_FD93)
+                .wrapping_add(v as *const Value<'t> as usize as u64);
+        }
+        if let Some(e) = self.tc_cache.frames.find(hash, |e: &E<'t>| match e {
+            value::Env::WideFramed { words: ew, slots: es, lsub: el, .. } =>
+                el.map_or(0, |l| l as *const value::LevelSub<'t> as usize) == lsub_addr
+                    && *ew == words
+                    && es.len() == slots.len()
+                    && es.iter().zip(slots).all(|(a, b)| std::ptr::eq(*a, *b)),
+            _ => false,
+        }) {
+            return e;
+        }
+        let last = *words.last().unwrap();
+        let len = ((words.len() - 1) * 64 + (64 - last.leading_zeros() as usize)) as u32;
+        let e: E<'t> = self.arena.alloc(value::Env::WideFramed {
+            words: self.arena.alloc_slice_copy(words),
+            slots: self.arena.alloc_slice_copy(slots),
+            lsub,
+            hash,
+            len,
+            prune: std::cell::Cell::new((0, None)),
+        });
+        self.tc_cache.frames.insert_unique(hash, e, |e| e.get_hash());
+        e
+    }
+
+    fn exact_wide_uses(&mut self, e: ExprPtr<'t>) -> Option<Vec<u64>> {
+        if let Some(words) = self.tc_cache.wide_uses_cache.get(&e) {
+            return Some(words.to_vec());
+        }
+        let k = usize::from(e.num_loose_bvars());
+        if k > 64 * MAX_WIDE_USE_WORDS {
+            return None;
+        }
+        let mut words = vec![0u64; (k + 63) / 64];
+        collect_loose_uses(e, 0, &mut words);
+        while matches!(words.last(), Some(0)) {
+            words.pop();
+        }
+        self.tc_cache.wide_uses_cache.insert(e, words.clone().into_boxed_slice());
+        Some(words)
+    }
+
+    fn prune_env_wide(&mut self, e: E<'t>, words: &[u64]) -> E<'t> {
+        if words.is_empty() {
+            return self.lsub_base(e.lsub());
+        }
+        let mut slots = Vec::with_capacity(words.iter().map(|w| w.count_ones() as usize).sum());
+        for (wi, &word) in words.iter().enumerate() {
+            let mut bits = word;
+            while bits != 0 {
+                let bi = bits.trailing_zeros() as usize;
+                bits &= bits - 1;
+                let idx = wi * 64 + bi;
+                let Ok(idx) = u16::try_from(idx) else { return e };
+                let Some(v) = e.lookup(idx) else { return e };
+                slots.push(v);
+            }
+        }
+        self.intern_wide_frame(words, &slots, e.lsub())
+    }
+
     fn lsub_base(&mut self, lsub: Option<&'t value::LevelSub<'t>>) -> E<'t> {
         let Some(ls) = lsub else { return self.tc_cache.empty_env };
         let key = ls as *const value::LevelSub<'t> as usize;
@@ -159,7 +269,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                     }
                 }
             }
-            value::Env::Cons { prune, .. } => {
+            value::Env::Cons { prune, .. } | value::Env::WideFramed { prune, .. } => {
                 let (m, r) = prune.get();
                 if m == mask {
                     if let Some(r) = r {
@@ -175,8 +285,9 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         if ent.0 == e as *const value::Env<'t> as usize && ent.1 == mask {
             if let Some(hit) = ent.2 {
                 match e {
-                    value::Env::Cons { prune, .. } | value::Env::Framed { prune, .. } =>
-                        prune.set((mask, Some(hit))),
+                    value::Env::Cons { prune, .. }
+                    | value::Env::Framed { prune, .. }
+                    | value::Env::WideFramed { prune, .. } => prune.set((mask, Some(hit))),
                     value::Env::Nil { .. } => {}
                 }
                 return hit;
@@ -215,6 +326,25 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                     }
                     break;
                 }
+                value::Env::WideFramed { words, slots, .. } => {
+                    let fmask = words.first().copied().unwrap_or(0);
+                    let limit = 64 - consumed;
+                    let bound = if limit >= 64 { u64::MAX } else { (1u64 << limit) - 1 };
+                    let m2 = rem & fmask & bound;
+                    out_mask |= m2 << consumed;
+                    let mut sel = select_ranks(m2, fmask);
+                    while sel != 0 {
+                        let i = sel.trailing_zeros() as usize;
+                        sel &= sel - 1;
+                        let sv = slots[i];
+                        buf[n].write(sv);
+                        slots_hash = slots_hash
+                            .wrapping_mul(0x9E3779B97F4A7C15)
+                            .wrapping_add(sv as *const Value<'t> as usize as u64);
+                        n += 1;
+                    }
+                    break;
+                }
                 value::Env::Cons { v, parent, .. } => {
                     if rem & 1 != 0 {
                         buf[n].write(*v);
@@ -239,7 +369,9 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         let r = self.intern_frame(hash, out_mask, slots, lsub);
         self.tc_cache.prune_dm[slot] = (e as *const value::Env<'t> as usize, mask, Some(r));
         match e {
-            value::Env::Cons { prune, .. } | value::Env::Framed { prune, .. } => prune.set((mask, Some(r))),
+            value::Env::Cons { prune, .. }
+            | value::Env::Framed { prune, .. }
+            | value::Env::WideFramed { prune, .. } => prune.set((mask, Some(r))),
             value::Env::Nil { .. } => {}
         }
         r
@@ -252,7 +384,14 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
             return self.lsub_base(env.lsub());
         }
         if k > 64 {
-            return env;
+            let ck = (env as *const value::Env<'t> as usize, e);
+            if let Some(r) = self.tc_cache.wide_prune_cache.get(&ck) {
+                return *r;
+            }
+            let Some(words) = self.exact_wide_uses(e) else { return env };
+            let r = self.prune_env_wide(env, &words);
+            self.tc_cache.wide_prune_cache.insert(ck, r);
+            return r;
         }
         self.prune_env(env, e.as_ref().fv_mask())
     }
