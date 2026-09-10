@@ -1,0 +1,30 @@
+name: Con-leche phase probe v99
+
+on:
+  push:
+    paths:
+      - 'experiments/run_conleche_phase_probe_v99.sh'
+      - '.github/workflows/conleche-phase-probe-v99.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Probe parse/check phases and upstream
+        run: bash experiments/run_conleche_phase_probe_v99.sh
+      - name: Preserve phase evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: conleche-phase-v99
+          path: |
+            /tmp/v99-phase/phase.json
+            /tmp/v99-phase/out/
+          if-no-files-found: warn
