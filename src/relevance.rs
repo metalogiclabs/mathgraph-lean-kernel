@@ -107,15 +107,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                         prop_result |= 1u64 << n;
                     }
                 }
-                for k in (0..n).rev() {
-                    let Some(s) = dom[k] else { break };
-                    let im = self.ctx.imax(s, r);
-                    r = self.ctx.simplify(im);
-                    result_known |= 1u64 << k;
-                    if self.ctx.is_zero(r) {
-                        prop_result |= 1u64 << k;
-                    }
-                }
+                let _ = r;
             }
         }
 
