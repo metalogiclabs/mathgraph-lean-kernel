@@ -1127,6 +1127,8 @@ pub struct TcCache<'a, 't> {
     pub(crate) lsub_bases: FxHashMap<usize, E<'a>>,
     pub(crate) level_subs: FxHashMap<(LevelsPtr<'t>, LevelsPtr<'t>), &'a crate::value::LevelSub<'a>>,
     pub(crate) prune_dm: Box<[(usize, u64, Option<E<'a>>); PRUNE_DM_LEN]>,
+    pub(crate) wide_uses_cache: FxHashMap<ExprPtr<'t>, Box<[u64]>>,
+    pub(crate) wide_prune_cache: FxHashMap<(usize, ExprPtr<'t>), E<'a>>,
     pub(crate) rigid_hc: FxHashMap<(u8, u64, u64, usize), V<'a>>,
     pub(crate) unfold_hc: FxHashMap<(usize, usize), V<'a>>,
     pub(crate) iota_stuck: FxHashSet<usize>,
@@ -1175,6 +1177,8 @@ impl<'a, 't> TcCache<'a, 't> {
             lsub_bases: small_fx_hash_map(),
             level_subs: small_fx_hash_map(),
             prune_dm: Box::new([(0, 0, None); PRUNE_DM_LEN]),
+            wide_uses_cache: session_small_fx_hash_map(),
+            wide_prune_cache: session_fx_hash_map(),
             rigid_hc: session_fx_hash_map(),
             unfold_hc: session_fx_hash_map(),
             iota_stuck: session_small_fx_hash_set(),
@@ -1203,6 +1207,8 @@ impl<'a, 't> TcCache<'a, 't> {
         self.lsub_bases.clear();
         self.level_subs.clear();
         self.prune_dm.fill((0, 0, None));
+        self.wide_uses_cache.clear();
+        self.wide_prune_cache.clear();
         self.type_cache.clear();
         self.thunk_hc.clear();
         self.quote_cache.clear();
@@ -1250,6 +1256,8 @@ impl<'a, 't> TcCache<'a, 't> {
         shrink_map(&mut self.lsub_bases);
         shrink_map(&mut self.level_subs);
         self.prune_dm.fill((0, 0, None));
+        shrink_map(&mut self.wide_uses_cache);
+        shrink_map(&mut self.wide_prune_cache);
         shrink_map(&mut self.type_cache);
         shrink_map(&mut self.thunk_hc);
         shrink_map(&mut self.quote_cache);
