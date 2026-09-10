@@ -1,0 +1,18 @@
+name: Arena six-test gate v99
+on:
+  push:
+    paths:
+      - 'experiments/run_arena_six_gate_v99.sh'
+      - '.github/workflows/arena-six-gate-v99.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Check six new Arena certificates
+        run: bash experiments/run_arena_six_gate_v99.sh
