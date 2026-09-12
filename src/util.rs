@@ -1058,6 +1058,8 @@ pub struct TcCache<'a, 't> {
     pub(crate) open_eval_seen: FxHashSet<ExprPtr<'t>>,
     pub(crate) bvar_hc: FxHashMap<(u32, usize), V<'a>>,
     pub(crate) spine_hc: FxHashMap<(usize, u64), S<'a>>,
+    pub(crate) app_hc: FxHashMap<(usize, usize), V<'a>>,
+    pub(crate) env_hc: FxHashMap<(usize, usize), E<'a>>,
     pub(crate) lam_hc: FxHashMap<(ExprPtr<'t>, usize, ExprPtr<'t>), V<'a>>,
     pub(crate) pi_hc: FxHashMap<(usize, usize, ExprPtr<'t>, usize), V<'a>>,
     pub(crate) type_cache: FxHashMap<(usize, ExprPtr<'t>), crate::infer::CachedType<'a>>,
@@ -1108,6 +1110,8 @@ impl<'a, 't> TcCache<'a, 't> {
             open_eval_seen: small_fx_hash_set(),
             bvar_hc: session_small_fx_hash_map(),
             spine_hc: session_fx_hash_map(),
+            app_hc: session_fx_hash_map(),
+            env_hc: session_fx_hash_map(),
             lam_hc: session_small_fx_hash_map(),
             pi_hc: session_small_fx_hash_map(),
             type_cache: session_fx_hash_map(),
@@ -1156,6 +1160,8 @@ impl<'a, 't> TcCache<'a, 't> {
         self.open_eval_seen.clear();
         self.bvar_hc.clear();
         self.spine_hc.clear();
+        self.app_hc.clear();
+        self.env_hc.clear();
         self.lam_hc.clear();
         self.pi_hc.clear();
         self.rigid_hc.clear();
@@ -1201,6 +1207,8 @@ impl<'a, 't> TcCache<'a, 't> {
         shrink_set(&mut self.open_eval_seen);
         shrink_map(&mut self.bvar_hc);
         shrink_map(&mut self.spine_hc);
+        shrink_map(&mut self.app_hc);
+        shrink_map(&mut self.env_hc);
         shrink_map(&mut self.lam_hc);
         shrink_map(&mut self.pi_hc);
         shrink_map(&mut self.rigid_hc);

@@ -6,7 +6,7 @@ use crate::value::E;
 
 use InferFlag::*;
 
-const SESSION_BUDGET: usize = 2_621_440;
+const SESSION_BUDGET: usize = 16 * 1024 * 1024;
 
 const CHUNK_SIZE: usize = 64;
 

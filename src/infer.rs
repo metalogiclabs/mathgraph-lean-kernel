@@ -123,7 +123,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 if flag == Check {
                     self.infer_sort_of_v(flag, depth, env, ctx, binder_type);
                     let fresh = self.mk_bvar_hc(depth, dom);
-                    let env2 = value::env_extend(self.arena, env, fresh);
+                    let env2 = self.env_extend(env, fresh);
                     let ctx2 = value::ctx_extend(self.arena, ctx, dom);
                     body_ty = Some(self.infer_value(flag, depth + 1, env2, ctx2, body));
                 }
@@ -143,7 +143,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 let l1 = self.infer_sort_of_v(flag, depth, env, ctx, binder_type);
                 let dom = self.arg_value(depth, env, binder_type);
                 let fresh = self.mk_bvar_hc(depth, dom);
-                let env2 = value::env_extend(self.arena, env, fresh);
+                let env2 = self.env_extend(env, fresh);
                 let ctx2 = value::ctx_extend(self.arena, ctx, dom);
                 let l2 = self.infer_sort_of_v(flag, depth + 1, env2, ctx2, body);
                 let im = self.ctx.imax(l1, l2);
@@ -158,7 +158,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                     assert!(self.conv_types_at(depth, dom, val_ty), "let def_eq failed");
                 }
                 let slot = self.arg_value(depth, env, val);
-                let env2 = value::env_extend(self.arena, env, slot);
+                let env2 = self.env_extend(env, slot);
                 let ctx2 = value::ctx_extend(self.arena, ctx, dom);
                 self.infer_value(flag, depth, env2, ctx2, body)
             }

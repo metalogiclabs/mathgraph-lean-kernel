@@ -541,7 +541,7 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
                 indices.push(binder_type);
             }
             let fresh = self.mk_bvar_hc(depth, domain);
-            env = crate::value::env_extend(self.arena, env, fresh);
+            env = self.env_extend(env, fresh);
             cur = self.apply_closure(depth + 1, body, fresh, Some(domain));
             depth += 1;
             i += 1;
@@ -1088,7 +1088,7 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
             let expected = self.eval(depth, env, st.local_params[i]);
             assert!(self.def_eq_at(depth, domain, expected), "def_eq failed");
             let fresh = self.mk_bvar_hc(depth, domain);
-            env = crate::value::env_extend(self.arena, env, fresh);
+            env = self.env_extend(env, fresh);
             cur = self.apply_closure(depth + 1, body, fresh, Some(domain));
             depth += 1;
         }

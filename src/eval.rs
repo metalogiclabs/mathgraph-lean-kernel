@@ -56,6 +56,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         }
         let empty = self.empty_spine();
         let v = value::mk_bvar_with_empty(self.arena, level, ty, empty);
+        v.mark_canonical();
         self.tc_cache.bvar_hc.insert(key, v);
         v
     }
@@ -77,6 +78,14 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         }
         self.tc_cache.unfold_hc.insert(key, u);
         u
+    }
+
+    pub(crate) fn env_extend(&mut self, parent: E<'t>, v: V<'t>) -> E<'t> {
+        let key = (parent as *const value::Env<'t> as usize, v as *const Value<'t> as usize);
+        match self.tc_cache.env_hc.entry(key) {
+            Entry::Occupied(o) => o.get(),
+            Entry::Vacant(slot) => slot.insert(value::env_extend(self.arena, parent, v)),
+        }
     }
 
     fn intern_frame(&mut self, hash: u64, mask: u64, slots: &[V<'t>], lsub: Option<&'t value::LevelSub<'t>>) -> E<'t> {
@@ -604,15 +613,12 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                         }
                         _ => self.eval(depth, env, first_fun),
                     };
-                    if let Value::Rigid { head, spine, .. } = f_val {
+                    if let Value::Rigid { head, .. } = f_val {
                         let head_copy = *head;
-                        let head_spine = *spine;
                         let is_nat_ctor = nat_ext && matches!(head_copy, RigidHead::Ctor(_, _));
                         if !is_nat_ctor {
                             for _ in 0..count {
-                                let a = self.canonicalize_for_spine(result);
-                                let ns = self.spine_snoc_hc(head_spine, Elim::app(a));
-                                result = self.mk_rigid_hc(head_copy, ns);
+                                result = self.neutral_app(f_val, result);
                             }
                             return result;
                         }
@@ -648,14 +654,11 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                         last_f_val = Some(v);
                         v
                     };
-                    if let Value::Rigid { head, spine, .. } = f_val {
+                    if let Value::Rigid { head, .. } = f_val {
                         let head_copy = *head;
                         let is_nat_ctor = nat_ext && matches!(head_copy, RigidHead::Ctor(_, _));
                         if !is_nat_ctor {
-                            let sp = *spine;
-                            let a = self.canonicalize_for_spine(result);
-                            let ns = self.spine_snoc_hc(sp, Elim::app(a));
-                            result = self.mk_rigid_hc(head_copy, ns);
+                            result = self.neutral_app(f_val, result);
                             continue;
                         }
                     }
@@ -668,7 +671,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
             if let Value::Lam { body: clo, .. } = f {
                 let clo_env = clo.env;
                 let clo_body = clo.body;
-                let new_env = value::env_extend(self.arena, clo_env, a);
+                let new_env = self.env_extend(clo_env, a);
                 return self.eval(depth, new_env, clo_body);
             }
             return self.apply(depth, f, a);
@@ -709,7 +712,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 let mut cursor = e;
                 while let Expr::Let { data: &crate::expr::LetData { val, body, .. }, .. } = self.ctx.read_expr(cursor) {
                     let vv = self.eval(depth, env, val);
-                    env = value::env_extend(self.arena, env, vv);
+                    env = self.env_extend(env, vv);
                     cursor = body;
                 }
                 self.eval(depth, env, cursor)
@@ -756,6 +759,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 value::mk_rigid_head_with_empty(self.arena, RigidHead::Inductive(name, levels), empty),
             ConstKind::Axiom => value::mk_rigid_head_with_empty(self.arena, RigidHead::Axiom(name, levels), empty),
         };
+        v.mark_canonical();
         self.tc_cache.const_head_value_cache.insert((name, levels), v);
         v
     }
@@ -829,13 +833,40 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         }
     }
 
+    fn neutral_app(&mut self, f: V<'t>, a: V<'t>) -> V<'t> {
+        let f = self.canonicalize_for_spine(f);
+        let a = self.canonicalize_for_spine(a);
+        let key = (f as *const Value<'t> as usize, a as *const Value<'t> as usize);
+        match self.tc_cache.app_hc.entry(key) {
+            Entry::Occupied(o) => o.get(),
+            Entry::Vacant(slot) => {
+                let (v, spine) = match f {
+                    Value::Rigid { head, spine, .. } => {
+                        let spine = value::spine_snoc(self.arena, spine, Elim::app(a));
+                        (value::mk_rigid(self.arena, *head, spine), spine)
+                    }
+                    Value::Unfold { head, spine, head_value, .. } => {
+                        let spine = value::spine_snoc(self.arena, spine, Elim::app(a));
+                        (value::mk_unfold(self.arena, head.name, head.levels, spine, head_value), spine)
+                    }
+                    _ => unreachable!(),
+                };
+                // Both inputs have passed canonicalization. Literal values do
+                // not have a canonical flag, but are interned by content there.
+                spine.mark_canonical();
+                v.mark_canonical();
+                slot.insert(v)
+            }
+        }
+    }
+
     #[inline]
     pub(crate) fn apply(&mut self, depth: u32, f: V<'t>, a: V<'t>) -> V<'t> {
         match f {
             Value::Lam { body: clo, .. } => {
                 let clo_env = clo.env;
                 let clo_body = clo.body;
-                let env = value::env_extend(self.arena, clo_env, a);
+                let env = self.env_extend(clo_env, a);
                 self.eval(depth, env, clo_body)
             }
             Value::Rigid { head, spine, .. } => {
@@ -848,9 +879,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                         }
                     }
                 }
-                let a = self.canonicalize_for_spine(a);
-                let new_spine = self.spine_snoc_hc(spine, Elim::app(a));
-                self.mk_rigid_hc(head_copy, new_spine)
+                self.neutral_app(f, a)
             }
             Value::Unfold { head, spine, head_value, .. } => {
                 let head = *head;
@@ -865,9 +894,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                     }
                     return self.mk_unfold_hc(head.name, head.levels, new_spine, head_value);
                 }
-                let a = self.canonicalize_for_spine(a);
-                let new_spine = self.spine_snoc_hc(spine, Elim::app(a));
-                self.mk_unfold_hc(head.name, head.levels, new_spine, head_value)
+                self.neutral_app(f, a)
             }
             _ => panic!("apply: ill-typed application"),
         }
@@ -884,12 +911,12 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 i += 1;
                 continue;
             };
-            let mut env = value::env_extend(self.arena, clo.env, args[i]);
+            let mut env = self.env_extend(clo.env, args[i]);
             let mut body = clo.body;
             i += 1;
             while i < args.len() {
                 let Expr::Lambda { body: inner, .. } = self.ctx.read_expr(body) else { break };
-                env = value::env_extend(self.arena, env, args[i]);
+                env = self.env_extend(env, args[i]);
                 body = inner;
                 i += 1;
             }
@@ -899,7 +926,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
     }
 
     pub(crate) fn apply_closure(&mut self, depth: u32, clo: &Closure<'t>, v: V<'t>, binder_ty: Option<V<'t>>) -> V<'t> {
-        let env = value::env_extend(self.arena, clo.env, v);
+        let env = self.env_extend(clo.env, v);
         match clo.ctx {
             None => self.eval(depth, env, clo.body),
             Some(clo_ctx) => {
