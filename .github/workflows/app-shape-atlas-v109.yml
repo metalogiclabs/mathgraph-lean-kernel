@@ -1,0 +1,34 @@
+name: App shape atlas v109
+
+on:
+  push:
+    branches:
+      - experiment/app-shape-atlas-v109
+    paths:
+      - 'scripts/apply_bounded_sparse_v105.py'
+      - 'scripts/apply_sparse_admission_census_v107.py'
+      - 'scripts/apply_sparse_feature_atlas_v108.py'
+      - 'scripts/apply_app_shape_atlas_v109.py'
+      - 'experiments/run_app_shape_atlas_v109.sh'
+      - '.github/workflows/app-shape-atlas-v109.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  atlas:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run app shape atlas
+        run: bash experiments/run_app_shape_atlas_v109.sh
+      - name: Preserve v109 atlas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-shape-atlas-v109
+          path: /tmp/app-shape-atlas-v109/out/
+          if-no-files-found: warn
