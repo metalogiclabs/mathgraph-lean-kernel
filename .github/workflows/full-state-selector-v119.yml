@@ -1,0 +1,41 @@
+name: Full-state boundary selector v119
+
+on:
+  push:
+    branches:
+      - experiment/full-state-selector-v119
+    paths:
+      - 'scripts/apply_full_state_selector_v119.py'
+      - 'experiments/run_full_state_selector_v119_one.sh'
+      - '.github/workflows/full-state-selector-v119.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  selector:
+    strategy:
+      fail-fast: false
+      matrix:
+        workload: [mathlib, con-leche]
+        threshold: [0, 100, 250, 500, 1000, 2000]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      V119_WORKLOAD: ${{ matrix.workload }}
+      V119_THRESHOLD: ${{ matrix.threshold }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run isolated V119 cell
+        run: bash experiments/run_full_state_selector_v119_one.sh
+      - name: Preserve V119 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v119-${{ matrix.workload }}-${{ matrix.threshold }}
+          path: /tmp/full-state-v119-${{ matrix.workload }}-${{ matrix.threshold }}/report/
+          if-no-files-found: warn
