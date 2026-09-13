@@ -1,0 +1,30 @@
+name: Upstream delta v115
+
+on:
+  push:
+    branches:
+      - experiment/upstream-rebase-v114
+    paths:
+      - 'experiments/run_upstream_delta_v115.sh'
+      - '.github/workflows/upstream-delta-v115.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  delta:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run upstream delta
+        run: bash experiments/run_upstream_delta_v115.sh
+      - name: Preserve v115 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: upstream-delta-v115
+          path: /tmp/upstream-delta-v115/out/
+          if-no-files-found: warn
