@@ -65,7 +65,8 @@ for label, old, new in [
 ]:
     c = replace_once(c, old, new, label)
 
-anchor = """pub(crate) fn ignores_binder(body: ExprPtr<'_>) -> bool {
+anchor = """#[inline]
+pub(crate) fn ignores_binder(body: ExprPtr<'_>) -> bool {
 """
 helpers = """#[inline]
 pub(crate) fn pack_boundary(loose: u16, var_mass: u8, depth: u8, app_spine: u8) -> u32 {
@@ -258,6 +259,104 @@ new = """        let hash = hash64!(PROJ_HASH, ty_name, idx, structure);
         let boundary = crate::expr::pack_boundary(loose, var_mass, depth, 0);
         self.alloc_expr(Expr::Proj { ty_name, idx, structure, fv_mask, boundary, hash })"""
 c = replace_once(c, old, new, "mk_proj")
+
+p.write_text(c)
+
+# parser.rs: the export parser constructs expressions directly rather than
+# through TcCtx::mk_*; compose the same boundary state there.
+p = Path("src/parser.rs")
+c = p.read_text()
+
+old = """        let fv_mask = fun_mask | arg_mask;
+        let nlb = fun.num_loose_bvars().max(arg.num_loose_bvars());
+        self.push_expr(idx, Expr::App { fun, arg, fv_mask, hash }, nlb, fv_mask);"""
+new = """        let fv_mask = fun_mask | arg_mask;
+        let nlb = fun.num_loose_bvars().max(arg.num_loose_bvars());
+        let var_mass = fun.as_ref().boundary_var_mass().saturating_add(arg.as_ref().boundary_var_mass());
+        let depth = 1u8.saturating_add(fun.as_ref().boundary_depth().max(arg.as_ref().boundary_depth())).min(15);
+        let app_spine = 1u8.saturating_add(fun.as_ref().boundary_app_spine()).min(15);
+        let boundary = crate::expr::pack_boundary(nlb, var_mass, depth, app_spine);
+        self.push_expr(idx, Expr::App { fun, arg, fv_mask, boundary, hash }, nlb, fv_mask);"""
+c = replace_once(c, old, new, "parser app")
+
+old = """        let fv_mask = binder_type_mask | body_mask;
+        let nlb = binder_type.num_loose_bvars().max(body.num_loose_bvars().saturating_sub(1));
+        self.push_expr(
+            idx,
+            Expr::Lambda { binder_name, binder_style: binder_info, binder_type, body, fv_mask, hash },"""
+new = """        let fv_mask = binder_type_mask | body_mask;
+        let nlb = binder_type.num_loose_bvars().max(body.num_loose_bvars().saturating_sub(1));
+        let var_mass = binder_type.as_ref().boundary_var_mass().saturating_add(body.as_ref().boundary_var_mass());
+        let depth = 1u8.saturating_add(binder_type.as_ref().boundary_depth().max(body.as_ref().boundary_depth())).min(15);
+        let boundary = crate::expr::pack_boundary(nlb, var_mass, depth, 0);
+        self.push_expr(
+            idx,
+            Expr::Lambda { binder_name, binder_style: binder_info, binder_type, body, fv_mask, boundary, hash },"""
+c = replace_once(c, old, new, "parser lambda")
+
+old = """        let fv_mask = binder_type_mask | body_mask;
+        let nlb = binder_type.num_loose_bvars().max(body.num_loose_bvars().saturating_sub(1));
+        self.push_expr(
+            idx,
+            Expr::Pi { binder_name, binder_style: binder_info, binder_type, body, fv_mask, hash },"""
+new = """        let fv_mask = binder_type_mask | body_mask;
+        let nlb = binder_type.num_loose_bvars().max(body.num_loose_bvars().saturating_sub(1));
+        let var_mass = binder_type.as_ref().boundary_var_mass().saturating_add(body.as_ref().boundary_var_mass());
+        let depth = 1u8.saturating_add(binder_type.as_ref().boundary_depth().max(body.as_ref().boundary_depth())).min(15);
+        let boundary = crate::expr::pack_boundary(nlb, var_mass, depth, 0);
+        self.push_expr(
+            idx,
+            Expr::Pi { binder_name, binder_style: binder_info, binder_type, body, fv_mask, boundary, hash },"""
+c = replace_once(c, old, new, "parser pi")
+
+old = """        let nlb =
+            binder_type.num_loose_bvars().max(val.num_loose_bvars().max(body.num_loose_bvars().saturating_sub(1)));
+        self.push_expr(
+            idx,
+            Expr::Let {
+                data: self.arena.alloc(crate::expr::LetData { binder_name, binder_type, val, body, nondep }),
+                fv_mask,
+                hash,"""
+new = """        let nlb =
+            binder_type.num_loose_bvars().max(val.num_loose_bvars().max(body.num_loose_bvars().saturating_sub(1)));
+        let var_mass = binder_type
+            .as_ref()
+            .boundary_var_mass()
+            .saturating_add(val.as_ref().boundary_var_mass())
+            .saturating_add(body.as_ref().boundary_var_mass());
+        let depth = 1u8
+            .saturating_add(
+                binder_type
+                    .as_ref()
+                    .boundary_depth()
+                    .max(val.as_ref().boundary_depth().max(body.as_ref().boundary_depth())),
+            )
+            .min(15);
+        let boundary = crate::expr::pack_boundary(nlb, var_mass, depth, 0);
+        self.push_expr(
+            idx,
+            Expr::Let {
+                data: self.arena.alloc(crate::expr::LetData { binder_name, binder_type, val, body, nondep }),
+                fv_mask,
+                boundary,
+                hash,"""
+c = replace_once(c, old, new, "parser let")
+
+old = """        let hash = hash64!(crate::expr::PROJ_HASH, ty_name, proj_idx, structure);
+        self.push_expr(
+            idx,
+            Expr::Proj { ty_name, idx: proj_idx, structure, fv_mask, hash },
+            structure.num_loose_bvars(),"""
+new = """        let hash = hash64!(crate::expr::PROJ_HASH, ty_name, proj_idx, structure);
+        let nlb = structure.num_loose_bvars();
+        let var_mass = structure.as_ref().boundary_var_mass();
+        let depth = 1u8.saturating_add(structure.as_ref().boundary_depth()).min(15);
+        let boundary = crate::expr::pack_boundary(nlb, var_mass, depth, 0);
+        self.push_expr(
+            idx,
+            Expr::Proj { ty_name, idx: proj_idx, structure, fv_mask, boundary, hash },
+            nlb,"""
+c = replace_once(c, old, new, "parser proj")
 
 p.write_text(c)
 print("APPLY_BOUNDARY_STATE_V117=PASS")
