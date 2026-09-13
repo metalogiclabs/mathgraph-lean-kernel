@@ -36,6 +36,8 @@ for t in perf/app-lam perf/beta-ladder perf/let-ladder perf/magma-list-deep-n36 
   safe="$(printf '%s' "$t" | tr '/' '_')"
   echo "V106_BEGIN=$t"
   MATHGRAPH_DEEP_CENSUS=1 target/release/sokonanoda "$ROOT/config.json" < "$ROOT/arena/_build/tests/$t.ndjson" >"$ROOT/out/$safe.stdout" 2>"$ROOT/out/$safe.stderr"
-  grep 'V106_CENSUS' "$ROOT/out/$safe.stderr" | sed "s/^/V106_RESULT test=$t /"
+  while IFS= read -r line; do
+    printf 'V106_RESULT test=%s %s\n' "$t" "$line"
+  done < <(grep 'V106_CENSUS' "$ROOT/out/$safe.stderr")
 done
 echo "V106_COMPLETE=PASS"
