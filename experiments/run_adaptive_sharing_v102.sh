@@ -13,7 +13,8 @@ grep -E "MemTotal|SwapTotal" /proc/meminfo | sed 's/^/V102_HOST_/'
 
 cargo test --release --locked -q
 
-git worktree add -q "$ROOT/base" "$BASE"
+git clone -q https://github.com/metalogiclabs/mathgraph-lean-kernel "$ROOT/base"
+git -C "$ROOT/base" checkout -q "$BASE"
 git clone -q https://github.com/leanprover/lean-kernel-arena "$ROOT/arena"
 git -C "$ROOT/arena" checkout -q "$ARENA"
 
