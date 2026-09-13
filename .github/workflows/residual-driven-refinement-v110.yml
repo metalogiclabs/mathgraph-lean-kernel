@@ -1,0 +1,35 @@
+name: Residual driven refinement v110
+
+on:
+  push:
+    branches:
+      - experiment/residual-driven-refinement-v110
+    paths:
+      - 'scripts/apply_bounded_sparse_v105.py'
+      - 'scripts/apply_sparse_admission_census_v107.py'
+      - 'scripts/apply_sparse_feature_atlas_v108.py'
+      - 'scripts/apply_app_shape_atlas_v109.py'
+      - 'scripts/analyze_residual_refinement_v110.py'
+      - 'experiments/run_residual_driven_refinement_v110.sh'
+      - '.github/workflows/residual-driven-refinement-v110.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  refine:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run residual driven refinement
+        run: bash experiments/run_residual_driven_refinement_v110.sh
+      - name: Preserve v110 report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: residual-driven-refinement-v110
+          path: /tmp/residual-driven-refinement-v110/report/
+          if-no-files-found: warn
