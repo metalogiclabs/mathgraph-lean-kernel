@@ -1,0 +1,39 @@
+name: Deep boundary selector v118c split
+
+on:
+  push:
+    branches:
+      - experiment/deep-boundary-selector-v118c
+    paths:
+      - 'scripts/apply_deep_boundary_selector_v118.py'
+      - 'experiments/run_deep_boundary_v118c_one.sh'
+      - '.github/workflows/deep-boundary-v118c.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  selector:
+    strategy:
+      fail-fast: false
+      matrix:
+        workload: [mathlib, con-leche]
+        threshold: [0, 100, 250, 500, 1000, 2000]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      V118_WORKLOAD: ${{ matrix.workload }}
+      V118_THRESHOLD: ${{ matrix.threshold }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run isolated V118c cell
+        run: bash experiments/run_deep_boundary_v118c_one.sh
+      - name: Preserve V118c evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v118c-${{ matrix.workload }}-${{ matrix.threshold }}
+          path: /tmp/deep-boundary-v118c-${{ matrix.workload }}-${{ matrix.threshold }}/report/
+          if-no-files-found: warn
