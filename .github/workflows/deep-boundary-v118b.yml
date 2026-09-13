@@ -1,0 +1,32 @@
+name: Deep boundary selector v118b
+
+on:
+  push:
+    branches:
+      - experiment/deep-boundary-selector-v118b
+    paths:
+      - 'scripts/apply_deep_boundary_selector_v118.py'
+      - 'scripts/analyze_deep_boundary_v118.py'
+      - 'experiments/run_deep_boundary_v118.sh'
+      - '.github/workflows/deep-boundary-v118b.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  selector:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run retained-cache deep boundary selector
+        run: bash experiments/run_deep_boundary_v118.sh
+      - name: Preserve v118b evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deep-boundary-v118b
+          path: /tmp/deep-boundary-v118/report/
+          if-no-files-found: warn
