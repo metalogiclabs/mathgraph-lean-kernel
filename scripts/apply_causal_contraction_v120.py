@@ -247,14 +247,14 @@ c=replace_once(c,old,new,'parser proj'); p.write_text(c)
 
 p=Path('src/eval.rs'); c=p.read_text(); anchor='use std::collections::hash_map::Entry;\n'
 match_body='\n'.join(arms)
-insert=anchor+f"""use std::sync::atomic::{{AtomicU16, Ordering}};
+insert=anchor+f"""use std::sync::atomic::{{AtomicU8, Ordering}};
 
-static V120_THRESHOLD_MILLI: AtomicU16 = AtomicU16::new(0);
+static V120_ABLATE_GROUP: AtomicU8 = AtomicU8::new(255);
 
 pub fn configure_v120_policy_from_env() {{
-    let threshold = std::env::var("MATHGRAPH_V120_THRESHOLD_MILLI").ok().and_then(|s| s.parse::<u16>().ok()).unwrap_or(0);
-    V120_THRESHOLD_MILLI.store(threshold, Ordering::Relaxed);
-    eprintln!("V120_POLICY threshold_milli={{}}", threshold);
+    let group = std::env::var("MATHGRAPH_V120_ABLATE_GROUP").ok().and_then(|s| s.parse::<u8>().ok()).unwrap_or(255);
+    V120_ABLATE_GROUP.store(group, Ordering::Relaxed);
+    eprintln!("V120_POLICY ablate_group={{}}", group);
 }}
 
 #[inline] fn v120_k(k:u16)->u8 {{ match k {{ 0..=96=>0,97..=128=>1,129..=192=>2,193..=256=>3,257..=384=>4,385..=512=>5,_=>6 }} }}
@@ -262,11 +262,11 @@ pub fn configure_v120_policy_from_env() {{
 #[inline] fn v120_mask(n:u32)->u8 {{ match n {{ 0=>0,1..=4=>1,5..=8=>2,9..=16=>3,17..=32=>4,33..=48=>5,_=>6 }} }}
 #[inline] fn v120_depth(n:u8)->u8 {{ match n {{ 0..=3=>0,4..=7=>1,8..=11=>2,_=>3 }} }}
 #[inline] fn v120_spine(n:u8)->u8 {{ match n {{ 0=>0,1=>1,2..=3=>2,4..=7=>3,_=>4 }} }}
-#[inline] fn v120_yield_milli(e:ExprPtr<'_>, k:u16)->u16 {{
+#[inline] fn v120_candidate_group(e:ExprPtr<'_>, k:u16)->u8 {{
     let key=(v120_k(k),v120_root(e),v120_mask(e.as_ref().fv_mask().count_ones()),v120_depth(e.as_ref().boundary_depth_v120()),v120_spine(e.as_ref().boundary_app_spine_v120()));
     match key {{
 {match_body}
-        _ => 0,
+        _ => 255,
     }}
 }}
 
