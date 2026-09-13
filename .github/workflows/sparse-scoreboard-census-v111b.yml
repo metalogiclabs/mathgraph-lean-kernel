@@ -1,0 +1,30 @@
+name: Sparse scoreboard census v111b
+
+on:
+  push:
+    branches:
+      - experiment/residual-grandchild-atlas-v111
+    paths:
+      - 'experiments/run_sparse_scoreboard_census_v111b.sh'
+      - '.github/workflows/sparse-scoreboard-census-v111b.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run heavy-test sparse census
+        run: bash experiments/run_sparse_scoreboard_census_v111b.sh
+      - name: Preserve census
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sparse-scoreboard-census-v111b
+          path: /tmp/sparse-scoreboard-census-v111b/out/
+          if-no-files-found: warn
