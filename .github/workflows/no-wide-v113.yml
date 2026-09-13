@@ -1,0 +1,31 @@
+name: No-wide ablation v113
+
+on:
+  push:
+    branches:
+      - experiment/residual-grandchild-atlas-v111
+    paths:
+      - 'scripts/apply_no_wide_v113.py'
+      - 'experiments/run_no_wide_v113.sh'
+      - '.github/workflows/no-wide-v113.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ablation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run no-wide ablation
+        run: bash experiments/run_no_wide_v113.sh
+      - name: Preserve v113 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: no-wide-v113
+          path: /tmp/no-wide-v113/out/
+          if-no-files-found: warn
