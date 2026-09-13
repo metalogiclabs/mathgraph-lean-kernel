@@ -91,6 +91,33 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         v
     }
 
+    /// Promote an environment extension into retained shared structure only
+    /// after the same construction has been demanded before. The fixed filter
+    /// is deliberately lossy: false positives merely promote early and cannot
+    /// affect semantics.
+    #[inline]
+    pub(crate) fn env_extend(&mut self, parent: E<'t>, v: V<'t>) -> E<'t> {
+        let p = parent as *const value::Env<'t> as usize;
+        let q = v as *const Value<'t> as usize;
+        let key = (p, q);
+        if let Some(e) = self.tc_cache.env_contract_hc.get(&key) {
+            return *e;
+        }
+        let h = (p as u64)
+            .wrapping_mul(0x9E37_79B9_7F4A_7C15)
+            ^ (q as u64).wrapping_mul(0xD6E8_FEB8_6659_FD93).rotate_left(29);
+        let bit_index = (h as usize) & ((1024 * 64) - 1);
+        let word = bit_index >> 6;
+        let bit = 1u64 << (bit_index & 63);
+        if self.tc_cache.env_contract_filter[word] & bit == 0 {
+            self.tc_cache.env_contract_filter[word] |= bit;
+            return value::env_extend(self.arena, parent, v);
+        }
+        let e = value::env_extend(self.arena, parent, v);
+        self.tc_cache.env_contract_hc.insert(key, e);
+        e
+    }
+
     fn mk_unfold_hc(
         &mut self,
         name: NamePtr<'t>,
@@ -767,7 +794,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
             if let Value::Lam { body: clo, .. } = f {
                 let clo_env = clo.env;
                 let clo_body = clo.body;
-                let new_env = value::env_extend(self.arena, clo_env, a);
+                let new_env = self.env_extend(clo_env, a);
                 return self.eval(depth, new_env, clo_body);
             }
             return self.apply(depth, f, a);
@@ -809,7 +836,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 let mut cursor = e;
                 while let Expr::Let { data: &crate::expr::LetData { val, body, .. }, .. } = self.ctx.read_expr(cursor) {
                     let vv = self.eval(depth, env, val);
-                    env = value::env_extend(self.arena, env, vv);
+                    env = self.env_extend(env, vv);
                     cursor = body;
                 }
                 self.eval(depth, env, cursor)
@@ -938,7 +965,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
             Value::Lam { body: clo, .. } => {
                 let clo_env = clo.env;
                 let clo_body = clo.body;
-                let env = value::env_extend(self.arena, clo_env, a);
+                let env = self.env_extend(clo_env, a);
                 self.eval(depth, env, clo_body)
             }
             Value::Rigid { head, spine , ..} => {
@@ -987,13 +1014,13 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 i += 1;
                 continue
             };
-            let mut env = value::env_extend(self.arena, clo.env, args[i]);
+            let mut env = self.env_extend(clo.env, args[i]);
             let mut body = clo.body;
             i += 1;
             while i < args.len() {
                 let Expr::Lambda { body: inner, .. } = self.ctx.read_expr(body) else { break };
                 let pruned = self.key_env(env, body);
-                env = value::env_extend(self.arena, pruned, args[i]);
+                env = self.env_extend(pruned, args[i]);
                 body = inner;
                 i += 1;
             }
@@ -1009,7 +1036,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         v: V<'t>,
         binder_ty: Option<V<'t>>,
     ) -> V<'t> {
-        let env = value::env_extend(self.arena, clo.env, v);
+        let env = self.env_extend(clo.env, v);
         match clo.ctx {
             None => self.eval(depth, env, clo.body),
             Some(clo_ctx) => {
