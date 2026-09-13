@@ -1135,7 +1135,7 @@ pub struct TcCache<'a, 't> {
     pub(crate) lsub_bases: FxHashMap<usize, E<'a>>,
     pub(crate) level_subs: FxHashMap<(LevelsPtr<'t>, LevelsPtr<'t>), &'a crate::value::LevelSub<'a>>,
     pub(crate) prune_dm: Box<[(usize, u64, Option<E<'a>>); PRUNE_DM_LEN]>,
-    pub(crate) wide_uses_cache: FxHashMap<ExprPtr<'t>, Box<[u64]>>,
+    pub(crate) wide_uses_cache: FxHashMap<ExprPtr<'t>, Box<[u16]>>,
     pub(crate) wide_prune_cache: FxHashMap<(usize, ExprPtr<'t>), E<'a>>,
     pub(crate) rigid_hc: FxHashMap<(u8, u64, u64, usize), V<'a>>,
     pub(crate) unfold_hc: FxHashMap<(usize, usize), V<'a>>,
