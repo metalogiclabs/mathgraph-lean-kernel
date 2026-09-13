@@ -1,0 +1,31 @@
+name: Wide path census v112
+
+on:
+  push:
+    branches:
+      - experiment/residual-grandchild-atlas-v111
+    paths:
+      - 'scripts/apply_wide_path_census_v112.py'
+      - 'experiments/run_wide_path_census_v112.sh'
+      - '.github/workflows/wide-path-census-v112.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run wide path census
+        run: bash experiments/run_wide_path_census_v112.sh
+      - name: Preserve v112 census
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wide-path-census-v112
+          path: /tmp/wide-path-census-v112/out/
+          if-no-files-found: warn
