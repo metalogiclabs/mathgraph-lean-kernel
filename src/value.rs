@@ -294,7 +294,7 @@ pub enum Env<'a> {
         prune: Cell<(u64, Option<E<'a>>)>,
     },
     WideFramed {
-        words: &'a [u64],
+        indices: &'a [u16],
         slots: &'a [V<'a>],
         lsub: Option<&'a LevelSub<'a>>,
         hash: u64,
@@ -405,16 +405,8 @@ impl<'a> Env<'a> {
                     let below = mask & ((1u64 << idx) - 1);
                     return Some(slots[below.count_ones() as usize]);
                 }
-                Env::WideFramed { words, slots, .. } => {
-                    let wi = usize::from(idx) / 64;
-                    let bi = u32::from(idx % 64);
-                    let Some(&word) = words.get(wi) else { return None };
-                    if (word >> bi) & 1 == 0 {
-                        return None;
-                    }
-                    let before_words: usize = words[..wi].iter().map(|w| w.count_ones() as usize).sum();
-                    let below = if bi == 0 { 0 } else { word & ((1u64 << bi) - 1) };
-                    return Some(slots[before_words + below.count_ones() as usize]);
+                Env::WideFramed { indices, slots, .. } => {
+                    return indices.binary_search(&idx).ok().map(|i| slots[i]);
                 }
             }
         }
