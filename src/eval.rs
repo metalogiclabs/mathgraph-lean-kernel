@@ -47,35 +47,15 @@ enum ForceStep<'a> {
     Done,
 }
 
-const MAX_WIDE_USE_WORDS: usize = 8;
-
-fn merge_use_words(mut a: Vec<u64>, b: Vec<u64>) -> Vec<u64> {
-    if a.len() < b.len() {
-        a.resize(b.len(), 0);
-    }
-    for (x, y) in a.iter_mut().zip(b) {
-        *x |= y;
-    }
-    while matches!(a.last(), Some(0)) {
-        a.pop();
-    }
+fn merge_sparse_uses(mut a: Vec<u16>, b: Vec<u16>) -> Vec<u16> {
+    a.extend(b);
+    a.sort_unstable();
+    a.dedup();
     a
 }
 
-fn under_binder_words(mut words: Vec<u64>) -> Vec<u64> {
-    for i in 0..words.len() {
-        let hi = words.get(i + 1).copied().unwrap_or(0);
-        words[i] = (words[i] >> 1) | (hi << 63);
-    }
-    while matches!(words.last(), Some(0)) {
-        words.pop();
-    }
-    words
-}
-
-#[inline]
-fn wide_bit(words: &[u64], idx: usize) -> bool {
-    words.get(idx / 64).is_some_and(|w| ((w >> (idx % 64)) & 1) != 0)
+fn under_binder_sparse(indices: Vec<u16>) -> Vec<u16> {
+    indices.into_iter().filter_map(|i| i.checked_sub(1)).collect()
 }
 
 impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
@@ -159,18 +139,18 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         e
     }
 
-    fn intern_wide_frame(
+    fn intern_sparse_frame(
         &mut self,
-        words: &[u64],
+        indices: &[u16],
         slots: &[V<'t>],
         lsub: Option<&'t value::LevelSub<'t>>,
     ) -> E<'t> {
-        debug_assert!(!words.is_empty());
-        debug_assert_ne!(*words.last().unwrap(), 0);
+        debug_assert!(!indices.is_empty());
+        debug_assert_eq!(indices.len(), slots.len());
         let lsub_addr = lsub.map_or(0, |l| l as *const value::LevelSub<'t> as usize);
         let mut hash = (lsub_addr as u64) ^ 0xD1B5_4A32_D192_ED03;
-        for &w in words {
-            hash = hash.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(w);
+        for &i in indices {
+            hash = hash.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(u64::from(i));
         }
         for &v in slots {
             hash = hash
@@ -178,19 +158,18 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 .wrapping_add(v as *const Value<'t> as usize as u64);
         }
         if let Some(e) = self.tc_cache.frames.find(hash, |e: &E<'t>| match e {
-            value::Env::WideFramed { words: ew, slots: es, lsub: el, .. } =>
+            value::Env::WideFramed { indices: ei, slots: es, lsub: el, .. } =>
                 el.map_or(0, |l| l as *const value::LevelSub<'t> as usize) == lsub_addr
-                    && *ew == words
+                    && *ei == indices
                     && es.len() == slots.len()
                     && es.iter().zip(slots).all(|(a, b)| std::ptr::eq(*a, *b)),
             _ => false,
         }) {
             return e;
         }
-        let last = *words.last().unwrap();
-        let len = ((words.len() - 1) * 64 + (64 - last.leading_zeros() as usize)) as u32;
+        let len = u32::from(*indices.last().unwrap()) + 1;
         let e: E<'t> = self.arena.alloc(value::Env::WideFramed {
-            words: self.arena.alloc_slice_copy(words),
+            indices: self.arena.alloc_slice_copy(indices),
             slots: self.arena.alloc_slice_copy(slots),
             lsub,
             hash,
@@ -201,103 +180,59 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         e
     }
 
-    fn exact_wide_uses(&mut self, e: ExprPtr<'t>) -> Option<Vec<u64>> {
-        if let Some(words) = self.tc_cache.wide_uses_cache.get(&e) {
-            return Some(words.to_vec());
-        }
-        if usize::from(e.num_loose_bvars()) > 64 * MAX_WIDE_USE_WORDS {
-            return None;
+    // Exact sparse dependency discovery.  Unlike the v101/v102 wide bitset,
+    // cost scales with the number of used binders rather than maximum depth.
+    // This generalizes the sparse-environment mechanism recently demonstrated
+    // by sokonanoda while retaining MathGraph's <=64 fast path.
+    fn exact_sparse_uses(&mut self, e: ExprPtr<'t>) -> Vec<u16> {
+        if let Some(indices) = self.tc_cache.wide_uses_cache.get(&e) {
+            return indices.to_vec();
         }
         let node = *self.ctx.read_expr_ref(e);
-        let mut words = match node {
-            Expr::Var { dbj_idx, .. } => {
-                let i = usize::from(dbj_idx);
-                if i >= 64 * MAX_WIDE_USE_WORDS {
-                    return None;
-                }
-                let mut w = vec![0u64; i / 64 + 1];
-                w[i / 64] = 1u64 << (i % 64);
-                w
-            }
-            Expr::App { fun, arg, .. } => {
-                let a = self.exact_wide_uses(fun)?;
-                let b = self.exact_wide_uses(arg)?;
-                merge_use_words(a, b)
-            }
+        let mut indices = match node {
+            Expr::Var { dbj_idx, .. } => vec![dbj_idx],
+            Expr::App { fun, arg, .. } =>
+                merge_sparse_uses(self.exact_sparse_uses(fun), self.exact_sparse_uses(arg)),
             Expr::Pi { binder_type, body, .. } | Expr::Lambda { binder_type, body, .. } => {
-                let d = self.exact_wide_uses(binder_type)?;
-                let b = under_binder_words(self.exact_wide_uses(body)?);
-                merge_use_words(d, b)
+                let d = self.exact_sparse_uses(binder_type);
+                let b = under_binder_sparse(self.exact_sparse_uses(body));
+                merge_sparse_uses(d, b)
             }
             Expr::Let { data, .. } => {
                 let d = *data;
-                let t = self.exact_wide_uses(d.binder_type)?;
-                let v = self.exact_wide_uses(d.val)?;
-                let b = under_binder_words(self.exact_wide_uses(d.body)?);
-                merge_use_words(merge_use_words(t, v), b)
+                let t = self.exact_sparse_uses(d.binder_type);
+                let v = self.exact_sparse_uses(d.val);
+                let b = under_binder_sparse(self.exact_sparse_uses(d.body));
+                merge_sparse_uses(merge_sparse_uses(t, v), b)
             }
-            Expr::Proj { structure, .. } => self.exact_wide_uses(structure)?,
+            Expr::Proj { structure, .. } => self.exact_sparse_uses(structure),
             Expr::Sort { .. } | Expr::Const { .. } | Expr::StringLit { .. } | Expr::NatLit { .. } => Vec::new(),
         };
-        while matches!(words.last(), Some(0)) {
-            words.pop();
-        }
-        self.tc_cache.wide_uses_cache.insert(e, words.clone().into_boxed_slice());
-        Some(words)
+        indices.sort_unstable();
+        indices.dedup();
+        self.tc_cache.wide_uses_cache.insert(e, indices.clone().into_boxed_slice());
+        indices
     }
 
-    fn prune_env_wide(&mut self, e: E<'t>, words: &[u64]) -> E<'t> {
-        if words.is_empty() {
-            return self.lsub_base(e.lsub());
+    fn prune_env_sparse(&mut self, env: E<'t>, indices: &[u16]) -> E<'t> {
+        if indices.is_empty() {
+            return self.lsub_base(env.lsub());
         }
-        let last = *words.last().unwrap();
-        let highest = (words.len() - 1) * 64 + (63 - last.leading_zeros() as usize);
-        let mut slots = Vec::with_capacity(words.iter().map(|w| w.count_ones() as usize).sum());
-        let mut cur = e;
-        let mut offset = 0usize;
-
-        while offset <= highest {
-            match cur {
-                value::Env::Nil { .. } => return e,
-                value::Env::Cons { v, parent, .. } => {
-                    if wide_bit(words, offset) {
-                        slots.push(*v);
-                    }
-                    offset += 1;
-                    cur = parent;
-                }
-                value::Env::Framed { mask, slots: frame_slots, .. } => {
-                    for j in 0..=highest - offset {
-                        if !wide_bit(words, offset + j) {
-                            continue;
-                        }
-                        if j >= 64 || ((*mask >> j) & 1) == 0 {
-                            return e;
-                        }
-                        let below = if j == 0 { 0 } else { *mask & ((1u64 << j) - 1) };
-                        slots.push(frame_slots[below.count_ones() as usize]);
-                    }
-                    offset = highest + 1;
-                }
-                value::Env::WideFramed { words: frame_words, slots: frame_slots, .. } => {
-                    for j in 0..=highest - offset {
-                        if !wide_bit(words, offset + j) {
-                            continue;
-                        }
-                        if !wide_bit(frame_words, j) {
-                            return e;
-                        }
-                        let wi = j / 64;
-                        let bi = j % 64;
-                        let before: usize = frame_words[..wi].iter().map(|w| w.count_ones() as usize).sum();
-                        let below = if bi == 0 { 0 } else { frame_words[wi] & ((1u64 << bi) - 1) };
-                        slots.push(frame_slots[before + below.count_ones() as usize]);
-                    }
-                    offset = highest + 1;
-                }
+        let mut slots = Vec::with_capacity(indices.len());
+        let mut cur = env;
+        let mut consumed = 0u16;
+        for &idx in indices {
+            while consumed < idx {
+                let value::Env::Cons { parent, .. } = cur else { break };
+                cur = parent;
+                consumed += 1;
             }
+            let Some(v) = cur.lookup(idx - consumed) else {
+                return env;
+            };
+            slots.push(v);
         }
-        self.intern_wide_frame(words, &slots, e.lsub())
+        self.intern_sparse_frame(indices, &slots, env.lsub())
     }
 
     fn lsub_base(&mut self, lsub: Option<&'t value::LevelSub<'t>>) -> E<'t> {
@@ -406,22 +341,20 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                     }
                     break;
                 }
-                value::Env::WideFramed { words, slots, .. } => {
-                    let fmask = words.first().copied().unwrap_or(0);
-                    let limit = 64 - consumed;
-                    let bound = if limit >= 64 { u64::MAX } else { (1u64 << limit) - 1 };
-                    let m2 = rem & fmask & bound;
-                    out_mask |= m2 << consumed;
-                    let mut sel = select_ranks(m2, fmask);
-                    while sel != 0 {
-                        let i = sel.trailing_zeros() as usize;
-                        sel &= sel - 1;
-                        let sv = slots[i];
-                        buf[n].write(sv);
-                        slots_hash = slots_hash
-                            .wrapping_mul(0x9E3779B97F4A7C15)
-                            .wrapping_add(sv as *const Value<'t> as usize as u64);
-                        n += 1;
+                value::Env::WideFramed { indices, slots, .. } => {
+                    for (&idx, &sv) in indices.iter().zip(*slots) {
+                        let j = u32::from(idx);
+                        if j >= 64 - consumed {
+                            break;
+                        }
+                        if (rem >> j) & 1 != 0 {
+                            buf[n].write(sv);
+                            slots_hash = slots_hash
+                                .wrapping_mul(0x9E3779B97F4A7C15)
+                                .wrapping_add(sv as *const Value<'t> as usize as u64);
+                            out_mask |= 1u64 << (j + consumed);
+                            n += 1;
+                        }
                     }
                     break;
                 }
@@ -468,8 +401,8 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
             if let Some(r) = self.tc_cache.wide_prune_cache.get(&ck) {
                 return *r;
             }
-            let Some(words) = self.exact_wide_uses(e) else { return env };
-            let r = self.prune_env_wide(env, &words);
+            let indices = self.exact_sparse_uses(e);
+            let r = self.prune_env_sparse(env, &indices);
             self.tc_cache.wide_prune_cache.insert(ck, r);
             return r;
         }
