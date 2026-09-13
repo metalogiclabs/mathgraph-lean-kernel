@@ -1,0 +1,31 @@
+name: Upstream rebase separator v114
+
+on:
+  push:
+    branches:
+      - experiment/upstream-rebase-v114
+    paths:
+      - 'scripts/apply_equal_hint_v114.py'
+      - 'experiments/run_upstream_rebase_v114.sh'
+      - '.github/workflows/upstream-rebase-v114.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  separator:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run upstream rebase separator
+        run: bash experiments/run_upstream_rebase_v114.sh
+      - name: Preserve v114 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: upstream-rebase-v114
+          path: /tmp/upstream-rebase-v114/out/
+          if-no-files-found: warn
