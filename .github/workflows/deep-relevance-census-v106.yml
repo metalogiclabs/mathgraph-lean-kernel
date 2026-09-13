@@ -1,0 +1,31 @@
+name: Deep relevance census v106
+
+on:
+  push:
+    branches:
+      - experiment/deep-relevance-census-v106
+    paths:
+      - 'scripts/apply_deep_relevance_census_v106.py'
+      - 'experiments/run_deep_relevance_census_v106.sh'
+      - '.github/workflows/deep-relevance-census-v106.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run deep relevance census
+        run: bash experiments/run_deep_relevance_census_v106.sh
+      - name: Preserve census
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deep-relevance-census-v106
+          path: /tmp/deep-relevance-census-v106/out/
+          if-no-files-found: warn
