@@ -1,0 +1,33 @@
+name: Sparse feature atlas v108
+
+on:
+  push:
+    branches:
+      - experiment/sparse-feature-atlas-v108
+    paths:
+      - 'scripts/apply_bounded_sparse_v105.py'
+      - 'scripts/apply_sparse_admission_census_v107.py'
+      - 'scripts/apply_sparse_feature_atlas_v108.py'
+      - 'experiments/run_sparse_feature_atlas_v108.sh'
+      - '.github/workflows/sparse-feature-atlas-v108.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  atlas:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run sparse feature atlas
+        run: bash experiments/run_sparse_feature_atlas_v108.sh
+      - name: Preserve v108 atlas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sparse-feature-atlas-v108
+          path: /tmp/sparse-feature-atlas-v108/out/
+          if-no-files-found: warn
