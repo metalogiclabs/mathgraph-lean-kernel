@@ -1,0 +1,33 @@
+name: Boundary state genesis v117
+
+on:
+  push:
+    branches:
+      - experiment/boundary-state-genesis-v117
+    paths:
+      - 'scripts/apply_boundary_state_v117.py'
+      - 'scripts/apply_boundary_atlas_v117.py'
+      - 'scripts/analyze_boundary_v117.py'
+      - 'experiments/run_boundary_state_v117.sh'
+      - '.github/workflows/boundary-state-v117.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  genesis:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run boundary state genesis
+        run: bash experiments/run_boundary_state_v117.sh
+      - name: Preserve v117 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: boundary-state-v117
+          path: /tmp/boundary-state-v117/report/
+          if-no-files-found: warn
