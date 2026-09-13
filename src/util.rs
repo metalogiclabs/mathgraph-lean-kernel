@@ -1095,6 +1095,12 @@ pub struct NameCache<'p> {
 pub(crate) const PRUNE_DM_LEN: usize = 1 << 10;
 pub(crate) const PRUNE_DM_SHIFT: u32 = 64 - 10;
 
+// Bounded direct-mapped reuse tables.  These do not globally hash-cons every
+// construction: an object becomes reusable only after the exact construction
+// has actually occurred.  Collisions simply fall back to ordinary construction.
+pub(crate) const REUSE_DM_LEN: usize = 1 << 12;
+pub(crate) const REUSE_DM_SHIFT: u32 = 64 - 12;
+
 pub struct TcCache<'a, 't> {
     pub(crate) unfold_const_cache: FxHashMap<(NamePtr<'t>, LevelsPtr<'t>), V<'a>>,
     pub(crate) rec_rule_cache: FxHashMap<(ExprPtr<'t>, LevelsPtr<'t>), V<'a>>,
@@ -1118,6 +1124,8 @@ pub struct TcCache<'a, 't> {
     pub(crate) open_eval_seen: FxHashSet<ExprPtr<'t>>,
     pub(crate) bvar_hc: FxHashMap<(u32, usize), V<'a>>,
     pub(crate) spine_hc: FxHashMap<(usize, u64), S<'a>>,
+    pub(crate) env_reuse_dm: Box<[(usize, usize, Option<E<'a>>); REUSE_DM_LEN]>,
+    pub(crate) app_reuse_dm: Box<[(usize, usize, Option<V<'a>>); REUSE_DM_LEN]>,
     pub(crate) lam_hc: FxHashMap<(ExprPtr<'t>, usize, ExprPtr<'t>), V<'a>>,
     pub(crate) pi_hc: FxHashMap<(usize, usize, ExprPtr<'t>, usize), V<'a>>,
     pub(crate) type_cache: FxHashMap<(usize, ExprPtr<'t>), crate::infer::CachedType<'a>>,
@@ -1168,6 +1176,8 @@ impl<'a, 't> TcCache<'a, 't> {
             open_eval_seen: small_fx_hash_set(),
             bvar_hc: session_small_fx_hash_map(),
             spine_hc: session_fx_hash_map(),
+            env_reuse_dm: Box::new([(0, 0, None); REUSE_DM_LEN]),
+            app_reuse_dm: Box::new([(0, 0, None); REUSE_DM_LEN]),
             lam_hc: session_small_fx_hash_map(),
             pi_hc: session_small_fx_hash_map(),
             type_cache: session_fx_hash_map(),
@@ -1216,6 +1226,8 @@ impl<'a, 't> TcCache<'a, 't> {
         self.open_eval_seen.clear();
         self.bvar_hc.clear();
         self.spine_hc.clear();
+        self.env_reuse_dm.fill((0, 0, None));
+        self.app_reuse_dm.fill((0, 0, None));
         self.lam_hc.clear();
         self.pi_hc.clear();
         self.rigid_hc.clear();
@@ -1265,6 +1277,8 @@ impl<'a, 't> TcCache<'a, 't> {
         shrink_set(&mut self.open_eval_seen);
         shrink_map(&mut self.bvar_hc);
         shrink_map(&mut self.spine_hc);
+        self.env_reuse_dm.fill((0, 0, None));
+        self.app_reuse_dm.fill((0, 0, None));
         shrink_map(&mut self.lam_hc);
         shrink_map(&mut self.pi_hc);
         shrink_map(&mut self.rigid_hc);
