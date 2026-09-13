@@ -1,0 +1,32 @@
+name: Wide activation atlas v116
+
+on:
+  push:
+    branches:
+      - experiment/wide-activation-atlas-v116
+    paths:
+      - 'scripts/apply_wide_activation_atlas_v116.py'
+      - 'scripts/analyze_wide_activation_v116.py'
+      - 'experiments/run_wide_activation_v116.sh'
+      - '.github/workflows/wide-activation-v116.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  atlas:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run wide activation atlas
+        run: bash experiments/run_wide_activation_v116.sh
+      - name: Preserve v116 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wide-activation-v116
+          path: /tmp/wide-activation-v116/report/
+          if-no-files-found: warn
