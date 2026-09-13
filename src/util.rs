@@ -1129,6 +1129,10 @@ pub struct TcCache<'a, 't> {
     pub(crate) prune_dm: Box<[(usize, u64, Option<E<'a>>); PRUNE_DM_LEN]>,
     pub(crate) wide_uses_cache: FxHashMap<ExprPtr<'t>, Box<[u64]>>,
     pub(crate) wide_prune_cache: FxHashMap<(usize, ExprPtr<'t>), E<'a>>,
+    // CONTRACT: cheap evidence filter; only repeated environment extensions
+    // are promoted into persistent canonical structure.
+    pub(crate) env_contract_filter: Box<[u64; 1024]>,
+    pub(crate) env_contract_hc: FxHashMap<(usize, usize), E<'a>>,
     pub(crate) rigid_hc: FxHashMap<(u8, u64, u64, usize), V<'a>>,
     pub(crate) unfold_hc: FxHashMap<(usize, usize), V<'a>>,
     pub(crate) iota_stuck: FxHashSet<usize>,
@@ -1179,6 +1183,8 @@ impl<'a, 't> TcCache<'a, 't> {
             prune_dm: Box::new([(0, 0, None); PRUNE_DM_LEN]),
             wide_uses_cache: session_small_fx_hash_map(),
             wide_prune_cache: session_fx_hash_map(),
+            env_contract_filter: Box::new([0u64; 1024]),
+            env_contract_hc: session_fx_hash_map(),
             rigid_hc: session_fx_hash_map(),
             unfold_hc: session_fx_hash_map(),
             iota_stuck: session_small_fx_hash_set(),
@@ -1209,6 +1215,8 @@ impl<'a, 't> TcCache<'a, 't> {
         self.prune_dm.fill((0, 0, None));
         self.wide_uses_cache.clear();
         self.wide_prune_cache.clear();
+        self.env_contract_filter.fill(0);
+        self.env_contract_hc.clear();
         self.type_cache.clear();
         self.thunk_hc.clear();
         self.quote_cache.clear();
@@ -1258,6 +1266,8 @@ impl<'a, 't> TcCache<'a, 't> {
         self.prune_dm.fill((0, 0, None));
         shrink_map(&mut self.wide_uses_cache);
         shrink_map(&mut self.wide_prune_cache);
+        self.env_contract_filter.fill(0);
+        shrink_map(&mut self.env_contract_hc);
         shrink_map(&mut self.type_cache);
         shrink_map(&mut self.thunk_hc);
         shrink_map(&mut self.quote_cache);
