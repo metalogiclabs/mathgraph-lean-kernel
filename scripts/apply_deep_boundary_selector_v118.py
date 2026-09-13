@@ -318,13 +318,13 @@ old = """        if k > 64 {
             return r;
         }"""
 new = """        if k > 64 {
-            let threshold = V118_THRESHOLD_MILLI.load(Ordering::Relaxed);
-            if threshold != 0 && v118_yield_milli(e) < threshold {
-                return env;
-            }
             let ck = (env as *const value::Env<'t> as usize, e);
             if let Some(r) = self.tc_cache.wide_prune_cache.get(&ck) {
                 return *r;
+            }
+            let threshold = V118_THRESHOLD_MILLI.load(Ordering::Relaxed);
+            if threshold != 0 && v118_yield_milli(e) < threshold {
+                return env;
             }
             let Some(words) = self.exact_wide_uses(e) else { return env };
             let r = self.prune_env_wide(env, &words);
@@ -344,4 +344,4 @@ new = """fn use_config(config_path: &Path) -> Result<Option<String>, Box<dyn Err
 c = replace_once(c, old, new, "main configure")
 p.write_text(c)
 
-print("APPLY_DEEP_BOUNDARY_SELECTOR_V118=PASS")
+print("APPLY_DEEP_BOUNDARY_SELECTOR_V118B=PASS")
