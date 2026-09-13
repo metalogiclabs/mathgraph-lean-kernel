@@ -1,0 +1,32 @@
+name: Sparse admission census v107
+
+on:
+  push:
+    branches:
+      - experiment/sparse-admission-census-v107
+    paths:
+      - 'scripts/apply_bounded_sparse_v105.py'
+      - 'scripts/apply_sparse_admission_census_v107.py'
+      - 'experiments/run_sparse_admission_census_v107.sh'
+      - '.github/workflows/sparse-admission-census-v107.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run sparse admission census
+        run: bash experiments/run_sparse_admission_census_v107.sh
+      - name: Preserve v107 census
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sparse-admission-census-v107
+          path: /tmp/sparse-admission-census-v107/out/
+          if-no-files-found: warn
