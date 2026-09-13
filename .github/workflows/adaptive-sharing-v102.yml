@@ -1,0 +1,34 @@
+name: Adaptive sharing v102
+
+on:
+  push:
+    branches:
+      - experiment/adaptive-sharing-v102
+    paths:
+      - 'src/**'
+      - 'experiments/run_adaptive_sharing_v102.sh'
+      - '.github/workflows/adaptive-sharing-v102.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  separator:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run adaptive sharing separator
+        run: bash experiments/run_adaptive_sharing_v102.sh
+      - name: Preserve evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: adaptive-sharing-v102
+          path: |
+            /tmp/adaptive-v102/results.tsv
+            /tmp/adaptive-v102/out/
+            /tmp/adaptive-v102/perf-probe.err
+          if-no-files-found: warn
