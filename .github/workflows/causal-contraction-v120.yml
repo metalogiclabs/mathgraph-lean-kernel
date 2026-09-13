@@ -1,0 +1,39 @@
+name: Causal contraction v120
+
+on:
+  push:
+    branches:
+      - experiment/causal-contraction-v120
+    paths:
+      - 'scripts/apply_causal_contraction_v120.py'
+      - 'experiments/run_causal_contraction_v120_one.sh'
+      - '.github/workflows/causal-contraction-v120.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  contraction:
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [255, 0, 1, 2, 3, 4, 5, 6, 7, 8]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      V120_GROUP: ${{ matrix.group }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run causal contraction cell
+        run: bash experiments/run_causal_contraction_v120_one.sh
+      - name: Preserve V120 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v120-group-${{ matrix.group }}
+          path: /tmp/causal-contraction-v120-${{ matrix.group }}/report/
+          if-no-files-found: warn
