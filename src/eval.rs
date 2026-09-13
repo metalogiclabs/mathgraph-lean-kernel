@@ -91,6 +91,24 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         v
     }
 
+    #[inline]
+    pub(crate) fn env_extend_adaptive(&mut self, parent: E<'t>, v: V<'t>) -> E<'t> {
+        let p = parent as *const value::Env<'t> as usize;
+        let q = v as *const Value<'t> as usize;
+        let h = (p as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15)
+            ^ (q as u64).wrapping_mul(0xD6E8_FEB8_6659_FD93);
+        let slot = (h >> crate::util::REUSE_DM_SHIFT) as usize;
+        let ent = self.tc_cache.env_reuse_dm[slot];
+        if ent.0 == p && ent.1 == q {
+            if let Some(hit) = ent.2 {
+                return hit;
+            }
+        }
+        let out = value::env_extend(self.arena, parent, v);
+        self.tc_cache.env_reuse_dm[slot] = (p, q, Some(out));
+        out
+    }
+
     fn mk_unfold_hc(
         &mut self,
         name: NamePtr<'t>,
@@ -767,7 +785,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
             if let Value::Lam { body: clo, .. } = f {
                 let clo_env = clo.env;
                 let clo_body = clo.body;
-                let new_env = value::env_extend(self.arena, clo_env, a);
+                let new_env = self.env_extend_adaptive(clo_env, a);
                 return self.eval(depth, new_env, clo_body);
             }
             return self.apply(depth, f, a);
@@ -809,7 +827,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 let mut cursor = e;
                 while let Expr::Let { data: &crate::expr::LetData { val, body, .. }, .. } = self.ctx.read_expr(cursor) {
                     let vv = self.eval(depth, env, val);
-                    env = value::env_extend(self.arena, env, vv);
+                    env = self.env_extend_adaptive(env, vv);
                     cursor = body;
                 }
                 self.eval(depth, env, cursor)
@@ -933,12 +951,41 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
     }
 
     #[inline]
+    fn neutral_app_adaptive(&mut self, f: V<'t>, a: V<'t>) -> V<'t> {
+        let a = self.canonicalize_for_spine(a);
+        let fp = f as *const Value<'t> as usize;
+        let ap = a as *const Value<'t> as usize;
+        let h = (fp as u64).wrapping_mul(0xA24B_AED4_963E_E407)
+            ^ (ap as u64).wrapping_mul(0x9FB2_1C65_1E98_DF25);
+        let slot = (h >> crate::util::REUSE_DM_SHIFT) as usize;
+        let ent = self.tc_cache.app_reuse_dm[slot];
+        if ent.0 == fp && ent.1 == ap {
+            if let Some(hit) = ent.2 {
+                return hit;
+            }
+        }
+        let out = match f {
+            Value::Rigid { head, spine, .. } => {
+                let ns = self.spine_snoc_hc(spine, Elim::app(a));
+                self.mk_rigid_hc(*head, ns)
+            }
+            Value::Unfold { head, spine, head_value, .. } => {
+                let ns = self.spine_snoc_hc(spine, Elim::app(a));
+                self.mk_unfold_hc(head.name, head.levels, ns, head_value)
+            }
+            _ => unreachable!("neutral_app_adaptive called on reducible head"),
+        };
+        self.tc_cache.app_reuse_dm[slot] = (fp, ap, Some(out));
+        out
+    }
+
+    #[inline]
     pub(crate) fn apply(&mut self, depth: u32, f: V<'t>, a: V<'t>) -> V<'t> {
         match f {
             Value::Lam { body: clo, .. } => {
                 let clo_env = clo.env;
                 let clo_body = clo.body;
-                let env = value::env_extend(self.arena, clo_env, a);
+                let env = self.env_extend_adaptive(clo_env, a);
                 self.eval(depth, env, clo_body)
             }
             Value::Rigid { head, spine , ..} => {
@@ -951,9 +998,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                         }
                     }
                 }
-                let a = self.canonicalize_for_spine(a);
-                let new_spine = self.spine_snoc_hc(spine, Elim::app(a));
-                self.mk_rigid_hc(head_copy, new_spine)
+                self.neutral_app_adaptive(f, a)
             }
             Value::Unfold { head, spine, head_value, .. } => {
                 let head = *head;
@@ -968,9 +1013,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                     }
                     return self.mk_unfold_hc(head.name, head.levels, new_spine, head_value);
                 }
-                let a = self.canonicalize_for_spine(a);
-                let new_spine = self.spine_snoc_hc(spine, Elim::app(a));
-                self.mk_unfold_hc(head.name, head.levels, new_spine, head_value)
+                self.neutral_app_adaptive(f, a)
             }
             _ => panic!("apply: ill-typed application"),
         }
@@ -987,13 +1030,13 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 i += 1;
                 continue
             };
-            let mut env = value::env_extend(self.arena, clo.env, args[i]);
+            let mut env = self.env_extend_adaptive(clo.env, args[i]);
             let mut body = clo.body;
             i += 1;
             while i < args.len() {
                 let Expr::Lambda { body: inner, .. } = self.ctx.read_expr(body) else { break };
                 let pruned = self.key_env(env, body);
-                env = value::env_extend(self.arena, pruned, args[i]);
+                env = self.env_extend_adaptive(pruned, args[i]);
                 body = inner;
                 i += 1;
             }
@@ -1009,7 +1052,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         v: V<'t>,
         binder_ty: Option<V<'t>>,
     ) -> V<'t> {
-        let env = value::env_extend(self.arena, clo.env, v);
+        let env = self.env_extend_adaptive(clo.env, v);
         match clo.ctx {
             None => self.eval(depth, env, clo.body),
             Some(clo_ctx) => {
