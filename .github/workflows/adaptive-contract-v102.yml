@@ -1,0 +1,32 @@
+name: Adaptive CONTRACT v102
+on:
+  push:
+    branches:
+      - experiment/adaptive-contract-v102
+    paths:
+      - 'src/**'
+      - 'experiments/run_adaptive_contract_v102.sh'
+      - '.github/workflows/adaptive-contract-v102.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Run controlled baseline vs adaptive contraction
+        run: bash experiments/run_adaptive_contract_v102.sh
+      - name: Preserve v102 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: adaptive-contract-v102
+          path: /tmp/v102-contract/out/
+          if-no-files-found: warn
