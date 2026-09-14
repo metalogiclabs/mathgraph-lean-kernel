@@ -1,0 +1,39 @@
+name: Interaction map v121
+
+on:
+  push:
+    branches:
+      - experiment/interaction-map-v121
+    paths:
+      - 'scripts/apply_causal_contraction_v120.py'
+      - 'experiments/run_interaction_v121_one.sh'
+      - '.github/workflows/interaction-v121.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  interaction:
+    strategy:
+      fail-fast: false
+      matrix:
+        mask: [0, 255, 15, 240, 85, 170, 3, 12, 48, 192, 51, 204]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      V121_MASK: ${{ matrix.mask }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run V121 interaction cell
+        run: bash experiments/run_interaction_v121_one.sh
+      - name: Preserve V121 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v121-mask-${{ matrix.mask }}
+          path: /tmp/interaction-v121-${{ matrix.mask }}/report/
+          if-no-files-found: warn
