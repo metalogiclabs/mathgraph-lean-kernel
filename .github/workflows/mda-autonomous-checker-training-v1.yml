@@ -1,0 +1,34 @@
+name: MDA autonomous checker training v1
+
+on:
+  push:
+    branches:
+      - mda/autonomous-checker-genesis-v1
+    paths:
+      - 'mda/AUTONOMOUS_CHECKER_GENESIS_V1.md'
+      - 'scripts/mda_autonomous_cache_genesis_v1.py'
+      - 'experiments/run_mda_autonomous_checker_training_v1.sh'
+      - '.github/workflows/mda-autonomous-checker-training-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  train:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Synthesize mechanism from training only
+        run: bash experiments/run_mda_autonomous_checker_training_v1.sh
+      - name: Preserve training evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mda-autonomous-checker-training-v1
+          path: /tmp/mda-auto-train-v1/evidence/
+          if-no-files-found: warn
