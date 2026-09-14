@@ -16,8 +16,8 @@ import time
 import uuid
 from pathlib import Path
 
-from official_jsonl import load
-from submission import read_jsonl
+from official_jsonl import identity, load, relative_path
+from submission import output_identity, read_jsonl
 
 
 def resolve_source(workspace: Path, relative: str) -> Path:
@@ -36,7 +36,15 @@ def verify_one(
     result: dict,
     timeout: int,
 ) -> dict:
-    source_path = resolve_source(workspace, frozen["path"])
+    rel = relative_path(frozen)
+    if not rel:
+        return {
+            "name": frozen["name"],
+            "source": frozen.get("source", ""),
+            "ok": False,
+            "error": "blank file_path requires standalone/header verification mode",
+        }
+    source_path = resolve_source(workspace, rel)
     original_file = source_path.read_text(encoding="utf-8")
     old = frozen["src"]
     new = result["proof"]
@@ -45,7 +53,7 @@ def verify_one(
     if occurrences != 1:
         return {
             "name": frozen["name"],
-            "path": frozen["path"],
+            "path": rel,
             "ok": False,
             "error": f"frozen theorem source occurs {occurrences} times; expected exactly 1",
         }
@@ -68,7 +76,7 @@ def verify_one(
         elapsed = time.perf_counter() - started
         return {
             "name": frozen["name"],
-            "path": frozen["path"],
+            "path": rel,
             "ok": proc.returncode == 0,
             "returncode": proc.returncode,
             "wall_seconds": elapsed,
@@ -79,7 +87,7 @@ def verify_one(
     except subprocess.TimeoutExpired as exc:
         return {
             "name": frozen["name"],
-            "path": frozen["path"],
+            "path": rel,
             "ok": False,
             "timeout": True,
             "wall_seconds": time.perf_counter() - started,
@@ -104,8 +112,8 @@ def main() -> int:
     frozen_rows = load(Path(args.input))
     result_rows = read_jsonl(Path(args.submission))
 
-    frozen_map = {(r["name"], r["path"]): r for r in frozen_rows}
-    result_map = {(r.get("name"), r.get("path")): r for r in result_rows}
+    frozen_map = {identity(r): r for r in frozen_rows}
+    result_map = {output_identity(r): r for r in result_rows}
     if set(frozen_map) != set(result_map):
         raise SystemExit("submission identities differ from benchmark identities")
 
