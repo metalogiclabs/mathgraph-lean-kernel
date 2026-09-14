@@ -31,6 +31,13 @@ jobs:
           echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
           "$HOME/.elan/bin/lean" --version
 
+      - name: Compile-check Arena Python harness
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile competitions/lean_refactor_arena/*.py
+          echo VERIFIED_ARENA_HARNESS_PYTHON_SYNTAX
+
       - name: Inventory live public Arena Space
         shell: bash
         run: |
