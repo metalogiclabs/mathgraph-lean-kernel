@@ -65,6 +65,13 @@ jobs:
             --output /tmp/live-zero-change.jsonl \
             --require-control-identity
 
+      - name: Reproduce all published proof token counts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 competitions/lean_refactor_arena/arena_metrics.py regression \
+            --benchmark /tmp/public-arena-payload/benchmark_data_warmup.jsonl
+
       - name: Build exact full-coverage Arena upload floor
         shell: bash
         run: |
