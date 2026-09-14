@@ -65,6 +65,38 @@ jobs:
             --output /tmp/live-zero-change.jsonl \
             --require-control-identity
 
+      - name: Build exact full-coverage Arena upload floor
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 competitions/lean_refactor_arena/arena_upload.py build \
+            --benchmark /tmp/public-arena-payload/benchmark_data_warmup.jsonl \
+            --out /tmp/live-arena-upload-floor.jsonl \
+            --report /tmp/live-arena-upload-floor-report.json
+          python3 competitions/lean_refactor_arena/arena_upload.py validate \
+            --benchmark /tmp/public-arena-payload/benchmark_data_warmup.jsonl \
+            --upload /tmp/live-arena-upload-floor.jsonl
+          python3 - <<'PY'
+          import json
+          rows=[json.loads(x) for x in open('/tmp/live-arena-upload-floor.jsonl') if x.strip()]
+          assert len(rows) == 15
+          assert all(set(r) == {'name','proof'} for r in rows)
+          print('VERIFIED_EXACT_15_ROW_ARENA_UPLOAD_SHAPE')
+          PY
+
+      - name: Prove sparse uploads are rejected locally
+        shell: bash
+        run: |
+          set -euo pipefail
+          head -n 1 /tmp/live-arena-upload-floor.jsonl > /tmp/sparse-upload.jsonl
+          if python3 competitions/lean_refactor_arena/arena_upload.py validate \
+            --benchmark /tmp/public-arena-payload/benchmark_data_warmup.jsonl \
+            --upload /tmp/sparse-upload.jsonl; then
+            echo "sparse upload unexpectedly accepted"
+            exit 1
+          fi
+          echo VERIFIED_SPARSE_UPLOAD_REFUSAL
+
       - name: Validate organizer JSONL schema
         shell: bash
         run: |
@@ -200,6 +232,8 @@ jobs:
             /tmp/arena-space-code/
             /tmp/live-warmup-summary.json
             /tmp/live-zero-change.jsonl
+            /tmp/live-arena-upload-floor.jsonl
+            /tmp/live-arena-upload-floor-report.json
             /tmp/zero-change-submission.jsonl
             /tmp/track1-ledger.jsonl
             /tmp/ddmin-candidate.lean
