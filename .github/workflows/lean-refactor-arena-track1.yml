@@ -34,6 +34,18 @@ jobs:
             competitions/lean_refactor_arena/fixtures/official_smoke.jsonl \
             --summary-out /tmp/official-schema-summary.json
 
+      - name: Prove submission-shaped zero-change control
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 competitions/lean_refactor_arena/submission.py baseline \
+            --input competitions/lean_refactor_arena/fixtures/official_smoke.jsonl \
+            --output /tmp/zero-change-submission.jsonl
+          python3 competitions/lean_refactor_arena/submission.py validate \
+            --input competitions/lean_refactor_arena/fixtures/official_smoke.jsonl \
+            --output /tmp/zero-change-submission.jsonl \
+            --require-control-identity
+
       - name: Run fail-closed evaluator smoke gate
         shell: bash
         run: |
@@ -144,6 +156,7 @@ jobs:
           path: |
             /tmp/lean-refactor-smoke.json
             /tmp/official-schema-summary.json
+            /tmp/zero-change-submission.jsonl
             /tmp/track1-ledger.jsonl
             /tmp/ddmin-candidate.lean
             /tmp/ddmin-trace.json
