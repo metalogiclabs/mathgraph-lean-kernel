@@ -4,7 +4,7 @@ from collections import defaultdict
 from pathlib import Path
 
 if len(sys.argv) != 2:
-    raise SystemExit('usage: apply_causal_contraction_v120.py <v117-artifact-dir>')
+    raise SystemExit('usage: apply_interaction_map_v121.py <v117-artifact-dir>')
 ART=Path(sys.argv[1])
 PAT=re.compile(
     r'V117_CELL k=(\S+) root=(\S+) mask=(\S+) var_mass=(\S+) depth=(\S+) app_spine=(\S+) '
@@ -41,15 +41,15 @@ group_of={}
 for i,key in enumerate(candidates):
     group_of[key]=min(7,(i*8)//max(1,len(candidates)))
 arms=[f'        {key} => {group_of[key]},' for key in sorted(group_of)]
-print(f'V120_TABLE_CELLS={len(scored)}')
-print(f'V120_CANDIDATE_CELLS={len(candidates)}')
+print(f'V121_TABLE_CELLS={len(scored)}')
+print(f'V121_CANDIDATE_CELLS={len(candidates)}')
 for g in range(8):
-    print(f"V120_GROUP_SIZE group={g} cells={sum(1 for x in group_of.values() if x==g)}")
-print('V120_PARTITION=LEXICOGRAPHIC_EQUAL_COUNT_8')
-print('V120_CANDIDATE_RULE=FROZEN_V119_SCORE_LT_100')
-print('V120_TABLE_SOURCE_RUN=34781716973')
-print('V120_TABLE_SOURCE_ARTIFACT=10325841133')
-print('V120_TABLE_SOURCE_SHA256=ed23da7d49b89b74715f10eb19d950b37784c865f7f30b6172d67e270b487e59')
+    print(f"V121_GROUP_SIZE group={g} cells={sum(1 for x in group_of.values() if x==g)}")
+print('V121_PARTITION=LEXICOGRAPHIC_EQUAL_COUNT_8')
+print('V121_CANDIDATE_RULE=FROZEN_V119_SCORE_LT_100')
+print('V121_TABLE_SOURCE_RUN=34781716973')
+print('V121_TABLE_SOURCE_ARTIFACT=10325841133')
+print('V121_TABLE_SOURCE_SHA256=ed23da7d49b89b74715f10eb19d950b37784c865f7f30b6172d67e270b487e59')
 
 p=Path('src/expr.rs'); c=p.read_text()
 for label,old,new in [
@@ -95,7 +95,7 @@ for label,old,new in [
     },"""),]: c=replace_once(c,old,new,label)
 anchor="""pub(crate) fn ignores_binder(body: ExprPtr<'_>) -> bool {
 """
-helper="""pub(crate) fn pack_boundary_v120(depth: u8, app_spine: u8) -> u8 {
+helper="""pub(crate) fn pack_boundary_v121(depth: u8, app_spine: u8) -> u8 {
     depth.min(15) | (app_spine.min(15) << 4)
 }
 
@@ -105,7 +105,7 @@ anchor="""    #[inline]
     pub(crate) fn fv_mask(&self) -> u64 {
 """
 methods="""    #[inline]
-    pub(crate) fn boundary_depth_v120(&self) -> u8 {
+    pub(crate) fn boundary_depth_v121(&self) -> u8 {
         match self {
             Var { .. } | Sort { .. } | Const { .. } | StringLit { .. } | NatLit { .. } => 1,
             App { boundary, .. } | Pi { boundary, .. } | Lambda { boundary, .. }
@@ -114,7 +114,7 @@ methods="""    #[inline]
     }
 
     #[inline]
-    pub(crate) fn boundary_app_spine_v120(&self) -> u8 {
+    pub(crate) fn boundary_app_spine_v121(&self) -> u8 {
         match self {
             App { boundary, .. } | Pi { boundary, .. } | Lambda { boundary, .. }
             | Let { boundary, .. } | Proj { boundary, .. } => *boundary >> 4,
@@ -134,9 +134,9 @@ old="""    pub fn mk_app(&mut self, fun: ExprPtr<'t>, arg: ExprPtr<'t>) -> ExprP
 new="""    pub fn mk_app(&mut self, fun: ExprPtr<'t>, arg: ExprPtr<'t>) -> ExprPtr<'t> {
         let hash = hash64!(APP_HASH, fun, arg);
         let fv_mask = crate::expr::child_mask(fun) | crate::expr::child_mask(arg);
-        let depth = 1u8.saturating_add(fun.as_ref().boundary_depth_v120().max(arg.as_ref().boundary_depth_v120())).min(15);
-        let app_spine = 1u8.saturating_add(fun.as_ref().boundary_app_spine_v120()).min(15);
-        let boundary = crate::expr::pack_boundary_v120(depth, app_spine);
+        let depth = 1u8.saturating_add(fun.as_ref().boundary_depth_v121().max(arg.as_ref().boundary_depth_v121())).min(15);
+        let app_spine = 1u8.saturating_add(fun.as_ref().boundary_app_spine_v121()).min(15);
+        let boundary = crate::expr::pack_boundary_v121(depth, app_spine);
         self.alloc_expr(Expr::App { fun, arg, fv_mask, boundary, hash })
     }"""
 c=replace_once(c,old,new,'mk_app')
@@ -153,8 +153,8 @@ for label,kind,hashname in [('mk_lambda','Lambda','LAMBDA_HASH'),('mk_pi','Pi','
         }})"""
     new=f"""        let hash = hash64!({hashname}, binder_name, binder_style, binder_type, body);
         let fv_mask = crate::expr::child_mask(binder_type) | crate::expr::body_mask(body);
-        let depth = 1u8.saturating_add(binder_type.as_ref().boundary_depth_v120().max(body.as_ref().boundary_depth_v120())).min(15);
-        let boundary = crate::expr::pack_boundary_v120(depth, 0);
+        let depth = 1u8.saturating_add(binder_type.as_ref().boundary_depth_v121().max(body.as_ref().boundary_depth_v121())).min(15);
+        let boundary = crate::expr::pack_boundary_v121(depth, 0);
         self.alloc_expr(Expr::{kind} {{
             binder_name,
             binder_style,
@@ -171,8 +171,8 @@ old="""        let fv_mask =
         self.alloc_expr(Expr::Let { data, fv_mask, hash })"""
 new="""        let fv_mask =
             crate::expr::child_mask(binder_type) | crate::expr::child_mask(val) | crate::expr::body_mask(body);
-        let depth = 1u8.saturating_add(binder_type.as_ref().boundary_depth_v120().max(val.as_ref().boundary_depth_v120().max(body.as_ref().boundary_depth_v120()))).min(15);
-        let boundary = crate::expr::pack_boundary_v120(depth, 0);
+        let depth = 1u8.saturating_add(binder_type.as_ref().boundary_depth_v121().max(val.as_ref().boundary_depth_v121().max(body.as_ref().boundary_depth_v121()))).min(15);
+        let boundary = crate::expr::pack_boundary_v121(depth, 0);
         let data = self.arena.alloc(crate::expr::LetData { binder_name, binder_type, val, body, nondep });
         self.alloc_expr(Expr::Let { data, fv_mask, boundary, hash })"""
 c=replace_once(c,old,new,'mk_let')
@@ -181,8 +181,8 @@ old="""        let hash = hash64!(PROJ_HASH, ty_name, idx, structure);
         self.alloc_expr(Expr::Proj { ty_name, idx, structure, fv_mask, hash })"""
 new="""        let hash = hash64!(PROJ_HASH, ty_name, idx, structure);
         let fv_mask = crate::expr::child_mask(structure);
-        let depth = 1u8.saturating_add(structure.as_ref().boundary_depth_v120()).min(15);
-        let boundary = crate::expr::pack_boundary_v120(depth, 0);
+        let depth = 1u8.saturating_add(structure.as_ref().boundary_depth_v121()).min(15);
+        let boundary = crate::expr::pack_boundary_v121(depth, 0);
         self.alloc_expr(Expr::Proj { ty_name, idx, structure, fv_mask, boundary, hash })"""
 c=replace_once(c,old,new,'mk_proj'); p.write_text(c)
 
@@ -192,9 +192,9 @@ old="""        let fv_mask = fun_mask | arg_mask;
         self.push_expr(idx, Expr::App { fun, arg, fv_mask, hash }, nlb, fv_mask);"""
 new="""        let fv_mask = fun_mask | arg_mask;
         let nlb = fun.num_loose_bvars().max(arg.num_loose_bvars());
-        let depth = 1u8.saturating_add(fun.as_ref().boundary_depth_v120().max(arg.as_ref().boundary_depth_v120())).min(15);
-        let app_spine = 1u8.saturating_add(fun.as_ref().boundary_app_spine_v120()).min(15);
-        let boundary = crate::expr::pack_boundary_v120(depth, app_spine);
+        let depth = 1u8.saturating_add(fun.as_ref().boundary_depth_v121().max(arg.as_ref().boundary_depth_v121())).min(15);
+        let app_spine = 1u8.saturating_add(fun.as_ref().boundary_app_spine_v121()).min(15);
+        let boundary = crate::expr::pack_boundary_v121(depth, app_spine);
         self.push_expr(idx, Expr::App { fun, arg, fv_mask, boundary, hash }, nlb, fv_mask);"""
 c=replace_once(c,old,new,'parser app')
 for label,kind,hashname in [('parser lambda','Lambda','LAMBDA_HASH'),('parser pi','Pi','PI_HASH')]:
@@ -207,8 +207,8 @@ for label,kind,hashname in [('parser lambda','Lambda','LAMBDA_HASH'),('parser pi
     new=f"""        let hash = hash64!(crate::expr::{hashname}, binder_name, binder_info, binder_type, body);
         let fv_mask = binder_type_mask | body_mask;
         let nlb = binder_type.num_loose_bvars().max(body.num_loose_bvars().saturating_sub(1));
-        let depth = 1u8.saturating_add(binder_type.as_ref().boundary_depth_v120().max(body.as_ref().boundary_depth_v120())).min(15);
-        let boundary = crate::expr::pack_boundary_v120(depth, 0);
+        let depth = 1u8.saturating_add(binder_type.as_ref().boundary_depth_v121().max(body.as_ref().boundary_depth_v121())).min(15);
+        let boundary = crate::expr::pack_boundary_v121(depth, 0);
         self.push_expr(
             idx,
             Expr::{kind} {{ binder_name, binder_style: binder_info, binder_type, body, fv_mask, boundary, hash }},"""
@@ -223,8 +223,8 @@ old="""        let nlb =
                 hash,"""
 new="""        let nlb =
             binder_type.num_loose_bvars().max(val.num_loose_bvars().max(body.num_loose_bvars().saturating_sub(1)));
-        let depth = 1u8.saturating_add(binder_type.as_ref().boundary_depth_v120().max(val.as_ref().boundary_depth_v120().max(body.as_ref().boundary_depth_v120()))).min(15);
-        let boundary = crate::expr::pack_boundary_v120(depth, 0);
+        let depth = 1u8.saturating_add(binder_type.as_ref().boundary_depth_v121().max(val.as_ref().boundary_depth_v121().max(body.as_ref().boundary_depth_v121()))).min(15);
+        let boundary = crate::expr::pack_boundary_v121(depth, 0);
         self.push_expr(
             idx,
             Expr::Let {
@@ -238,8 +238,8 @@ old="""        let hash = hash64!(crate::expr::PROJ_HASH, ty_name, proj_idx, str
             idx,
             Expr::Proj { ty_name, idx: proj_idx, structure, fv_mask, hash },"""
 new="""        let hash = hash64!(crate::expr::PROJ_HASH, ty_name, proj_idx, structure);
-        let depth = 1u8.saturating_add(structure.as_ref().boundary_depth_v120()).min(15);
-        let boundary = crate::expr::pack_boundary_v120(depth, 0);
+        let depth = 1u8.saturating_add(structure.as_ref().boundary_depth_v121()).min(15);
+        let boundary = crate::expr::pack_boundary_v121(depth, 0);
         self.push_expr(
             idx,
             Expr::Proj { ty_name, idx: proj_idx, structure, fv_mask, boundary, hash },"""
@@ -249,21 +249,21 @@ p=Path('src/eval.rs'); c=p.read_text(); anchor='use std::collections::hash_map::
 match_body='\n'.join(arms)
 insert=anchor+f"""use std::sync::atomic::{{AtomicU8, Ordering}};
 
-static V120_ABLATE_GROUP: AtomicU8 = AtomicU8::new(255);
+static V121_ABLATE_GROUP: AtomicU8 = AtomicU8::new(255);
 
-pub fn configure_v120_policy_from_env() {{
-    let group = std::env::var("MATHGRAPH_V120_ABLATE_GROUP").ok().and_then(|s| s.parse::<u8>().ok()).unwrap_or(255);
-    V120_ABLATE_GROUP.store(group, Ordering::Relaxed);
-    eprintln!("V120_POLICY ablate_group={{}}", group);
+pub fn configure_v121_policy_from_env() {{
+    let group = std::env::var("MATHGRAPH_V121_ABLATE_GROUP").ok().and_then(|s| s.parse::<u8>().ok()).unwrap_or(255);
+    V121_ABLATE_GROUP.store(group, Ordering::Relaxed);
+    eprintln!("V121_POLICY ablate_group={{}}", group);
 }}
 
-#[inline] fn v120_k(k:u16)->u8 {{ match k {{ 0..=96=>0,97..=128=>1,129..=192=>2,193..=256=>3,257..=384=>4,385..=512=>5,_=>6 }} }}
-#[inline] fn v120_root(e:ExprPtr<'_>)->u8 {{ match e.as_ref() {{ Expr::Var{{..}}=>0,Expr::Sort{{..}}=>1,Expr::Const{{..}}=>2,Expr::App{{..}}=>3,Expr::Pi{{..}}=>4,Expr::Lambda{{..}}=>5,Expr::Let{{..}}=>6,Expr::StringLit{{..}}=>7,Expr::NatLit{{..}}=>8,Expr::Proj{{..}}=>9 }} }}
-#[inline] fn v120_mask(n:u32)->u8 {{ match n {{ 0=>0,1..=4=>1,5..=8=>2,9..=16=>3,17..=32=>4,33..=48=>5,_=>6 }} }}
-#[inline] fn v120_depth(n:u8)->u8 {{ match n {{ 0..=3=>0,4..=7=>1,8..=11=>2,_=>3 }} }}
-#[inline] fn v120_spine(n:u8)->u8 {{ match n {{ 0=>0,1=>1,2..=3=>2,4..=7=>3,_=>4 }} }}
-#[inline] fn v120_candidate_group(e:ExprPtr<'_>, k:u16)->u8 {{
-    let key=(v120_k(k),v120_root(e),v120_mask(e.as_ref().fv_mask().count_ones()),v120_depth(e.as_ref().boundary_depth_v120()),v120_spine(e.as_ref().boundary_app_spine_v120()));
+#[inline] fn v121_k(k:u16)->u8 {{ match k {{ 0..=96=>0,97..=128=>1,129..=192=>2,193..=256=>3,257..=384=>4,385..=512=>5,_=>6 }} }}
+#[inline] fn v121_root(e:ExprPtr<'_>)->u8 {{ match e.as_ref() {{ Expr::Var{{..}}=>0,Expr::Sort{{..}}=>1,Expr::Const{{..}}=>2,Expr::App{{..}}=>3,Expr::Pi{{..}}=>4,Expr::Lambda{{..}}=>5,Expr::Let{{..}}=>6,Expr::StringLit{{..}}=>7,Expr::NatLit{{..}}=>8,Expr::Proj{{..}}=>9 }} }}
+#[inline] fn v121_mask(n:u32)->u8 {{ match n {{ 0=>0,1..=4=>1,5..=8=>2,9..=16=>3,17..=32=>4,33..=48=>5,_=>6 }} }}
+#[inline] fn v121_depth(n:u8)->u8 {{ match n {{ 0..=3=>0,4..=7=>1,8..=11=>2,_=>3 }} }}
+#[inline] fn v121_spine(n:u8)->u8 {{ match n {{ 0=>0,1=>1,2..=3=>2,4..=7=>3,_=>4 }} }}
+#[inline] fn v121_candidate_group(e:ExprPtr<'_>, k:u16)->u8 {{
+    let key=(v121_k(k),v121_root(e),v121_mask(e.as_ref().fv_mask().count_ones()),v121_depth(e.as_ref().boundary_depth_v121()),v121_spine(e.as_ref().boundary_app_spine_v121()));
     match key {{
 {match_body}
         _ => 255,
@@ -287,9 +287,9 @@ new="""        if k > 64 {
             if let Some(r) = self.tc_cache.wide_prune_cache.get(&ck) {
                 return *r;
             }
-            let policy = V120_ABLATE_GROUP.load(Ordering::Relaxed);
-            let group = v120_candidate_group(e, k);
-            if (policy < 8 && group == policy) || (policy == 8 && group != 255) {
+            let mask = V121_ABLATE_MASK.load(Ordering::Relaxed);
+            let group = v121_candidate_group(e, k);
+            if group < 8 && (mask & (1u16 << group)) != 0 {
                 return env;
             }
             let Some(words) = self.exact_wide_uses(e) else { return env };
@@ -303,7 +303,7 @@ p=Path('src/main.rs'); c=p.read_text()
 old="""fn use_config(config_path: &Path) -> Result<Option<String>, Box<dyn Error>> {
     let cfg = Config::try_from(config_path)?;"""
 new="""fn use_config(config_path: &Path) -> Result<Option<String>, Box<dyn Error>> {
-    sokonanoda::eval::configure_v120_policy_from_env();
+    sokonanoda::eval::configure_v121_policy_from_env();
     let cfg = Config::try_from(config_path)?;"""
 c=replace_once(c,old,new,'main configure'); p.write_text(c)
-print('APPLY_CAUSAL_CONTRACTION_V120=PASS')
+print('APPLY_INTERACTION_MAP_V121=PASS')
