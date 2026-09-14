@@ -1,0 +1,50 @@
+name: Lean Refactor Arena Track 1
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'competitions/lean_refactor_arena/**'
+      - '.github/workflows/lean-refactor-arena-track1.yml'
+
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      LEAN_TOOLCHAIN: leanprover/lean4:v4.24.0
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pinned Lean
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh             | sh -s -- -y --default-toolchain "$LEAN_TOOLCHAIN"
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          "$HOME/.elan/bin/lean" --version
+
+      - name: Run fail-closed evaluator smoke gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 competitions/lean_refactor_arena/runner.py             --lean "$HOME/.elan/bin/lean"             --manifest competitions/lean_refactor_arena/fixtures/smoke/manifest.json             --out /tmp/lean-refactor-smoke.json
+
+      - name: Assert the fixture demonstrates a verified contraction
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          p = json.load(open('/tmp/lean-refactor-smoke.json'))
+          c = p['cases'][0]
+          assert p['all_valid']
+          assert c['candidate']['tokens_proxy'] < c['reference']['tokens_proxy']
+          print('VERIFIED_LEAN_REFACTOR_ARENA_SMOKE_CONTRACTION')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lean-refactor-arena-track1-smoke
+          path: /tmp/lean-refactor-smoke.json
