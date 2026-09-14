@@ -1,0 +1,32 @@
+name: MDA autonomous checker v2 sanity
+
+on:
+  push:
+    branches:
+      - mda/autonomous-checker-genesis-v2
+    paths:
+      - '.github/workflows/mda-autonomous-checker-v2-sanity.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sanity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile helper and instrument source in place
+        run: |
+          python3 -m py_compile scripts/mda_autonomous_cache_genesis_v2.py
+          cp src/eval.rs /tmp/eval.rs
+          cp src/main.rs /tmp/main.rs
+          python3 scripts/mda_autonomous_cache_genesis_v2.py instrument /tmp/eval.rs /tmp/main.rs
+          cp /tmp/eval.rs src/eval.rs
+          cp /tmp/main.rs src/main.rs
+          cargo check --locked -q
+          echo MDA_V2_SANITY=PASS
