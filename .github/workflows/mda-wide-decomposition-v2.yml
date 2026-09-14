@@ -1,0 +1,36 @@
+name: MDA wide causal decomposition v2
+
+on:
+  push:
+    branches:
+      - mda/mathgraph-lean-v1
+    paths:
+      - 'experiments/run_mda_wide_decomposition_v2_cell.sh'
+      - '.github/workflows/mda-wide-decomposition-v2.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  decompose:
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [full, acquire-only, none]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      MODE: ${{ matrix.mode }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run isolated causal arm
+        run: bash experiments/run_mda_wide_decomposition_v2_cell.sh
+      - name: Preserve arm evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mda-wide-v2-${{ matrix.mode }}
+          path: /tmp/mda-wide-decomposition-v2-${{ matrix.mode }}/evidence/
+          if-no-files-found: warn
