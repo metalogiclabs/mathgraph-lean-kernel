@@ -1,0 +1,36 @@
+name: MDA MathGraph baseline v1
+
+on:
+  push:
+    branches:
+      - mda/mathgraph-lean-v1
+    paths:
+      - 'domains/lean-kernel/DOMAIN_CONTRACT.md'
+      - 'present/PRESENT.json'
+      - 'history/INTERACTION_REGISTRY.md'
+      - 'mda/FREEZE.md'
+      - 'experiments/run_mda_mathgraph_baseline_v1.sh'
+      - '.github/workflows/mda-mathgraph-baseline-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  baseline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Establish frozen MDA baseline
+        run: bash experiments/run_mda_mathgraph_baseline_v1.sh
+      - name: Preserve MDA baseline evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mda-mathgraph-baseline-v1
+          path: /tmp/mda-mathgraph-baseline-v1/evidence/
+          if-no-files-found: warn
