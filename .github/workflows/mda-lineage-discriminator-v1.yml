@@ -1,0 +1,59 @@
+name: MDA lineage discriminator v1
+
+on:
+  push:
+    branches:
+      - mda/mathgraph-lean-v1
+    paths:
+      - 'experiments/run_mda_lineage_cell_v1.sh'
+      - '.github/workflows/mda-lineage-discriminator-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lineage:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: mergebase
+            rev: 792a5f99bcee9ca3181a01b68be9e5ce2ab6d8d6
+          - label: upstream-port-fixes
+            rev: 7b51784fe4ec9b82bf7a20c71ba6bf803a4ed7c0
+          - label: upstream-no-binder-metadata
+            rev: ceaabb593e830dd318bfefd1675be3142fad8eb7
+          - label: upstream-sparse-env
+            rev: fe8edcc0838ba6198248a475e93446a3b55e5a86
+          - label: upstream-share-more
+            rev: 28c03d0103e004610e4d47a4828965efb2b70af9
+          - label: mg-equal-hint
+            rev: 801cb6d918d0e383e4c6a3c6017ef945d42a0698
+          - label: mg-recursor-soundness
+            rev: 2de1895a52d21ad266b77002defe3e6bc69bbcfd
+          - label: mg-wide-frame
+            rev: 91ba5db4029290b257a08494559ec3283cddbee3
+          - label: mg-wide-cache
+            rev: eaf479a135c02e0daad6760eff9e049dd9f63576
+          - label: mg-exact-wide-key
+            rev: 5daa4f66c1fa63b44d2dd02e96bd7303e6ec0f71
+          - label: mg-bottom-up-wide
+            rev: d6a73279e6765e637f9741180cefbd7ef957d8e5
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      LABEL: ${{ matrix.label }}
+      REV: ${{ matrix.rev }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run frozen lineage cell
+        run: bash experiments/run_mda_lineage_cell_v1.sh
+      - name: Preserve lineage evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mda-lineage-${{ matrix.label }}
+          path: /tmp/mda-lineage-${{ matrix.label }}/evidence/
+          if-no-files-found: warn
