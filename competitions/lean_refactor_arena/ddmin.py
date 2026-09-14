@@ -42,39 +42,43 @@ def verifies(src: str, lean: str, timeout: int) -> tuple[bool, str]:
         Path(path).unlink(missing_ok=True)
 
 def ddmin(signature: str, tokens: list[str], lean: str, timeout: int, max_checks: int):
+    """Greedy largest-span deletion under verifier control.
+
+    Search contains no Lean-specific rewrite. At each round it asks whether any
+    contiguous span of existing proof tokens can disappear. The first verified
+    largest deletion is retained, then the search restarts from the smaller proof.
+    """
     checks = 0
     current = tokens[:]
     trace = []
-    n = 2
     while len(current) >= 2 and checks < max_checks:
-        chunk = max(1, (len(current) + n - 1) // n)
         accepted = False
-        for start in range(0, len(current), chunk):
-            if checks >= max_checks:
-                break
-            candidate = current[:start] + current[start + chunk:]
-            if not candidate:
-                continue
-            checks += 1
-            ok, detail = verifies(render(signature, candidate), lean, timeout)
-            trace.append({
-                "check": checks,
-                "before_tokens": len(current),
-                "after_tokens": len(candidate),
-                "deleted_start": start,
-                "deleted_count": min(chunk, len(current) - start),
-                "accepted": ok,
-                "detail": detail if not ok else "",
-            })
-            if ok:
-                current = candidate
-                n = max(2, n - 1)
-                accepted = True
+        for width in range(len(current) - 1, 0, -1):
+            for start in range(0, len(current) - width + 1):
+                if checks >= max_checks:
+                    return current, checks, trace
+                candidate = current[:start] + current[start + width:]
+                if not candidate:
+                    continue
+                checks += 1
+                ok, detail = verifies(render(signature, candidate), lean, timeout)
+                trace.append({
+                    "check": checks,
+                    "before_tokens": len(current),
+                    "after_tokens": len(candidate),
+                    "deleted_start": start,
+                    "deleted_count": width,
+                    "accepted": ok,
+                    "detail": detail if not ok else "",
+                })
+                if ok:
+                    current = candidate
+                    accepted = True
+                    break
+            if accepted:
                 break
         if not accepted:
-            if n >= len(current):
-                break
-            n = min(len(current), n * 2)
+            break
     return current, checks, trace
 
 def main() -> int:
