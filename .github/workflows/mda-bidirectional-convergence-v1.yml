@@ -1,0 +1,185 @@
+name: MDA bidirectional convergence v1
+
+on:
+  push:
+    branches:
+      - mda/bidirectional-convergence-v1
+    paths:
+      - 'mda/BIDIRECTIONAL_CONVERGENCE_V1.md'
+      - 'experiments/run_mda_bidirectional_convergence_v1.sh'
+      - '.github/workflows/mda-bidirectional-convergence-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prepare-ground:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Prepare frozen pinned Arena semantic ground
+        run: |
+          set -euo pipefail
+          ARENA=ac1c13762de41b594fa24b90ede8cfd97ac6a765
+          ROOT=/tmp/mda-bidir-ground-v1
+          rm -rf "$ROOT"
+          mkdir -p "$ROOT/tests"
+          git clone -q https://github.com/leanprover/lean-kernel-arena "$ROOT/arena"
+          git -C "$ROOT/arena" checkout -q "$ARENA"
+          cd "$ROOT/arena"
+          for t in init-prelude extra-rec rec-missing-ih proj-of-stuck-prop proj-of-subst-prop; do
+            nix develop -c ./lka.py build-test "$t" >/dev/null
+            cp "_build/tests/$t.ndjson" "$ROOT/tests/$t.ndjson"
+          done
+          sha256sum "$ROOT"/tests/*.ndjson > "$ROOT/tests/SHA256SUMS"
+          printf '%s\n' "$ARENA" > "$ROOT/tests/ARENA_SHA"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mda-bidir-ground-v1
+          path: /tmp/mda-bidir-ground-v1/tests/
+          if-no-files-found: error
+
+  configuration:
+    needs: prepare-ground
+    strategy:
+      fail-fast: false
+      matrix:
+        mask: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      MDA_MASK: ${{ matrix.mask }}
+      MDA_TEST_DIR: /tmp/mda-bidir-ground
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: mda-bidir-ground-v1
+          path: /tmp/mda-bidir-ground
+      - name: Verify frozen ground
+        run: |
+          set -euo pipefail
+          cd /tmp/mda-bidir-ground
+          sha256sum -c SHA256SUMS
+          test "$(cat ARENA_SHA)" = "ac1c13762de41b594fa24b90ede8cfd97ac6a765"
+      - name: Evaluate genesis and solvent for same mask
+        run: bash experiments/run_mda_bidirectional_convergence_v1.sh
+      - name: Preserve paired configuration evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mda-bidir-mask-${{ matrix.mask }}
+          path: /tmp/mda-bidir-v1-mask-${{ matrix.mask }}/evidence/
+          if-no-files-found: error
+
+  aggregate:
+    needs: configuration
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mda-bidir-mask-*
+          path: /tmp/mda-bidir-all
+      - name: Compute exact semantic frontiers and convergence
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, pathlib
+          root=pathlib.Path('/tmp/mda-bidir-all')
+          rows=[]
+          for d in sorted(root.glob('mda-bidir-mask-*'), key=lambda p:int(p.name.rsplit('-',1)[1])):
+              p=d/'pair.json'
+              if not p.exists():
+                  continue
+              rows.append(json.loads(p.read_text()))
+          if len(rows)!=64:
+              raise SystemExit(f'HARNESS_ERROR expected 64 paired rows, found {len(rows)}')
+
+          lawful_g=[r for r in rows if r['genesis']['lawful']]
+          lawful_s=[r for r in rows if r['solvent']['lawful']]
+
+          def frontier(rows):
+              if not rows:
+                  return [], None
+              k=min(r['retained_count'] for r in rows)
+              return sorted(r['mask'] for r in rows if r['retained_count']==k), k
+
+          fg,kg=frontier(lawful_g)
+          fs,ks=frontier(lawful_s)
+          common=sorted(set(fg)&set(fs))
+          source_mismatches=[
+              r['mask'] for r in rows
+              if r['mask'] in common and not r['same_source_payload']
+          ]
+          lawful_only_g=sorted(
+              r['mask'] for r in rows
+              if r['genesis']['lawful'] and not r['solvent']['lawful']
+          )
+          lawful_only_s=sorted(
+              r['mask'] for r in rows
+              if r['solvent']['lawful'] and not r['genesis']['lawful']
+          )
+          unreachable_g=sum(r['genesis']['classification']=='UNREACHABLE_PATCH' for r in rows)
+          unreachable_s=sum(r['solvent']['classification']=='UNREACHABLE_PATCH' for r in rows)
+
+          passed=bool(fg) and fg==fs and not source_mismatches
+          verdict=(
+              'VERIFIED_BIDIRECTIONAL_SEMANTIC_FRONTIER_CONVERGENCE'
+              if passed else
+              'BIDIRECTIONAL_CONVERGENCE_NOT_ESTABLISHED'
+          )
+
+          data={
+              'schema':'mda-bidirectional-convergence-v1',
+              'verdict':verdict,
+              'full_pass':passed,
+              'genesis_lawful_count':len(lawful_g),
+              'solvent_lawful_count':len(lawful_s),
+              'genesis_min_retained_count':kg,
+              'solvent_min_retained_count':ks,
+              'genesis_frontier_masks':fg,
+              'solvent_frontier_masks':fs,
+              'common_frontier_masks':common,
+              'frontier_source_mismatches':source_mismatches,
+              'lawful_only_genesis_masks':lawful_only_g,
+              'lawful_only_solvent_masks':lawful_only_s,
+              'unreachable_patch_genesis_count':unreachable_g,
+              'unreachable_patch_solvent_count':unreachable_s,
+              'rows':rows,
+              'claim_boundary':(
+                  'Exact within the frozen six-capability configuration class and fast protected '
+                  'semantic replay. No global Lean-kernel minimality or Arena performance win claimed.'
+              ),
+          }
+          out=pathlib.Path('/tmp/mda-bidir-summary')
+          out.mkdir()
+          (out/'evidence.json').write_text(json.dumps(data,indent=2)+'\n')
+          with (out/'summary.md').open('w') as f:
+              f.write('# MDA Bidirectional Convergence V1\n\n')
+              f.write(f'Verdict: **{verdict}**\n\n')
+              f.write(f'Genesis lawful: {len(lawful_g)}/64; solvent lawful: {len(lawful_s)}/64.\n\n')
+              f.write(f'Genesis minimum retained atoms: {kg}; frontier: {fg}.\n\n')
+              f.write(f'Solvent minimum retained atoms: {ks}; frontier: {fs}.\n\n')
+              f.write(f'Common frontier: {common}.\n\n')
+              f.write(f'Frontier source mismatches: {source_mismatches}.\n\n')
+              f.write(f'Lawful only from genesis: {lawful_only_g}.\n\n')
+              f.write(f'Lawful only from solvent: {lawful_only_s}.\n\n')
+              f.write('This is a bounded semantic-sufficiency result, not an Arena performance promotion.\n')
+          (out/'verdict.txt').write_text(('PASS' if passed else 'FAIL')+'\n')
+          print('MDA_BIDIR_VERDICT='+verdict)
+          print('MDA_BIDIR_GENESIS_FRONTIER='+','.join(map(str,fg)))
+          print('MDA_BIDIR_SOLVENT_FRONTIER='+','.join(map(str,fs)))
+          print('MDA_BIDIR_SOURCE_MISMATCHES='+','.join(map(str,source_mismatches)))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mda-bidirectional-convergence-v1-summary
+          path: /tmp/mda-bidir-summary/
+          if-no-files-found: error
+      - name: Strict convergence gate
+        run: test "$(cat /tmp/mda-bidir-summary/verdict.txt)" = PASS
