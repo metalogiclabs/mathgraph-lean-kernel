@@ -177,20 +177,28 @@ def make_policies(census_path,outdir):
     out=Path(outdir); out.mkdir(parents=True,exist_ok=True)
     hs=[1,2,4,8,16]; rs=[0.0,0.01,0.05,0.10,0.20,0.40]
     labels=[]
+    unique_labels=[]
+    seen_behaviors={}
     for h in hs:
         for ratio in rs:
             admit=[(c["hits"]>=h and c["hit_ratio"]>=ratio) for c in cells]
             label=f"h{h}_r{str(ratio).replace('.','p')}"
+            key=tuple(admit)
+            representative=seen_behaviors.get(key)
             payload={"schema":"mda-cache-policy-v1","label":label,"h":h,"r":ratio,
                      "admit":admit,"admitted_cells":sum(admit),
-                     "source":"training_census_only"}
+                     "source":"training_census_only",
+                     "behavioral_representative":representative or label}
             (out/f"{label}.json").write_text(json.dumps(payload,indent=2,sort_keys=True)+"\n")
             labels.append(label)
+            if representative is None:
+                seen_behaviors[key]=label
+                unique_labels.append(label)
     # negative control, timed but excluded from synthesized promotion
     payload={"schema":"mda-cache-policy-v1","label":"all_bypass","h":None,"r":None,
              "admit":[False]*NCELLS,"admitted_cells":0,"source":"negative_control"}
     (out/"all_bypass.json").write_text(json.dumps(payload,indent=2,sort_keys=True)+"\n")
-    (out/"labels.txt").write_text("\n".join(labels+["all_bypass"])+"\n")
+    (out/"labels.txt").write_text("\n".join(unique_labels+["all_bypass"])+"\n")\n    (out/"all-threshold-labels.txt").write_text("\n".join(labels)+"\n")\n    print(f"MDA_POLICY_THRESHOLDS={len(labels)} UNIQUE_BEHAVIORS={len(unique_labels)}")
 
 def apply_policy(clean_eval:Path, policy_path:Path, dest:Path):
     c=clean_eval.read_text()
