@@ -1,0 +1,124 @@
+name: Lean Refactor Arena real Strata acquisition
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'competition/lean-refactor-arena-track1'
+    paths:
+      - 'competitions/lean_refactor_arena/project_line_reduce.py'
+      - '.github/workflows/lean-refactor-arena-real-strata.yml'
+
+concurrency:
+  group: lean-refactor-arena-real-strata
+  cancel-in-progress: true
+
+jobs:
+  strata-extracted-old-expr:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      STRATA_COMMIT: 451e5f047bafa010d178856db76c00029bfa4d7f
+      TARGET_NAME: CallElimCorrect.extractedOldExprInVars
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install elan
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \
+            | sh -s -- -y --default-toolchain leanprover/lean4:v4.26.0
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          "$HOME/.elan/bin/lean" --version
+
+      - name: Freeze live warm-up payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/lra-space
+          git clone --depth=1 https://huggingface.co/spaces/delta-lab-ai/lean-refactor-arena /tmp/lra-space
+          python3 competitions/lean_refactor_arena/official_jsonl.py \
+            /tmp/lra-space/benchmark_data_warmup.jsonl \
+            --summary-out /tmp/strata-live-benchmark-summary.json
+
+      - name: Checkout exact Strata competition commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/Strata
+          git init /tmp/Strata
+          git -C /tmp/Strata remote add origin https://github.com/strata-org/Strata.git
+          git -C /tmp/Strata fetch --depth=1 origin "$STRATA_COMMIT"
+          git -C /tmp/Strata checkout --detach FETCH_HEAD
+          test "$(git -C /tmp/Strata rev-parse HEAD)" = "$STRATA_COMMIT"
+          test "$(cat /tmp/Strata/lean-toolchain)" = "leanprover/lean4:v4.26.0"
+          echo "VERIFIED_EXACT_STRATA_COMPETITION_COMMIT"
+
+      - name: Materialize Strata dependencies
+        shell: bash
+        working-directory: /tmp/Strata
+        run: |
+          set -euo pipefail
+          "$HOME/.elan/bin/lake" update
+          "$HOME/.elan/bin/lake" build Strata.Transform.CallElimCorrect
+
+      - name: Verify frozen reference in exact workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 competitions/lean_refactor_arena/submission.py baseline \
+            --input /tmp/lra-space/benchmark_data_warmup.jsonl \
+            --output /tmp/full-control.jsonl
+          python3 competitions/lean_refactor_arena/workspace_verify.py \
+            --workspace /tmp/Strata \
+            --input /tmp/lra-space/benchmark_data_warmup.jsonl \
+            --submission /tmp/full-control.jsonl \
+            --out /tmp/strata-reference-verify.json \
+            --limit 1 || true
+          # The generic verifier's first benchmark row is the adjacent Strata theorem;
+          # verify our target directly through the reducer's mandatory baseline replay.
+
+      - name: Run bounded deletion-only acquisition on real theorem
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 competitions/lean_refactor_arena/project_line_reduce.py \
+            --benchmark /tmp/lra-space/benchmark_data_warmup.jsonl \
+            --name "$TARGET_NAME" \
+            --workspace /tmp/Strata \
+            --out-proof /tmp/strata-candidate.jsonl \
+            --out-report /tmp/strata-line-reduce-report.json \
+            --max-checks 24 \
+            --timeout 120
+
+      - name: Build full 15-problem upload with retained Strata candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 competitions/lean_refactor_arena/arena_upload.py build \
+            --benchmark /tmp/lra-space/benchmark_data_warmup.jsonl \
+            --candidates /tmp/strata-candidate.jsonl \
+            --out /tmp/strata-full-upload.jsonl \
+            --report /tmp/strata-full-upload-report.json
+          python3 - <<'PY'
+          import json
+          r=json.load(open('/tmp/strata-line-reduce-report.json'))
+          print('REAL_STRATA_CHANGED=', r['changed'])
+          print('REAL_STRATA_LINES=', r['initial_body_lines'], '->', r['final_body_lines'])
+          print('REAL_STRATA_CHECKS=', r['verifier_checks'])
+          print('REAL_STRATA_BASELINE_WALL=', r['baseline_wall_seconds'])
+          print('REAL_STRATA_FINAL_WALL=', r['final_wall_seconds'])
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lean-refactor-arena-real-strata
+          path: |
+            /tmp/strata-live-benchmark-summary.json
+            /tmp/strata-reference-verify.json
+            /tmp/strata-candidate.jsonl
+            /tmp/strata-line-reduce-report.json
+            /tmp/strata-full-upload.jsonl
+            /tmp/strata-full-upload-report.json
