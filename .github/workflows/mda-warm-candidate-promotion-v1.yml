@@ -1,0 +1,30 @@
+name: MDA warm projection candidate promotion v1
+
+on:
+  push:
+    branches:
+      - mda/mathgraph-lean-v1
+    paths:
+      - 'experiments/run_mda_warm_candidate_promotion_v1.sh'
+      - '.github/workflows/mda-warm-candidate-promotion-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  promotion:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run full pinned Arena replay and causal ablation
+        run: bash experiments/run_mda_warm_candidate_promotion_v1.sh
+      - name: Preserve promotion evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mda-warm-candidate-promotion-v1
+          path: /tmp/mda-warm-candidate-promotion-v1/evidence/
+          if-no-files-found: warn
