@@ -2,11 +2,16 @@ name: Lean Refactor Arena Track 1
 
 on:
   workflow_dispatch:
-  pull_request:
-    branches: [master]
+  push:
+    branches:
+      - 'competition/lean-refactor-arena-track1'
     paths:
       - 'competitions/lean_refactor_arena/**'
       - '.github/workflows/lean-refactor-arena-track1.yml'
+
+concurrency:
+  group: lean-refactor-arena-track1
+  cancel-in-progress: true
 
 jobs:
   smoke:
