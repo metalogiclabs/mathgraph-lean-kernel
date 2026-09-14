@@ -43,9 +43,27 @@ jobs:
             git rev-parse HEAD
             find . -maxdepth 4 -type f -not -path './.git/*' -print | sort
           ) | tee /tmp/arena-space-inventory.txt
-          mkdir -p /tmp/public-arena-payload
+          mkdir -p /tmp/public-arena-payload /tmp/arena-space-code
           find /tmp/lean-refactor-arena-space -type f -name '*.jsonl' -print -exec cp {} /tmp/public-arena-payload/ \;
+          for f in README.md app.py benchmark.py leaderboard.py contribution.md; do
+            test ! -f "/tmp/lean-refactor-arena-space/$f" || cp "/tmp/lean-refactor-arena-space/$f" /tmp/arena-space-code/
+          done
           echo "PUBLIC_JSONL_COUNT=$(find /tmp/public-arena-payload -type f -name '*.jsonl' | wc -l)"
+
+      - name: Validate live warm-up payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 competitions/lean_refactor_arena/official_jsonl.py \
+            /tmp/public-arena-payload/benchmark_data_warmup.jsonl \
+            --summary-out /tmp/live-warmup-summary.json
+          python3 competitions/lean_refactor_arena/submission.py baseline \
+            --input /tmp/public-arena-payload/benchmark_data_warmup.jsonl \
+            --output /tmp/live-zero-change.jsonl
+          python3 competitions/lean_refactor_arena/submission.py validate \
+            --input /tmp/public-arena-payload/benchmark_data_warmup.jsonl \
+            --output /tmp/live-zero-change.jsonl \
+            --require-control-identity
 
       - name: Validate organizer JSONL schema
         shell: bash
@@ -179,6 +197,9 @@ jobs:
             /tmp/official-schema-summary.json
             /tmp/arena-space-inventory.txt
             /tmp/public-arena-payload/
+            /tmp/arena-space-code/
+            /tmp/live-warmup-summary.json
+            /tmp/live-zero-change.jsonl
             /tmp/zero-change-submission.jsonl
             /tmp/track1-ledger.jsonl
             /tmp/ddmin-candidate.lean
