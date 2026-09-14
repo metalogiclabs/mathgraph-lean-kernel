@@ -1,0 +1,34 @@
+name: MDA autonomous checker semantic v2
+
+on:
+  push:
+    branches:
+      - candidate/autonomous-cache-admission-v2
+    paths:
+      - 'src/eval.rs'
+      - 'mda/generated/autonomous_cache_admission_v2/**'
+      - 'experiments/run_mda_autonomous_checker_semantic_v2.sh'
+      - '.github/workflows/mda-autonomous-checker-semantic-v2.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  semantic:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Run full pinned Arena semantic authority
+        run: bash experiments/run_mda_autonomous_checker_semantic_v2.sh
+      - name: Preserve V2 semantic evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mda-autonomous-checker-semantic-v2
+          path: /tmp/mda-auto-semantic-v2/evidence/
+          if-no-files-found: warn
