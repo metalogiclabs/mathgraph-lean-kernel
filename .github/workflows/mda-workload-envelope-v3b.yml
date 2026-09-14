@@ -1,0 +1,116 @@
+name: MDA workload envelope convergence v3b
+
+on:
+  push:
+    branches:
+      - mda/workload-envelope-convergence-v3b
+    paths:
+      - 'mda/WORKLOAD_ENVELOPE_CONVERGENCE_V3B.md'
+      - 'experiments/run_mda_workload_envelope_v3b.sh'
+      - '.github/workflows/mda-workload-envelope-v3b.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  configuration:
+    strategy:
+      fail-fast: false
+      matrix:
+        mask: [2, 3, 10, 11, 30, 31, 62, 63]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      MDA_MASK: ${{ matrix.mask }}
+      MDA_TEST_DIR: /tmp/mda-workload-ground
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: mda-workload-ground-v3
+          path: /tmp/mda-workload-ground
+          run-id: 34807040127
+          github-token: ${{ github.token }}
+      - name: Verify reused frozen ground
+        run: |
+          set -euo pipefail
+          cd /tmp/mda-workload-ground
+          sha256sum -c SHA256SUMS
+          test "$(cat ARENA_SHA)" = "ac1c13762de41b594fa24b90ede8cfd97ac6a765"
+      - name: Evaluate controlled workload envelope
+        run: bash experiments/run_mda_workload_envelope_v3b.sh
+      - name: Upload mask evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mda-v3b-mask-${{ matrix.mask }}
+          path: /tmp/mda-workload-v3b-mask-${{ matrix.mask }}/evidence/
+          if-no-files-found: error
+
+  aggregate:
+    needs: configuration
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mda-v3b-mask-*
+          path: /tmp/mda-v3b-all
+      - name: Compute exact bounded frontier
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,pathlib
+          masks=[2,3,10,11,30,31,62,63]
+          root=pathlib.Path('/tmp/mda-v3b-all')
+          rows=[]; missing=[]
+          for m in masks:
+              p=root/f'mda-v3b-mask-{m}'/'result.json'
+              if p.exists(): rows.append(json.loads(p.read_text()))
+              else: missing.append(m)
+          if missing:
+              raise SystemExit(f'MISSING_RESULTS={missing}')
+          good=[r for r in rows if r['workload_sufficient']]
+          if good:
+              k=min(r['retained_count'] for r in good)
+              frontier=sorted(r['mask'] for r in good if r['retained_count']==k)
+          else:
+              k=None; frontier=[]
+          verdict='VERIFIED_WORKLOAD_ENVELOPE_BIDIRECTIONAL_FRONTIER' if frontier else 'NO_WORKLOAD_ENVELOPE_FRONTIER'
+          data={
+            'schema':'mda-workload-envelope-convergence-v3b-summary',
+            'verdict':verdict,
+            'workload_sufficient_masks':sorted(r['mask'] for r in good),
+            'minimum_retained_count':k,
+            'frontier_masks':frontier,
+            'rows':rows,
+            'claim_boundary':'Same-runner wall+CPU envelope on frozen Mathlib+con-leche; not official Arena retired-instruction evidence.'
+          }
+          out=pathlib.Path('/tmp/mda-v3b-summary'); out.mkdir()
+          (out/'evidence.json').write_text(json.dumps(data,indent=2)+'\n')
+          with (out/'summary.md').open('w') as f:
+              f.write('# MDA Workload Envelope Convergence V3b\n\n')
+              f.write(f'Verdict: **{verdict}**\n\n')
+              f.write(f'Sufficient masks: {data["workload_sufficient_masks"]}.\n\n')
+              f.write(f'Minimum retained count: {k}.\n\n')
+              f.write(f'Frontier: {frontier}.\n\n')
+              for r in rows:
+                  f.write(f'## mask {r["mask"]} retained={r["retained_count"]} sufficient={r["workload_sufficient"]}\n\n')
+                  for t,x in r['workloads'].items():
+                      f.write(f'- {t}: wall_ratio={x["wall_ratio"]}, cpu_ratio={x["cpu_ratio"]}, timeout={x["candidate"]["timed_out"]}\n')
+                  f.write('\n')
+          (out/'verdict.txt').write_text(('PASS' if frontier else 'FAIL')+'\n')
+          print('MDA_V3B_VERDICT='+verdict)
+          print('MDA_V3B_SUFFICIENT='+','.join(map(str,data['workload_sufficient_masks'])))
+          print('MDA_V3B_FRONTIER='+','.join(map(str,frontier)))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mda-workload-envelope-v3b-summary
+          path: /tmp/mda-v3b-summary/
+          if-no-files-found: error
+      - name: Strict frontier gate
+        run: test "$(cat /tmp/mda-v3b-summary/verdict.txt)" = PASS
