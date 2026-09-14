@@ -74,6 +74,41 @@ jobs:
           fi
           echo VERIFIED_TRACK1_HARD_BUDGET_REFUSAL
 
+      - name: Prove parallel workers cannot race past the cap
+        shell: bash
+        run: |
+          set -euo pipefail
+          LEDGER=/tmp/track1-concurrent.jsonl
+          set +e
+          pids=""
+          for i in 1 2 3 4; do
+            python3 competitions/lean_refactor_arena/budget_ledger.py \
+              --ledger "$LEDGER" --problem concurrent-smoke --usd 1.00 \
+              --model test-model --purpose "parallel-$i" \
+              >"/tmp/parallel-$i.log" 2>&1 &
+            pids="$pids $!"
+          done
+          failures=0
+          successes=0
+          for pid in $pids; do
+            wait "$pid"
+            rc=$?
+            if [ "$rc" -eq 0 ]; then successes=$((successes+1)); else failures=$((failures+1)); fi
+          done
+          set -e
+          python3 - <<'PY'
+          import json
+          from decimal import Decimal
+          rows=[json.loads(x) for x in open('/tmp/track1-concurrent.jsonl') if x.strip()]
+          total=sum((Decimal(r['usd']) for r in rows), Decimal('0'))
+          assert len(rows) == 3, rows
+          assert total == Decimal('3.00'), total
+          assert rows[-1]['cumulative_usd'] == '3.00', rows[-1]
+          print('VERIFIED_ATOMIC_PARALLEL_TRACK1_BUDGET')
+          PY
+          test "$successes" -eq 3
+          test "$failures" -eq 1
+
       - name: Discover contraction by deletion only
         shell: bash
         run: |
