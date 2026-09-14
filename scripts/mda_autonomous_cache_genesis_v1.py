@@ -198,7 +198,9 @@ def make_policies(census_path,outdir):
     payload={"schema":"mda-cache-policy-v1","label":"all_bypass","h":None,"r":None,
              "admit":[False]*NCELLS,"admitted_cells":0,"source":"negative_control"}
     (out/"all_bypass.json").write_text(json.dumps(payload,indent=2,sort_keys=True)+"\n")
-    (out/"labels.txt").write_text("\n".join(unique_labels+["all_bypass"])+"\n")\n    (out/"all-threshold-labels.txt").write_text("\n".join(labels)+"\n")\n    print(f"MDA_POLICY_THRESHOLDS={len(labels)} UNIQUE_BEHAVIORS={len(unique_labels)}")
+    (out/"labels.txt").write_text("\n".join(unique_labels+["all_bypass"])+"\n")
+    (out/"all-threshold-labels.txt").write_text("\n".join(labels)+"\n")
+    print(f"MDA_POLICY_THRESHOLDS={len(labels)} UNIQUE_BEHAVIORS={len(unique_labels)}")
 
 def apply_policy(clean_eval:Path, policy_path:Path, dest:Path):
     c=clean_eval.read_text()
