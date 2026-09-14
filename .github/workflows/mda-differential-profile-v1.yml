@@ -1,0 +1,30 @@
+name: MDA differential Mathlib profile v1
+
+on:
+  push:
+    branches:
+      - mda/mathgraph-lean-v1
+    paths:
+      - 'experiments/run_mda_differential_profile_v1.sh'
+      - '.github/workflows/mda-differential-profile-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  profile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Profile frozen present against pinned comparator
+        run: bash experiments/run_mda_differential_profile_v1.sh
+      - name: Preserve differential evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mda-differential-profile-v1
+          path: /tmp/mda-differential-profile-v1/evidence/
+          if-no-files-found: warn
