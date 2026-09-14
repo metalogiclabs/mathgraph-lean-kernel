@@ -34,7 +34,7 @@ jobs:
             nix develop -c ./lka.py build-test "$t" >/dev/null
             cp "_build/tests/$t.ndjson" "$ROOT/tests/$t.ndjson"
           done
-          sha256sum "$ROOT"/tests/*.ndjson > "$ROOT/tests/SHA256SUMS"
+          ( cd "$ROOT/tests" && sha256sum *.ndjson > SHA256SUMS )
           printf '%s\n' "$ARENA" > "$ROOT/tests/ARENA_SHA"
       - uses: actions/upload-artifact@v4
         with:
