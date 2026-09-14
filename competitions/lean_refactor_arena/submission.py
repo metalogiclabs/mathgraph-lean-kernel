@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Submission-shape controls for the Lean Refactor Arena.
+"""Zero-change and candidate artifact controls for the Lean Refactor Arena.
 
-The zero-change baseline is intentionally boring: it emits each organizer input
-proof unchanged. That gives us a control artifact whose ordering, identity, and
-record coverage can be checked before any optimizer is introduced.
+This module intentionally separates *our* auditable run artifact from the final
+Arena upload encoding. The live Space's submission parser is inspected and
+pinned separately; no optimizer is allowed to mutate problem identity.
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ import argparse
 import json
 from pathlib import Path
 
-from official_jsonl import load
+from official_jsonl import identity, load, relative_path, schema_of
 
 
 def write_jsonl(path: Path, rows: list[dict]) -> None:
@@ -29,7 +29,9 @@ def baseline(input_path: Path, output_path: Path) -> None:
         original_len = row.get("proof_length")
         out.append({
             "name": row["name"],
-            "path": row["path"],
+            "source": row.get("source", ""),
+            "file_path": relative_path(row),
+            "input_schema": schema_of(row),
             "original_proof_length": original_len,
             "optimized_proof_length": original_len,
             "reduction_percentage": 0.0,
@@ -55,18 +57,23 @@ def read_jsonl(path: Path) -> list[dict]:
     return rows
 
 
+def output_identity(row: dict) -> tuple[str, str]:
+    return str(row.get("name") or ""), str(row.get("source") or row.get("file_path") or "")
+
+
 def validate(input_path: Path, output_path: Path, require_control_identity: bool) -> None:
     source = load(input_path)
     output = read_jsonl(output_path)
 
-    source_keys = [(r["name"], r["path"]) for r in source]
-    output_keys = [(r.get("name"), r.get("path")) for r in output]
-    if len(set(source_keys)) != len(source_keys):
-        raise SystemExit("input contains duplicate (name,path) identities")
+    source_keys = [identity(r) for r in source]
+    output_keys = [output_identity(r) for r in output]
     if len(set(output_keys)) != len(output_keys):
-        raise SystemExit("output contains duplicate (name,path) identities")
+        raise SystemExit("output contains duplicate Arena identities")
     if source_keys != output_keys:
-        raise SystemExit("output identities/order differ from organizer input")
+        raise SystemExit(
+            f"output identities/order differ from benchmark input: "
+            f"input={source_keys} output={output_keys}"
+        )
 
     for i, (src, out) in enumerate(zip(source, output, strict=True), 1):
         if not isinstance(out.get("proof"), str) or not out["proof"].strip():
@@ -78,7 +85,7 @@ def validate(input_path: Path, output_path: Path, require_control_identity: bool
         if require_control_identity and out.get("reduction_percentage") != 0.0:
             raise SystemExit(f"row {i}: zero-change control claims a gain")
 
-    mode = "ZERO_CHANGE_IDENTITY" if require_control_identity else "SUBMISSION_SHAPE"
+    mode = "ZERO_CHANGE_IDENTITY" if require_control_identity else "CANDIDATE_ARTIFACT"
     print(f"VERIFIED_{mode} count={len(output)}")
 
 
