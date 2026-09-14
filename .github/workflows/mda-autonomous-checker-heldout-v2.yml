@@ -1,0 +1,31 @@
+name: MDA autonomous checker heldout v2
+
+on:
+  push:
+    branches:
+      - candidate/autonomous-cache-admission-v2
+    paths:
+      - 'mda/generated/autonomous_cache_admission_v2/HELDOUT_AUTHORIZED'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  heldout:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Run frozen held-out comparison and ablation control
+        run: bash experiments/run_mda_autonomous_checker_heldout_v2.sh
+      - name: Preserve V2 held-out evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mda-autonomous-checker-heldout-v2
+          path: /tmp/mda-auto-heldout-v2/evidence/
+          if-no-files-found: warn
