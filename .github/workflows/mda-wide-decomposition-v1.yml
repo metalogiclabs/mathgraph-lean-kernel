@@ -1,0 +1,30 @@
+name: MDA wide causal decomposition v1
+
+on:
+  push:
+    branches:
+      - mda/mathgraph-lean-v1
+    paths:
+      - 'experiments/run_mda_wide_decomposition_v1.sh'
+      - '.github/workflows/mda-wide-decomposition-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  decompose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run frozen wide causal decomposition
+        run: bash experiments/run_mda_wide_decomposition_v1.sh
+      - name: Preserve decomposition evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mda-wide-decomposition-v1
+          path: /tmp/mda-wide-decomposition-v1/evidence/
+          if-no-files-found: warn
