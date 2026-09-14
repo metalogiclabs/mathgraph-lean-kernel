@@ -1,0 +1,234 @@
+name: MDA performance convergence v2
+
+on:
+  push:
+    branches:
+      - mda/performance-convergence-v2
+    paths:
+      - 'mda/PERFORMANCE_CONVERGENCE_V2.md'
+      - 'experiments/run_mda_performance_convergence_v2.sh'
+      - '.github/workflows/mda-performance-convergence-v2.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prepare-ground:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Prepare frozen semantic and performance probes
+        run: |
+          set -euo pipefail
+          ARENA=ac1c13762de41b594fa24b90ede8cfd97ac6a765
+          ROOT=/tmp/mda-perf-ground-v2
+          rm -rf "$ROOT"
+          mkdir -p "$ROOT/tests"
+          git clone -q https://github.com/leanprover/lean-kernel-arena "$ROOT/arena"
+          git -C "$ROOT/arena" checkout -q "$ARENA"
+          cd "$ROOT/arena"
+          for t in             init-prelude             extra-rec rec-missing-ih proj-of-stuck-prop proj-of-subst-prop             perf/grind-ring-5 perf/app-lam perf/beta-ladder perf/let-ladder
+          do
+            nix develop -c ./lka.py build-test "$t" >/dev/null
+            mkdir -p "$ROOT/tests/$(dirname "$t")"
+            cp "_build/tests/$t.ndjson" "$ROOT/tests/$t.ndjson"
+          done
+          ( cd "$ROOT/tests" && find . -type f -name '*.ndjson' -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS )
+          printf '%s\n' "$ARENA" > "$ROOT/tests/ARENA_SHA"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mda-performance-ground-v2
+          path: /tmp/mda-perf-ground-v2/tests/
+          if-no-files-found: error
+
+  configuration:
+    needs: prepare-ground
+    strategy:
+      fail-fast: false
+      matrix:
+        mask: [2, 3, 10, 11, 30, 31, 62, 63]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    env:
+      MDA_MASK: ${{ matrix.mask }}
+      MDA_TEST_DIR: /tmp/mda-performance-ground
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: mda-performance-ground-v2
+          path: /tmp/mda-performance-ground
+      - name: Verify frozen probe artifact
+        run: |
+          set -euo pipefail
+          cd /tmp/mda-performance-ground
+          sha256sum -c SHA256SUMS
+          test "$(cat ARENA_SHA)" = "ac1c13762de41b594fa24b90ede8cfd97ac6a765"
+      - name: Install Callgrind
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq valgrind
+          valgrind --version
+      - name: Evaluate paired configuration
+        run: bash experiments/run_mda_performance_convergence_v2.sh
+      - name: Preserve paired evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mda-performance-v2-mask-${{ matrix.mask }}
+          path: /tmp/mda-perf-v2-mask-${{ matrix.mask }}/evidence/
+          if-no-files-found: error
+
+  aggregate:
+    needs: configuration
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mda-performance-v2-mask-*
+          path: /tmp/mda-performance-v2-all
+      - name: Compute performance-sufficient frontiers
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, pathlib, math
+          root=pathlib.Path('/tmp/mda-performance-v2-all')
+          rows=[]
+          for d in sorted(root.glob('mda-performance-v2-mask-*'), key=lambda p:int(p.name.rsplit('-',1)[1])):
+              p=d/'pair.json'
+              if p.exists():
+                  rows.append(json.loads(p.read_text()))
+          if len(rows)!=8:
+              raise SystemExit(f'HARNESS_ERROR expected 8 rows, found {len(rows)}')
+
+          tests=['perf/grind-ring-5','perf/app-lam','perf/beta-ladder','perf/let-ladder']
+          bymask={r['mask']:r for r in rows}
+          if 63 not in bymask:
+              raise SystemExit('HARNESS_ERROR missing full mask 63')
+
+          for r in rows:
+              if not r['same_source_payload']:
+                  raise SystemExit(f"SOURCE_MISMATCH mask={r['mask']}")
+              for direction in ('genesis','solvent'):
+                  d=r[direction]
+                  if not d['lawful']:
+                      raise SystemExit(f"SEMANTIC_REGRESSION mask={r['mask']} direction={direction}")
+                  if sorted(d['performance']) != sorted(tests):
+                      raise SystemExit(f"MISSING_PERFORMANCE mask={r['mask']} direction={direction}")
+
+          baselines={
+              direction:{
+                  t:bymask[63][direction]['performance'][t]['callgrind_instructions']
+                  for t in tests
+              }
+              for direction in ('genesis','solvent')
+          }
+
+          tolerance=1.02
+          details={}
+          frontiers={}
+          sufficient_masks={}
+          for direction in ('genesis','solvent'):
+              suff=[]
+              drows={}
+              for r in rows:
+                  ratios={}
+                  ok=True
+                  for t in tests:
+                      rec=r[direction]['performance'][t]
+                      if rec['rc'] != 0:
+                          ok=False
+                      ratio=rec['callgrind_instructions']/baselines[direction][t]
+                      ratios[t]=ratio
+                      if ratio > tolerance:
+                          ok=False
+                  drows[str(r['mask'])]={
+                      'retained_count':r['retained_count'],
+                      'ratios_to_full':ratios,
+                      'performance_sufficient':ok,
+                  }
+                  if ok:
+                      suff.append(r)
+              sufficient_masks[direction]=sorted(r['mask'] for r in suff)
+              if not suff:
+                  frontiers[direction]=[]
+              else:
+                  k=min(r['retained_count'] for r in suff)
+                  frontiers[direction]=sorted(r['mask'] for r in suff if r['retained_count']==k)
+              details[direction]=drows
+
+          fg=frontiers['genesis']; fs=frontiers['solvent']
+          pass_convergence=bool(fg) and fg==fs
+          verdict=(
+              'VERIFIED_BIDIRECTIONAL_SEMANTIC_PLUS_PERFORMANCE_FRONTIER_CONVERGENCE'
+              if pass_convergence else
+              'BIDIRECTIONAL_PERFORMANCE_CONVERGENCE_NOT_ESTABLISHED'
+          )
+
+          # Cross-direction measurement discrepancy for identical source payloads.
+          discrepancies={}
+          for r in rows:
+              per={}
+              for t in tests:
+                  g=r['genesis']['performance'][t]['callgrind_instructions']
+                  s=r['solvent']['performance'][t]['callgrind_instructions']
+                  per[t]=(g-s)/min(g,s) if min(g,s) else 0.0
+              discrepancies[str(r['mask'])]=per
+
+          data={
+              'schema':'mda-performance-convergence-v2',
+              'verdict':verdict,
+              'full_pass':pass_convergence,
+              'tolerance_ratio':tolerance,
+              'tests':tests,
+              'baseline_mask':63,
+              'baseline_instructions':baselines,
+              'performance_sufficient_masks':sufficient_masks,
+              'genesis_frontier_masks':fg,
+              'solvent_frontier_masks':fs,
+              'details':details,
+              'cross_direction_relative_discrepancy':discrepancies,
+              'rows':rows,
+              'claim_boundary':(
+                  'Bounded to the eight V1 semantically lawful masks, fixed release build, '
+                  'four frozen Arena probes, and Callgrind instruction counts. Not an official Arena Mathlib performance result.'
+              ),
+          }
+          out=pathlib.Path('/tmp/mda-performance-v2-summary')
+          out.mkdir()
+          (out/'evidence.json').write_text(json.dumps(data,indent=2)+'\n')
+          with (out/'summary.md').open('w') as f:
+              f.write('# MDA Performance Convergence V2\n\n')
+              f.write(f'Verdict: **{verdict}**\n\n')
+              f.write(f'Genesis performance-sufficient masks: {sufficient_masks["genesis"]}.\n\n')
+              f.write(f'Solvent performance-sufficient masks: {sufficient_masks["solvent"]}.\n\n')
+              f.write(f'Genesis minimum frontier: {fg}.\n\n')
+              f.write(f'Solvent minimum frontier: {fs}.\n\n')
+              f.write('## Ratios to full mask 63\n\n')
+              for direction in ('genesis','solvent'):
+                  f.write(f'### {direction}\n\n')
+                  for r in rows:
+                      m=str(r['mask']); x=details[direction][m]
+                      rs=', '.join(f'{t}={x["ratios_to_full"][t]:.5f}' for t in tests)
+                      f.write(f'- mask {m} retained={x["retained_count"]} sufficient={x["performance_sufficient"]}: {rs}\n')
+                  f.write('\n')
+              f.write('This is a Callgrind-bounded performance result, not an official Arena Mathlib ranking result.\n')
+          (out/'verdict.txt').write_text(('PASS' if pass_convergence else 'FAIL')+'\n')
+          print('MDA_PERF_V2_VERDICT='+verdict)
+          print('MDA_PERF_V2_GENESIS_SUFFICIENT='+','.join(map(str,sufficient_masks['genesis'])))
+          print('MDA_PERF_V2_SOLVENT_SUFFICIENT='+','.join(map(str,sufficient_masks['solvent'])))
+          print('MDA_PERF_V2_GENESIS_FRONTIER='+','.join(map(str,fg)))
+          print('MDA_PERF_V2_SOLVENT_FRONTIER='+','.join(map(str,fs)))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mda-performance-convergence-v2-summary
+          path: /tmp/mda-performance-v2-summary/
+          if-no-files-found: error
+      - name: Strict convergence gate
+        run: test "$(cat /tmp/mda-performance-v2-summary/verdict.txt)" = PASS
