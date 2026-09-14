@@ -1,0 +1,36 @@
+name: MDA warm projection cache separator v4
+
+on:
+  push:
+    branches:
+      - mda/mathgraph-lean-v1
+    paths:
+      - 'experiments/run_mda_warm_cache_v4_cell.sh'
+      - '.github/workflows/mda-warm-cache-v4.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  separator:
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [full, warm-no-proj-cache, warm-with-proj-cache]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      MODE: ${{ matrix.mode }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run frozen warm-cache separator
+        run: bash experiments/run_mda_warm_cache_v4_cell.sh
+      - name: Preserve separator evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mda-warm-v4-${{ matrix.mode }}
+          path: /tmp/mda-warm-cache-v4-${{ matrix.mode }}/evidence/
+          if-no-files-found: warn
