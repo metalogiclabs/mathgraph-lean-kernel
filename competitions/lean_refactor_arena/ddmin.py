@@ -10,8 +10,8 @@ import argparse, json, re, subprocess, tempfile
 from pathlib import Path
 
 TOKEN = re.compile(
-    r"<;>|:=|=>|->|←|\\.\\.\\.|\\.\\.|::|:>|==|!=|&&|\\|\\||<=|>=|⁻¹|\\?_"
-    r"|[A-Za-z_][A-Za-z0-9_']*|[0-9]+|[^\\s]"
+    r"<;>|:=|=>|->|←|\.\.\.|\.\.|::|:>|==|!=|&&|\|\||<=|>=|⁻¹|\?_"
+    r"|[A-Za-z_][A-Za-z0-9_']*|[0-9]+|[^\s]"
 )
 
 def split_declaration(src: str) -> tuple[str, list[str]]:
