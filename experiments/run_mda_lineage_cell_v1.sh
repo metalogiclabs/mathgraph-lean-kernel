@@ -27,8 +27,40 @@ git clone -q https://github.com/metalogiclabs/mathgraph-lean-kernel "$ROOT/repo"
 git -C "$ROOT/repo" checkout -q "$REV"
 
 cd "$ROOT/repo"
-cargo test --release --locked -q
+
+set +e
+cargo test --release --locked -q >"$ROOT/out/cargo-test.out" 2>"$ROOT/out/cargo-test.err"
+test_rc=$?
+set -e
+
+if [ "$test_rc" -ne 0 ]; then
+  if grep -qE 'reject_unlisted_recursor|reject_rec_rule_with_forged_lambda_domains' "$ROOT/out/cargo-test.out" "$ROOT/out/cargo-test.err"; then
+    class="UNLAWFUL_PROTECTED_REPLAY"
+  elif grep -qE 'could not compile|error\[E[0-9]+' "$ROOT/out/cargo-test.out" "$ROOT/out/cargo-test.err"; then
+    class="INVALID_TRANSITION_SNAPSHOT"
+  else
+    class="UNKNOWN_TEST_FAILURE"
+  fi
+  echo "MDA_LINEAGE_CLASSIFICATION label=$LABEL class=$class test_rc=$test_rc"
+  python3 - "$ROOT" "$LABEL" "$REV" "$class" "$test_rc" <<'PY'
+import json,pathlib,sys
+root=pathlib.Path(sys.argv[1])
+data={
+  "label":sys.argv[2],
+  "rev":sys.argv[3],
+  "classification":sys.argv[4],
+  "test_rc":int(sys.argv[5]),
+  "measured":False,
+  "claim_boundary":"Non-lawful or non-buildable snapshots are classified, not performance-compared."
+}
+(root/"evidence/result.json").write_text(json.dumps(data,indent=2)+"\n")
+PY
+  echo "MDA_LINEAGE_COMPLETE=CLASSIFIED"
+  exit 0
+fi
+
 echo "MDA_LINEAGE_TESTS=PASS"
+class="LAWFUL"
 
 rm -rf pgo
 RUSTFLAGS="-C target-cpu=native -Cprofile-generate=$ROOT/repo/pgo" cargo build --release --locked -q
@@ -50,7 +82,7 @@ python3 - "$ROOT" "$LABEL" "$REV" "$rc" <<'PY'
 import json,pathlib,re,sys
 root=pathlib.Path(sys.argv[1]); label=sys.argv[2]; rev=sys.argv[3]; rc=int(sys.argv[4])
 s=(root/"out/mathlib.time").read_text().strip()
-row={"label":label,"rev":rev,"rc":rc}
+row={"label":label,"rev":rev,"classification":"LAWFUL","rc":rc,"measured":True}
 for k,v in re.findall(r'(wall|user|sys|rss_kb)=([0-9.]+)',s):
     row[k]=int(v) if k=="rss_kb" else float(v)
 row["claim_boundary"]="screening measurement only; no retired-instruction authority on this runner"
