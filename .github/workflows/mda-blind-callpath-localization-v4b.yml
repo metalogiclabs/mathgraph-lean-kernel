@@ -1,0 +1,45 @@
+name: MDA blind call-path localization v4b
+
+on:
+  push:
+    branches:
+      - mda/blind-callpath-localization-v4b
+    paths:
+      - 'mda/BLIND_CALLPATH_LOCALIZATION_V4B.md'
+      - 'experiments/run_mda_blind_callpath_localization_v4b.sh'
+      - '.github/workflows/mda-blind-callpath-localization-v4b.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  localize-callpath:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      MDA_TEST_DIR: /tmp/mda-workload-ground
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: mda-workload-ground-v3
+          path: /tmp/mda-workload-ground
+          run-id: 34807040127
+          github-token: ${{ github.token }}
+      - name: Verify frozen encounter artifact
+        run: |
+          set -euo pipefail
+          cd /tmp/mda-workload-ground
+          sha256sum -c SHA256SUMS
+          test "$(cat ARENA_SHA)" = "ac1c13762de41b594fa24b90ede8cfd97ac6a765"
+      - name: Run blind call-path localization
+        run: bash experiments/run_mda_blind_callpath_localization_v4b.sh
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mda-blind-callpath-localization-v4b
+          path: /tmp/mda-v4b/evidence/
+          if-no-files-found: error
