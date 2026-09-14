@@ -1,0 +1,23 @@
+name: MDA autonomous checker materialize v2
+
+on:
+  push:
+    branches:
+      - mda/autonomous-checker-genesis-v2
+    paths:
+      - 'mda/AUTONOMOUS_CHECKER_GENESIS_V2_SELECTED'
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Regenerate frozen selected policy and materialize candidate
+        run: bash experiments/run_mda_autonomous_checker_materialize_v2.sh
