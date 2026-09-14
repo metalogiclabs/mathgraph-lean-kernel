@@ -97,3 +97,42 @@ fi
 cargo build --release --locked -q
 echo "build_test_status=PASS" >> "$ROOT/evidence/status.txt"
 echo "MDA_SOLVENT_STAGE_A_SOURCE=PASS"
+
+: "${MDA_TEST_DIR:?set MDA_TEST_DIR to prepared pinned Arena fast-gate exports}"
+
+cat > "$ROOT/config.json" <<'EOF'
+{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}
+EOF
+
+: > "$ROOT/evidence/arena-fast-gate.tsv"
+run_case () {
+  local test="$1"
+  local want="$2"
+  local file="$MDA_TEST_DIR/$test.ndjson"
+  if [ ! -s "$file" ]; then
+    echo "missing_test=$test" >> "$ROOT/evidence/status.txt"
+    echo "MDA_SOLVENT_STAGE_A=HARNESS_MISSING_TEST"
+    exit 2
+  fi
+  set +e
+  target/release/sokonanoda "$ROOT/config.json" < "$file" >"$ROOT/out/$test.out" 2>"$ROOT/out/$test.err"
+  rc=$?
+  set -e
+  printf '%s\twant=%s\trc=%s\n' "$test" "$want" "$rc" | tee -a "$ROOT/evidence/arena-fast-gate.tsv"
+  if [ "$rc" -ne "$want" ]; then
+    echo "arena_fast_gate_status=UNLAWFUL_SEMANTIC_REPLAY" >> "$ROOT/evidence/status.txt"
+    echo "failed_test=$test" >> "$ROOT/evidence/status.txt"
+    echo "MDA_SOLVENT_STAGE_A=UNLAWFUL_SEMANTIC_REPLAY"
+    exit 0
+  fi
+}
+
+run_case init-prelude 0
+run_case extra-rec 1
+run_case rec-missing-ih 1
+run_case proj-of-stuck-prop 1
+run_case proj-of-subst-prop 1
+
+echo "arena_fast_gate_status=PASS" >> "$ROOT/evidence/status.txt"
+git diff --numstat "$BASE" > "$ROOT/evidence/candidate.numstat"
+echo "MDA_SOLVENT_STAGE_A=PASS"
