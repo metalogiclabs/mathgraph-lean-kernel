@@ -1,0 +1,130 @@
+name: MDA SOLVENT v1 Stage A
+
+on:
+  push:
+    branches:
+      - mda/mathgraph-lean-v1
+    paths:
+      - 'mda/SOLVENT_LAUNCH_V1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prepare-ground:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Prepare pinned Arena fast gate
+        run: |
+          set -euo pipefail
+          ARENA=ac1c13762de41b594fa24b90ede8cfd97ac6a765
+          ROOT=/tmp/mda-solvent-ground-v1
+          rm -rf "$ROOT"
+          mkdir -p "$ROOT/tests"
+          git clone -q https://github.com/leanprover/lean-kernel-arena "$ROOT/arena"
+          git -C "$ROOT/arena" checkout -q "$ARENA"
+          cd "$ROOT/arena"
+          for t in init-prelude extra-rec rec-missing-ih proj-of-stuck-prop proj-of-subst-prop; do
+            nix develop -c ./lka.py build-test "$t" >/dev/null
+            cp "_build/tests/$t.ndjson" "$ROOT/tests/$t.ndjson"
+          done
+          sha256sum "$ROOT"/tests/*.ndjson > "$ROOT/tests/SHA256SUMS"
+          printf '%s\n' "$ARENA" > "$ROOT/tests/ARENA_SHA"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mda-solvent-fast-ground-v1
+          path: /tmp/mda-solvent-ground-v1/tests/
+          if-no-files-found: error
+
+  candidate:
+    needs: prepare-ground
+    strategy:
+      fail-fast: false
+      matrix:
+        mask: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      MDA_MASK: ${{ matrix.mask }}
+      MDA_TEST_DIR: /tmp/mda-fast-ground
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: mda-solvent-fast-ground-v1
+          path: /tmp/mda-fast-ground
+      - name: Verify frozen fast-ground hashes
+        run: |
+          cd /tmp/mda-fast-ground
+          sha256sum -c SHA256SUMS
+          test "$(cat ARENA_SHA)" = "ac1c13762de41b594fa24b90ede8cfd97ac6a765"
+      - name: Evaluate bounded contraction
+        run: bash experiments/run_mda_solvent_stage_a_v1.sh
+      - name: Preserve candidate evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mda-solvent-stage-a-mask-${{ matrix.mask }}
+          path: /tmp/mda-solvent-v1-mask-${{ matrix.mask }}/evidence/
+          if-no-files-found: error
+
+  aggregate:
+    needs: candidate
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mda-solvent-stage-a-mask-*
+          path: /tmp/mda-stage-a
+      - name: Aggregate contextual results
+        run: |
+          python3 - <<'PY'
+          import json, pathlib
+          root=pathlib.Path('/tmp/mda-stage-a')
+          rows=[]
+          for d in sorted(root.glob('mda-solvent-stage-a-mask-*'), key=lambda p:int(p.name.rsplit('-',1)[1])):
+              mask=int(d.name.rsplit('-',1)[1])
+              status={}
+              p=d/'status.txt'
+              if p.exists():
+                  for line in p.read_text(errors='replace').splitlines():
+                      if '=' in line:
+                          k,v=line.split('=',1); status[k]=v
+              cfg={}
+              q=d/'configuration.json'
+              if q.exists():
+                  cfg=json.loads(q.read_text())
+              overall=(
+                  'PASS' if status.get('patch_status')=='PASS'
+                  and status.get('build_test_status')=='PASS'
+                  and status.get('arena_fast_gate_status')=='PASS'
+                  else status.get('arena_fast_gate_status')
+                  or status.get('build_test_status')
+                  or status.get('patch_status')
+                  or 'HARNESS_ERROR'
+              )
+              rows.append({'mask':mask,'overall':overall,'status':status,'configuration':cfg})
+          survivors=[r['mask'] for r in rows if r['overall']=='PASS']
+          out=pathlib.Path('/tmp/mda-stage-a-summary')
+          out.mkdir()
+          (out/'stage-a-results.json').write_text(json.dumps({'rows':rows,'survivors':survivors},indent=2)+'\n')
+          (out/'survivors.json').write_text(json.dumps(survivors)+'\n')
+          with (out/'summary.md').open('w') as f:
+              f.write('# MDA SOLVENT v1 Stage A\n\n')
+              f.write('Bounded class: all 64 subset contractions of the six frozen retained-capability commits.\n\n')
+              f.write(f'Fast-gate survivors: {len(survivors)}/64\n\n')
+              f.write('Survivor masks: '+', '.join(map(str,survivors))+'\n\n')
+              f.write('Stage A is screening only; no candidate is promoted here.\n')
+          print('MDA_SOLVENT_STAGE_A_SURVIVORS='+','.join(map(str,survivors)))
+          print('MDA_SOLVENT_STAGE_A_COUNT='+str(len(survivors)))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mda-solvent-stage-a-summary
+          path: /tmp/mda-stage-a-summary/
+          if-no-files-found: error
