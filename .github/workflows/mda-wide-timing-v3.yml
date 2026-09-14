@@ -1,0 +1,36 @@
+name: MDA wide application timing v3
+
+on:
+  push:
+    branches:
+      - mda/mathgraph-lean-v1
+    paths:
+      - 'experiments/run_mda_wide_timing_v3_cell.sh'
+      - '.github/workflows/mda-wide-timing-v3.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  timing:
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [full, cold-only, warm-only]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      MODE: ${{ matrix.mode }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run frozen application-timing discriminator
+        run: bash experiments/run_mda_wide_timing_v3_cell.sh
+      - name: Preserve timing evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mda-wide-v3-${{ matrix.mode }}
+          path: /tmp/mda-wide-timing-v3-${{ matrix.mode }}/evidence/
+          if-no-files-found: warn
