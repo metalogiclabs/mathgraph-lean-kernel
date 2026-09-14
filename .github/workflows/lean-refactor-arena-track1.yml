@@ -26,6 +26,22 @@ jobs:
           echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
           "$HOME/.elan/bin/lean" --version
 
+      - name: Inventory live public Arena Space
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/lean-refactor-arena-space
+          git clone --depth=1 https://huggingface.co/spaces/delta-lab-ai/lean-refactor-arena \
+            /tmp/lean-refactor-arena-space
+          (
+            cd /tmp/lean-refactor-arena-space
+            git rev-parse HEAD
+            find . -maxdepth 4 -type f -not -path './.git/*' -print | sort
+          ) | tee /tmp/arena-space-inventory.txt
+          mkdir -p /tmp/public-arena-payload
+          find /tmp/lean-refactor-arena-space -type f -name '*.jsonl' -print -exec cp {} /tmp/public-arena-payload/ \;
+          echo "PUBLIC_JSONL_COUNT=$(find /tmp/public-arena-payload -type f -name '*.jsonl' | wc -l)"
+
       - name: Validate organizer JSONL schema
         shell: bash
         run: |
@@ -156,6 +172,8 @@ jobs:
           path: |
             /tmp/lean-refactor-smoke.json
             /tmp/official-schema-summary.json
+            /tmp/arena-space-inventory.txt
+            /tmp/public-arena-payload/
             /tmp/zero-change-submission.jsonl
             /tmp/track1-ledger.jsonl
             /tmp/ddmin-candidate.lean
