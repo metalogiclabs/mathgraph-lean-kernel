@@ -450,10 +450,14 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
             if let Some(r) = self.tc_cache.wide_prune_cache.get(&ck) {
                 return *r;
             }
-            let Some(words) = self.exact_wide_uses(e) else { return env };
-            let r = self.prune_env_wide(env, &words);
-            self.tc_cache.wide_prune_cache.insert(ck, r);
-            return r;
+            if let Some(words) = self.tc_cache.wide_uses_cache.get(&e) {
+                let words = words.to_vec();
+                let r = self.prune_env_wide(env, &words);
+                self.tc_cache.wide_prune_cache.insert(ck, r);
+                return r;
+            }
+            let _ = self.exact_wide_uses(e);
+            return env;
         }
         self.prune_env(env, e.as_ref().fv_mask())
     }
