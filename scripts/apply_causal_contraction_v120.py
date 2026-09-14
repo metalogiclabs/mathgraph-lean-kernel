@@ -247,14 +247,14 @@ c=replace_once(c,old,new,'parser proj'); p.write_text(c)
 
 p=Path('src/eval.rs'); c=p.read_text(); anchor='use std::collections::hash_map::Entry;\n'
 match_body='\n'.join(arms)
-insert=anchor+f"""use std::sync::atomic::{{AtomicU8, Ordering}};
+insert=anchor+f"""use std::sync::atomic::{{AtomicU16, Ordering}};
 
-static V121_ABLATE_GROUP: AtomicU8 = AtomicU8::new(255);
+static V121_ABLATE_MASK: AtomicU16 = AtomicU16::new(0);
 
 pub fn configure_v121_policy_from_env() {{
-    let group = std::env::var("MATHGRAPH_V121_ABLATE_GROUP").ok().and_then(|s| s.parse::<u8>().ok()).unwrap_or(255);
-    V121_ABLATE_GROUP.store(group, Ordering::Relaxed);
-    eprintln!("V121_POLICY ablate_group={{}}", group);
+    let mask = std::env::var("MATHGRAPH_V121_ABLATE_MASK").ok().and_then(|s| s.parse::<u16>().ok()).unwrap_or(0);
+    V121_ABLATE_MASK.store(mask, Ordering::Relaxed);
+    eprintln!("V121_POLICY ablate_mask={{}}", mask);
 }}
 
 #[inline] fn v121_k(k:u16)->u8 {{ match k {{ 0..=96=>0,97..=128=>1,129..=192=>2,193..=256=>3,257..=384=>4,385..=512=>5,_=>6 }} }}
