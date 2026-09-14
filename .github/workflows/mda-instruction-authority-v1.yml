@@ -1,0 +1,29 @@
+name: MDA instruction authority probe v1
+
+on:
+  push:
+    branches:
+      - mda/mathgraph-lean-v1
+    paths:
+      - 'experiments/run_mda_instruction_authority_v1.sh'
+      - '.github/workflows/mda-instruction-authority-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Probe Arena-equivalent instruction authority
+        run: bash experiments/run_mda_instruction_authority_v1.sh
+      - name: Preserve authority evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mda-instruction-authority-v1
+          path: /tmp/mda-instruction-authority-v1/
+          if-no-files-found: warn
