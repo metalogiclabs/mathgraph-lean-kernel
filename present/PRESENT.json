@@ -1,0 +1,113 @@
+{
+  "schema": "mda-present-v1",
+  "domain": "mathgraph-lean-kernel",
+  "version": "dulce-de-leche",
+  "repo_sha": "d6a73279e6765e637f9741180cefbd7ef957d8e5",
+  "arena_pin": "ac1c13762de41b594fa24b90ede8cfd97ac6a765",
+  "mda_kernel_sha256": "0fcf675ba073a61c7a3a406e9ac6153e8ead4d3ee41563ef8265c9641f20e90e",
+  "mda_prompt_sha256": "36ddc368c36d41b4fd4bc2bc3b1f00ed5d517e2efb81f9139f2f11d4ec970da5",
+  "toolchain": {
+    "language": "Rust 2021",
+    "cargo_locked": true,
+    "release_profile": "opt-level=3, fat LTO, codegen-units=1",
+    "arena_checker_threads": 4,
+    "pgo_training_test": "init-prelude"
+  },
+  "grounding": {
+    "primary": "Pinned Lean Kernel Arena expected outcomes",
+    "claim_scope": "benchmark-relative finite suite",
+    "may_candidate_modify": false
+  },
+  "official_preference_order": [
+    "wrongly_accepted_invalid_proofs",
+    "wrongly_rejected_valid_proofs",
+    "mathlib_instruction_derived_time",
+    "declined_or_crashed_tests"
+  ],
+  "retained_capabilities": [
+    {
+      "id": "equal-hint-short-asymmetric-spines",
+      "commit": "801cb6d918d0",
+      "status": "present"
+    },
+    {
+      "id": "reject-underived-and-orphan-recurrors",
+      "commit": "2de1895a52d2",
+      "status": "protected-soundness"
+    },
+    {
+      "id": "wide-framed-exact-deep-read-sets",
+      "commit": "91ba5db40292",
+      "status": "present"
+    },
+    {
+      "id": "wide-readset-and-projected-env-cache",
+      "commit": "eaf479a135c0",
+      "status": "present"
+    },
+    {
+      "id": "exact-env-keys-past-64-loose-vars",
+      "commit": "5daa4f66c1fa",
+      "status": "present"
+    },
+    {
+      "id": "bottom-up-wide-readset-and-one-pass-projection",
+      "commit": "d6a73279e676",
+      "status": "present"
+    }
+  ],
+  "known_evidence": [
+    {
+      "id": "arena-accepted-present",
+      "arena_checker": "mathgraph",
+      "arena_version": "dulce-de-leche",
+      "repo_sha": "d6a73279e6765e637f9741180cefbd7ef957d8e5"
+    },
+    {
+      "id": "v113-no-wide-ablation",
+      "interpretation": "local wall-time screening showed Mathlib/con-leche tradeoff; retired-instruction effect unmeasured"
+    },
+    {
+      "id": "v117-boundary-atlas",
+      "run": 34781716973,
+      "interpretation": "construction-time structural state predicts local projection consequences; not a promotion result"
+    },
+    {
+      "id": "v120-causal-contraction",
+      "run": 34790844462,
+      "interpretation": "single low-yield group contractions completed con-leche under the experimental budget; joint removal showed strong interaction"
+    },
+    {
+      "id": "v121-interaction-map",
+      "run": 34792979872,
+      "interpretation": "configuration interactions are non-additive; experimental wall-time/resource evidence only"
+    }
+  ],
+  "known_regressions": [],
+  "known_unknowns": [
+    "Which lawful configuration minimizes the official Arena score from this present?",
+    "Which local wall-time wins correspond to lower retired instruction count on Mathlib?",
+    "What is the minimal jointly sufficient environment-handling configuration under the official score?",
+    "Which historical optimizations remain on the minimal lawful frontier when tested jointly?"
+  ],
+  "development_permissions": [
+    "Rust source",
+    "representations",
+    "data structures",
+    "caches",
+    "evaluation/conversion strategies",
+    "environment handling",
+    "search/unfolding policies",
+    "instrumentation",
+    "probe generators",
+    "candidate build structure"
+  ],
+  "forbidden_mutations": [
+    "Arena expected outcomes",
+    "Arena scoring law",
+    "hidden benchmark labels",
+    "semantic success criterion",
+    "protected replay omission"
+  ],
+  "evidence_root": "evidence/mda-v1/"
+}
