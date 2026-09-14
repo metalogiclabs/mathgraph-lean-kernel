@@ -1,0 +1,1 @@
+{"name":"nat_add_zero_smoke","src":"theorem nat_add_zero_smoke (n : Nat) : n + 0 = n := by\n  induction n with\n  | zero =>\n      rfl\n  | succ n ih =>\n      simp [ih]\n","path":"Smoke.lean","signature":"theorem nat_add_zero_smoke (n : Nat) : n + 0 = n","contexts":[],"proof_length":18,"header":""}
