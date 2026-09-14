@@ -1,0 +1,151 @@
+name: MDA workload convergence v3
+
+on:
+  push:
+    branches:
+      - mda/workload-convergence-v3
+    paths:
+      - 'mda/WORKLOAD_CONVERGENCE_V3.md'
+      - 'experiments/run_mda_workload_convergence_v3.sh'
+      - '.github/workflows/mda-workload-convergence-v3.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prepare-ground:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Prepare frozen semantic and real workload inputs
+        run: |
+          set -euo pipefail
+          ARENA=ac1c13762de41b594fa24b90ede8cfd97ac6a765
+          ROOT=/tmp/mda-workload-ground-v3
+          rm -rf "$ROOT"
+          mkdir -p "$ROOT/tests"
+          git clone -q https://github.com/leanprover/lean-kernel-arena "$ROOT/arena"
+          git -C "$ROOT/arena" checkout -q "$ARENA"
+          cd "$ROOT/arena"
+          for t in             init-prelude             extra-rec rec-missing-ih proj-of-stuck-prop proj-of-subst-prop             mathlib con-leche
+          do
+            nix develop -c ./lka.py build-test "$t" >/dev/null
+            mkdir -p "$ROOT/tests/$(dirname "$t")"
+            cp "_build/tests/$t.ndjson" "$ROOT/tests/$t.ndjson"
+          done
+          ( cd "$ROOT/tests" && find . -type f -name '*.ndjson' -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS )
+          printf '%s\n' "$ARENA" > "$ROOT/tests/ARENA_SHA"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mda-workload-ground-v3
+          path: /tmp/mda-workload-ground-v3/tests/
+          if-no-files-found: error
+
+  configuration:
+    needs: prepare-ground
+    strategy:
+      fail-fast: false
+      matrix:
+        mask: [2, 3, 10, 11, 30, 31, 62, 63]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    env:
+      MDA_MASK: ${{ matrix.mask }}
+      MDA_TEST_DIR: /tmp/mda-workload-ground
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: mda-workload-ground-v3
+          path: /tmp/mda-workload-ground
+      - name: Verify frozen workload artifact
+        run: |
+          set -euo pipefail
+          cd /tmp/mda-workload-ground
+          sha256sum -c SHA256SUMS
+          test "$(cat ARENA_SHA)" = "ac1c13762de41b594fa24b90ede8cfd97ac6a765"
+      - name: Evaluate paired source and workload sufficiency
+        run: bash experiments/run_mda_workload_convergence_v3.sh
+      - name: Preserve workload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mda-workload-v3-mask-${{ matrix.mask }}
+          path: /tmp/mda-workload-v3-mask-${{ matrix.mask }}/evidence/
+          if-no-files-found: error
+
+  aggregate:
+    needs: configuration
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mda-workload-v3-mask-*
+          path: /tmp/mda-workload-v3-all
+      - name: Compute minimal workload-sufficient frontier
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,pathlib
+          root=pathlib.Path('/tmp/mda-workload-v3-all')
+          rows=[]
+          missing=[]
+          for mask in [2,3,10,11,30,31,62,63]:
+              p=root/f'mda-workload-v3-mask-{mask}'/'result.json'
+              if p.exists():
+                  rows.append(json.loads(p.read_text()))
+              else:
+                  missing.append(mask)
+          if missing:
+              raise SystemExit(f'HARNESS_OR_TIMEOUT_MISSING_RESULTS={missing}')
+          good=[r for r in rows if r['workload_sufficient']]
+          if not good:
+              frontier=[]
+              k=None
+          else:
+              k=min(r['retained_count'] for r in good)
+              frontier=sorted(r['mask'] for r in good if r['retained_count']==k)
+          verdict='VERIFIED_WORKLOAD_CONSTRAINED_BIDIRECTIONAL_FRONTIER' if frontier else 'NO_WORKLOAD_SUFFICIENT_FRONTIER'
+          data={
+              'schema':'mda-workload-convergence-v3-summary',
+              'verdict':verdict,
+              'workload_sufficient_masks':sorted(r['mask'] for r in good),
+              'minimum_retained_count':k,
+              'frontier_masks':frontier,
+              'rows':rows,
+              'claim_boundary':(
+                  'Same-runner CPU-work proxy on Mathlib + con-leche with 20% tolerance; '
+                  'not official Arena retired-instruction ranking evidence.'
+              ),
+          }
+          out=pathlib.Path('/tmp/mda-workload-v3-summary'); out.mkdir()
+          (out/'evidence.json').write_text(json.dumps(data,indent=2)+'\n')
+          with (out/'summary.md').open('w') as f:
+              f.write('# MDA Workload Convergence V3\n\n')
+              f.write(f'Verdict: **{verdict}**\n\n')
+              f.write(f'Workload-sufficient masks: {data["workload_sufficient_masks"]}.\n\n')
+              f.write(f'Minimum retained count: {k}.\n\n')
+              f.write(f'Frontier masks: {frontier}.\n\n')
+              for r in rows:
+                  f.write(f'## mask {r["mask"]} retained={r["retained_count"]} sufficient={r["workload_sufficient"]}\n\n')
+                  for t,x in r['workloads'].items():
+                      f.write(f'- {t}: cpu_ratio={x["cpu_ratio"]}, rc={x["candidate"]["rc"]}, timeout={x["candidate"]["timed_out"]}, full_wall={x["full"]["wall"]}, cand_wall={x["candidate"]["wall"]}\n')
+                  f.write('\n')
+              f.write('This is an operational workload result, not the official Arena Mathlib instruction-count ranking.\n')
+          (out/'verdict.txt').write_text(('PASS' if frontier else 'FAIL')+'\n')
+          print('MDA_WORKLOAD_V3_VERDICT='+verdict)
+          print('MDA_WORKLOAD_V3_SUFFICIENT='+','.join(map(str,data['workload_sufficient_masks'])))
+          print('MDA_WORKLOAD_V3_FRONTIER='+','.join(map(str,frontier)))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mda-workload-convergence-v3-summary
+          path: /tmp/mda-workload-v3-summary/
+          if-no-files-found: error
+      - name: Strict workload frontier gate
+        run: test "$(cat /tmp/mda-workload-v3-summary/verdict.txt)" = PASS
