@@ -1,0 +1,16 @@
+name: R1 representation controller CI
+
+on:
+  push:
+    branches:
+      - r1-representation-controller-v1
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run controller tests
+        run: cargo test --release --locked representation::tests -- --nocapture
