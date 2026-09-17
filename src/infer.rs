@@ -1,20 +1,12 @@
 use crate::env::Declar;
 use crate::expr::Expr;
+use crate::representation::{select_app_representation, AppRepresentation, R1Pressure};
 use crate::tc::{InferFlag, TypeChecker};
 use crate::util::{ExprPtr, LevelPtr, LevelsPtr, NamePtr};
 use crate::value::{self, Closure, RigidHead, Value, C, E, V};
 
 use Expr::*;
 use InferFlag::*;
-
-/// R1 selective representation capability.
-///
-/// The selector is purely structural: only an application whose function is
-/// syntactically a lambda uses the direct-beta inference representation. All
-/// other applications retain the existing MathGraph inference path. Keeping
-/// this as a compile-time constant gives the qualification workflow an exact
-/// one-bit ablation without adding a runtime configuration branch.
-pub(crate) const R1_DIRECT_BETA_FUSION: bool = true;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum CheckScope<'a> {
@@ -189,6 +181,39 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         r
     }
 
+    /// Collect only structural signals available at the current application.
+    /// This intentionally does not inspect declaration names, source paths, test
+    /// names, or expected outcomes. The admitted R1 execution subset remains
+    /// exactly the already-qualified immediately-applied-lambda subset.
+    fn r1_pressure(&self, e: ExprPtr<'t>) -> R1Pressure {
+        let App { fun, .. } = self.ctx.read_expr(e) else {
+            return R1Pressure::default();
+        };
+        let Lambda { body, .. } = self.ctx.read_expr(fun) else {
+            return R1Pressure::default();
+        };
+
+        let mut lambda_body_depth = 0u8;
+        let mut cursor = body;
+        while lambda_body_depth < u8::MAX {
+            match self.ctx.read_expr(cursor) {
+                Lambda { body: next, .. } => {
+                    lambda_body_depth = lambda_body_depth.saturating_add(1);
+                    cursor = next;
+                }
+                _ => break,
+            }
+        }
+
+        R1Pressure {
+            lambda_head: true,
+            app_spine_depth: u8::try_from(self.ctx.num_args(e)).unwrap_or(u8::MAX),
+            lambda_body_depth,
+            binder_dependent: self.ctx.has_loose_bvar(body, 0),
+            let_body: matches!(self.ctx.read_expr(body), Let { .. }),
+        }
+    }
+
     fn infer_app_v(
         &mut self,
         flag: InferFlag,
@@ -197,11 +222,12 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         ctx: C<'t>,
         e: ExprPtr<'t>,
     ) -> V<'t> {
-        // RealityGraph R1 selector: a syntactic App(Lambda, arg) has already
-        // supplied enough structural evidence to avoid constructing and then
-        // immediately consuming the lambda's Pi type. This is the minimum
-        // alternate representation earned by the beta-ladder obstruction.
-        if R1_DIRECT_BETA_FUSION {
+        // RealityGraph R1: the representation controller admits direct beta
+        // inference only when structural beta/app/let pressure has earned it.
+        // The current threshold intentionally preserves the already-qualified
+        // App(Lambda, arg) execution subset while making the decision mechanism
+        // explicit and independently ablatable.
+        if select_app_representation(self.r1_pressure(e)) == AppRepresentation::DirectBeta {
             if let App { fun, arg, .. } = self.ctx.read_expr(e) {
                 if let Lambda { binder_type, body, .. } = self.ctx.read_expr(fun) {
                     let dom = self.arg_value(depth, env, binder_type);
