@@ -1,0 +1,143 @@
+name: R1 beta fusion separator
+
+on:
+  push:
+    branches:
+      - realitygraph-selective-representation-v1
+  workflow_dispatch:
+
+jobs:
+  separator:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build champion and R1 candidate
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git worktree add /tmp/base "$GITHUB_SHA"
+          cp -a /tmp/base /tmp/r1
+          python3 /tmp/base/experiments/r1/apply_infer_beta_fusion.py /tmp/r1
+          for arm in base r1; do
+            (cd /tmp/$arm && cargo test --release --locked)
+            (cd /tmp/$arm && RUSTFLAGS='-C target-cpu=x86-64-v3' cargo build --release --locked)
+            cp /tmp/$arm/target/release/sokonanoda /tmp/$arm-bin
+          done
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+
+      - name: Build focused current Arena exports
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          tests=(
+            perf/beta-ladder
+            perf/app-lam
+            perf/let-ladder
+            perf/grind-ring-5
+            init-prelude
+            perf/magma-list-deep-n36
+            perf/magma-list-pair-n21
+          )
+          : >/tmp/built-exports.txt
+          for t in "${tests[@]}"; do
+            if [ -f "tests/$t.yaml" ]; then
+              nix develop -c ./lka.py build-test "$t"
+              f="_build/tests/$t.ndjson"
+              [ -f "$f" ] && printf '%s\n' "$f" >>/tmp/built-exports.txt
+            fi
+          done
+          echo "built $(wc -l </tmp/built-exports.txt) focused Arena exports"
+          test -s /tmp/built-exports.txt
+
+      - name: Exact parity on focused exports
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          cat >/tmp/normalize_stderr.py <<'PY'
+          import re, sys
+          s = sys.stdin.read()
+          s = re.sub(r"thread '([^']+)' \(\d+\)", r"thread '\1' (<tid>)", s)
+          s = re.sub(r"(src/[A-Za-z0-9_./-]+\.rs):\d+:\d+", r"\1:<loc>", s)
+          sys.stdout.write(s)
+          PY
+          : >/tmp/parity.tsv
+          while IFS= read -r f; do
+            set +e
+            /tmp/base-bin /tmp/checker.json < "$f" >/tmp/base.out 2>/tmp/base.err
+            bs=$?
+            /tmp/r1-bin /tmp/checker.json < "$f" >/tmp/r1.out 2>/tmp/r1.err
+            rs=$?
+            set -e
+            python3 /tmp/normalize_stderr.py </tmp/base.err >/tmp/base.err.norm
+            python3 /tmp/normalize_stderr.py </tmp/r1.err >/tmp/r1.err.norm
+            if [ "$bs" -ne "$rs" ] || ! cmp -s /tmp/base.out /tmp/r1.out || ! cmp -s /tmp/base.err.norm /tmp/r1.err.norm; then
+              echo "MISMATCH $f base_status=$bs r1_status=$rs" | tee -a /tmp/parity.tsv
+              diff -u /tmp/base.out /tmp/r1.out || true
+              diff -u /tmp/base.err.norm /tmp/r1.err.norm || true
+              exit 1
+            fi
+            printf 'MATCH\t%s\t%s\n' "$bs" "$f" | tee -a /tmp/parity.tsv
+          done </tmp/built-exports.txt
+
+      - name: Tournament timings
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          : >/tmp/perf.tsv
+          while IFS= read -r f; do
+            label=${f#_build/tests/}; label=${label%.ndjson}
+            for arm in base r1; do
+              for rep in 1 2 3; do
+                set +e
+                /usr/bin/time -f '%e\t%M' -o /tmp/t /tmp/$arm-bin /tmp/checker.json < "$f" >/dev/null 2>/dev/null
+                st=$?
+                set -e
+                read -r sec rss </tmp/t
+                printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$label" "$arm" "$rep" "$st" "$sec" "$rss" | tee -a /tmp/perf.tsv
+              done
+            done
+          done </tmp/built-exports.txt
+
+      - name: Scorecard
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY' | tee /tmp/scorecard.txt
+          from collections import defaultdict
+          from statistics import median
+          rows = defaultdict(lambda: defaultdict(list))
+          for line in open('/tmp/perf.tsv'):
+              label, arm, rep, status, sec, rss = line.rstrip().split('\t')
+              rows[label][arm].append((float(sec), int(rss), int(status)))
+          print('label\tbase_med_s\tr1_med_s\tspeedup\tbase_med_rss_kb\tr1_med_rss_kb')
+          for label in sorted(rows):
+              b = rows[label]['base']; r = rows[label]['r1']
+              if not b or not r: continue
+              bs = median(x[0] for x in b); rs = median(x[0] for x in r)
+              br = median(x[1] for x in b); rr = median(x[1] for x in r)
+              speed = (bs / rs) if rs else float('inf')
+              print(f'{label}\t{bs:.6f}\t{rs:.6f}\t{speed:.3f}\t{int(br)}\t{int(rr)}')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r1-beta-fusion-separator
+          path: |
+            /tmp/built-exports.txt
+            /tmp/parity.tsv
+            /tmp/perf.tsv
+            /tmp/scorecard.txt
+          if-no-files-found: warn
