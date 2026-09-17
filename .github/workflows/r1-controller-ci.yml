@@ -13,4 +13,5 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run controller tests
+        # Dedicated red/green gate for the selector before inference wiring.
         run: cargo test --release --locked representation::tests -- --nocapture
