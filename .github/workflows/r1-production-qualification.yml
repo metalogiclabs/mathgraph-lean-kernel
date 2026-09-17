@@ -3,7 +3,7 @@ name: R1 production qualification
 on:
   push:
     branches:
-      - r1-selective-beta-fusion-v1
+      - r1-representation-controller-v1
   workflow_dispatch:
 
 jobs:
@@ -28,7 +28,7 @@ jobs:
           cp -a /tmp/r1 /tmp/ablated
           python3 - <<'PY'
           from pathlib import Path
-          p = Path('/tmp/ablated/src/infer.rs')
+          p = Path('/tmp/ablated/src/representation.rs')
           s = p.read_text()
           old = 'pub(crate) const R1_DIRECT_BETA_FUSION: bool = true;'
           new = 'pub(crate) const R1_DIRECT_BETA_FUSION: bool = false;'
@@ -47,7 +47,12 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
+          ARENA_SHA=a538455e201c1be48a11963cb83058649a36dc0e
           git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena fetch --depth 1 origin "$ARENA_SHA"
+          git -C /tmp/arena checkout --detach "$ARENA_SHA"
+          test "$(git -C /tmp/arena rev-parse HEAD)" = "$ARENA_SHA"
+          printf '%s\n' "$ARENA_SHA" >/tmp/arena-sha.txt
           cd /tmp/arena
           tests=(perf/beta-ladder perf/app-lam perf/let-ladder perf/grind-ring-5 init-prelude)
           : >/tmp/built-exports.txt
@@ -68,8 +73,15 @@ jobs:
           s=sys.stdin.read()
           s=re.sub(r"thread '([^']+)' \(\d+\)",r"thread '\1' (<tid>)",s)
           s=re.sub(r"(src/[A-Za-z0-9_./-]+\.rs):\d+:\d+",r"\1:<loc>",s)
+          s=re.sub(r"NamePtr\(0x[0-9A-Fa-f]+(?=[,)])","NamePtr(<ptr>",s)
           sys.stdout.write(s)
           PY
+          # Regression check for the exact nondeterministic shape exposed by
+          # tutorial/bad/135_misnamed_rec_user. Preserve the semantic suffix.
+          a=$(printf '%s\n' 'right: {NamePtr(0x5a19edc0140,L)}' | python3 /tmp/normalize.py)
+          b=$(printf '%s\n' 'right: {NamePtr(0x5c2159c0140,L)}' | python3 /tmp/normalize.py)
+          test "$a" = "$b"
+          test "$a" = 'right: {NamePtr(<ptr>,L)}'
           : >/tmp/parity.tsv
           while IFS= read -r f; do
             for arm in ablated r1; do
@@ -144,6 +156,7 @@ jobs:
         with:
           name: r1-production-qualification
           path: |
+            /tmp/arena-sha.txt
             /tmp/built-exports.txt
             /tmp/parity.tsv
             /tmp/perf.tsv
