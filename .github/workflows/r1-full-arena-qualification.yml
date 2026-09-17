@@ -1,0 +1,164 @@
+name: R1 full Arena qualification
+
+on:
+  push:
+    branches:
+      - r1-full-qualification-v1
+  workflow_dispatch:
+
+jobs:
+  full-gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build R1 and exact ablation
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git worktree add /tmp/r1 "$GITHUB_SHA"
+          cp -a /tmp/r1 /tmp/ablated
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/ablated/src/infer.rs')
+          s=p.read_text()
+          old='pub(crate) const R1_DIRECT_BETA_FUSION: bool = true;'
+          new='pub(crate) const R1_DIRECT_BETA_FUSION: bool = false;'
+          assert s.count(old)==1
+          p.write_text(s.replace(old,new,1))
+          PY
+          for arm in ablated r1; do
+            (cd /tmp/$arm && cargo test --release --locked)
+            (cd /tmp/$arm && RUSTFLAGS='-C target-cpu=x86-64-v3' cargo build --release --locked)
+            cp /tmp/$arm/target/release/sokonanoda /tmp/$arm-bin
+          done
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+
+      - name: Build every current Arena test
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          : >/tmp/build-tests.tsv
+          while IFS= read -r y; do
+            t=${y#tests/}; t=${t%.yaml}
+            echo "BUILD $t" | tee -a /tmp/build-tests.tsv
+            nix develop -c ./lka.py build-test "$t" | tee -a /tmp/build-tests.tsv
+          done < <(find tests -type f -name '*.yaml' | sort)
+          find _build/tests -type f -name '*.ndjson' | sort >/tmp/built-exports.txt
+          echo "built $(wc -l </tmp/built-exports.txt) Arena exports"
+          test -s /tmp/built-exports.txt
+
+      - name: Exact full-corpus replay parity
+        shell: bash
+        run: |
+          set -uxo pipefail
+          cd /tmp/arena
+          : >/tmp/correctness.tsv
+          cat >/tmp/normalize_stderr.py <<'PY'
+          import re,sys
+          s=sys.stdin.read()
+          s=re.sub(r"thread '([^']+)' \(\d+\)",r"thread '\1' (<tid>)",s)
+          s=re.sub(r"(src/[A-Za-z0-9_./-]+\.rs):\d+:\d+",r"\1:<loc>",s)
+          sys.stdout.write(s)
+          PY
+          while IFS= read -r f; do
+            set +e
+            /tmp/ablated-bin /tmp/checker.json < "$f" >/tmp/a.out 2>/tmp/a.err
+            as=$?
+            /tmp/r1-bin /tmp/checker.json < "$f" >/tmp/r.out 2>/tmp/r.err
+            rs=$?
+            set -e
+            python3 /tmp/normalize_stderr.py </tmp/a.err >/tmp/a.err.norm
+            python3 /tmp/normalize_stderr.py </tmp/r.err >/tmp/r.err.norm
+            if [ "$as" -ne "$rs" ] || ! cmp -s /tmp/a.out /tmp/r.out || ! cmp -s /tmp/a.err.norm /tmp/r.err.norm; then
+              echo "MISMATCH $f ablated_status=$as r1_status=$rs" | tee -a /tmp/correctness.tsv
+              diff -u /tmp/a.out /tmp/r.out || true
+              diff -u /tmp/a.err.norm /tmp/r.err.norm || true
+              exit 1
+            fi
+            printf 'MATCH\t%s\t%s\n' "$rs" "$f" >>/tmp/correctness.tsv
+          done </tmp/built-exports.txt
+          echo "matched $(wc -l </tmp/correctness.tsv) current Arena exports"
+
+      - name: Heavyweight performance replay
+        shell: bash
+        run: |
+          set -uxo pipefail
+          cd /tmp/arena
+          : >/tmp/perf.tsv
+          tests=(
+            perf/beta-ladder
+            perf/app-lam
+            perf/let-ladder
+            perf/grind-ring-5
+            perf/magma-list-deep-n36
+            perf/magma-list-pair-n21
+            init-prelude
+            init
+            cedar
+            cslib
+            mathlib
+          )
+          for label in "${tests[@]}"; do
+            f="_build/tests/$label.ndjson"
+            [ -f "$f" ] || continue
+            for arm in ablated r1; do
+              for rep in 1 2 3; do
+                set +e
+                /usr/bin/time -f '%e\t%M' -o /tmp/t /tmp/$arm-bin /tmp/checker.json < "$f" >/dev/null 2>/dev/null
+                st=$?
+                set -e
+                read -r sec rss </tmp/t
+                printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$label" "$arm" "$rep" "$st" "$sec" "$rss" | tee -a /tmp/perf.tsv
+              done
+            done
+          done
+          set -e
+
+      - name: Full qualification scorecard
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY' | tee /tmp/full-scorecard.txt
+          from collections import defaultdict
+          from statistics import median
+          rows=defaultdict(lambda:defaultdict(list))
+          for line in open('/tmp/perf.tsv'):
+              label,arm,rep,status,sec,rss=line.rstrip().split('\t')
+              rows[label][arm].append((float(sec),int(rss),int(status)))
+          print('label\tablated_med_s\tr1_med_s\tspeedup\tablated_rss_kb\tr1_rss_kb')
+          for label in sorted(rows):
+              a=rows[label]['ablated']; r=rows[label]['r1']
+              if not a or not r: continue
+              am=median(x[0] for x in a); rm=median(x[0] for x in r)
+              ar=median(x[1] for x in a); rr=median(x[1] for x in r)
+              speed=(am/rm) if rm else float('inf')
+              print(f'{label}\t{am:.6f}\t{rm:.6f}\t{speed:.3f}\t{int(ar)}\t{int(rr)}')
+          beta=rows.get('perf/beta-ladder',{})
+          assert beta and beta.get('ablated') and beta.get('r1')
+          am=median(x[0] for x in beta['ablated']); rm=median(x[0] for x in beta['r1'])
+          ar=median(x[1] for x in beta['ablated']); rr=median(x[1] for x in beta['r1'])
+          assert (rm>0 and am/rm>=2.0) or (rr>0 and ar/rr>=2.0), 'no causal R1 beta phase change'
+          print('R1_FULL_ARENA_PARITY_PASS')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r1-full-arena-qualification
+          path: |
+            /tmp/build-tests.tsv
+            /tmp/built-exports.txt
+            /tmp/correctness.tsv
+            /tmp/perf.tsv
+            /tmp/full-scorecard.txt
+          if-no-files-found: warn
