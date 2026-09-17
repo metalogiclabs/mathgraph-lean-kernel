@@ -68,6 +68,10 @@ jobs:
           s=sys.stdin.read()
           s=re.sub(r"thread '([^']+)' \(\d+\)",r"thread '\1' (<tid>)",s)
           s=re.sub(r"(src/[A-Za-z0-9_./-]+\.rs):\d+:\d+",r"\1:<loc>",s)
+          # Allocation addresses are nondeterministic across binaries and carry no
+          # semantic information. Canonicalize only typed NamePtr debug addresses;
+          # keep every surrounding name-set/member and diagnostic byte exact.
+          s=re.sub(r"NamePtr\(0x[0-9A-Fa-f]+\)","NamePtr(<ptr>)",s)
           sys.stdout.write(s)
           PY
           while IFS= read -r f; do
