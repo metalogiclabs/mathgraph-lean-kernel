@@ -7,6 +7,15 @@ use crate::value::{self, Closure, RigidHead, Value, C, E, V};
 use Expr::*;
 use InferFlag::*;
 
+/// R1 selective representation capability.
+///
+/// The selector is purely structural: only an application whose function is
+/// syntactically a lambda uses the direct-beta inference representation. All
+/// other applications retain the existing MathGraph inference path. Keeping
+/// this as a compile-time constant gives the qualification workflow an exact
+/// one-bit ablation without adding a runtime configuration branch.
+pub(crate) const R1_DIRECT_BETA_FUSION: bool = true;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum CheckScope<'a> {
     Unchecked,
@@ -188,6 +197,27 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         ctx: C<'t>,
         e: ExprPtr<'t>,
     ) -> V<'t> {
+        // RealityGraph R1 selector: a syntactic App(Lambda, arg) has already
+        // supplied enough structural evidence to avoid constructing and then
+        // immediately consuming the lambda's Pi type. This is the minimum
+        // alternate representation earned by the beta-ladder obstruction.
+        if R1_DIRECT_BETA_FUSION {
+            if let App { fun, arg, .. } = self.ctx.read_expr(e) {
+                if let Lambda { binder_type, body, .. } = self.ctx.read_expr(fun) {
+                    let dom = self.arg_value(depth, env, binder_type);
+                    if flag == Check {
+                        self.infer_sort_of_v(flag, depth, env, ctx, binder_type);
+                        let arg_ty = self.infer_value(flag, depth, env, ctx, arg);
+                        assert!(self.conv_types_at(depth, dom, arg_ty), "app arg def_eq failed");
+                    }
+                    let av = self.arg_value(depth, env, arg);
+                    let env2 = value::env_extend(self.arena, env, av);
+                    let ctx2 = value::ctx_extend(self.arena, ctx, dom);
+                    return self.infer_value(flag, depth + 1, env2, ctx2, body);
+                }
+            }
+        }
+
         let (fun, mut args) = self.ctx.unfold_apps_stack(self.arena, e);
         let mut fty = self.infer_value(flag, depth, env, ctx, fun);
         while let Some(arg) = args.pop() {
