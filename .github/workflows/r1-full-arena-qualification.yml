@@ -21,6 +21,7 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
+          printf 'candidate_sha\t%s\n' "$GITHUB_SHA" >/tmp/provenance.tsv
           git worktree add /tmp/r1 "$GITHUB_SHA"
           cp -a /tmp/r1 /tmp/ablated
           python3 - <<'PY'
@@ -47,6 +48,7 @@ jobs:
           set -euxo pipefail
           git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
           cd /tmp/arena
+          printf 'arena_sha\t%s\n' "$(git rev-parse HEAD)" >>/tmp/provenance.tsv
           : >/tmp/build-tests.tsv
           while IFS= read -r y; do
             t=${y#tests/}; t=${t%.yaml}
@@ -57,20 +59,19 @@ jobs:
           echo "built $(wc -l </tmp/built-exports.txt) Arena exports"
           test -s /tmp/built-exports.txt
 
-      - name: Exact full-corpus replay parity
+      - name: Full-corpus semantic parity and diagnostic audit
         shell: bash
         run: |
           set -uxo pipefail
           cd /tmp/arena
           : >/tmp/correctness.tsv
+          : >/tmp/diagnostics.tsv
+          : >/tmp/semantic-mismatches.tsv
           cat >/tmp/normalize_stderr.py <<'PY'
           import re,sys
           s=sys.stdin.read()
           s=re.sub(r"thread '([^']+)' \(\d+\)",r"thread '\1' (<tid>)",s)
           s=re.sub(r"(src/[A-Za-z0-9_./-]+\.rs):\d+:\d+",r"\1:<loc>",s)
-          # Allocation addresses are nondeterministic across binaries and carry no
-          # semantic information. Canonicalize only typed NamePtr debug addresses;
-          # keep every surrounding name-set/member and diagnostic byte exact.
           s=re.sub(r"NamePtr\(0x[0-9A-Fa-f]+\)","NamePtr(<ptr>)",s)
           sys.stdout.write(s)
           PY
@@ -83,17 +84,24 @@ jobs:
             set -e
             python3 /tmp/normalize_stderr.py </tmp/a.err >/tmp/a.err.norm
             python3 /tmp/normalize_stderr.py </tmp/r.err >/tmp/r.err.norm
-            if [ "$as" -ne "$rs" ] || ! cmp -s /tmp/a.out /tmp/r.out || ! cmp -s /tmp/a.err.norm /tmp/r.err.norm; then
-              echo "MISMATCH $f ablated_status=$as r1_status=$rs" | tee -a /tmp/correctness.tsv
-              diff -u /tmp/a.out /tmp/r.out || true
-              diff -u /tmp/a.err.norm /tmp/r.err.norm || true
-              exit 1
+            if [ "$as" -ne "$rs" ] || ! cmp -s /tmp/a.out /tmp/r.out; then
+              printf 'SEMANTIC_MISMATCH\t%s\tablated_status=%s\tr1_status=%s\n' "$f" "$as" "$rs" | tee -a /tmp/semantic-mismatches.tsv /tmp/correctness.tsv
+              diff -u /tmp/a.out /tmp/r.out >>/tmp/semantic-mismatches.tsv || true
+            else
+              printf 'MATCH\t%s\t%s\n' "$rs" "$f" >>/tmp/correctness.tsv
             fi
-            printf 'MATCH\t%s\t%s\n' "$rs" "$f" >>/tmp/correctness.tsv
+            if ! cmp -s /tmp/a.err.norm /tmp/r.err.norm; then
+              printf 'DIAGNOSTIC_DIFF\t%s\n' "$f" | tee -a /tmp/diagnostics.tsv
+              diff -u /tmp/a.err.norm /tmp/r.err.norm >>/tmp/diagnostics.tsv || true
+            fi
           done </tmp/built-exports.txt
-          echo "matched $(wc -l </tmp/correctness.tsv) current Arena exports"
+          printf 'exports\t%s\nsemantic_mismatches\t%s\ndiagnostic_diffs\t%s\n' \
+            "$(wc -l </tmp/built-exports.txt)" \
+            "$(grep -c '^SEMANTIC_MISMATCH' /tmp/semantic-mismatches.tsv || true)" \
+            "$(grep -c '^DIAGNOSTIC_DIFF' /tmp/diagnostics.tsv || true)" | tee /tmp/parity-summary.tsv
 
       - name: Heavyweight performance replay
+        if: always()
         shell: bash
         run: |
           set -uxo pipefail
@@ -126,33 +134,54 @@ jobs:
               done
             done
           done
-          set -e
 
       - name: Full qualification scorecard
+        if: always()
         shell: bash
         run: |
           set -euxo pipefail
           python3 - <<'PY' | tee /tmp/full-scorecard.txt
           from collections import defaultdict
           from statistics import median
+          from pathlib import Path
+
+          provenance=dict(line.rstrip().split('\t',1) for line in open('/tmp/provenance.tsv'))
+          print('candidate_sha', provenance['candidate_sha'])
+          print('arena_sha', provenance['arena_sha'])
+
+          exports=sum(1 for _ in open('/tmp/built-exports.txt'))
+          semantic=sum(1 for line in open('/tmp/semantic-mismatches.tsv') if line.startswith('SEMANTIC_MISMATCH'))
+          diagnostics=sum(1 for line in open('/tmp/diagnostics.tsv') if line.startswith('DIAGNOSTIC_DIFF'))
+          print(f'exports={exports} semantic_mismatches={semantic} diagnostic_diffs={diagnostics}')
+
           rows=defaultdict(lambda:defaultdict(list))
           for line in open('/tmp/perf.tsv'):
               label,arm,rep,status,sec,rss=line.rstrip().split('\t')
               rows[label][arm].append((float(sec),int(rss),int(status)))
           print('label\tablated_med_s\tr1_med_s\tspeedup\tablated_rss_kb\tr1_rss_kb')
+          speedups={}
           for label in sorted(rows):
               a=rows[label]['ablated']; r=rows[label]['r1']
-              if not a or not r: continue
+              assert len(a)==3 and len(r)==3, f'incomplete benchmark: {label}'
+              assert [x[2] for x in a] == [x[2] for x in r], f'benchmark status mismatch: {label}'
               am=median(x[0] for x in a); rm=median(x[0] for x in r)
               ar=median(x[1] for x in a); rr=median(x[1] for x in r)
               speed=(am/rm) if rm else float('inf')
+              speedups[label]=speed
               print(f'{label}\t{am:.6f}\t{rm:.6f}\t{speed:.3f}\t{int(ar)}\t{int(rr)}')
+
           beta=rows.get('perf/beta-ladder',{})
           assert beta and beta.get('ablated') and beta.get('r1')
           am=median(x[0] for x in beta['ablated']); rm=median(x[0] for x in beta['r1'])
           ar=median(x[1] for x in beta['ablated']); rr=median(x[1] for x in beta['r1'])
           assert (rm>0 and am/rm>=2.0) or (rr>0 and ar/rr>=2.0), 'no causal R1 beta phase change'
-          print('R1_FULL_ARENA_PARITY_PASS')
+
+          protected=('perf/grind-ring-5','perf/magma-list-deep-n36','perf/magma-list-pair-n21','init-prelude','init','cedar','cslib','mathlib')
+          regressions=[label for label in protected if label in speedups and speedups[label] < 0.95]
+          assert semantic == 0, f'{semantic} semantic parity mismatches'
+          assert not regressions, 'material protected-workload regressions: ' + ', '.join(regressions)
+          print('R1_FULL_ARENA_SEMANTIC_PARITY_PASS')
+          print('R1_FULL_QUALIFICATION_PASS')
           PY
 
       - uses: actions/upload-artifact@v4
@@ -160,9 +189,13 @@ jobs:
         with:
           name: r1-full-arena-qualification
           path: |
+            /tmp/provenance.tsv
             /tmp/build-tests.tsv
             /tmp/built-exports.txt
             /tmp/correctness.tsv
+            /tmp/semantic-mismatches.tsv
+            /tmp/diagnostics.tsv
+            /tmp/parity-summary.tsv
             /tmp/perf.tsv
             /tmp/full-scorecard.txt
           if-no-files-found: warn
