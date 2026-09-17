@@ -49,8 +49,15 @@ pub(crate) fn r1_beta_pressure_score(p: R1Pressure) -> u8 {
     score
 }
 
-pub(crate) fn select_app_representation(_p: R1Pressure) -> AppRepresentation {
-    todo!("R1 controller implementation follows the failing selector tests")
+pub(crate) fn select_app_representation(p: R1Pressure) -> AppRepresentation {
+    if !R1_DIRECT_BETA_FUSION || !p.lambda_head {
+        return AppRepresentation::PiSpine;
+    }
+    if r1_beta_pressure_score(p) >= R1_BETA_PRESSURE_THRESHOLD {
+        AppRepresentation::DirectBeta
+    } else {
+        AppRepresentation::PiSpine
+    }
 }
 
 #[cfg(test)]
