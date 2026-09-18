@@ -1,0 +1,33 @@
+name: QCKN Mathlib v1
+
+on:
+  push:
+    branches:
+      - qckn-mathlib-v1
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  causal-and-promotion-gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: cachix/install-nix-action@v31
+
+      - name: Run QCKN causal and Mathlib promotion gate
+        shell: bash
+        run: bash experiments/run_qckn_mathlib_v1.sh
+
+      - name: Upload QCKN evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qckn-mathlib-v1
+          path: /tmp/qckn-mathlib-v1/evidence
+          if-no-files-found: warn
