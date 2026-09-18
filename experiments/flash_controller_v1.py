@@ -148,8 +148,7 @@ pub(crate) const DIRECT_VAR_EVAL: bool = %s;
 pub(crate) const DIRECT_FRAMED_PRUNE: bool = %s;
 
 pub(crate) const PROMOTED_CAPABILITY_IDS: &[&str] = &[
-%s
-];
+%s];
 """ % (
         "true" if "direct_var_eval" in promoted else "false",
         "true" if "direct_framed_prune" in promoted else "false",
