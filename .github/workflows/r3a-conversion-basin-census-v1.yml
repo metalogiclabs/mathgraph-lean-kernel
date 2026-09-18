@@ -1,0 +1,190 @@
+name: R3a conversion basin census V1
+
+on:
+  push:
+    branches:
+      - r3a-conversion-basin-census-v1
+  workflow_dispatch:
+
+jobs:
+  basin-census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build qualified R1 and R3a profiler
+        shell: bash
+        run: |
+          set -euxo pipefail
+          R1_SHA=d3b97093175eee5573caaa00993bac358d00a1dc
+          printf 'candidate_sha\t%s\nr1_sha\t%s\n' "$GITHUB_SHA" "$R1_SHA" >/tmp/provenance.tsv
+          git worktree add /tmp/r1 "$R1_SHA"
+          git worktree add /tmp/r3a "$GITHUB_SHA"
+          for arm in r1 r3a; do
+            (cd /tmp/$arm && cargo test --release --locked)
+            (cd /tmp/$arm && RUSTFLAGS='-C target-cpu=x86-64-v3' cargo build --release --locked)
+            cp /tmp/$arm/target/release/sokonanoda /tmp/$arm-bin
+          done
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+
+      - name: Build conversion workload panel
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          printf 'arena_sha\t%s\n' "$(git rev-parse HEAD)" >>/tmp/provenance.tsv
+          tests=(
+            mathlib
+            cslib
+            cedar
+            init
+            perf/grind-ring-5
+            perf/beta-ladder
+            perf/magma-list-deep-n36
+            perf/magma-list-pair-n21
+          )
+          : >/tmp/built-exports.txt
+          for t in "${tests[@]}"; do
+            nix develop -c ./lka.py build-test "$t"
+            f="_build/tests/$t.ndjson"
+            test -f "$f"
+            printf '%s\n' "$f" >>/tmp/built-exports.txt
+          done
+
+      - name: Semantic parity and conversion basin census
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          : >/tmp/parity.tsv
+          : >/tmp/r3a-profile.tsv
+          while IFS= read -r f; do
+            label=${f#_build/tests/}
+            label=${label%.ndjson}
+
+            set +e
+            /tmp/r1-bin /tmp/checker.json <"$f" >/tmp/r1.out 2>/tmp/r1.err
+            r1_status=$?
+            QCKN_R3A_PROFILE=1 /usr/bin/time -f '%e\t%M' -o /tmp/time               /tmp/r3a-bin /tmp/checker.json <"$f" >/tmp/r3a.out 2>/tmp/r3a.err
+            r3a_status=$?
+            set -e
+
+            if [ "$r1_status" -ne "$r3a_status" ] || ! cmp -s /tmp/r1.out /tmp/r3a.out; then
+              printf 'SEMANTIC_MISMATCH\t%s\tr1=%s\tr3a=%s\n' "$label" "$r1_status" "$r3a_status" | tee -a /tmp/parity.tsv
+              diff -u /tmp/r1.out /tmp/r3a.out || true
+              exit 1
+            fi
+            printf 'MATCH\t%s\t%s\n' "$r3a_status" "$label" | tee -a /tmp/parity.tsv
+
+            read -r sec rss </tmp/time
+            summary=$(grep '^QCKN_R3A_SUMMARY ' /tmp/r3a.err | tail -n1)
+            test -n "$summary"
+            printf 'SUMMARY\t%s\t%s\t%s\t%s\n' "$label" "$sec" "$rss" "${summary#QCKN_R3A_SUMMARY }" >>/tmp/r3a-profile.tsv
+            grep '^QCKN_R3A_CLASS ' /tmp/r3a.err | while IFS= read -r line; do
+              printf 'CLASS\t%s\t%s\n' "$label" "${line#QCKN_R3A_CLASS }" >>/tmp/r3a-profile.tsv
+            done
+          done </tmp/built-exports.txt
+
+      - name: Rank Mathlib conversion basins
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY' | tee /tmp/r3a-scorecard.txt
+          from pathlib import Path
+          from collections import defaultdict
+
+          summaries = {}
+          classes = defaultdict(dict)
+
+          def kv(payload):
+              out={}
+              for item in payload.split():
+                  k,v=item.split('=',1)
+                  out[k]=v
+              return out
+
+          for line in Path('/tmp/r3a-profile.tsv').read_text().splitlines():
+              kind,label,*rest=line.split('\t')
+              if kind=='SUMMARY':
+                  sec,rss,payload=rest
+                  d=kv(payload)
+                  d['seconds']=float(sec)
+                  d['rss_kb']=int(rss)
+                  summaries[label]=d
+              else:
+                  d=kv(rest[0])
+                  name=d.pop('name')
+                  classes[label][name]={k:int(v) for k,v in d.items()}
+
+          msum=summaries['mathlib']
+          total=int(msum['calls'])
+          print(f"mathlib_seconds={msum['seconds']:.2f}")
+          print(f"mathlib_conversion_calls={total}")
+          print("class\tcalls\tshare%\tfresh%\treuse%\tdirect_miss%\tcold_success%\tcontrol_share_mean%\tdifferential")
+
+          rows=[]
+          for name,d in classes['mathlib'].items():
+              calls=d['calls']
+              fresh=d['fresh']
+              reuse=d['uf_hits']+d['neg_hits']+d['probe_neg_hits']
+              direct_total=d['direct_true']+d['direct_false']
+              cold_total=d['cold_true']+d['cold_false']
+              share=calls/total if total else 0.0
+              fresh_r=fresh/calls if calls else 0.0
+              reuse_r=reuse/calls if calls else 0.0
+              direct_miss=d['direct_false']/direct_total if direct_total else 0.0
+              cold_success=d['cold_true']/cold_total if cold_total else 0.0
+
+              control_shares=[]
+              for label,cds in classes.items():
+                  if label=='mathlib':
+                      continue
+                  cs=cds.get(name,{}).get('calls',0)
+                  ct=int(summaries[label]['calls'])
+                  control_shares.append(cs/ct if ct else 0.0)
+              cm=sum(control_shares)/len(control_shares) if control_shares else 0.0
+              differential=share/(cm+1e-12)
+
+              # Evidence score, not a promotion score: prioritize a basin that is
+              # common in Mathlib, still enters fresh work, and frequently misses
+              # the direct path. Differential is capped so tiny control baselines
+              # cannot dominate the choice.
+              score=share*fresh_r*(1.0+direct_miss)*min(max(differential,0.5),3.0)
+              rows.append((score,name,share,fresh_r,reuse_r,direct_miss,cold_success,cm,differential,calls))
+
+          rows.sort(reverse=True)
+          for row in rows:
+              _,name,share,fresh_r,reuse_r,direct_miss,cold_success,cm,diff,calls=row
+              print(f"{name}\t{calls}\t{100*share:.2f}\t{100*fresh_r:.2f}\t{100*reuse_r:.2f}\t{100*direct_miss:.2f}\t{100*cold_success:.2f}\t{100*cm:.2f}\t{diff:.2f}")
+
+          print()
+          for key in ['spine_probe_attempt','spine_probe_hit','unfold_pair_attempt','unfold_pair_hit','iota_pair_attempt','iota_pair_hit','proof_irrel_attempt','proof_irrel_hit','struct_eta_attempt','struct_eta_hit']:
+              print(f"mathlib_{key}={msum[key]}")
+
+          if not rows or rows[0][2] < 0.02:
+              print("NEXT_R3_BASIN=UNKNOWN_SEARCH")
+          else:
+              print(f"NEXT_R3_BASIN={rows[0][1]}")
+              print(f"NEXT_R3_BASIN_SCORE={rows[0][0]:.6f}")
+          print("STATUS=R3A_CENSUS_ONLY_NOT_PROMOTED")
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r3a-conversion-basin-census-v1
+          path: |
+            /tmp/provenance.tsv
+            /tmp/built-exports.txt
+            /tmp/parity.tsv
+            /tmp/r3a-profile.tsv
+            /tmp/r3a-scorecard.txt
+          if-no-files-found: warn
