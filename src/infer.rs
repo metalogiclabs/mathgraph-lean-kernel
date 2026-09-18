@@ -131,9 +131,11 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         let scope = self.uparam_scope();
         if let Some(cached) = self.tc_cache.type_cache.get(&key).copied() {
             if flag == InferOnly || cached.checked_under == scope {
+                crate::profile::note_infer_cache(true);
                 return cached.result;
             }
         }
+        crate::profile::note_infer_cache(false);
 
         let r = match self.ctx.read_expr(e) {
             App { .. } => self.infer_app_v(flag, depth, env, ctx, e),
