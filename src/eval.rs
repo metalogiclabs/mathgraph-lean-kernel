@@ -2170,3 +2170,20 @@ mod qckn_eval_var_fast_tests {
         });
     }
 }
+
+
+#[cfg(test)]
+mod qckn_r2_eval_atlas_tests {
+    use super::{r2_eval_atlas_count, r2_eval_atlas_record};
+
+    #[test]
+    fn r2_eval_atlas_records_exact_bucket() {
+        let idx = 2usize;
+        let other = 3usize;
+        let before = r2_eval_atlas_count(idx);
+        let other_before = r2_eval_atlas_count(other);
+        r2_eval_atlas_record(idx);
+        assert_eq!(r2_eval_atlas_count(idx), before + 1);
+        assert_eq!(r2_eval_atlas_count(other), other_before);
+    }
+}
