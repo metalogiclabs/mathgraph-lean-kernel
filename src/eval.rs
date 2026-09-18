@@ -298,6 +298,8 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                     indices.extend_from_slice(self.wide_fvars(arg));
                 }
                 Expr::Pi { binder_type, body, .. } | Expr::Lambda { binder_type, body, .. } => {
+                #[cfg(feature = "qckn-eval-atlas")]
+                eval_atlas_record(13);
                     indices.extend_from_slice(self.wide_fvars(binder_type));
                     indices.extend(self.wide_fvars(body).iter().filter_map(|i| i.checked_sub(1)));
                 }
@@ -552,12 +554,63 @@ const WHNF_ADMIT_THRESHOLD: u8 = 2;
 const FAIL_CLOSURE: u8 = 1;
 const FAIL_DEPTH: u8 = 7;
 
+#[cfg(any(test, feature = "qckn-eval-atlas"))]
+static EVAL_ATLAS: [std::sync::atomic::AtomicU64; 19] =
+    [const { std::sync::atomic::AtomicU64::new(0) }; 19];
+
+#[cfg(any(test, feature = "qckn-eval-atlas"))]
+#[inline]
+pub(crate) fn eval_atlas_record(index: usize) {
+    EVAL_ATLAS[index].fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+}
+
+#[cfg(any(test, feature = "qckn-eval-atlas"))]
+#[inline]
+pub(crate) fn eval_atlas_count(index: usize) -> u64 {
+    EVAL_ATLAS[index].load(std::sync::atomic::Ordering::Relaxed)
+}
+
+#[cfg(feature = "qckn-eval-atlas")]
+pub fn dump_eval_atlas() {
+    const LABELS: [&str; 19] = [
+        "eval_entry",
+        "closed_cache_hit",
+        "closed_cache_miss",
+        "open_cache_hit",
+        "open_cache_miss",
+        "direct_no_cache",
+        "app_chain_same",
+        "app_chain_mixed",
+        "app_simple_lambda",
+        "app_simple_apply",
+        "var",
+        "sort",
+        "const",
+        "lambda",
+        "pi",
+        "let",
+        "proj",
+        "natlit",
+        "strlit",
+    ];
+    for (index, label) in LABELS.iter().enumerate() {
+        let count = EVAL_ATLAS[index].load(std::sync::atomic::Ordering::Relaxed);
+        eprintln!("QCKN_EVAL_ATLAS\t{index}\t{label}\t{count}");
+    }
+}
+
 impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
     pub(crate) fn eval(&mut self, depth: u32, env: E<'t>, e: ExprPtr<'t>) -> V<'t> {
+        #[cfg(feature = "qckn-eval-atlas")]
+        eval_atlas_record(0);
         if e.num_loose_bvars() == 0 && env.lsub().is_none() {
             if let Some(v) = self.tc_cache.closed_eval_cache.get(&e) {
+                #[cfg(feature = "qckn-eval-atlas")]
+                eval_atlas_record(1);
                 return v;
             }
+            #[cfg(feature = "qckn-eval-atlas")]
+            eval_atlas_record(2);
             let v = self.eval_no_cache(depth, env, e);
             self.tc_cache.closed_eval_cache.insert(e, v);
             return v;
@@ -569,12 +622,18 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
             let te = self.key_env(env, e);
             let key = (te as *const value::Env<'t> as usize, e);
             if let Some(v) = self.tc_cache.open_eval_cache.get(&key) {
+                #[cfg(feature = "qckn-eval-atlas")]
+                eval_atlas_record(3);
                 return v;
             }
+            #[cfg(feature = "qckn-eval-atlas")]
+            eval_atlas_record(4);
             let v = self.eval_no_cache(depth, te, e);
             self.tc_cache.open_eval_cache.insert(key, v);
             return v;
         }
+        #[cfg(feature = "qckn-eval-atlas")]
+        eval_atlas_record(5);
         self.eval_no_cache(depth, env, e)
     }
 
@@ -606,8 +665,12 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 let nat_ext = self.nat_extension;
 
                 if all_same {
+                    #[cfg(feature = "qckn-eval-atlas")]
+                    eval_atlas_record(6);
                     let f_val = match self.ctx.read_expr_ref(first_fun) {
                         &Expr::Var { dbj_idx, .. } => {
+                #[cfg(feature = "qckn-eval-atlas")]
+                eval_atlas_record(10);
                             let v = env.lookup(dbj_idx).expect("eval: loose bvar");
                             self.force_thunk(depth, v)
                         }
@@ -629,6 +692,8 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                     return result;
                 }
 
+                #[cfg(feature = "qckn-eval-atlas")]
+                eval_atlas_record(7);
                 let mut funs: Vec<ExprPtr<'t>> = Vec::with_capacity(count as usize);
                 funs.push(fun);
                 funs.push(f2);
@@ -669,11 +734,15 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
             let f = self.eval(depth, env, fun);
             let a = self.eval(depth, env, arg);
             if let Value::Lam { body: clo, .. } = f {
+                #[cfg(feature = "qckn-eval-atlas")]
+                eval_atlas_record(8);
                 let clo_env = clo.env;
                 let clo_body = clo.body;
                 let new_env = self.env_extend(clo_env, a);
                 return self.eval(depth, new_env, clo_body);
             }
+            #[cfg(feature = "qckn-eval-atlas")]
+            eval_atlas_record(9);
             return self.apply(depth, f, a);
         }
         match first {
@@ -682,6 +751,8 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 self.force_thunk(depth, v)
             }
             Expr::Sort { level, .. } => {
+                #[cfg(feature = "qckn-eval-atlas")]
+                eval_atlas_record(11);
                 let level = match env.lsub() {
                     Some(ls) => self.ctx.subst_level(level, ls.ks, ls.vs),
                     None => level,
@@ -689,6 +760,8 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 value::mk_sort(self.arena, self.ctx.simplify(level))
             }
             Expr::Const { name, levels, .. } => {
+                #[cfg(feature = "qckn-eval-atlas")]
+                eval_atlas_record(12);
                 let levels = match env.lsub() {
                     Some(ls) => self.ctx.subst_levels(levels, ls.ks, ls.vs),
                     None => levels,
@@ -701,6 +774,8 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 value::mk_lam(self.arena, binder_type, Closure::mk_eval(ce, body))
             }
             Expr::Pi { binder_type, body, .. } => {
+                #[cfg(feature = "qckn-eval-atlas")]
+                eval_atlas_record(14);
                 let dom = self.eval(depth, env, binder_type);
                 {
                     let ce = self.key_env(env, e);
@@ -708,6 +783,8 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 }
             }
             Expr::Let { .. } => {
+                #[cfg(feature = "qckn-eval-atlas")]
+                eval_atlas_record(15);
                 let mut env = env;
                 let mut cursor = e;
                 while let Expr::Let { data: &crate::expr::LetData { val, body, .. }, .. } = self.ctx.read_expr(cursor) {
@@ -718,11 +795,21 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 self.eval(depth, env, cursor)
             }
             Expr::Proj { ty_name, idx, structure, .. } => {
+                #[cfg(feature = "qckn-eval-atlas")]
+                eval_atlas_record(16);
                 let vs = self.eval(depth, env, structure);
                 self.do_proj(depth, ty_name, idx, vs)
             }
-            Expr::NatLit { ptr, .. } => value::mk_natlit(self.arena, ptr),
-            Expr::StringLit { ptr, .. } => value::mk_strlit(self.arena, ptr),
+            Expr::NatLit { ptr, .. } => {
+                #[cfg(feature = "qckn-eval-atlas")]
+                eval_atlas_record(17);
+                value::mk_natlit(self.arena, ptr)
+            },
+            Expr::StringLit { ptr, .. } => {
+                #[cfg(feature = "qckn-eval-atlas")]
+                eval_atlas_record(18);
+                value::mk_strlit(self.arena, ptr)
+            },
         }
     }
 
