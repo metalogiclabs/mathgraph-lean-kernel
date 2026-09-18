@@ -412,17 +412,37 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
     }
 
     fn spine_probe(&mut self, depth: u32, sx: S<'t>, sy: S<'t>, sig: Sig, limit: u32) -> bool {
-        if std::ptr::eq(sx, sy) {
-            return true;
-        }
-        if self.tc_cache.probe_depth > 0 {
-            return self.unify_spine::<true>(depth, sx, sy, sig, limit);
-        }
-        let Some(pairs) = self.probe_pairs(sx, sy, sig, limit) else { return false };
-        let outer = std::mem::replace(&mut self.tc_cache.probe_exhausted, false);
-        let decided = self.probe_pass(depth, &pairs);
-        self.tc_cache.probe_exhausted = outer;
-        decided
+        let ptr_equal = std::ptr::eq(sx, sy);
+        let both_closed = sx.is_closed() && sy.is_closed();
+        let sig_hash = crate::hash64!(
+            sig.arity, sig.prop_arg, sig.arg_known, sig.absent_arg, sig.prop_result, sig.result_known
+        );
+        let repeat = crate::profile::spine_probe_seen(
+            sx as *const Spine<'t> as usize,
+            sy as *const Spine<'t> as usize,
+            depth,
+            limit,
+            sig_hash,
+            both_closed,
+            ptr_equal,
+        );
+        let result = if ptr_equal {
+            true
+        } else if self.tc_cache.probe_depth > 0 {
+            self.unify_spine::<true>(depth, sx, sy, sig, limit)
+        } else {
+            match self.probe_pairs(sx, sy, sig, limit) {
+                Some(pairs) => {
+                    let outer = std::mem::replace(&mut self.tc_cache.probe_exhausted, false);
+                    let decided = self.probe_pass(depth, &pairs);
+                    self.tc_cache.probe_exhausted = outer;
+                    decided
+                }
+                None => false,
+            }
+        };
+        crate::profile::note_spine_probe_result(repeat, result);
+        result
     }
 
     fn probe_pass(&mut self, depth: u32, pairs: &[(V<'t>, V<'t>)]) -> bool {
