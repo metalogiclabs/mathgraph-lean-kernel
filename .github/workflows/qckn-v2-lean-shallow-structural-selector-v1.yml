@@ -24,7 +24,7 @@ jobs:
           path: realitygraph
 
       - name: Verify structural selector boundary
-        run: cargo test --locked qckn_r1_structural_selector_tests -- --nocapture
+        run: cargo test --locked qckn_r1_chain_threshold -- --nocapture
 
       - name: Verify exact developmental gates
         env:

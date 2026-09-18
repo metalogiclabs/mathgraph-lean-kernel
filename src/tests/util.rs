@@ -48,6 +48,34 @@ pub(crate) fn test_ctx<'p, A>(path: Option<&Path>, f: impl FnOnce(&mut TcCtx) ->
     test_export_file(path, |export_file| export_file.with_ctx(|ctx, _cache, _arena| f(ctx)))
 }
 
+#[test]
+fn qckn_r1_chain_threshold_counts_only_consecutive_beta_redexes() {
+    use crate::expr::Expr;
+    use crate::infer::r1_recurrent_chain_at_least;
+
+    test_ctx(None, |ctx| {
+        let ty = ctx.prop();
+        let arg = ctx.prop();
+        let terminal = ctx.prop();
+        let lambda1 = ctx.mk_lambda(ty, terminal);
+        let one = ctx.mk_app(lambda1, arg);
+        let lambda2 = ctx.mk_lambda(ty, one);
+        let two = ctx.mk_app(lambda2, arg);
+        let lambda3 = ctx.mk_lambda(ty, two);
+        let three = ctx.mk_app(lambda3, arg);
+
+        assert!(r1_recurrent_chain_at_least(ctx, three, 3));
+        assert!(!r1_recurrent_chain_at_least(ctx, three, 4));
+
+        let interrupted_body = ctx.mk_app(terminal, one);
+        let interrupted_lambda = ctx.mk_lambda(ty, interrupted_body);
+        let interrupted = ctx.mk_app(interrupted_lambda, arg);
+        assert!(!r1_recurrent_chain_at_least(ctx, interrupted, 2));
+        assert!(matches!(ctx.read_expr(three), Expr::App { .. }));
+    })
+    .unwrap();
+}
+
 impl<'t, 'p: 't> TcCtx<'t, 'p> {
     #[cfg(test)]
     pub(crate) fn level_n(&mut self, mut l: LevelPtr<'t>, n: u64) -> LevelPtr<'t> {
