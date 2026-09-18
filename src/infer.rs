@@ -13,6 +13,9 @@ use InferFlag::*;
 /// the retained leader path and isolates recurrent binder-consuming pressure.
 pub(crate) const R1_DIRECT_BETA_FUSION: bool = true;
 
+#[inline]
+pub(crate) fn r1_depth_split_allows(depth: u32) -> bool { depth >= 64 }
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum CheckScope<'a> {
     Unchecked,
@@ -185,7 +188,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                         App { fun: next_fun, .. } => matches!(self.ctx.read_expr(next_fun), Lambda { .. }),
                         _ => false,
                     };
-                    if recurrent_beta {
+                    if recurrent_beta && r1_depth_split_allows(depth) {
                         let dom = self.arg_value(depth, env, binder_type);
                         if flag == Check {
                             self.infer_sort_of_v(flag, depth, env, ctx, binder_type);
