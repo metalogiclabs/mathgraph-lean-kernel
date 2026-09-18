@@ -29,6 +29,22 @@
       "dependencies": [
         "direct_var_eval"
       ]
+    },
+    {
+      "id": "r1_recurrent_beta",
+      "status": "candidate_reverify",
+      "guard": "recurrent_immediate_beta_prefix",
+      "implementation": "direct_beta_infer",
+      "evidence": {
+        "qualified_commit": "d3b97093175eee5573caaa00993bac358d00a1dc",
+        "qualification_run": 35293429101,
+        "exports": 409,
+        "semantic_mismatches": 0,
+        "beta_ladder_speedup": 19.5,
+        "mathlib_effect": "neutral"
+      },
+      "dependencies": [],
+      "reserve_reason": "qualified on separate lineage; current active lineage lacks implementation"
     }
   ],
   "obstructions": [
