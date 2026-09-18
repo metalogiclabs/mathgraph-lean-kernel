@@ -2127,3 +2127,30 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         }
     }
 }
+
+
+#[cfg(test)]
+mod qckn_eval_var_fast_tests {
+    use super::eval_direct_var_index;
+    use crate::expr::Expr;
+    use crate::hash64;
+    use crate::util::ExprPtr;
+    use stumpalo::Arena;
+
+    #[test]
+    fn direct_var_dispatch_matches_only_variables() {
+        let arena = Arena::new();
+        arena.with_scope(|scope| {
+            let v = scope.alloc(Expr::Var { dbj_idx: 7, hash: hash64!(crate::expr::VAR_HASH, 7u16) });
+            let vp = ExprPtr::local(v);
+            assert_eq!(eval_direct_var_index(vp), Some(7));
+
+            let s = scope.alloc(Expr::Sort {
+                level: crate::util::LevelPtr::global(scope.alloc(crate::level::Level::Zero)),
+                hash: 0,
+            });
+            let sp = ExprPtr::local(s);
+            assert_eq!(eval_direct_var_index(sp), None);
+        });
+    }
+}
