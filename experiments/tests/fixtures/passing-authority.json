@@ -1,0 +1,29 @@
+{
+  "schema": "qckn-v2-lean-authority-v1",
+  "candidate_sha": "fixture-candidate-sha",
+  "arena_sha": "510fbfead6f02bed1a0179d01729a6ddf5bfd06d",
+  "authority_snapshot": "lean-kernel-arena@510fbfead6f02bed1a0179d01729a6ddf5bfd06d",
+  "verifier_id": "exact-parity+callgrind-ir-v1",
+  "workloads": {
+    "perf/beta-ladder": {
+      "parity": true,
+      "ablated_ir": 2000,
+      "candidate_ir": 500
+    },
+    "perf/magma-list-deep-n21": {
+      "parity": true,
+      "ablated_ir": 1010,
+      "candidate_ir": 1000
+    },
+    "perf/grind-ring-5": {
+      "parity": true,
+      "ablated_ir": 1000,
+      "candidate_ir": 1000
+    },
+    "mathlib": {
+      "parity": true,
+      "ablated_ir": 1000,
+      "candidate_ir": 1000
+    }
+  }
+}
