@@ -9,11 +9,13 @@ use InferFlag::*;
 
 /// R1 selective representation capability.
 ///
-/// The selector is purely structural: only an application whose function is
-/// syntactically a lambda uses the direct-beta inference representation. All
-/// other applications retain the existing MathGraph inference path. Keeping
-/// this as a compile-time constant gives the qualification workflow an exact
-/// one-bit ablation without adding a runtime configuration branch.
+/// The selector is purely structural: direct-beta inference is enabled only
+/// when an immediate App(Lambda, arg) is followed by another immediate
+/// App(Lambda, arg) in the lambda body. This is a cheap prefix witness of
+/// recurrent binder-consuming beta pressure; isolated beta redexes retain the
+/// existing MathGraph inference path. Keeping this as a compile-time constant
+/// gives the qualification workflow an exact one-bit ablation without adding a
+/// runtime configuration branch.
 pub(crate) const R1_DIRECT_BETA_FUSION: bool = true;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -197,23 +199,30 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         ctx: C<'t>,
         e: ExprPtr<'t>,
     ) -> V<'t> {
-        // RealityGraph R1 selector: a syntactic App(Lambda, arg) has already
-        // supplied enough structural evidence to avoid constructing and then
-        // immediately consuming the lambda's Pi type. This is the minimum
-        // alternate representation earned by the beta-ladder obstruction.
+        // RealityGraph R1 selector: one immediate App(Lambda, arg) is not
+        // enough evidence to switch representation. Require a second immediate
+        // beta redex in the lambda body before paying for direct-beta inference.
+        // The beta-ladder has this prefix at every level except the last, while
+        // isolated administrative lambdas stay on the retained path.
         if R1_DIRECT_BETA_FUSION {
             if let App { fun, arg, .. } = self.ctx.read_expr(e) {
                 if let Lambda { binder_type, body, .. } = self.ctx.read_expr(fun) {
-                    let dom = self.arg_value(depth, env, binder_type);
-                    if flag == Check {
-                        self.infer_sort_of_v(flag, depth, env, ctx, binder_type);
-                        let arg_ty = self.infer_value(flag, depth, env, ctx, arg);
-                        assert!(self.conv_types_at(depth, dom, arg_ty), "app arg def_eq failed");
+                    let recurrent_beta = match self.ctx.read_expr(body) {
+                        App { fun: next_fun, .. } => matches!(self.ctx.read_expr(next_fun), Lambda { .. }),
+                        _ => false,
+                    };
+                    if recurrent_beta {
+                        let dom = self.arg_value(depth, env, binder_type);
+                        if flag == Check {
+                            self.infer_sort_of_v(flag, depth, env, ctx, binder_type);
+                            let arg_ty = self.infer_value(flag, depth, env, ctx, arg);
+                            assert!(self.conv_types_at(depth, dom, arg_ty), "app arg def_eq failed");
+                        }
+                        let av = self.arg_value(depth, env, arg);
+                        let env2 = value::env_extend(self.arena, env, av);
+                        let ctx2 = value::ctx_extend(self.arena, ctx, dom);
+                        return self.infer_value(flag, depth + 1, env2, ctx2, body);
                     }
-                    let av = self.arg_value(depth, env, arg);
-                    let env2 = value::env_extend(self.arena, env, av);
-                    let ctx2 = value::ctx_extend(self.arena, ctx, dom);
-                    return self.infer_value(flag, depth + 1, env2, ctx2, body);
                 }
             }
         }
