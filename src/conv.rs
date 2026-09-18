@@ -46,10 +46,12 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
     }
 
     pub(crate) fn conv_types_at(&mut self, depth: u32, a: V<'t>, b: V<'t>) -> bool {
+        crate::profile::note_conv_top();
         self.unbudgeted(|s| s.unify::<true>(depth, a, b))
     }
 
     pub(crate) fn def_eq_at(&mut self, depth: u32, vx: V<'t>, vy: V<'t>) -> bool {
+        crate::profile::note_conv_top();
         self.unbudgeted(|s| s.try_proof_irrel_at(depth, vx, vy) || s.unify::<true>(depth, vx, vy))
     }
 
@@ -96,21 +98,26 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         let cacheable = is_cacheable(x) || is_cacheable(y);
         let neg_eligible = !matches!(x, Value::Lam { .. }) && !matches!(y, Value::Lam { .. });
         if cacheable {
+            crate::profile::note_conv_cacheable();
             let xa = x as *const Value<'t> as usize;
             let ya = y as *const Value<'t> as usize;
             let cache_key = if xa < ya { (xa, ya) } else { (ya, xa) };
             if self.tc_cache.conv_uf.equiv(xa, ya) {
+                crate::profile::note_conv_uf_hit();
                 return true;
             }
             if RIGID && neg_eligible {
                 if self.tc_cache.conv_cache_neg.contains(&cache_key) {
+                    crate::profile::note_conv_neg_hit();
                     return false;
                 }
                 if self.tc_cache.probe_depth > 0 && self.tc_cache.conv_cache_neg_probe.contains(&cache_key) {
+                    crate::profile::note_conv_probe_neg_hit();
                     self.tc_cache.probe_exhausted = true;
                     return false;
                 }
             }
+            crate::profile::note_conv_cold();
             let outer = std::mem::replace(&mut self.tc_cache.probe_exhausted, false);
             let result = self.unify_no_cache::<RIGID>(depth, x, y);
             let truncated = self.tc_cache.probe_exhausted;
@@ -126,6 +133,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
             }
             result
         } else {
+            crate::profile::note_conv_cold();
             self.unify_no_cache::<RIGID>(depth, x, y)
         }
     }
