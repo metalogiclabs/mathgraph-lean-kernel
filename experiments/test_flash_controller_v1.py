@@ -21,7 +21,16 @@ passed["events"].append({
 })
 p=fc.close(passed,deepcopy(manifest))
 assert p["runtime_policy"]["promoted"]==["direct_framed_prune","direct_var_eval"]
-assert p["selected_action"]=="app_simple_apply_new_representation"
+assert p["selected_action"]=="revalidate_ordinary_unfold_neutral"
+
+unfold_pass=deepcopy(passed)
+unfold_pass["events"].append({
+    "id":"test-unfold-pass","kind":"current_revalidation","capability_id":"ordinary_unfold_neutral",
+    "run":5,"semantic_pass":True,"performance_pass":True,
+})
+up=fc.close(unfold_pass,deepcopy(manifest))
+assert up["runtime_policy"]["promoted"]==["direct_framed_prune","direct_var_eval","ordinary_unfold_neutral"]
+assert up["selected_action"]=="app_simple_apply_new_representation"
 
 failed=deepcopy(evidence)
 failed["events"].append({
