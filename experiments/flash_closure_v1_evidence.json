@@ -108,6 +108,17 @@
       "geomean_delta_percent": -0.655041,
       "worst_delta_percent": 1.562598,
       "action": "reject"
+    },
+    {
+      "id": "shallow-selector-heldout-red",
+      "kind": "obstruction",
+      "family": "shallow_structural_selector",
+      "run": 35394178087,
+      "semantic_pass": true,
+      "local_separator_speedup": 33.95074356099589,
+      "first_exact_obstruction": "HELDOUT_COST_GATE_FAILED: perf/magma-list-deep-n21 speedup 0.999873 is below 1.010000",
+      "action": "reject",
+      "note": "Local phase change did not transfer to held-out cost authority; no capability promoted."
     }
   ]
 }
