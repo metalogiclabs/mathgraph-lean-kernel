@@ -303,3 +303,27 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         assert!(self.def_eq_at(0, val_ty, declared), "def_eq failed");
     }
 }
+
+
+#[cfg(test)]
+mod r1_activation_bucket_tests {
+    use super::r1_activation_bucket_index;
+
+    #[test]
+    fn bucket_index_encodes_the_finite_context_partition() {
+        assert_eq!(r1_activation_bucket_index(false, 0, 0, 0, 0, 0), 0);
+        assert_eq!(r1_activation_bucket_index(true, 0, 0, 0, 0, 0), 1024);
+        assert_eq!(r1_activation_bucket_index(false, 8, 32, 64, 7, 31), 433);
+        assert_eq!(r1_activation_bucket_index(true, 64, 64, 64, 64, 64), 2047);
+    }
+
+    #[test]
+    fn bucket_bands_have_the_intended_boundaries() {
+        assert_eq!(r1_activation_bucket_index(false, 7, 7, 7, 7, 7), 0);
+        assert_eq!(r1_activation_bucket_index(false, 8, 8, 8, 8, 8), 341);
+        assert_eq!(r1_activation_bucket_index(false, 31, 31, 31, 31, 31), 341);
+        assert_eq!(r1_activation_bucket_index(false, 32, 32, 32, 32, 32), 682);
+        assert_eq!(r1_activation_bucket_index(false, 63, 63, 63, 63, 63), 682);
+        assert_eq!(r1_activation_bucket_index(false, 64, 64, 64, 64, 64), 1023);
+    }
+}
