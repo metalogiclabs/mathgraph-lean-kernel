@@ -1,0 +1,17 @@
+{
+  "schema": "mathgraph.flash.verification-event.v1",
+  "required": [
+    "event_id",
+    "kind",
+    "capability_id",
+    "run",
+    "semantic_pass",
+    "performance_pass"
+  ],
+  "semantics": {
+    "kind": "current_revalidation",
+    "semantic_pass": "must come from declared semantic authority",
+    "performance_pass": "must come from declared promotion authority",
+    "effect": "evidence only; controller decides promotion/rejection after closure"
+  }
+}
