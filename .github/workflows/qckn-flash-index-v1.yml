@@ -1,0 +1,28 @@
+name: QCKN Flash impact index v1
+
+on:
+  push:
+    branches:
+      - qckn-flash-index-v1
+  workflow_dispatch:
+
+jobs:
+  index:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Flash impact index
+        run: |
+          set -euxo pipefail
+          python3 experiments/flash_index_v1.py             experiments/flash_capability_manifest_v1.json             experiments/flash_closure_v1_evidence.json             /tmp/flash-impact-index.json | tee /tmp/flash-impact-index.log
+          grep -q '^FLASH_IMPACT_INDEX_PASS$' /tmp/flash-impact-index.log
+      - name: Test impact closure
+        run: python3 experiments/test_flash_index_v1.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-impact-index-v1
+          path: |
+            /tmp/flash-impact-index.json
+            /tmp/flash-impact-index.log
+          if-no-files-found: warn
