@@ -1,5 +1,9 @@
 name: QCKN Flash Closure V1
 
+concurrency:
+  group: qckn-flash-closure-v1
+  cancel-in-progress: true
+
 on:
   push:
     branches:
