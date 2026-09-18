@@ -486,7 +486,13 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         Some(out)
     }
 
-    fn spine_probe(&mut self, depth: u32, sx: S<'t>, sy: S<'t>, sig: Sig, limit: u32) -> bool {\n        let r = self.spine_probe_inner(depth, sx, sy, sig, limit);\n        crate::profile::note_spine_probe(r);\n        r\n    }\n\n    fn spine_probe_inner(&mut self, depth: u32, sx: S<'t>, sy: S<'t>, sig: Sig, limit: u32) -> bool {
+    fn spine_probe(&mut self, depth: u32, sx: S<'t>, sy: S<'t>, sig: Sig, limit: u32) -> bool {
+        let r = self.spine_probe_inner(depth, sx, sy, sig, limit);
+        crate::profile::note_spine_probe(r);
+        r
+    }
+
+    fn spine_probe_inner(&mut self, depth: u32, sx: S<'t>, sy: S<'t>, sig: Sig, limit: u32) -> bool {
         if std::ptr::eq(sx, sy) {
             return true;
         }
@@ -520,7 +526,13 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         decided
     }
 
-    fn unfold_pair(&mut self, depth: u32, t: V<'t>, t2: V<'t>) -> bool {\n        let r = self.unfold_pair_inner(depth, t, t2);\n        crate::profile::note_unfold_pair(r);\n        r\n    }\n\n    fn unfold_pair_inner(&mut self, depth: u32, t: V<'t>, t2: V<'t>) -> bool {
+    fn unfold_pair(&mut self, depth: u32, t: V<'t>, t2: V<'t>) -> bool {
+        let r = self.unfold_pair_inner(depth, t, t2);
+        crate::profile::note_unfold_pair(r);
+        r
+    }
+
+    fn unfold_pair_inner(&mut self, depth: u32, t: V<'t>, t2: V<'t>) -> bool {
         let v1 = self.unfold_value(depth, t);
         let v2 = self.unfold_value(depth, t2);
         if std::ptr::eq(v1, t) && std::ptr::eq(v2, t2) {
@@ -534,7 +546,23 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         self.unify::<true>(depth, v1, v2)
     }
 
-    fn unify_iota<const RIGID: bool>(\n        &mut self,\n        depth: u32,\n        t: V<'t>,\n        t2: V<'t>,\n        heads_match: bool,\n        name: NamePtr<'t>,\n        levels: LevelsPtr<'t>,\n        sx: S<'t>,\n        sy: S<'t>,\n    ) -> bool {\n        let r = self.unify_iota_inner::<RIGID>(depth, t, t2, heads_match, name, levels, sx, sy);\n        crate::profile::note_iota_pair(r);\n        r\n    }\n\n    fn unify_iota_inner<const RIGID: bool>(
+    fn unify_iota<const RIGID: bool>(
+        &mut self,
+        depth: u32,
+        t: V<'t>,
+        t2: V<'t>,
+        heads_match: bool,
+        name: NamePtr<'t>,
+        levels: LevelsPtr<'t>,
+        sx: S<'t>,
+        sy: S<'t>,
+    ) -> bool {
+        let r = self.unify_iota_inner::<RIGID>(depth, t, t2, heads_match, name, levels, sx, sy);
+        crate::profile::note_iota_pair(r);
+        r
+    }
+
+    fn unify_iota_inner<const RIGID: bool>(
         &mut self,
         depth: u32,
         t: V<'t>,
@@ -664,7 +692,13 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         self.try_struct_eta(depth, x, y)
     }
 
-    fn try_struct_eta(&mut self, depth: u32, x: V<'t>, y: V<'t>) -> bool {\n        let r = self.try_struct_eta_inner(depth, x, y);\n        crate::profile::note_struct_eta(r);\n        r\n    }\n\n    fn try_struct_eta_inner(&mut self, depth: u32, x: V<'t>, y: V<'t>) -> bool {
+    fn try_struct_eta(&mut self, depth: u32, x: V<'t>, y: V<'t>) -> bool {
+        let r = self.try_struct_eta_inner(depth, x, y);
+        crate::profile::note_struct_eta(r);
+        r
+    }
+
+    fn try_struct_eta_inner(&mut self, depth: u32, x: V<'t>, y: V<'t>) -> bool {
         let xt = self.value_type_opt(depth, x);
         let yt = self.value_type_opt(depth, y);
         for ty in [xt, yt].into_iter().flatten() {
@@ -691,7 +725,13 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         }
     }
 
-    fn try_proof_irrel_at(&mut self, depth: u32, x: V<'t>, y: V<'t>) -> bool {\n        let r = self.try_proof_irrel_at_inner(depth, x, y);\n        crate::profile::note_proof_irrel(r);\n        r\n    }\n\n    fn try_proof_irrel_at_inner(&mut self, depth: u32, x: V<'t>, y: V<'t>) -> bool {
+    fn try_proof_irrel_at(&mut self, depth: u32, x: V<'t>, y: V<'t>) -> bool {
+        let r = self.try_proof_irrel_at_inner(depth, x, y);
+        crate::profile::note_proof_irrel(r);
+        r
+    }
+
+    fn try_proof_irrel_at_inner(&mut self, depth: u32, x: V<'t>, y: V<'t>) -> bool {
         if matches!(x, Value::Lam { .. }) || matches!(y, Value::Lam { .. }) {
             return self.try_proof_irrel_lam(depth, x, y);
         }
