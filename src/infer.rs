@@ -303,3 +303,17 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         assert!(self.def_eq_at(0, val_ty, declared), "def_eq failed");
     }
 }
+
+
+#[cfg(test)]
+mod qckn_depth_split_tests {
+    use super::r1_depth_split_allows;
+
+    #[test]
+    fn depth64_is_the_exact_split_boundary() {
+        assert!(!r1_depth_split_allows(0));
+        assert!(!r1_depth_split_allows(63));
+        assert!(r1_depth_split_allows(64));
+        assert!(r1_depth_split_allows(u32::MAX));
+    }
+}
