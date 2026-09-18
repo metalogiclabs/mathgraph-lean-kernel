@@ -181,14 +181,14 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
     }
 
     fn infer_app_v(&mut self, flag: InferFlag, depth: u32, env: E<'t>, ctx: C<'t>, e: ExprPtr<'t>) -> V<'t> {
-        if R1_DIRECT_BETA_FUSION {
+        if R1_DIRECT_BETA_FUSION && r1_depth_split_allows(depth) {
             if let App { fun, arg, .. } = self.ctx.read_expr(e) {
                 if let Lambda { binder_type, body, .. } = self.ctx.read_expr(fun) {
                     let recurrent_beta = match self.ctx.read_expr(body) {
                         App { fun: next_fun, .. } => matches!(self.ctx.read_expr(next_fun), Lambda { .. }),
                         _ => false,
                     };
-                    if recurrent_beta && r1_depth_split_allows(depth) {
+                    if recurrent_beta {
                         let dom = self.arg_value(depth, env, binder_type);
                         if flag == Check {
                             self.infer_sort_of_v(flag, depth, env, ctx, binder_type);
