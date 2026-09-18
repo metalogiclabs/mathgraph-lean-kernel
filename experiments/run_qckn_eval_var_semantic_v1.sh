@@ -21,10 +21,13 @@ assert s.count(old)==1
 p.write_text(s.replace(old,new,1))
 PY
 
+(
+  cd "$ROOT/candidate"
+  cargo test --release --locked qckn_eval_var_fast_tests -- --nocapture
+)
 for arm in candidate ablated; do
   (
     cd "$ROOT/$arm"
-    cargo test --release --locked
     RUSTFLAGS='-C target-cpu=x86-64-v3' cargo build --release --locked
     cp target/release/sokonanoda "$ROOT/$arm.bin"
   )
