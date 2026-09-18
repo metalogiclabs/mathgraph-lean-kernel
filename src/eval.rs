@@ -552,6 +552,47 @@ const WHNF_ADMIT_THRESHOLD: u8 = 2;
 const FAIL_CLOSURE: u8 = 1;
 const FAIL_DEPTH: u8 = 7;
 
+#[cfg(any(test, feature = "qckn-r2-unfold-atlas"))]
+static R2_UNFOLD_ATLAS: [std::sync::atomic::AtomicU64; 15] =
+    [const { std::sync::atomic::AtomicU64::new(0) }; 15];
+
+#[cfg(any(test, feature = "qckn-r2-unfold-atlas"))]
+#[inline]
+pub(crate) fn r2_unfold_atlas_record(index: usize) {
+    R2_UNFOLD_ATLAS[index].fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+}
+
+#[cfg(any(test, feature = "qckn-r2-unfold-atlas"))]
+#[inline]
+pub(crate) fn r2_unfold_atlas_count(index: usize) -> u64 {
+    R2_UNFOLD_ATLAS[index].load(std::sync::atomic::Ordering::Relaxed)
+}
+
+#[cfg(feature = "qckn-r2-unfold-atlas")]
+pub fn dump_r2_unfold_atlas() {
+    const LABELS: [&str; 15] = [
+        "ordinary_unfold_total",
+        "f_already_canonical",
+        "f_canon_cache_hit",
+        "f_canon_cache_miss",
+        "a_already_canonical",
+        "a_thunk",
+        "a_canon_cache_hit",
+        "a_canon_cache_miss",
+        "app_hc_hit",
+        "app_hc_miss",
+        "spine_len_0",
+        "spine_len_1",
+        "spine_len_2_3",
+        "spine_len_4_7",
+        "spine_len_8_plus",
+    ];
+    for (index, label) in LABELS.iter().enumerate() {
+        let count = R2_UNFOLD_ATLAS[index].load(std::sync::atomic::Ordering::Relaxed);
+        eprintln!("QCKN_R2_UNFOLD_ATLAS\t{index}\t{label}\t{count}");
+    }
+}
+
 pub(crate) const EVAL_DIRECT_VAR_FAST: bool = true;
 
 #[inline(always)]
@@ -563,6 +604,63 @@ pub(crate) fn eval_direct_var_index(e: ExprPtr<'_>) -> Option<u16> {
 }
 
 impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
+    #[cfg(feature = "qckn-r2-unfold-atlas")]
+    fn observe_r2_ordinary_unfold_apply(
+        &mut self,
+        f: V<'t>,
+        a: V<'t>,
+    ) -> (V<'t>, V<'t>) {
+        r2_unfold_atlas_record(0);
+
+        if f.is_canonical() {
+            r2_unfold_atlas_record(1);
+        } else {
+            let key = f as *const Value<'t> as usize;
+            if self.tc_cache.canon_cache.get(&key).is_some() {
+                r2_unfold_atlas_record(2);
+            } else {
+                r2_unfold_atlas_record(3);
+            }
+        }
+
+        if a.is_canonical() {
+            r2_unfold_atlas_record(4);
+        } else if matches!(a, Value::Thunk { .. }) {
+            r2_unfold_atlas_record(5);
+        } else {
+            let key = a as *const Value<'t> as usize;
+            if self.tc_cache.canon_cache.get(&key).is_some() {
+                r2_unfold_atlas_record(6);
+            } else {
+                r2_unfold_atlas_record(7);
+            }
+        }
+
+        let cf = self.canonicalize_for_spine(f);
+        let ca = self.canonicalize_for_spine(a);
+        let key = (
+            cf as *const Value<'t> as usize,
+            ca as *const Value<'t> as usize,
+        );
+        if self.tc_cache.app_hc.get(&key).is_some() {
+            r2_unfold_atlas_record(8);
+        } else {
+            r2_unfold_atlas_record(9);
+        }
+
+        let Value::Unfold { spine, .. } = cf else {
+            unreachable!("ordinary-Unfold observer received non-Unfold function")
+        };
+        match spine.len() {
+            0 => r2_unfold_atlas_record(10),
+            1 => r2_unfold_atlas_record(11),
+            2..=3 => r2_unfold_atlas_record(12),
+            4..=7 => r2_unfold_atlas_record(13),
+            _ => r2_unfold_atlas_record(14),
+        }
+        (cf, ca)
+    }
+
     pub(crate) fn eval(&mut self, depth: u32, env: E<'t>, e: ExprPtr<'t>) -> V<'t> {
         if EVAL_DIRECT_VAR_FAST {
             if let Some(dbj_idx) = eval_direct_var_index(e) {
@@ -689,6 +787,13 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 let clo_body = clo.body;
                 let new_env = self.env_extend(clo_env, a);
                 return self.eval(depth, new_env, clo_body);
+            }
+            #[cfg(feature = "qckn-r2-unfold-atlas")]
+            if let Value::Unfold { head, .. } = f {
+                if !(self.nat_extension && self.is_nat_red_name(head.name)) {
+                    let (f, a) = self.observe_r2_ordinary_unfold_apply(f, a);
+                    return self.apply(depth, f, a);
+                }
             }
             return self.apply(depth, f, a);
         }
