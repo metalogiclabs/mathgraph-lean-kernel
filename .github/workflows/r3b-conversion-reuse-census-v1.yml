@@ -1,0 +1,164 @@
+name: R3b conversion reuse census V1
+
+on:
+  push:
+    branches:
+      - r3b-conversion-reuse-census-v1
+  workflow_dispatch:
+
+jobs:
+  reuse-census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build qualified R1 and R3b profiler
+        shell: bash
+        run: |
+          set -euxo pipefail
+          R1_SHA=d3b97093175eee5573caaa00993bac358d00a1dc
+          printf 'candidate_sha\t%s\nr1_sha\t%s\n' "$GITHUB_SHA" "$R1_SHA" >/tmp/provenance.tsv
+          git worktree add /tmp/r1 "$R1_SHA"
+          git worktree add /tmp/r3b "$GITHUB_SHA"
+          for arm in r1 r3b; do
+            (cd /tmp/$arm && cargo test --release --locked)
+            (cd /tmp/$arm && RUSTFLAGS='-C target-cpu=x86-64-v3' cargo build --release --locked)
+            cp /tmp/$arm/target/release/sokonanoda /tmp/$arm-bin
+          done
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+
+      - name: Build reuse workload panel
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          printf 'arena_sha\t%s\n' "$(git rev-parse HEAD)" >>/tmp/provenance.tsv
+          tests=(
+            mathlib
+            cslib
+            cedar
+            init
+            perf/grind-ring-5
+            perf/beta-ladder
+            perf/magma-list-deep-n36
+            perf/magma-list-pair-n21
+          )
+          : >/tmp/built-exports.txt
+          for t in "${tests[@]}"; do
+            nix develop -c ./lka.py build-test "$t"
+            f="_build/tests/$t.ndjson"
+            test -f "$f"
+            printf '%s\n' "$f" >>/tmp/built-exports.txt
+          done
+
+      - name: Semantic parity and reuse census
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          : >/tmp/parity.tsv
+          : >/tmp/r3b-profile.tsv
+          while IFS= read -r f; do
+            label=${f#_build/tests/}
+            label=${label%.ndjson}
+
+            set +e
+            /tmp/r1-bin /tmp/checker.json <"$f" >/tmp/r1.out 2>/tmp/r1.err
+            r1_status=$?
+            QCKN_R3B_PROFILE=1 /usr/bin/time -f '%e\t%M' -o /tmp/time               /tmp/r3b-bin /tmp/checker.json <"$f" >/tmp/r3b.out 2>/tmp/r3b.err
+            r3b_status=$?
+            set -e
+
+            if [ "$r1_status" -ne "$r3b_status" ] || ! cmp -s /tmp/r1.out /tmp/r3b.out; then
+              printf 'SEMANTIC_MISMATCH\t%s\tr1=%s\tr3b=%s\n' "$label" "$r1_status" "$r3b_status" | tee -a /tmp/parity.tsv
+              diff -u /tmp/r1.out /tmp/r3b.out || true
+              exit 1
+            fi
+            printf 'MATCH\t%s\t%s\n' "$r3b_status" "$label" | tee -a /tmp/parity.tsv
+
+            line=$(grep '^QCKN_R3B_PROFILE ' /tmp/r3b.err | tail -n1)
+            test -n "$line"
+            read -r sec rss </tmp/time
+            printf '%s\t%s\t%s\t%s\n' "$label" "$sec" "$rss" "${line#QCKN_R3B_PROFILE }" >>/tmp/r3b-profile.tsv
+          done </tmp/built-exports.txt
+
+      - name: Classify reusable Mathlib conversion consequence
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY' | tee /tmp/r3b-scorecard.txt
+          from pathlib import Path
+
+          rows={}
+          for line in Path('/tmp/r3b-profile.tsv').read_text().splitlines():
+              label,sec,rss,payload=line.split('\t',3)
+              d={}
+              for item in payload.split():
+                  k,v=item.split('=',1)
+                  d[k]=int(v)
+              d['seconds']=float(sec)
+              d['rss_kb']=int(rss)
+              rows[label]=d
+
+          def ratio(a,b): return a/b if b else 0.0
+
+          print("label\tlevel_ptr%\tlevel_simplified%\tlevel_recursive%\tspine_repeat%\tspine_repeat_closed%\tspine_repeat_success%\tspine_closed%")
+          derived={}
+          for label,d in rows.items():
+              level_calls=d['level_eq_calls']
+              spine_calls=d['spine_probe_calls']
+              repeat=d['spine_repeat']
+              x=dict(
+                  level_ptr=ratio(d['level_eq_ptr'],level_calls),
+                  level_simplified=ratio(d['level_eq_simplified_ptr'],level_calls),
+                  level_recursive=ratio(d['level_eq_recursive'],level_calls),
+                  spine_repeat=ratio(repeat,spine_calls),
+                  spine_repeat_closed=ratio(d['spine_repeat_closed'],spine_calls),
+                  spine_repeat_success=ratio(d['spine_repeat_true'],repeat),
+                  spine_closed=ratio(d['spine_both_closed'],spine_calls),
+              )
+              derived[label]=x
+              print(
+                f"{label}\t{100*x['level_ptr']:.2f}\t{100*x['level_simplified']:.2f}\t{100*x['level_recursive']:.2f}\t"
+                f"{100*x['spine_repeat']:.2f}\t{100*x['spine_repeat_closed']:.2f}\t{100*x['spine_repeat_success']:.2f}\t{100*x['spine_closed']:.2f}"
+              )
+
+          m=derived['mathlib']
+          controls=[x for k,x in derived.items() if k!='mathlib']
+          mean=lambda k: sum(x[k] for x in controls)/len(controls)
+
+          # Strongest safe cache opportunity is repeated *closed* spine comparison:
+          # the same immutable closed spine pair under the same signature/depth/limit.
+          spine_signal=m['spine_repeat_closed']*m['spine_repeat_success']
+          level_signal=m['level_recursive']
+          print()
+          print(f"MATHLIB_LEVEL_RECURSIVE_SIGNAL={level_signal:.6f} controls_mean={mean('level_recursive'):.6f}")
+          print(f"MATHLIB_CLOSED_SPINE_REPEAT_SIGNAL={spine_signal:.6f} controls_mean_repeat_closed={mean('spine_repeat_closed'):.6f}")
+          if spine_signal > level_signal:
+              print("NEXT_CAPABILITY=R3C_POSITIVE_CLOSED_SPINE_EQ_CACHE")
+          elif level_signal > spine_signal:
+              print("NEXT_CAPABILITY=R3C_UNIVERSE_EQUALITY_FAST_PATH")
+          else:
+              print("NEXT_CAPABILITY=UNKNOWN_CHOICE")
+          print("STATUS=R3B_CENSUS_ONLY_NOT_PROMOTED")
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r3b-conversion-reuse-census-v1
+          path: |
+            /tmp/provenance.tsv
+            /tmp/built-exports.txt
+            /tmp/parity.tsv
+            /tmp/r3b-profile.tsv
+            /tmp/r3b-scorecard.txt
+          if-no-files-found: warn
