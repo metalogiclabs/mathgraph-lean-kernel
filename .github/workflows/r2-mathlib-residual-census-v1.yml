@@ -1,0 +1,175 @@
+name: R2 Mathlib residual census V1
+
+on:
+  push:
+    branches:
+      - r2-mathlib-residual-census-v1
+  workflow_dispatch:
+
+jobs:
+  residual-census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build qualified R1 and profiled census kernel
+        shell: bash
+        run: |
+          set -euxo pipefail
+          R1_SHA=d3b97093175eee5573caaa00993bac358d00a1dc
+          printf 'candidate_sha\t%s\nr1_sha\t%s\n' "$GITHUB_SHA" "$R1_SHA" >/tmp/provenance.tsv
+          git worktree add /tmp/r1 "$R1_SHA"
+          git worktree add /tmp/profile "$GITHUB_SHA"
+          for arm in r1 profile; do
+            (cd /tmp/$arm && cargo test --release --locked)
+            (cd /tmp/$arm && RUSTFLAGS='-C target-cpu=x86-64-v3' cargo build --release --locked)
+            cp /tmp/$arm/target/release/sokonanoda /tmp/$arm-bin
+          done
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+
+      - name: Build residual workload panel
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          printf 'arena_sha\t%s\n' "$(git rev-parse HEAD)" >>/tmp/provenance.tsv
+          tests=(
+            mathlib
+            perf/grind-ring-5
+            cslib
+            cedar
+            init
+            perf/beta-ladder
+            perf/magma-list-deep-n36
+            perf/magma-list-pair-n21
+          )
+          : >/tmp/built-exports.txt
+          for t in "${tests[@]}"; do
+            if [ -f "tests/$t.yaml" ]; then
+              nix develop -c ./lka.py build-test "$t"
+              f="_build/tests/$t.ndjson"
+              [ -f "$f" ] && printf '%s\n' "$f" >>/tmp/built-exports.txt
+            fi
+          done
+          test -s /tmp/built-exports.txt
+
+      - name: Selected semantic parity and structural census
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          : >/tmp/profile.tsv
+          : >/tmp/parity.tsv
+          while IFS= read -r f; do
+            label=${f#_build/tests/}
+            label=${label%.ndjson}
+
+            set +e
+            /tmp/r1-bin /tmp/checker.json <"$f" >/tmp/r1.out 2>/tmp/r1.err
+            r1_status=$?
+            QCKN_PROFILE=1 /usr/bin/time -f '%e\t%M' -o /tmp/time               /tmp/profile-bin /tmp/checker.json <"$f" >/tmp/profile.out 2>/tmp/profile.err
+            profile_status=$?
+            set -e
+
+            if [ "$r1_status" -ne "$profile_status" ] || ! cmp -s /tmp/r1.out /tmp/profile.out; then
+              printf 'SEMANTIC_MISMATCH\t%s\tr1=%s\tprofile=%s\n' "$label" "$r1_status" "$profile_status" | tee -a /tmp/parity.tsv
+              diff -u /tmp/r1.out /tmp/profile.out || true
+              exit 1
+            fi
+            printf 'MATCH\t%s\t%s\n' "$profile_status" "$label" | tee -a /tmp/parity.tsv
+
+            line=$(grep '^QCKN_PROFILE ' /tmp/profile.err | tail -n1)
+            test -n "$line"
+            read -r sec rss </tmp/time
+            printf '%s\t%s\t%s\t%s\n' "$label" "$sec" "$rss" "${line#QCKN_PROFILE }" >>/tmp/profile.tsv
+          done </tmp/built-exports.txt
+
+      - name: Classify Mathlib residual
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY' | tee /tmp/residual-scorecard.txt
+          from pathlib import Path
+
+          rows = {}
+          for line in Path('/tmp/profile.tsv').read_text().splitlines():
+              label, sec, rss, payload = line.split('\t', 3)
+              d = {}
+              for item in payload.split():
+                  k, v = item.split('=', 1)
+                  d[k] = int(v)
+              d['seconds'] = float(sec)
+              d['rss_kb'] = int(rss)
+              rows[label] = d
+
+          def ratio(a, b):
+              return (a / b) if b else 0.0
+
+          print('label\tsec\tenv_keep\tenv_reduce%\tenv_half%\tenv_quarter%\tconv_reuse%\tconv_cold/top\tforce_nonzero%\tforce_avg_steps\tinfer_hit%\topen_eval_hit%')
+          derived = {}
+          for label, d in rows.items():
+              env_keep = ratio(d['key_env_after'], d['key_env_before'])
+              env_reduce = ratio(d['key_env_reduced'], d['key_env_calls'])
+              env_half = ratio(d['key_env_half'], d['key_env_calls'])
+              env_quarter = ratio(d['key_env_quarter'], d['key_env_calls'])
+              conv_hits = d['conv_uf_hits'] + d['conv_neg_hits'] + d['conv_probe_neg_hits']
+              conv_reuse = ratio(conv_hits, d['conv_cacheable'])
+              conv_cold_top = ratio(d['conv_cold'], d['conv_top_calls'])
+              force_nonzero = ratio(d['force_all_nonzero'], d['force_all_calls'])
+              force_avg = ratio(d['force_all_steps'], d['force_all_nonzero'])
+              infer_hit = ratio(d['infer_cache_hits'], d['infer_cache_hits'] + d['infer_cache_misses'])
+              open_hit = ratio(d['open_eval_hits'], d['open_eval_hits'] + d['open_eval_misses'])
+              derived[label] = dict(
+                  env_keep=env_keep, env_reduce=env_reduce, env_half=env_half, env_quarter=env_quarter,
+                  conv_reuse=conv_reuse, conv_cold_top=conv_cold_top,
+                  force_nonzero=force_nonzero, force_avg=force_avg,
+                  infer_hit=infer_hit, open_hit=open_hit,
+              )
+              print(
+                  f"{label}\t{d['seconds']:.2f}\t{env_keep:.3f}\t{100*env_reduce:.1f}\t"
+                  f"{100*env_half:.1f}\t{100*env_quarter:.1f}\t{100*conv_reuse:.1f}\t"
+                  f"{conv_cold_top:.3f}\t{100*force_nonzero:.1f}\t{force_avg:.2f}\t"
+                  f"{100*infer_hit:.1f}\t{100*open_hit:.1f}"
+              )
+
+          m = derived.get('mathlib')
+          assert m is not None, 'Mathlib profile missing'
+          controls = [v for k, v in derived.items() if k != 'mathlib']
+          def mean(key):
+              return sum(x[key] for x in controls) / max(len(controls), 1)
+
+          # These are evidence labels, not promotion decisions. They identify which
+          # declared next portfolio deserves the first isolated repair experiment.
+          r2_signal = (1.0 - m['env_keep']) + m['env_half'] + m['env_quarter']
+          r3_signal = m['conv_cold_top'] + m['force_nonzero'] * min(m['force_avg'] / 4.0, 2.0)
+          print()
+          print(f"MATHLIB_R2_ENV_SIGNAL={r2_signal:.6f} controls_mean_env_keep={mean('env_keep'):.6f}")
+          print(f"MATHLIB_R3_CONV_FORCE_SIGNAL={r3_signal:.6f} controls_mean_conv_cold_top={mean('conv_cold_top'):.6f}")
+          if r2_signal > r3_signal:
+              print('NEXT_PORTFOLIO=R2_ENVIRONMENT_PRESSURE')
+          elif r3_signal > r2_signal:
+              print('NEXT_PORTFOLIO=R3_CONVERSION_FORCE_PRESSURE')
+          else:
+              print('NEXT_PORTFOLIO=UNKNOWN_CHOICE')
+          print('STATUS=RESIDUAL_CENSUS_ONLY_NOT_PROMOTED')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r2-mathlib-residual-census-v1
+          path: |
+            /tmp/provenance.tsv
+            /tmp/built-exports.txt
+            /tmp/parity.tsv
+            /tmp/profile.tsv
+            /tmp/residual-scorecard.txt
+          if-no-files-found: warn
