@@ -552,6 +552,43 @@ const WHNF_ADMIT_THRESHOLD: u8 = 2;
 const FAIL_CLOSURE: u8 = 1;
 const FAIL_DEPTH: u8 = 7;
 
+#[cfg(any(test, feature = "qckn-r2-app-atlas"))]
+static R2_APP_ATLAS: [std::sync::atomic::AtomicU64; 11] =
+    [const { std::sync::atomic::AtomicU64::new(0) }; 11];
+
+#[cfg(any(test, feature = "qckn-r2-app-atlas"))]
+#[inline]
+pub(crate) fn r2_app_atlas_record(index: usize) {
+    R2_APP_ATLAS[index].fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+}
+
+#[cfg(any(test, feature = "qckn-r2-app-atlas"))]
+#[inline]
+pub(crate) fn r2_app_atlas_count(index: usize) -> u64 {
+    R2_APP_ATLAS[index].load(std::sync::atomic::Ordering::Relaxed)
+}
+
+#[cfg(feature = "qckn-r2-app-atlas")]
+pub fn dump_r2_app_atlas() {
+    const LABELS: [&str; 11] = [
+        "simple_apply_total",
+        "rigid_bvar",
+        "rigid_axiom",
+        "rigid_ctor_nat_succ",
+        "rigid_ctor_other",
+        "rigid_recursor",
+        "rigid_quot",
+        "rigid_inductive",
+        "unfold_nat_red",
+        "unfold_other",
+        "unexpected",
+    ];
+    for (index, label) in LABELS.iter().enumerate() {
+        let count = R2_APP_ATLAS[index].load(std::sync::atomic::Ordering::Relaxed);
+        eprintln!("QCKN_R2_APP_ATLAS\t{index}\t{label}\t{count}");
+    }
+}
+
 pub(crate) const EVAL_DIRECT_VAR_FAST: bool = true;
 
 #[inline(always)]
@@ -689,6 +726,34 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 let clo_body = clo.body;
                 let new_env = self.env_extend(clo_env, a);
                 return self.eval(depth, new_env, clo_body);
+            }
+            #[cfg(feature = "qckn-r2-app-atlas")]
+            {
+                r2_app_atlas_record(0);
+                match f {
+                    Value::Rigid { head, .. } => match *head {
+                        RigidHead::BVar(..) => r2_app_atlas_record(1),
+                        RigidHead::Axiom(..) => r2_app_atlas_record(2),
+                        RigidHead::Ctor(name, _) => {
+                            if Some(name) == self.ctx.export_file.name_cache.nat_succ {
+                                r2_app_atlas_record(3);
+                            } else {
+                                r2_app_atlas_record(4);
+                            }
+                        }
+                        RigidHead::Recursor(..) => r2_app_atlas_record(5),
+                        RigidHead::QuotConst(..) => r2_app_atlas_record(6),
+                        RigidHead::Inductive(..) => r2_app_atlas_record(7),
+                    },
+                    Value::Unfold { head, .. } => {
+                        if self.is_nat_red_name(head.name) {
+                            r2_app_atlas_record(8);
+                        } else {
+                            r2_app_atlas_record(9);
+                        }
+                    }
+                    _ => r2_app_atlas_record(10),
+                }
             }
             return self.apply(depth, f, a);
         }
