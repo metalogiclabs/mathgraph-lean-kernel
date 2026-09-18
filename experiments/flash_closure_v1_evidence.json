@@ -1,0 +1,113 @@
+{
+  "version": "qckn-flash-closure-v1",
+  "contract": {
+    "target": "Lean Kernel Arena / Mathlib",
+    "active_base": "74dc5ddb4584e1254f5687615e5b02795b8dc6f3",
+    "protected_semantics": "exact Arena checker status/stdout parity",
+    "promotion_authority": "Arena-style native performance plus full semantic replay"
+  },
+  "events": [
+    {
+      "id": "direct-var",
+      "kind": "capability_evidence",
+      "family": "eval_dispatch",
+      "semantic_pass": true,
+      "exports": 409,
+      "mathlib_speedup": 1.020156,
+      "run": 35380563756,
+      "semantic_run": 35380841937,
+      "action": "promote"
+    },
+    {
+      "id": "app-first-sight-v66",
+      "kind": "candidate_evidence",
+      "family": "app_first_sight_bypass",
+      "semantic_pass": true,
+      "mathlib_delta_percent": 2.6386,
+      "run": 34003244852,
+      "action": "reject"
+    },
+    {
+      "id": "app-lookup-v67",
+      "kind": "candidate_evidence",
+      "family": "app_first_sight_bypass",
+      "semantic_pass": true,
+      "mathlib_delta_percent": 1.2127,
+      "run": 34006844203,
+      "action": "reject"
+    },
+    {
+      "id": "r3c-universe-eq-cache",
+      "kind": "candidate_evidence",
+      "family": "universe_equality_memo",
+      "semantic_pass": true,
+      "exports": 409,
+      "mathlib_speedup": 0.968277,
+      "run": 35385119925,
+      "action": "reject"
+    },
+    {
+      "id": "post-var-eval-census",
+      "kind": "residual",
+      "family": "eval",
+      "run": 35401942103,
+      "observations": {
+        "direct_var_share_eval": 0.287665,
+        "app_simple_apply_share_eval": 0.169106,
+        "app_chain_mixed_share_eval": 0.079433
+      }
+    },
+    {
+      "id": "current-cost-atlas",
+      "kind": "residual",
+      "family": "cost_atlas",
+      "run": 35389603404,
+      "observations": {
+        "eval_self_share": 0.2984,
+        "prune_env_cold_self_share": 0.116,
+        "infer_value_self_share": 0.0969,
+        "unify_general_self_share": 0.016,
+        "universe_leq_core_self_share_approx": 0.0109
+      }
+    },
+    {
+      "id": "cold-prune-separator-v91",
+      "kind": "obstruction_fingerprint",
+      "family": "cold_prune",
+      "run": 34189703609,
+      "semantic_pass": true,
+      "fingerprint": {
+        "end_kind": "Framed",
+        "mathlib_fraction": 0.785182,
+        "dominant_mask_band": "2_4",
+        "same_result_fraction": 0
+      }
+    },
+    {
+      "id": "cold-prune-direct-v93",
+      "kind": "repair_evidence",
+      "family": "cold_prune",
+      "strategy": "direct_framed_prune",
+      "run": 34210623437,
+      "semantic_pass": true,
+      "std_delta_percent": -4.537302,
+      "cedar_delta_percent": -0.366743,
+      "mathlib_delta_percent": -1.404775,
+      "geomean_delta_percent": -2.119096,
+      "worst_delta_percent": -0.366743,
+      "action": "promote_repair_family"
+    },
+    {
+      "id": "cold-prune-onecons-v93",
+      "kind": "repair_evidence",
+      "family": "cold_prune",
+      "strategy": "one_cons_over_framed",
+      "run": 34210623437,
+      "semantic_pass": true,
+      "mathlib_delta_percent": 1.562598,
+      "geomean_delta_percent": -0.655041,
+      "worst_delta_percent": 1.562598,
+      "action": "reject"
+    }
+  ]
+}
