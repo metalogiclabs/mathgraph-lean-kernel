@@ -17,3 +17,22 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run direct Var dispatch test
         run: cargo test --locked qckn_eval_var_fast_tests -- --nocapture
+
+  mathlib-causal-gate:
+    needs: unit-red-green
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Run direct Var Mathlib causal gate
+        run: bash experiments/run_qckn_eval_var_fast_v1.sh
+      - name: Upload direct Var evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qckn-eval-var-fast-v1
+          path: /tmp/qckn-eval-var-fast-v1/evidence
+          if-no-files-found: warn
