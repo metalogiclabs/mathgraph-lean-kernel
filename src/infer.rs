@@ -13,6 +13,7 @@ use InferFlag::*;
 /// the retained leader path and isolates recurrent binder-consuming pressure.
 pub(crate) const R1_DIRECT_BETA_FUSION: bool = true;
 
+#[cfg(any(test, feature = "qckn-r1-atlas"))]
 #[inline]
 fn r1_activation_band(n: u32) -> usize {
     match n {
@@ -23,6 +24,7 @@ fn r1_activation_band(n: u32) -> usize {
     }
 }
 
+#[cfg(any(test, feature = "qckn-r1-atlas"))]
 /// Finite presentation of the structural context available at the R1 decision.
 /// The 2,048 buckets are: inference mode × depth × environment width ×
 /// binder/argument/body loose-variable pressure, with four bands per numeric axis.
@@ -45,6 +47,32 @@ pub(crate) fn r1_activation_bucket_index(
         idx = idx * 4 + band;
     }
     idx
+}
+
+#[cfg(any(test, feature = "qckn-r1-atlas"))]
+static R1_ACTIVATION_ATLAS: [std::sync::atomic::AtomicU64; 2048] =
+    [const { std::sync::atomic::AtomicU64::new(0) }; 2048];
+
+#[cfg(any(test, feature = "qckn-r1-atlas"))]
+#[inline]
+pub(crate) fn r1_activation_atlas_record_index(index: usize) {
+    R1_ACTIVATION_ATLAS[index].fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+}
+
+#[cfg(any(test, feature = "qckn-r1-atlas"))]
+#[inline]
+pub(crate) fn r1_activation_atlas_bucket_count(index: usize) -> u64 {
+    R1_ACTIVATION_ATLAS[index].load(std::sync::atomic::Ordering::Relaxed)
+}
+
+#[cfg(feature = "qckn-r1-atlas")]
+pub fn dump_r1_activation_atlas() {
+    for (index, counter) in R1_ACTIVATION_ATLAS.iter().enumerate() {
+        let count = counter.load(std::sync::atomic::Ordering::Relaxed);
+        if count != 0 {
+            eprintln!("QCKN_R1_ATLAS\t{index}\t{count}");
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -220,6 +248,18 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                         _ => false,
                     };
                     if recurrent_beta {
+                        #[cfg(feature = "qckn-r1-atlas")]
+                        {
+                            let bucket = r1_activation_bucket_index(
+                                flag == Check,
+                                depth,
+                                env.len(),
+                                self.ctx.num_loose_bvars(binder_type),
+                                self.ctx.num_loose_bvars(arg),
+                                self.ctx.num_loose_bvars(body),
+                            );
+                            r1_activation_atlas_record_index(bucket);
+                        }
                         let dom = self.arg_value(depth, env, binder_type);
                         if flag == Check {
                             self.infer_sort_of_v(flag, depth, env, ctx, binder_type);
