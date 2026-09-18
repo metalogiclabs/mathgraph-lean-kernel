@@ -552,8 +552,24 @@ const WHNF_ADMIT_THRESHOLD: u8 = 2;
 const FAIL_CLOSURE: u8 = 1;
 const FAIL_DEPTH: u8 = 7;
 
+pub(crate) const EVAL_DIRECT_VAR_FAST: bool = true;
+
+#[inline(always)]
+pub(crate) fn eval_direct_var_index(e: ExprPtr<'_>) -> Option<u16> {
+    match e.as_ref() {
+        Expr::Var { dbj_idx, .. } => Some(*dbj_idx),
+        _ => None,
+    }
+}
+
 impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
     pub(crate) fn eval(&mut self, depth: u32, env: E<'t>, e: ExprPtr<'t>) -> V<'t> {
+        if EVAL_DIRECT_VAR_FAST {
+            if let Some(dbj_idx) = eval_direct_var_index(e) {
+                let v = env.lookup(dbj_idx).expect("eval: loose bvar");
+                return self.force_thunk(depth, v);
+            }
+        }
         if e.num_loose_bvars() == 0 && env.lsub().is_none() {
             if let Some(v) = self.tc_cache.closed_eval_cache.get(&e) {
                 return v;
