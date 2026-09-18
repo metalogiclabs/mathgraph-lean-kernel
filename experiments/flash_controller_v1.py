@@ -112,7 +112,10 @@ def close(evidence, manifest):
             "reason":"old first-sight family killed by two REDs",
         })
 
-    frontier.sort(key=lambda x:(-x["priority"], x["id"]))
+    # Flash acquisition economics: already-verified reusable capability is cheaper
+    # than opening a new search, so close reusable work first when both remain live.
+    mode_rank={"reuse_then_reverify":0,"new_search_not_first_sight_bypass":1,"new_search":1}
+    frontier.sort(key=lambda x:(mode_rank.get(x["mode"],9),-x["priority"],x["id"]))
 
     # Runtime contains promoted only.
     promoted=sorted(c["id"] for c in caps.values() if c["status"]=="promoted")
