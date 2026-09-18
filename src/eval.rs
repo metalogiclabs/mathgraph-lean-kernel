@@ -298,8 +298,6 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                     indices.extend_from_slice(self.wide_fvars(arg));
                 }
                 Expr::Pi { binder_type, body, .. } | Expr::Lambda { binder_type, body, .. } => {
-                #[cfg(feature = "qckn-eval-atlas")]
-                eval_atlas_record(13);
                     indices.extend_from_slice(self.wide_fvars(binder_type));
                     indices.extend(self.wide_fvars(body).iter().filter_map(|i| i.checked_sub(1)));
                 }
@@ -669,8 +667,6 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                     eval_atlas_record(6);
                     let f_val = match self.ctx.read_expr_ref(first_fun) {
                         &Expr::Var { dbj_idx, .. } => {
-                #[cfg(feature = "qckn-eval-atlas")]
-                eval_atlas_record(10);
                             let v = env.lookup(dbj_idx).expect("eval: loose bvar");
                             self.force_thunk(depth, v)
                         }
@@ -747,6 +743,8 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         }
         match first {
             Expr::Var { dbj_idx, .. } => {
+                #[cfg(feature = "qckn-eval-atlas")]
+                eval_atlas_record(10);
                 let v = env.lookup(dbj_idx).expect("eval: loose bvar");
                 self.force_thunk(depth, v)
             }
@@ -770,6 +768,8 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
             }
             Expr::App { .. } => unreachable!(),
             Expr::Lambda { binder_type, body, .. } => {
+                #[cfg(feature = "qckn-eval-atlas")]
+                eval_atlas_record(13);
                 let ce = self.key_env(env, e);
                 value::mk_lam(self.arena, binder_type, Closure::mk_eval(ce, body))
             }
