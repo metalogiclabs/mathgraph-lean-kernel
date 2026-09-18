@@ -1,0 +1,51 @@
+{
+  "schema": "mathgraph.flash.capabilities.v1",
+  "trusted_semantics": "unchanged",
+  "generated_from": "experiments/flash_closure_v1_evidence.json",
+  "capabilities": [
+    {
+      "id": "direct_var_eval",
+      "status": "promoted",
+      "guard": "expr_is_var",
+      "implementation": "eval_direct_var",
+      "evidence": {
+        "causal_run": 35380563756,
+        "semantic_run": 35380841937,
+        "exports": 409,
+        "mathlib_wall_speedup": 1.020156
+      },
+      "dependencies": []
+    },
+    {
+      "id": "direct_framed_prune",
+      "status": "candidate_reverify",
+      "guard": "prune_source_is_framed",
+      "implementation": "prune_env_direct_framed",
+      "evidence": {
+        "historical_run": 34210623437,
+        "current_reverify_run": 35404485971,
+        "historical_mathlib_delta_percent": -1.404775
+      },
+      "dependencies": [
+        "direct_var_eval"
+      ]
+    }
+  ],
+  "obstructions": [
+    {
+      "id": "universe_equality_general_memo",
+      "status": "rejected",
+      "evidence_run": 35385119925,
+      "reason": "semantic parity preserved but Mathlib slowed 3.2%"
+    },
+    {
+      "id": "app_first_sight_bypass_family",
+      "status": "rejected_family",
+      "evidence_runs": [
+        34003244852,
+        34006844203
+      ],
+      "reason": "two semantically clean variants regressed Mathlib"
+    }
+  ]
+}
