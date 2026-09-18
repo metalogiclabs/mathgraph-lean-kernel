@@ -98,6 +98,25 @@ def close(evidence, manifest):
             "priority": atlas["prune_env_cold_self_share"],
             "reason":"current high-cost residual matches previously verified repair family",
         })
+    appkind = events.get("post-var-simple-apply-kind-census",{}).get("observations",{})
+    unfold_cap = caps.get("ordinary_unfold_neutral",{})
+    unfold_share_eval = appkind.get("unfold_other_share_eval_estimate",0)
+
+    if unfold_cap and unfold_cap.get("status") == "candidate_reverify" and unfold_share_eval > 0:
+        frontier.append({
+            "id":"revalidate_ordinary_unfold_neutral",
+            "mode":"candidate_reverify",
+            "priority": unfold_share_eval,
+            "reason":"61.2% of simple-apply functions are ordinary Unfold; implemented neutral fast path awaits authority",
+        })
+    elif unfold_cap and unfold_cap.get("status") == "rejected" and unfold_share_eval > 0:
+        frontier.append({
+            "id":"ordinary_unfold_new_representation",
+            "mode":"new_search_not_same_head",
+            "priority": unfold_share_eval,
+            "reason":"neutral candidate rejected; same-head continuation family already killed",
+        })
+
     if "app_first_sight_bypass" not in killed_families and evalc.get("app_simple_apply_share_eval",0) > 0:
         frontier.append({
             "id":"app_simple_apply_search",
@@ -112,9 +131,15 @@ def close(evidence, manifest):
             "reason":"old first-sight family killed by two REDs",
         })
 
-    # Flash acquisition economics: already-verified reusable capability is cheaper
-    # than opening a new search, so close reusable work first when both remain live.
-    mode_rank={"reuse_then_reverify":0,"new_search_not_first_sight_bypass":1,"new_search":1}
+    # Flash acquisition economics: reuse verified knowledge before candidate
+    # revalidation, and revalidate an existing candidate before opening new search.
+    mode_rank={
+        "reuse_then_reverify":0,
+        "candidate_reverify":1,
+        "new_search_not_first_sight_bypass":2,
+        "new_search_not_same_head":2,
+        "new_search":2,
+    }
     frontier.sort(key=lambda x:(mode_rank.get(x["mode"],9),-x["priority"],x["id"]))
 
     # Runtime contains promoted only.
@@ -146,12 +171,14 @@ def emit_rust(runtime):
 
 pub(crate) const DIRECT_VAR_EVAL: bool = %s;
 pub(crate) const DIRECT_FRAMED_PRUNE: bool = %s;
+pub(crate) const ORDINARY_UNFOLD_NEUTRAL: bool = %s;
 
 pub(crate) const PROMOTED_CAPABILITY_IDS: &[&str] = &[
 %s];
 """ % (
         "true" if "direct_var_eval" in promoted else "false",
         "true" if "direct_framed_prune" in promoted else "false",
+        "true" if "ordinary_unfold_neutral" in promoted else "false",
         "".join(f'    "{x}",\n' for x in sorted(promoted)),
     )
 
