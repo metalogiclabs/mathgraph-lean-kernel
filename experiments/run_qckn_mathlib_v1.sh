@@ -22,6 +22,7 @@ leader_sha	$LEADER_SHA
 candidate_sha	$CANDIDATE_SHA
 arena_sha	$ARENA_SHA
 development_counter	callgrind_Ir
+development_build	valgrind_safe_x86_64_no_avx
 final_counter	Arena_perf_retired_instructions
 EOF
 
@@ -40,11 +41,12 @@ build_arm() {
   mkdir -p "$dir/pgo"
   (
     cd "$dir"
-    RUSTFLAGS="-C target-cpu=native -Cprofile-generate=$dir/pgo" cargo build --release --locked
+    PROFILE_CPU_FLAGS="-C target-cpu=x86-64 -C target-feature=-avx,-avx2,-avx512f,-fma"
+    RUSTFLAGS="$PROFILE_CPU_FLAGS -Cprofile-generate=$dir/pgo" cargo build --release --locked
     target/release/sokonanoda "$ROOT/config.json" < "$ROOT/arena/_build/tests/init-prelude.ndjson" >/dev/null
     nix shell nixpkgs#llvmPackages_21.llvm -c llvm-profdata merge -o "$dir/pgo/merged.profdata" "$dir/pgo"
     test -s "$dir/pgo/merged.profdata"
-    RUSTFLAGS="-C target-cpu=native -Cprofile-use=$dir/pgo/merged.profdata" cargo build --release --locked
+    RUSTFLAGS="$PROFILE_CPU_FLAGS -Cprofile-use=$dir/pgo/merged.profdata" cargo build --release --locked
   )
   cp "$dir/target/release/sokonanoda" "$ROOT/$arm.bin"
   sha256sum "$ROOT/$arm.bin" >> "$ROOT/evidence/binaries.sha256"
