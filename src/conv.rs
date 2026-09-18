@@ -11,6 +11,68 @@ fn rigid_head_eq<'a>(hx: RigidHead<'a>, hy: RigidHead<'a>) -> bool {
 }
 
 #[inline]
+fn profile_pair_class<'a>(x: V<'a>, y: V<'a>) -> usize {
+    match (x, y) {
+        (Value::Sort { .. }, Value::Sort { .. }) => 0,
+        (Value::NatLit { .. }, Value::NatLit { .. }) => 1,
+        (Value::StrLit { .. }, Value::StrLit { .. }) => 2,
+        (Value::Pi { .. }, Value::Pi { .. }) => 3,
+        (Value::Lam { .. }, Value::Lam { .. }) => 4,
+        (
+            Value::Unfold { head: UnfoldHead { name: nx, levels: lx }, .. },
+            Value::Unfold { head: UnfoldHead { name: ny, levels: ly }, .. },
+        ) if nx == ny && lx == ly => 5,
+        (Value::Unfold { .. }, Value::Unfold { .. }) => 6,
+        (Value::Unfold { .. }, _) => 7,
+        (_, Value::Unfold { .. }) => 8,
+        (
+            Value::Rigid { head: RigidHead::Recursor(nx, lx), .. },
+            Value::Rigid { head: RigidHead::Recursor(ny, ly), .. },
+        ) if nx == ny && lx == ly => 9,
+        (
+            Value::Rigid { head: RigidHead::Recursor(..), .. },
+            Value::Rigid { head: RigidHead::Recursor(..), .. },
+        ) => 10,
+        (
+            Value::Rigid { head: RigidHead::QuotConst(nx, lx), .. },
+            Value::Rigid { head: RigidHead::QuotConst(ny, ly), .. },
+        ) if nx == ny && lx == ly => 11,
+        (
+            Value::Rigid { head: RigidHead::QuotConst(..), .. },
+            Value::Rigid { head: RigidHead::QuotConst(..), .. },
+        ) => 12,
+        (
+            Value::Rigid { head: RigidHead::Recursor(..) | RigidHead::QuotConst(..), .. },
+            _,
+        ) => 13,
+        (
+            _,
+            Value::Rigid { head: RigidHead::Recursor(..) | RigidHead::QuotConst(..), .. },
+        ) => 14,
+        (
+            Value::Rigid { head: RigidHead::Ctor(nx, lx), .. },
+            Value::Rigid { head: RigidHead::Ctor(ny, ly), .. },
+        ) if nx == ny && lx == ly => 15,
+        (
+            Value::Rigid { head: RigidHead::Inductive(nx, lx), .. },
+            Value::Rigid { head: RigidHead::Inductive(ny, ly), .. },
+        ) if nx == ny && lx == ly => 16,
+        (
+            Value::Rigid { head: RigidHead::Axiom(nx, lx), .. },
+            Value::Rigid { head: RigidHead::Axiom(ny, ly), .. },
+        ) if nx == ny && lx == ly => 17,
+        (
+            Value::Rigid { head: RigidHead::BVar(..), .. },
+            Value::Rigid { head: RigidHead::BVar(..), .. },
+        ) => 18,
+        (Value::Lam { .. }, _) => 19,
+        (_, Value::Lam { .. }) => 20,
+        (Value::Rigid { .. }, Value::Rigid { .. }) => 21,
+        _ => 22,
+    }
+}
+
+#[inline]
 fn is_cacheable<'a>(v: &Value<'a>) -> bool {
     matches!(
         v,
@@ -93,6 +155,8 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
 
     #[inline]
     fn unify_general<const RIGID: bool>(&mut self, depth: u32, x: V<'t>, y: V<'t>) -> bool {
+        let profile_class = profile_pair_class(x, y);
+        crate::profile::note_call(profile_class);
         let cacheable = is_cacheable(x) || is_cacheable(y);
         let neg_eligible = !matches!(x, Value::Lam { .. }) && !matches!(y, Value::Lam { .. });
         if cacheable {
@@ -100,17 +164,21 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
             let ya = y as *const Value<'t> as usize;
             let cache_key = if xa < ya { (xa, ya) } else { (ya, xa) };
             if self.tc_cache.conv_uf.equiv(xa, ya) {
+                crate::profile::note_uf_hit(profile_class);
                 return true;
             }
             if RIGID && neg_eligible {
                 if self.tc_cache.conv_cache_neg.contains(&cache_key) {
+                    crate::profile::note_neg_hit(profile_class);
                     return false;
                 }
                 if self.tc_cache.probe_depth > 0 && self.tc_cache.conv_cache_neg_probe.contains(&cache_key) {
+                    crate::profile::note_probe_neg_hit(profile_class);
                     self.tc_cache.probe_exhausted = true;
                     return false;
                 }
             }
+            crate::profile::note_fresh(profile_class);
             let outer = std::mem::replace(&mut self.tc_cache.probe_exhausted, false);
             let result = self.unify_no_cache::<RIGID>(depth, x, y);
             let truncated = self.tc_cache.probe_exhausted;
@@ -126,6 +194,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
             }
             result
         } else {
+            crate::profile::note_fresh(profile_class);
             self.unify_no_cache::<RIGID>(depth, x, y)
         }
     }
@@ -141,13 +210,19 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
             self.tc_cache.probe_budget -= 1;
         }
         let (t, t2) = (self.force_thunk(depth, x), self.force_thunk(depth, y));
+        let profile_class = profile_pair_class(t, t2);
         if let Some(r) = self.conv_nat::<RIGID>(depth, t, t2) {
+            crate::profile::note_nat_resolved(profile_class);
             return r;
         }
-        if self.unify_direct::<RIGID>(depth, t, t2) {
+        let direct = self.unify_direct::<RIGID>(depth, t, t2);
+        crate::profile::note_direct(profile_class, direct);
+        if direct {
             return true;
         }
-        self.unify_cold::<RIGID>(depth, t, t2)
+        let cold = self.unify_cold::<RIGID>(depth, t, t2);
+        crate::profile::note_cold(profile_class, cold);
+        cold
     }
 
     fn unify_direct<const RIGID: bool>(&mut self, depth: u32, t: V<'t>, t2: V<'t>) -> bool {
@@ -411,7 +486,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         Some(out)
     }
 
-    fn spine_probe(&mut self, depth: u32, sx: S<'t>, sy: S<'t>, sig: Sig, limit: u32) -> bool {
+    fn spine_probe(&mut self, depth: u32, sx: S<'t>, sy: S<'t>, sig: Sig, limit: u32) -> bool {\n        let r = self.spine_probe_inner(depth, sx, sy, sig, limit);\n        crate::profile::note_spine_probe(r);\n        r\n    }\n\n    fn spine_probe_inner(&mut self, depth: u32, sx: S<'t>, sy: S<'t>, sig: Sig, limit: u32) -> bool {
         if std::ptr::eq(sx, sy) {
             return true;
         }
@@ -445,7 +520,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         decided
     }
 
-    fn unfold_pair(&mut self, depth: u32, t: V<'t>, t2: V<'t>) -> bool {
+    fn unfold_pair(&mut self, depth: u32, t: V<'t>, t2: V<'t>) -> bool {\n        let r = self.unfold_pair_inner(depth, t, t2);\n        crate::profile::note_unfold_pair(r);\n        r\n    }\n\n    fn unfold_pair_inner(&mut self, depth: u32, t: V<'t>, t2: V<'t>) -> bool {
         let v1 = self.unfold_value(depth, t);
         let v2 = self.unfold_value(depth, t2);
         if std::ptr::eq(v1, t) && std::ptr::eq(v2, t2) {
@@ -459,7 +534,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         self.unify::<true>(depth, v1, v2)
     }
 
-    fn unify_iota<const RIGID: bool>(
+    fn unify_iota<const RIGID: bool>(\n        &mut self,\n        depth: u32,\n        t: V<'t>,\n        t2: V<'t>,\n        heads_match: bool,\n        name: NamePtr<'t>,\n        levels: LevelsPtr<'t>,\n        sx: S<'t>,\n        sy: S<'t>,\n    ) -> bool {\n        let r = self.unify_iota_inner::<RIGID>(depth, t, t2, heads_match, name, levels, sx, sy);\n        crate::profile::note_iota_pair(r);\n        r\n    }\n\n    fn unify_iota_inner<const RIGID: bool>(
         &mut self,
         depth: u32,
         t: V<'t>,
@@ -589,7 +664,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         self.try_struct_eta(depth, x, y)
     }
 
-    fn try_struct_eta(&mut self, depth: u32, x: V<'t>, y: V<'t>) -> bool {
+    fn try_struct_eta(&mut self, depth: u32, x: V<'t>, y: V<'t>) -> bool {\n        let r = self.try_struct_eta_inner(depth, x, y);\n        crate::profile::note_struct_eta(r);\n        r\n    }\n\n    fn try_struct_eta_inner(&mut self, depth: u32, x: V<'t>, y: V<'t>) -> bool {
         let xt = self.value_type_opt(depth, x);
         let yt = self.value_type_opt(depth, y);
         for ty in [xt, yt].into_iter().flatten() {
@@ -616,7 +691,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         }
     }
 
-    fn try_proof_irrel_at(&mut self, depth: u32, x: V<'t>, y: V<'t>) -> bool {
+    fn try_proof_irrel_at(&mut self, depth: u32, x: V<'t>, y: V<'t>) -> bool {\n        let r = self.try_proof_irrel_at_inner(depth, x, y);\n        crate::profile::note_proof_irrel(r);\n        r\n    }\n\n    fn try_proof_irrel_at_inner(&mut self, depth: u32, x: V<'t>, y: V<'t>) -> bool {
         if matches!(x, Value::Lam { .. }) || matches!(y, Value::Lam { .. }) {
             return self.try_proof_irrel_lam(depth, x, y);
         }
