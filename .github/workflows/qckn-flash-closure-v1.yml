@@ -1,0 +1,190 @@
+name: QCKN Flash Closure V1
+
+on:
+  push:
+    branches:
+      - qckn-flash-closure-v1
+  workflow_dispatch:
+
+jobs:
+  flash-close-and-reverify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: cachix/install-nix-action@v31
+
+      - name: Flash-close shared evidence graph
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 experiments/flash_closure_v1.py experiments/flash_closure_v1_evidence.json             > /tmp/flash-closure.json 2> /tmp/flash-closure.log
+          cat /tmp/flash-closure.json
+          cat /tmp/flash-closure.log
+          grep -q '^FLASH_CLOSE_FIXED_POINT$' /tmp/flash-closure.log
+          grep -q '^FLASH_SELECTED_ACTION=transplant_direct_framed_prune_into_active_var$' /tmp/flash-closure.log
+          python3 - <<'PY'
+          import json
+          x=json.load(open('/tmp/flash-closure.json'))
+          assert 'direct-var' in x['active_capabilities']
+          assert 'app_first_sight_bypass_family' in x['cancelled_work']
+          assert 'universe_equality_search' in x['cancelled_work']
+          assert 'cold_prune:direct_framed_prune' in x['compiled_repair_rules']
+          assert x['selected_action']=='transplant_direct_framed_prune_into_active_var'
+          print('FLASH_CLOSURE_STATE_PASS')
+          PY
+
+      - name: Build composed present and exact ablation
+        shell: bash
+        run: |
+          set -euxo pipefail
+          printf 'candidate_sha\t%s\n' "$GITHUB_SHA" >/tmp/provenance.tsv
+          printf 'compiled_present\tdirect_var+direct_framed_prune\n' >>/tmp/provenance.tsv
+          git worktree add /tmp/flash "$GITHUB_SHA"
+          cp -a /tmp/flash /tmp/ablated
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/ablated/src/eval.rs')
+          s=p.read_text()
+          old='pub(crate) const FLASH_DIRECT_FRAMED_PRUNE: bool = true;'
+          new='pub(crate) const FLASH_DIRECT_FRAMED_PRUNE: bool = false;'
+          assert s.count(old)==1
+          p.write_text(s.replace(old,new,1))
+          PY
+          for arm in ablated flash; do
+            (cd /tmp/$arm && cargo test --release --locked)
+            (cd /tmp/$arm && RUSTFLAGS='-C target-cpu=x86-64-v3' cargo build --release --locked)
+            cp /tmp/$arm/target/release/sokonanoda /tmp/$arm-bin
+          done
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}
+          EOF
+
+      - name: Build current Arena corpus
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          git checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          printf 'arena_sha\t%s\n' "$(git rev-parse HEAD)" >>/tmp/provenance.tsv
+          : >/tmp/build-tests.tsv
+          while IFS= read -r y; do
+            t=${y#tests/}; t=${t%.yaml}
+            echo "BUILD $t" | tee -a /tmp/build-tests.tsv
+            nix develop -c ./lka.py build-test "$t" >/dev/null
+          done < <(find tests -type f -name '*.yaml' | sort)
+          find _build/tests -type f -name '*.ndjson' | sort >/tmp/built-exports.txt
+          echo "built $(wc -l </tmp/built-exports.txt) exports"
+          test -s /tmp/built-exports.txt
+
+      - name: Full semantic parity
+        shell: bash
+        run: |
+          set -uxo pipefail
+          cd /tmp/arena
+          : >/tmp/semantic.tsv
+          : >/tmp/semantic-mismatches.tsv
+          while IFS= read -r f; do
+            set +e
+            /tmp/ablated-bin /tmp/checker.json <"$f" >/tmp/a.out 2>/tmp/a.err
+            as=$?
+            /tmp/flash-bin /tmp/checker.json <"$f" >/tmp/f.out 2>/tmp/f.err
+            fs=$?
+            set -e
+            if [ "$as" -ne "$fs" ] || ! cmp -s /tmp/a.out /tmp/f.out; then
+              printf 'SEMANTIC_MISMATCH\t%s\tablated=%s\tflash=%s\n' "$f" "$as" "$fs" | tee -a /tmp/semantic.tsv /tmp/semantic-mismatches.tsv
+            else
+              printf 'MATCH\t%s\t%s\n' "$fs" "$f" >>/tmp/semantic.tsv
+            fi
+          done </tmp/built-exports.txt
+          mismatches=$(grep -c '^SEMANTIC_MISMATCH' /tmp/semantic-mismatches.tsv || true)
+          exports=$(wc -l </tmp/built-exports.txt)
+          printf 'exports=%s semantic_mismatches=%s\n' "$exports" "$mismatches" | tee /tmp/semantic-summary.txt
+          test "$mismatches" -eq 0
+
+      - name: Native causal performance gate
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          : >/tmp/perf.tsv
+          tests=(mathlib cslib cedar init perf/grind-ring-5)
+          for label in "${tests[@]}"; do
+            f="_build/tests/$label.ndjson"
+            test -f "$f"
+            reps=3
+            [ "$label" = mathlib ] && reps=5
+            for rep in $(seq 1 "$reps"); do
+              if [ $((rep % 2)) -eq 1 ]; then order="ablated flash"; else order="flash ablated"; fi
+              for arm in $order; do
+                set +e
+                /usr/bin/time -f '%e\t%U\t%M' -o /tmp/t /tmp/$arm-bin /tmp/checker.json <"$f" >/dev/null 2>/dev/null
+                st=$?
+                set -e
+                read -r wall user rss </tmp/t
+                printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$label" "$arm" "$rep" "$st" "$wall" "$user" "$rss" | tee -a /tmp/perf.tsv
+              done
+            done
+          done
+
+      - name: Flash promotion scorecard
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY' | tee /tmp/flash-scorecard.txt
+          from collections import defaultdict
+          from statistics import median
+
+          rows=defaultdict(lambda:defaultdict(list))
+          for line in open('/tmp/perf.tsv'):
+              label,arm,rep,status,wall,user,rss=line.rstrip().split('\t')
+              rows[label][arm].append((float(wall),float(user),int(rss),int(status)))
+
+          print('label\tablated_wall\tflash_wall\tspeedup\tablated_user\tflash_user\tablated_rss\tflash_rss')
+          speed={}
+          for label in sorted(rows):
+              a=rows[label]['ablated']; f=rows[label]['flash']
+              assert len(a)==len(f)
+              assert [x[3] for x in a]==[x[3] for x in f]
+              aw=median(x[0] for x in a); fw=median(x[0] for x in f)
+              au=median(x[1] for x in a); fu=median(x[1] for x in f)
+              ar=median(x[2] for x in a); fr=median(x[2] for x in f)
+              sp=aw/fw if fw else 999.0
+              speed[label]=sp
+              print(f'{label}\t{aw:.3f}\t{fw:.3f}\t{sp:.4f}\t{au:.3f}\t{fu:.3f}\t{ar}\t{fr}')
+
+          semantic=sum(1 for l in open('/tmp/semantic-mismatches.tsv') if l.startswith('SEMANTIC_MISMATCH'))
+          assert semantic==0
+          regress=[k for k in ('cslib','cedar','init','perf/grind-ring-5') if speed.get(k,1)>=0 and speed.get(k,1)<0.98]
+          assert not regress, 'protected regressions: '+','.join(regress)
+
+          m=speed['mathlib']
+          print(f'MATHLIB_FLASH_SPEEDUP={m:.6f}')
+          if m >= 1.005:
+              print('FLASH_REUSED_CAPABILITY_CAUSAL_PASS')
+              print('FLASH_PROMOTE_DIRECT_FRAMED_PRUNE_IN_CURRENT_PRESENT')
+          else:
+              print('FLASH_REUSED_CAPABILITY_NOT_MATERIAL')
+              raise AssertionError(f'current-present Mathlib gain below 0.5%: {m:.4f}')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-closure-v1
+          path: |
+            /tmp/flash-closure.json
+            /tmp/flash-closure.log
+            /tmp/provenance.tsv
+            /tmp/build-tests.tsv
+            /tmp/built-exports.txt
+            /tmp/semantic.tsv
+            /tmp/semantic-mismatches.tsv
+            /tmp/semantic-summary.txt
+            /tmp/perf.tsv
+            /tmp/flash-scorecard.txt
+          if-no-files-found: warn
