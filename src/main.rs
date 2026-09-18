@@ -27,6 +27,8 @@ fn main() {
             }
         }
     };
+    #[cfg(feature = "qckn-r1-atlas")]
+    sokonanoda::infer::dump_r1_activation_atlas();
     match out {
         Ok(Some(msg)) => println!("{}", msg),
         Ok(None) => {}
