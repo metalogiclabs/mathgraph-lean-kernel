@@ -21,6 +21,8 @@ cat >"$ROOT/evidence/provenance.tsv" <<EOF
 leader_sha	$LEADER_SHA
 candidate_sha	$CANDIDATE_SHA
 arena_sha	$ARENA_SHA
+development_counter	callgrind_Ir
+final_counter	Arena_perf_retired_instructions
 EOF
 
 cat >"$ROOT/config.json" <<'EOF'
@@ -51,13 +53,9 @@ build_arm() {
 build_arm leader
 build_arm candidate
 
-PERF=$(command -v perf || true)
-if [[ -z "$PERF" ]]; then
-  PERF=$(cd "$ROOT/arena" && nix develop -c sh -c 'command -v perf')
-fi
-"$PERF" --version | tee "$ROOT/evidence/perf-version.txt"
-
-printf 'label	arm	rep	status	instructions
+VALGRIND=$(nix shell nixpkgs#valgrind -c sh -c 'command -v valgrind')
+"$VALGRIND" --version | tee "$ROOT/evidence/valgrind-version.txt"
+printf 'label	arm	rep	status	callgrind_ir
 ' > "$ROOT/evidence/measurements.tsv"
 
 measure_one() {
@@ -65,109 +63,92 @@ measure_one() {
   local arm="$2"
   local rep="$3"
   local input="$4"
-  local perfout="$ROOT/evidence/${label//\//_}.$arm.$rep.perf.json"
-  local stdout="$ROOT/evidence/${label//\//_}.$arm.$rep.stdout"
-  local stderr="$ROOT/evidence/${label//\//_}.$arm.$rep.stderr"
+  local limit="$5"
+  local stem="${label//\//_}.$arm.$rep"
+  local cg="$ROOT/evidence/$stem.callgrind"
+  local stdout="$ROOT/evidence/$stem.stdout"
+  local stderr="$ROOT/evidence/$stem.stderr"
+  local timing="$ROOT/evidence/$stem.time"
   set +e
-  LC_ALL=C "$PERF" stat -j -o "$perfout" \
-    -e duration_time -e task-clock -e instructions -- \
-    "$ROOT/$arm.bin" "$ROOT/config.json" < "$input" > "$stdout" 2> "$stderr"
+  /usr/bin/time -f 'wall_s=%e\nmax_rss_kb=%M' -o "$timing" \
+    timeout "$limit" "$VALGRIND" --tool=callgrind --quiet \
+      --callgrind-out-file="$cg" \
+      "$ROOT/$arm.bin" "$ROOT/config.json" < "$input" > "$stdout" 2> "$stderr"
   local status=$?
   set -e
-  local instructions
-  instructions=$(python3 - "$perfout" <<'PY'
-import json,sys
-path=sys.argv[1]
-found=None
-for raw in open(path, errors='replace'):
-    raw=raw.strip()
-    if not raw:
-        continue
-    try:
-        row=json.loads(raw)
-    except json.JSONDecodeError:
-        continue
-    event=str(row.get("event","")).split(":")[0]
-    if event != "instructions":
-        continue
-    value=row.get("counter-value")
-    try:
-        found=int(float(value))
-    except (TypeError,ValueError):
-        pass
-if not found:
-    raise SystemExit("instruction counter unavailable")
-print(found)
-PY
-)
+  if [[ ! -s "$cg" ]]; then
+    echo "missing Callgrind output for $label/$arm/$rep" >&2
+    cat "$stderr" >&2 || true
+    return 1
+  fi
+  local ir
+  ir=$(awk '/^summary:/ {print $2; exit}' "$cg")
+  if [[ -z "$ir" || "$ir" == "0" ]]; then
+    echo "Callgrind instruction total unavailable for $label/$arm/$rep" >&2
+    head -100 "$cg" >&2 || true
+    return 1
+  fi
   printf '%s	%s	%s	%s	%s
-' "$label" "$arm" "$rep" "$status" "$instructions" | tee -a "$ROOT/evidence/measurements.tsv"
+' "$label" "$arm" "$rep" "$status" "$ir" | tee -a "$ROOT/evidence/measurements.tsv"
 }
 
+# RED/GREEN causal witness. Callgrind Ir is deterministic enough that one run
+# per exact PGO binary is preferable to noisy wall-time repetition.
 for arm in leader candidate; do
-  for rep in 1 2 3; do
-    measure_one perf/beta-ladder "$arm" "$rep" "$ROOT/arena/_build/tests/perf/beta-ladder.ndjson"
-  done
+  measure_one perf/beta-ladder "$arm" 1 "$ROOT/arena/_build/tests/perf/beta-ladder.ndjson" 900s
 done
 
 python3 - "$ROOT/evidence/measurements.tsv" <<'PY' | tee "$ROOT/evidence/beta-scorecard.txt"
-import csv,statistics,sys
+import csv,sys
 rows=list(csv.DictReader(open(sys.argv[1]), delimiter="\t"))
-by={}
-for r in rows:
-    by.setdefault((r["label"],r["arm"]),[]).append(r)
+by={(r["label"],r["arm"]):r for r in rows}
 for arm in ("leader","candidate"):
-    rs=by[("perf/beta-ladder",arm)]
-    assert len(rs)==3
-    assert all(int(r["status"])==0 for r in rs), f"{arm} beta-ladder did not accept"
-li=statistics.median(int(r["instructions"]) for r in by[("perf/beta-ladder","leader")])
-ci=statistics.median(int(r["instructions"]) for r in by[("perf/beta-ladder","candidate")])
+    r=by[("perf/beta-ladder",arm)]
+    assert int(r["status"]) == 0, f"{arm} beta-ladder did not accept"
+li=int(by[("perf/beta-ladder","leader")]["callgrind_ir"])
+ci=int(by[("perf/beta-ladder","candidate")]["callgrind_ir"])
 speed=li/ci
-print(f"leader_beta_instructions={li}")
-print(f"candidate_beta_instructions={ci}")
-print(f"beta_instruction_speedup={speed:.6f}")
+print("counter=callgrind_Ir_development_proxy")
+print(f"leader_beta_ir={li}")
+print(f"candidate_beta_ir={ci}")
+print(f"beta_ir_speedup={speed:.6f}")
 assert speed >= 2.0, f"RED: no >=2x causal beta capability yet ({speed:.6f}x)"
 print("QCKN_BETA_CAPABILITY_PASS")
 PY
 
-# Only a candidate that first proves the causal capability earns the expensive
+# A capability that cannot beat its causal witness never earns the expensive
 # protected-consequence measurements.
 cd "$ROOT/arena"
 nix develop -c ./lka.py build-test perf/grind-ring-5
 nix develop -c ./lka.py build-test mathlib
 
-for label in perf/grind-ring-5 mathlib; do
-  input="$ROOT/arena/_build/tests/$label.ndjson"
-  reps=3
-  [[ "$label" == mathlib ]] && reps=2
-  for arm in leader candidate; do
-    for rep in $(seq 1 "$reps"); do
-      measure_one "$label" "$arm" "$rep" "$input"
-    done
-  done
+for arm in leader candidate; do
+  measure_one perf/grind-ring-5 "$arm" 1 "$ROOT/arena/_build/tests/perf/grind-ring-5.ndjson" 1800s
+done
+for arm in leader candidate; do
+  measure_one mathlib "$arm" 1 "$ROOT/arena/_build/tests/mathlib.ndjson" 5400s
 done
 
 python3 - "$ROOT/evidence/measurements.tsv" <<'PY' | tee "$ROOT/evidence/promotion-scorecard.txt"
-import csv,statistics,sys
+import csv,sys
 rows=list(csv.DictReader(open(sys.argv[1]), delimiter="\t"))
-by={}
-for r in rows:
-    by.setdefault((r["label"],r["arm"]),[]).append(r)
+by={(r["label"],r["arm"]):r for r in rows}
 
-def med(label,arm):
-    rs=by[(label,arm)]
-    assert rs and all(int(r["status"])==0 for r in rs), f"{label}/{arm} did not accept"
-    return statistics.median(int(r["instructions"]) for r in rs)
+def ir(label,arm):
+    r=by[(label,arm)]
+    assert int(r["status"]) == 0, f"{label}/{arm} did not accept"
+    return int(r["callgrind_ir"])
 
 for label in ("perf/beta-ladder","perf/grind-ring-5","mathlib"):
-    l=med(label,"leader"); c=med(label,"candidate"); s=l/c
-    print(f"{label}\tleader={l}\tcandidate={c}\tspeedup={s:.6f}")
+    l=ir(label,"leader"); c=ir(label,"candidate"); s=l/c
+    print(f"{label}\tleader_ir={l}\tcandidate_ir={c}\tspeedup={s:.6f}")
 
-beta=med("perf/beta-ladder","leader")/med("perf/beta-ladder","candidate")
-grind=med("perf/grind-ring-5","leader")/med("perf/grind-ring-5","candidate")
-mathlib=med("mathlib","leader")/med("mathlib","candidate")
+beta=ir("perf/beta-ladder","leader")/ir("perf/beta-ladder","candidate")
+grind=ir("perf/grind-ring-5","leader")/ir("perf/grind-ring-5","candidate")
+mathlib=ir("mathlib","leader")/ir("mathlib","candidate")
 assert beta >= 2.0, "causal beta capability disappeared"
-assert grind >= 0.95, f"protected grind regression exceeds 5% ({grind:.6f}x)"
-assert mathlib >= 1.001, f"Mathlib instructions did not improve by at least 0.1% ({mathlib:.6f}x)"
-print("QCKN_MATHLIB_PROMOTION_PASS")
+assert grind >= 0.95, f"protected grind proxy regression exceeds 5% ({grind:.6f}x)"
+assert mathlib >= 1.001, f"Mathlib development proxy did not improve by at least 0.1% ({mathlib:.6f}x)"
+print("QCKN_MATHLIB_DEVELOPMENT_PROXY_PASS")
+print("FINAL_EXACT_ARENA_INSTRUCTION_GATE_REQUIRED")
 PY
