@@ -27,6 +27,8 @@ fn main() {
             }
         }
     };
+    #[cfg(feature = "qckn-eval-atlas")]
+    sokonanoda::eval::dump_eval_atlas();
     match out {
         Ok(Some(msg)) => println!("{}", msg),
         Ok(None) => {}
