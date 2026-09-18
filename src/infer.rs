@@ -12,9 +12,12 @@ use InferFlag::*;
 /// in the lambda body. This structural witness keeps isolated beta redexes on
 /// the retained leader path and isolates recurrent binder-consuming pressure.
 pub(crate) const R1_DIRECT_BETA_FUSION: bool = true;
+pub(crate) const R1_MIN_DEPTH: u32 = 64;
 
 #[inline]
-pub(crate) fn r1_depth_split_allows(depth: u32) -> bool { depth >= 64 }
+pub(crate) fn r1_depth_split_allows(depth: u32) -> bool {
+    depth >= R1_MIN_DEPTH
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum CheckScope<'a> {
@@ -310,10 +313,11 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
 
 #[cfg(test)]
 mod qckn_depth_split_tests {
-    use super::r1_depth_split_allows;
+    use super::{r1_depth_split_allows, R1_MIN_DEPTH};
 
     #[test]
     fn depth64_is_the_exact_split_boundary() {
+        assert_eq!(R1_MIN_DEPTH, 64);
         assert!(!r1_depth_split_allows(0));
         assert!(!r1_depth_split_allows(63));
         assert!(r1_depth_split_allows(64));
