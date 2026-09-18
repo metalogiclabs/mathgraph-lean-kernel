@@ -341,7 +341,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
 
 #[cfg(test)]
 mod r1_activation_bucket_tests {
-    use super::r1_activation_bucket_index;
+    use super::{r1_activation_atlas_bucket_count, r1_activation_atlas_record_index, r1_activation_bucket_index};
 
     #[test]
     fn bucket_index_encodes_the_finite_context_partition() {
@@ -349,6 +349,17 @@ mod r1_activation_bucket_tests {
         assert_eq!(r1_activation_bucket_index(true, 0, 0, 0, 0, 0), 1024);
         assert_eq!(r1_activation_bucket_index(false, 8, 32, 64, 7, 31), 433);
         assert_eq!(r1_activation_bucket_index(true, 64, 64, 64, 64, 64), 2047);
+    }
+
+    #[test]
+    fn atlas_recording_increments_only_the_selected_bucket() {
+        let idx = r1_activation_bucket_index(false, 8, 32, 64, 7, 31);
+        let neighbor = idx + 1;
+        let before = r1_activation_atlas_bucket_count(idx);
+        let neighbor_before = r1_activation_atlas_bucket_count(neighbor);
+        r1_activation_atlas_record_index(idx);
+        assert_eq!(r1_activation_atlas_bucket_count(idx), before + 1);
+        assert_eq!(r1_activation_atlas_bucket_count(neighbor), neighbor_before);
     }
 
     #[test]
