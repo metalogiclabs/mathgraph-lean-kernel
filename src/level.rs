@@ -6,7 +6,15 @@ pub(crate) const SUCC_HASH: u64 = 541;
 pub(crate) const MAX_HASH: u64 = 1091;
 pub(crate) const IMAX_HASH: u64 = 1747;
 pub(crate) const PARAM_HASH: u64 = 947;
+pub(crate) const R3C_LEVEL_EQ_CACHE: bool = true;
 use Level::*;
+
+#[inline]
+fn level_eq_slot(a: u64, b: u64) -> usize {
+    let x = a.wrapping_mul(0x9E37_79B9_7F4A_7C15)
+        ^ b.rotate_left(23).wrapping_mul(0xD6E8_FEB8_6659_FD93);
+    ((x ^ (x >> 32)) as usize) & (crate::util::LEVEL_EQ_DM_LEN - 1)
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Level<'a> {
@@ -250,7 +258,32 @@ impl<'t, 'p: 't> TcCtx<'t, 'p> {
     }
 
     pub fn eq_antisymm(&mut self, l: LevelPtr<'t>, r: LevelPtr<'t>) -> bool {
-        l == r || (self.leq(l, r) && self.leq(r, l))
+        if l == r {
+            return true;
+        }
+
+        let l_prime = self.simplify(l);
+        let r_prime = self.simplify(r);
+        if l_prime == r_prime {
+            return true;
+        }
+
+        if R3C_LEVEL_EQ_CACHE {
+            let la = l_prime.get_hash();
+            let ra = r_prime.get_hash();
+            let (a, b) = if la <= ra { (la, ra) } else { (ra, la) };
+            let slot = level_eq_slot(a, b);
+            let ent = self.expr_cache.level_eq_dm[slot];
+            if ent.0 == a && ent.1 == b && ent.2 != 0 {
+                return ent.2 == 2;
+            }
+
+            let result = self.leq_core(l_prime, r_prime, 0) && self.leq_core(r_prime, l_prime, 0);
+            self.expr_cache.level_eq_dm[slot] = (a, b, if result { 2 } else { 1 });
+            return result;
+        }
+
+        self.leq_core(l_prime, r_prime, 0) && self.leq_core(r_prime, l_prime, 0)
     }
 
     pub fn eq_antisymm_many(&mut self, xs: LevelsPtr<'t>, ys: LevelsPtr<'t>) -> bool {
