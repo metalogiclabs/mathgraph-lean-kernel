@@ -1,0 +1,27 @@
+name: QCKN Var R2 Mathlib cost atlas v1
+
+on:
+  push:
+    branches:
+      - qckn-var-r2-mathlib-cost-atlas-v1
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  full-mathlib-cost-atlas:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run QCKN R2 full Mathlib cost atlas
+        run: bash experiments/run_qckn_var_r2_mathlib_cost_atlas_v1.sh
+      - name: Upload R2 cost atlas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qckn-var-r2-mathlib-cost-atlas-v1
+          path: /tmp/qckn-var-r2-mathlib-cost-atlas-v1/evidence
+          if-no-files-found: warn
