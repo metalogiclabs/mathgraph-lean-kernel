@@ -1,0 +1,29 @@
+{
+  "schema": "qckn-v2-lean-authority-v1",
+  "candidate_sha": "731da4ad2abf1461223a47620fbf584908cdec0f",
+  "arena_sha": "510fbfead6f02bed1a0179d01729a6ddf5bfd06d",
+  "authority_snapshot": "lean-kernel-arena@510fbfead6f02bed1a0179d01729a6ddf5bfd06d+candidate@731da4ad2abf1461223a47620fbf584908cdec0f",
+  "verifier_id": "lean-kernel-arena-callgrind-exact-ablation-v1",
+  "workloads": {
+    "mathlib": {
+      "ablated_ir": 811025010318,
+      "candidate_ir": 811142395106,
+      "parity": true
+    },
+    "perf/beta-ladder": {
+      "ablated_ir": 50881683417,
+      "candidate_ir": 50710834809,
+      "parity": true
+    },
+    "perf/grind-ring-5": {
+      "ablated_ir": 2312542460,
+      "candidate_ir": 2335188975,
+      "parity": true
+    },
+    "perf/magma-list-deep-n21": {
+      "ablated_ir": 2429396221,
+      "candidate_ir": 2435387852,
+      "parity": true
+    }
+  }
+}
