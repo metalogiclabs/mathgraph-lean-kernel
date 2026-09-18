@@ -441,21 +441,27 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
 
     #[inline]
     pub(crate) fn key_env(&mut self, env: E<'t>, e: ExprPtr<'t>) -> E<'t> {
+        let before = env.len();
         let k = e.num_loose_bvars();
-        if k == 0 {
-            return self.lsub_base(env.lsub());
-        }
-        if k > 64 {
+        let wide = k > 64;
+        let r = if k == 0 {
+            self.lsub_base(env.lsub())
+        } else if wide {
             let ck = (env as *const value::Env<'t> as usize, e);
             if let Some(r) = self.tc_cache.wide_prune_cache.get(&ck) {
-                return *r;
+                *r
+            } else if let Some(words) = self.exact_wide_uses(e) {
+                let r = self.prune_env_wide(env, &words);
+                self.tc_cache.wide_prune_cache.insert(ck, r);
+                r
+            } else {
+                env
             }
-            let Some(words) = self.exact_wide_uses(e) else { return env };
-            let r = self.prune_env_wide(env, &words);
-            self.tc_cache.wide_prune_cache.insert(ck, r);
-            return r;
-        }
-        self.prune_env(env, e.as_ref().fv_mask())
+        } else {
+            self.prune_env(env, e.as_ref().fv_mask())
+        };
+        crate::profile::note_key_env(before, r.len(), wide);
+        r
     }
 
     #[inline]
@@ -646,8 +652,10 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
     pub(crate) fn eval(&mut self, depth: u32, env: E<'t>, e: ExprPtr<'t>) -> V<'t> {
         if e.num_loose_bvars() == 0 && env.lsub().is_none() {
             if let Some(v) = self.tc_cache.closed_eval_cache.get(&e) {
+                crate::profile::note_eval_cache(false, true);
                 return v;
             }
+            crate::profile::note_eval_cache(false, false);
             let v = self.eval_no_cache(depth, env, e);
             self.tc_cache.closed_eval_cache.insert(e, v);
             return v;
@@ -659,8 +667,10 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
             let te = self.key_env(env, e);
             let key = (te as *const value::Env<'t> as usize, e);
             if let Some(v) = self.tc_cache.open_eval_cache.get(&key) {
+                crate::profile::note_eval_cache(true, true);
                 return v;
             }
+            crate::profile::note_eval_cache(true, false);
             let v = self.eval_no_cache(depth, te, e);
             self.tc_cache.open_eval_cache.insert(key, v);
             return v;
@@ -1009,6 +1019,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         v: V<'t>,
         binder_ty: Option<V<'t>>,
     ) -> V<'t> {
+        crate::profile::note_apply_closure(clo.ctx.is_some());
         let env = value::env_extend(self.arena, clo.env, v);
         match clo.ctx {
             None => self.eval(depth, env, clo.body),
@@ -1449,6 +1460,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
 
     pub(crate) fn force_all(&mut self, depth: u32, v: V<'t>) -> V<'t> {
         if let Some(r) = self.store_lookup(depth, v) {
+            crate::profile::note_force_all_store_hit();
             return r;
         }
         let mut cur = v;
@@ -1507,6 +1519,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 }
             }
         };
+        crate::profile::note_force_all(steps);
         self.note_whnf(depth, v, result, steps);
         result
     }
