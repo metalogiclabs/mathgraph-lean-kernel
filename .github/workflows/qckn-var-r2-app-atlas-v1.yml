@@ -1,0 +1,19 @@
+name: QCKN Var R2 app atlas v1
+
+on:
+  push:
+    branches:
+      - qckn-var-r2-app-atlas-v1
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit-red-green:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run R2 simple-apply atlas unit test
+        run: cargo test --locked qckn_r2_app_atlas_tests -- --nocapture
