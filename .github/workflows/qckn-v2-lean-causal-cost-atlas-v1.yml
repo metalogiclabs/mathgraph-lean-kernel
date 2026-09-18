@@ -1,0 +1,66 @@
+name: QCKN V2 Lean causal-cost atlas v1
+
+on:
+  push:
+    branches:
+      - qckn-v2-lean-causal-cost-atlas-v1
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit-preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check out frozen RealityGraph authority surface
+        uses: actions/checkout@v4
+        with:
+          repository: heathsanchez/realitygraph
+          ref: a78cb2b83ca792225df1b7cfe1a1f3b62a8f136c
+          path: realitygraph
+
+      - name: Verify named Lean selector boundary
+        run: cargo test --locked qckn_depth_split_tests -- --nocapture
+
+      - name: Verify RED compilation and causal-cost gates
+        env:
+          PYTHONPATH: ${{ github.workspace }}/realitygraph:${{ github.workspace }}
+        run: python3 -m unittest discover -s experiments/tests -v
+
+      - name: Verify exact atlas runner syntax
+        run: bash -n experiments/run_qckn_v2_lean_causal_cost_atlas.sh
+
+  exact-causal-cost-atlas:
+    needs: unit-preflight
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check out frozen RealityGraph authority surface
+        uses: actions/checkout@v4
+        with:
+          repository: heathsanchez/realitygraph
+          ref: a78cb2b83ca792225df1b7cfe1a1f3b62a8f136c
+          path: realitygraph
+
+      - uses: cachix/install-nix-action@v31
+
+      - name: Run exact causal-cost atlas
+        env:
+          REALITYGRAPH_ROOT: ${{ github.workspace }}/realitygraph
+        run: bash experiments/run_qckn_v2_lean_causal_cost_atlas.sh
+
+      - name: Upload causal-cost evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qckn-v2-lean-causal-cost-atlas-v1
+          path: /tmp/qckn-v2-lean-causal-cost-atlas-v1/evidence
+          if-no-files-found: warn
