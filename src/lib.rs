@@ -16,6 +16,7 @@ pub mod level;
 pub mod name;
 pub mod parser;
 pub mod pretty_printer;
+pub mod profile;
 pub mod quot;
 pub mod quote;
 pub mod relevance;
