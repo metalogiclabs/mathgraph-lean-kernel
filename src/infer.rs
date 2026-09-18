@@ -8,15 +8,41 @@ use Expr::*;
 use InferFlag::*;
 
 /// QCKN R1 capability: direct-beta inference is enabled only when an
-/// immediate App(Lambda, arg) is followed by another immediate App(Lambda, arg)
-/// in the lambda body. This structural witness keeps isolated beta redexes on
-/// the retained leader path and isolates recurrent binder-consuming pressure.
+/// shallow immediate App(Lambda, arg) begins a sufficiently long consecutive
+/// recurrent-beta chain. Depth 8+ retains the previously measured atlas arm;
+/// the structural selector attributes only the depth 0..7 incremental savings.
 pub(crate) const R1_DIRECT_BETA_FUSION: bool = true;
-pub(crate) const R1_MIN_DEPTH: u32 = 64;
+pub(crate) const R1_MIN_DEPTH: u32 = 0;
+pub(crate) const R1_MIN_RECURRENT_CHAIN: u16 = 8;
+pub(crate) const R1_STRUCTURAL_DEPTH_LIMIT: u32 = 8;
 
 #[inline]
 pub(crate) fn r1_depth_split_allows(depth: u32) -> bool {
     depth >= R1_MIN_DEPTH
+}
+
+#[inline]
+pub(crate) fn r1_recurrent_chain_at_least<'t, 'p: 't>(
+    ctx: &crate::util::TcCtx<'t, 'p>,
+    mut expression: ExprPtr<'t>,
+    threshold: u16,
+) -> bool {
+    for _ in 0..threshold {
+        let App { fun, .. } = ctx.read_expr(expression) else { return false };
+        let Lambda { body, .. } = ctx.read_expr(fun) else { return false };
+        expression = body;
+    }
+    true
+}
+
+#[inline]
+pub(crate) fn r1_structural_selector_allows<'t, 'p: 't>(
+    ctx: &crate::util::TcCtx<'t, 'p>,
+    expression: ExprPtr<'t>,
+    depth: u32,
+) -> bool {
+    depth >= R1_STRUCTURAL_DEPTH_LIMIT
+        || r1_recurrent_chain_at_least(ctx, expression, R1_MIN_RECURRENT_CHAIN)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -184,13 +210,17 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
     }
 
     fn infer_app_v(&mut self, flag: InferFlag, depth: u32, env: E<'t>, ctx: C<'t>, e: ExprPtr<'t>) -> V<'t> {
-        if R1_DIRECT_BETA_FUSION && r1_depth_split_allows(depth) {
+        if R1_DIRECT_BETA_FUSION
+            && r1_depth_split_allows(depth)
+            && r1_structural_selector_allows(self.ctx, e, depth)
+        {
             if let App { fun, arg, .. } = self.ctx.read_expr(e) {
                 if let Lambda { binder_type, body, .. } = self.ctx.read_expr(fun) {
-                    let recurrent_beta = match self.ctx.read_expr(body) {
-                        App { fun: next_fun, .. } => matches!(self.ctx.read_expr(next_fun), Lambda { .. }),
-                        _ => false,
-                    };
+                    let recurrent_beta = r1_recurrent_chain_at_least(
+                        self.ctx,
+                        e,
+                        R1_MIN_RECURRENT_CHAIN,
+                    );
                     if recurrent_beta {
                         let dom = self.arg_value(depth, env, binder_type);
                         if flag == Check {
@@ -316,11 +346,42 @@ mod qckn_depth_split_tests {
     use super::{r1_depth_split_allows, R1_MIN_DEPTH};
 
     #[test]
-    fn depth64_is_the_exact_split_boundary() {
-        assert_eq!(R1_MIN_DEPTH, 64);
-        assert!(!r1_depth_split_allows(0));
-        assert!(!r1_depth_split_allows(63));
+    fn structural_selector_has_no_depth_gate() {
+        assert_eq!(R1_MIN_DEPTH, 0);
+        assert!(r1_depth_split_allows(0));
+        assert!(r1_depth_split_allows(63));
         assert!(r1_depth_split_allows(64));
         assert!(r1_depth_split_allows(u32::MAX));
+    }
+}
+
+#[cfg(test)]
+mod qckn_r1_structural_selector_tests {
+    use super::r1_recurrent_chain_at_least;
+    use crate::expr::Expr;
+    use crate::tests::util::test_ctx;
+
+    #[test]
+    fn chain_threshold_counts_only_consecutive_beta_redexes() {
+        test_ctx(None, |ctx| {
+            let ty = ctx.prop();
+            let arg = ctx.prop();
+            let terminal = ctx.prop();
+            let lambda1 = ctx.mk_lambda(ty, terminal);
+            let one = ctx.mk_app(lambda1, arg);
+            let lambda2 = ctx.mk_lambda(ty, one);
+            let two = ctx.mk_app(lambda2, arg);
+            let lambda3 = ctx.mk_lambda(ty, two);
+            let three = ctx.mk_app(lambda3, arg);
+
+            assert!(r1_recurrent_chain_at_least(ctx, three, 3));
+            assert!(!r1_recurrent_chain_at_least(ctx, three, 4));
+
+            let interrupted_body = ctx.mk_app(terminal, one);
+            let interrupted_lambda = ctx.mk_lambda(ty, interrupted_body);
+            let interrupted = ctx.mk_app(interrupted_lambda, arg);
+            assert!(!r1_recurrent_chain_at_least(ctx, interrupted, 2));
+            assert!(matches!(ctx.read_expr(three), Expr::App { .. }));
+        }).unwrap();
     }
 }
