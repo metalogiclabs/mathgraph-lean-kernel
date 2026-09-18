@@ -14,7 +14,11 @@
         "exports": 409,
         "mathlib_wall_speedup": 1.020156
       },
-      "dependencies": []
+      "dependencies": [],
+      "evidence_families": [
+        "eval_dispatch",
+        "eval"
+      ]
     },
     {
       "id": "direct_framed_prune",
@@ -28,6 +32,10 @@
       },
       "dependencies": [
         "direct_var_eval"
+      ],
+      "evidence_families": [
+        "cold_prune",
+        "cost_atlas"
       ]
     },
     {
@@ -44,7 +52,11 @@
         "mathlib_effect": "neutral"
       },
       "dependencies": [],
-      "reserve_reason": "qualified on separate lineage; current active lineage lacks implementation"
+      "reserve_reason": "qualified on separate lineage; current active lineage lacks implementation",
+      "evidence_families": [
+        "beta",
+        "eval"
+      ]
     },
     {
       "id": "ordinary_unfold_neutral",
@@ -59,6 +71,9 @@
       },
       "dependencies": [
         "direct_var_eval"
+      ],
+      "evidence_families": [
+        "app_simple_apply"
       ]
     }
   ],
