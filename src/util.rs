@@ -591,11 +591,16 @@ pub(crate) fn nat_lor(x: BigUint, y: BigUint) -> BigUint {
     x | y
 }
 
+pub(crate) const LEVEL_EQ_DM_LEN: usize = 1 << 16;
+
 pub struct ExprCache<'t> {
     pub(crate) inst_cache: FxHashMap<(ExprPtr<'t>, u16), ExprPtr<'t>>,
     pub(crate) subst_cache: FxHashMap<(ExprPtr<'t>, LevelsPtr<'t>, LevelsPtr<'t>), ExprPtr<'t>>,
     pub(crate) dsubst_cache: FxHashMap<(ExprPtr<'t>, LevelsPtr<'t>, LevelsPtr<'t>), ExprPtr<'t>>,
     pub(crate) simplify_cache: FxHashMap<LevelPtr<'t>, LevelPtr<'t>>,
+    // R3c: bounded exact-key memo for expensive post-simplification universe equality.
+    // value: 0 = empty, 1 = false, 2 = true.
+    pub(crate) level_eq_dm: Box<[(u64, u64, u8); LEVEL_EQ_DM_LEN]>,
 }
 
 impl<'t> ExprCache<'t> {
@@ -604,6 +609,7 @@ impl<'t> ExprCache<'t> {
         shrink_map(&mut self.subst_cache);
         shrink_map(&mut self.dsubst_cache);
         shrink_map(&mut self.simplify_cache);
+        self.level_eq_dm.fill((0, 0, 0));
     }
 }
 
@@ -614,6 +620,7 @@ impl<'t> ExprCache<'t> {
             subst_cache: small_fx_hash_map(),
             dsubst_cache: small_fx_hash_map(),
             simplify_cache: small_fx_hash_map(),
+            level_eq_dm: Box::new([(0, 0, 0); LEVEL_EQ_DM_LEN]),
         }
     }
 }
