@@ -191,6 +191,43 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
 
     #[inline(never)]
     fn prune_env_cold(&mut self, e: E<'t>, mask: u64, slot: usize) -> E<'t> {
+        // Flash-reused repair: historical v91/v93 evidence identified direct
+        // Framed cold-prunes as the transferable subclass. Reverify on the
+        // current post-Var present rather than rediscovering the repair.
+        if FLASH_DIRECT_FRAMED_PRUNE {
+            if let value::Env::Framed { mask: fmask, slots, .. } = e {
+                let mut buf: [std::mem::MaybeUninit<V<'t>>; 64] =
+                    [const { std::mem::MaybeUninit::uninit() }; 64];
+                let mut slots_hash =
+                    e.lsub().map_or(0, |l| l as *const value::LevelSub<'t> as usize as u64);
+                let m2 = mask & *fmask;
+                let out_mask = m2;
+                let mut n = 0usize;
+                let mut sel = select_ranks(m2, *fmask);
+                while sel != 0 {
+                    let i = sel.trailing_zeros() as usize;
+                    sel &= sel - 1;
+                    let sv = slots[i];
+                    buf[n].write(sv);
+                    slots_hash = slots_hash
+                        .wrapping_mul(0x9E3779B97F4A7C15)
+                        .wrapping_add(sv as *const Value<'t> as usize as u64);
+                    n += 1;
+                }
+                let picked: &[V<'t>] =
+                    unsafe { std::slice::from_raw_parts(buf.as_ptr().cast::<V<'t>>(), n) };
+                let lsub = e.lsub();
+                let hash = out_mask.wrapping_mul(0x9E3779B97F4A7C15).wrapping_add(slots_hash);
+                let r = self.intern_frame(hash, out_mask, picked, lsub);
+                self.tc_cache.prune_dm[slot] =
+                    (e as *const value::Env<'t> as usize, mask, Some(r));
+                if let value::Env::Framed { prune, .. } = e {
+                    prune.set((mask, Some(r)));
+                }
+                return r;
+            }
+        }
+
         let mut buf: [std::mem::MaybeUninit<V<'t>>; 64] = [const { std::mem::MaybeUninit::uninit() }; 64];
         let mut slots_hash = e.lsub().map_or(0, |l| l as *const value::LevelSub<'t> as usize as u64);
         let mut n = 0usize;
@@ -553,6 +590,7 @@ const FAIL_CLOSURE: u8 = 1;
 const FAIL_DEPTH: u8 = 7;
 
 pub(crate) const EVAL_DIRECT_VAR_FAST: bool = true;
+pub(crate) const FLASH_DIRECT_FRAMED_PRUNE: bool = true;
 
 #[inline(always)]
 pub(crate) fn eval_direct_var_index(e: ExprPtr<'_>) -> Option<u16> {
