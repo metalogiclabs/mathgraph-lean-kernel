@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - qckn-flash-substrate-v1
+      - qckn-flash-unfold-reclosure-v1
   workflow_dispatch:
 
 jobs:
@@ -25,6 +26,8 @@ jobs:
           assert c['runtime_policy']['promoted']==['direct_var_eval']
           assert 'universe_equality_search' in c['cancelled_work']
           assert 'app_first_sight_bypass' in c['killed_families']
+          assert 'same_head_unfold_continuation' in c['killed_families']
+          assert any(x['id']=='revalidate_ordinary_unfold_neutral' for x in c['frontier'])
           assert c['selected_action']=='revalidate_direct_framed_prune'
           cert=json.load(open('/tmp/flash-v1/certificate.json'))
           assert len(cert['closure_sha256'])==64
