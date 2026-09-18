@@ -45,6 +45,21 @@
       },
       "dependencies": [],
       "reserve_reason": "qualified on separate lineage; current active lineage lacks implementation"
+    },
+    {
+      "id": "ordinary_unfold_neutral",
+      "status": "candidate_reverify",
+      "guard": "simple_apply_function_is_ordinary_unfold",
+      "implementation": "direct_neutral_app",
+      "evidence": {
+        "app_kind_census_run": 35404897365,
+        "causal_run": 35406140894,
+        "dominant_subclass_share": 0.611965,
+        "estimated_share_of_eval_entries": 0.103477
+      },
+      "dependencies": [
+        "direct_var_eval"
+      ]
     }
   ],
   "obstructions": [
@@ -62,6 +77,15 @@
         34006844203
       ],
       "reason": "two semantically clean variants regressed Mathlib"
+    },
+    {
+      "id": "same_head_unfold_continuation_family",
+      "status": "rejected_family",
+      "evidence_runs": [
+        33838195741,
+        33838195848
+      ],
+      "reason": "same-head continuation variants preserved semantics but regressed std/cedar and full Mathlib"
     }
   ]
 }
