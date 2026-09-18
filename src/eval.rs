@@ -2170,3 +2170,20 @@ mod qckn_eval_var_fast_tests {
         });
     }
 }
+
+
+#[cfg(test)]
+mod qckn_r2_unfold_atlas_tests {
+    use super::{r2_unfold_atlas_count, r2_unfold_atlas_record};
+
+    #[test]
+    fn r2_unfold_atlas_records_exact_bucket() {
+        let idx = 6usize;
+        let other = 7usize;
+        let before = r2_unfold_atlas_count(idx);
+        let other_before = r2_unfold_atlas_count(other);
+        r2_unfold_atlas_record(idx);
+        assert_eq!(r2_unfold_atlas_count(idx), before + 1);
+        assert_eq!(r2_unfold_atlas_count(other), other_before);
+    }
+}
