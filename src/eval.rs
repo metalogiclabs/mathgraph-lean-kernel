@@ -2155,7 +2155,7 @@ mod qckn_eval_var_fast_tests {
 
     #[test]
     fn direct_var_dispatch_matches_only_variables() {
-        let arena = Arena::new();
+        let mut arena = Arena::new();
         arena.with_scope(|scope| {
             let v = scope.alloc(Expr::Var { dbj_idx: 7, hash: hash64!(crate::expr::VAR_HASH, 7u16) });
             let vp = ExprPtr::local(v);
