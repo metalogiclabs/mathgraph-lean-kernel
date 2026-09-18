@@ -2170,3 +2170,16 @@ mod qckn_eval_var_fast_tests {
         });
     }
 }
+
+
+#[cfg(test)]
+mod qckn_r2_unfold_neutral_tests {
+    use super::plain_unfold_neutral_path;
+
+    #[test]
+    fn ordinary_unfolds_take_neutral_fast_path_but_nat_red_does_not() {
+        assert!(plain_unfold_neutral_path(false, false));
+        assert!(plain_unfold_neutral_path(true, false));
+        assert!(!plain_unfold_neutral_path(true, true));
+    }
+}
