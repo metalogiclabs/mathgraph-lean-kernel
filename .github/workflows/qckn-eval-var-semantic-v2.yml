@@ -1,0 +1,29 @@
+name: QCKN direct Var semantic v2
+
+on:
+  push:
+    branches:
+      - qckn-eval-var-semantic-v2
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  full-semantic-parity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Run full current-Arena semantic parity
+        run: bash experiments/run_qckn_eval_var_semantic_v1.sh
+      - name: Upload semantic evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qckn-eval-var-semantic-v2
+          path: /tmp/qckn-eval-var-semantic-v1/evidence
+          if-no-files-found: warn
