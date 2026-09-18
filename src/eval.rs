@@ -553,6 +553,12 @@ const FAIL_CLOSURE: u8 = 1;
 const FAIL_DEPTH: u8 = 7;
 
 pub(crate) const EVAL_DIRECT_VAR_FAST: bool = true;
+pub(crate) const EVAL_PLAIN_UNFOLD_NEUTRAL_FAST: bool = true;
+
+#[inline(always)]
+pub(crate) fn plain_unfold_neutral_path(nat_extension: bool, is_nat_red: bool) -> bool {
+    !nat_extension || !is_nat_red
+}
 
 #[inline(always)]
 pub(crate) fn eval_direct_var_index(e: ExprPtr<'_>) -> Option<u16> {
@@ -689,6 +695,16 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 let clo_body = clo.body;
                 let new_env = self.env_extend(clo_env, a);
                 return self.eval(depth, new_env, clo_body);
+            }
+            if EVAL_PLAIN_UNFOLD_NEUTRAL_FAST {
+                if let Value::Unfold { head, .. } = f {
+                    if plain_unfold_neutral_path(
+                        self.nat_extension,
+                        self.is_nat_red_name(head.name),
+                    ) {
+                        return self.neutral_app(f, a);
+                    }
+                }
             }
             return self.apply(depth, f, a);
         }
