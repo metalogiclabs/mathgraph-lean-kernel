@@ -108,6 +108,50 @@
       "geomean_delta_percent": -0.655041,
       "worst_delta_percent": 1.562598,
       "action": "reject"
+    },
+    {
+      "id": "post-var-simple-apply-kind-census",
+      "kind": "residual",
+      "family": "app_simple_apply",
+      "run": 35404897365,
+      "observations": {
+        "simple_apply_total": 284603159,
+        "app_simple_apply_share_eval": 0.169106,
+        "unfold_other_count": 174167102,
+        "unfold_other_share": 0.611965,
+        "unfold_other_share_eval_estimate": 0.103477,
+        "rigid_inductive_share": 0.281534
+      }
+    },
+    {
+      "id": "unfold-same-head-v35-same4",
+      "kind": "candidate_evidence",
+      "family": "same_head_unfold_continuation",
+      "strategy": "same_head_depth4",
+      "run": 33838195741,
+      "semantic_pass": true,
+      "std_delta_percent": 2.0885,
+      "cedar_delta_percent": 0.9647,
+      "action": "reject"
+    },
+    {
+      "id": "unfold-same-head-v36-same1-mathlib",
+      "kind": "candidate_evidence",
+      "family": "same_head_unfold_continuation",
+      "strategy": "same_head_depth1",
+      "run": 33838195848,
+      "semantic_pass": true,
+      "mathlib_delta_percent": 0.4839,
+      "action": "reject"
+    },
+    {
+      "id": "ordinary-unfold-neutral-current",
+      "kind": "candidate_pending",
+      "family": "ordinary_unfold_neutral",
+      "capability_id": "ordinary_unfold_neutral",
+      "run": 35406140894,
+      "semantic_pass": null,
+      "performance_pass": null
     }
   ]
 }
