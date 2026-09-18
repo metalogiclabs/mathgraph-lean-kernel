@@ -250,7 +250,19 @@ impl<'t, 'p: 't> TcCtx<'t, 'p> {
     }
 
     pub fn eq_antisymm(&mut self, l: LevelPtr<'t>, r: LevelPtr<'t>) -> bool {
-        l == r || (self.leq(l, r) && self.leq(r, l))
+        if l == r {
+            crate::profile::note_level_ptr_equal();
+            return true;
+        }
+        let l_prime = self.simplify(l);
+        let r_prime = self.simplify(r);
+        if l_prime == r_prime {
+            crate::profile::note_level_simplified_equal();
+            return true;
+        }
+        let ok = self.leq_core(l_prime, r_prime, 0) && self.leq_core(r_prime, l_prime, 0);
+        crate::profile::note_level_recursive(ok);
+        ok
     }
 
     pub fn eq_antisymm_many(&mut self, xs: LevelsPtr<'t>, ys: LevelsPtr<'t>) -> bool {
