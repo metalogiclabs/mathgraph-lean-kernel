@@ -2127,3 +2127,20 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         }
     }
 }
+
+
+#[cfg(test)]
+mod qckn_eval_atlas_tests {
+    use super::{eval_atlas_count, eval_atlas_record};
+
+    #[test]
+    fn eval_atlas_records_only_the_selected_path() {
+        let idx = 3usize;
+        let neighbor = 4usize;
+        let before = eval_atlas_count(idx);
+        let neighbor_before = eval_atlas_count(neighbor);
+        eval_atlas_record(idx);
+        assert_eq!(eval_atlas_count(idx), before + 1);
+        assert_eq!(eval_atlas_count(neighbor), neighbor_before);
+    }
+}
