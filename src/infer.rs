@@ -13,6 +13,40 @@ use InferFlag::*;
 /// the retained leader path and isolates recurrent binder-consuming pressure.
 pub(crate) const R1_DIRECT_BETA_FUSION: bool = true;
 
+#[inline]
+fn r1_activation_band(n: u32) -> usize {
+    match n {
+        0..=7 => 0,
+        8..=31 => 1,
+        32..=63 => 2,
+        _ => 3,
+    }
+}
+
+/// Finite presentation of the structural context available at the R1 decision.
+/// The 2,048 buckets are: inference mode × depth × environment width ×
+/// binder/argument/body loose-variable pressure, with four bands per numeric axis.
+pub(crate) fn r1_activation_bucket_index(
+    check: bool,
+    depth: u32,
+    env_len: u32,
+    binder_loose: u16,
+    arg_loose: u16,
+    body_loose: u16,
+) -> usize {
+    let mut idx = usize::from(check);
+    for band in [
+        r1_activation_band(depth),
+        r1_activation_band(env_len),
+        r1_activation_band(u32::from(binder_loose)),
+        r1_activation_band(u32::from(arg_loose)),
+        r1_activation_band(u32::from(body_loose)),
+    ] {
+        idx = idx * 4 + band;
+    }
+    idx
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum CheckScope<'a> {
     Unchecked,
