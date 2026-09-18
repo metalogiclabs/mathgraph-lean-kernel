@@ -17,3 +17,22 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run ordinary-unfold neutral test
         run: cargo test --locked qckn_r2_unfold_neutral_tests -- --nocapture
+
+  mathlib-causal-gate:
+    needs: unit-red-green
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Run ordinary-unfold Mathlib causal gate
+        run: bash experiments/run_qckn_var_r2_unfold_neutral_v1.sh
+      - name: Upload ordinary-unfold evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qckn-var-r2-unfold-neutral-v1
+          path: /tmp/qckn-var-r2-unfold-neutral-v1/evidence
+          if-no-files-found: warn
