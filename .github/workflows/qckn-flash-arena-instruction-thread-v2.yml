@@ -1,0 +1,112 @@
+name: QCKN Flash Arena instruction thread tournament V2
+
+on:
+  push:
+    branches:
+      - qckn-flash-arena-instruction-v1
+    paths:
+      - '.github/workflows/qckn-flash-arena-instruction-thread-v2.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: qckn-flash-arena-instruction-thread-v2
+  cancel-in-progress: true
+
+jobs:
+  compare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Materialize frozen RC1 and pinned Mathlib
+        shell: bash
+        run: |
+          set -euxo pipefail
+          SOURCE=a342c74f6eb913c25c6dae4138158023d1b9aa6a
+          ARENA=510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          git worktree add --detach /tmp/candidate "$SOURCE"
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q "$ARENA"
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test init-prelude >/dev/null
+          nix develop -c ./lka.py build-test mathlib >/dev/null
+          cat >/tmp/provenance.tsv <<EOF
+          frozen_source_sha	$SOURCE
+          arena_suite_sha	$ARENA
+          comparison	same_generic_binary_same_runner
+          objective	Callgrind_Ir_thread_count_causality
+          score_rate	6000000000
+          EOF
+
+      - name: Build one Valgrind-safe PGO binary
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cat >/tmp/config-train.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+          LLVM_PROFDATA=$(nix shell nixpkgs#llvmPackages_21.llvm -c sh -c 'command -v llvm-profdata')
+          CPU='-C target-cpu=x86-64 -C target-feature=-avx,-avx2,-avx512f,-fma'
+          rm -rf /tmp/candidate/target /tmp/candidate/pgo
+          mkdir -p /tmp/candidate/pgo
+          (
+            cd /tmp/candidate
+            RUSTFLAGS="$CPU -Cprofile-generate=/tmp/candidate/pgo" cargo build --release --locked
+            target/release/sokonanoda /tmp/config-train.json </tmp/arena/_build/tests/init-prelude.ndjson >/dev/null
+            "$LLVM_PROFDATA" merge -o /tmp/candidate/pgo/merged.profdata /tmp/candidate/pgo
+            rm -rf target
+            RUSTFLAGS="$CPU -Cprofile-use=/tmp/candidate/pgo/merged.profdata" cargo build --release --locked
+            cp target/release/sokonanoda /tmp/candidate.bin
+          )
+          sha256sum /tmp/candidate.bin | tee /tmp/binary.sha256
+
+      - name: Sequential 1 2 4 thread Callgrind comparison
+        shell: bash
+        run: |
+          set -euxo pipefail
+          VALGRIND=$(nix shell nixpkgs#valgrind -c sh -c 'command -v valgrind')
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          : >/tmp/thread-ir.tsv
+          for threads in 1 2 4; do
+            cat >/tmp/config.json <<EOF
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":$threads,"print_success_message":false}
+          EOF
+            /usr/bin/time -f 'wall_s=%e\nuser_s=%U\nsys_s=%S\nmax_rss_kb=%M' -o /tmp/time-$threads.txt               timeout 8000s "$VALGRIND" --tool=callgrind --quiet --collect-jumps=no               --callgrind-out-file=/tmp/mathlib-$threads.callgrind               /tmp/candidate.bin /tmp/config.json <"$f" >/tmp/out-$threads.txt 2>/tmp/err-$threads.txt
+            ir=$(awk '/^summary:/ {print $2; exit}' /tmp/mathlib-$threads.callgrind)
+            test -n "$ir"
+            printf '%s\t%s\n' "$threads" "$ir" | tee -a /tmp/thread-ir.tsv
+            cat /tmp/time-$threads.txt
+          done
+          python3 - <<'PY' | tee /tmp/thread-scorecard.txt
+          rows={}
+          for line in open('/tmp/thread-ir.tsv'):
+              t,ir=line.split()
+              rows[int(t)]=int(ir)
+          base=rows[4]
+          print('threads\tIr\tvirtual_s\tvs_4_speedup')
+          for t in (1,2,4):
+              ir=rows[t]
+              print(f'{t}\t{ir}\t{ir/6_000_000_000:.6f}\t{base/ir:.6f}')
+          winner=min(rows,key=rows.get)
+          print(f'THREAD_IR_WINNER={winner}')
+          print(f'WINNER_IR={rows[winner]}')
+          print(f'WINNER_VIRTUAL_SECONDS={rows[winner]/6_000_000_000:.6f}')
+          print(f'WINNER_VS_4_REDUCTION_PERCENT={(1-rows[winner]/rows[4])*100:.4f}')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-arena-instruction-thread-v2
+          path: |
+            /tmp/provenance.tsv
+            /tmp/binary.sha256
+            /tmp/thread-ir.tsv
+            /tmp/thread-scorecard.txt
+            /tmp/time-*.txt
+            /tmp/mathlib-*.callgrind
+          if-no-files-found: warn
