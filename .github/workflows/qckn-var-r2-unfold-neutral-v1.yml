@@ -36,3 +36,64 @@ jobs:
           name: qckn-var-r2-unfold-neutral-v1
           path: /tmp/qckn-var-r2-unfold-neutral-v1/evidence
           if-no-files-found: warn
+
+  callgrind-candidate:
+    needs: unit-red-green
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      QCKN_ARM: candidate
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Run candidate Callgrind
+        run: bash experiments/run_qckn_r2_unfold_neutral_callgrind_v1.sh
+      - name: Upload candidate Callgrind evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qckn-r2-unfold-neutral-callgrind-candidate
+          path: /tmp/qckn-r2-unfold-neutral-callgrind-candidate/evidence
+          if-no-files-found: warn
+
+  callgrind-ablated:
+    needs: unit-red-green
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      QCKN_ARM: ablated
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Run ablated Callgrind
+        run: bash experiments/run_qckn_r2_unfold_neutral_callgrind_v1.sh
+      - name: Upload ablated Callgrind evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qckn-r2-unfold-neutral-callgrind-ablated
+          path: /tmp/qckn-r2-unfold-neutral-callgrind-ablated/evidence
+          if-no-files-found: warn
+
+  full-semantic-parity:
+    needs: unit-red-green
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Run full current-Arena semantic parity
+        run: bash experiments/run_qckn_r2_unfold_neutral_semantic_v1.sh
+      - name: Upload semantic evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qckn-r2-unfold-neutral-semantic-v1
+          path: /tmp/qckn-r2-unfold-neutral-semantic-v1/evidence
+          if-no-files-found: warn
