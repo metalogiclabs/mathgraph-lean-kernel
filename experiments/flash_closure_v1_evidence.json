@@ -353,6 +353,41 @@
         "champion_rss_kb": 6248524
       },
       "verdict": "champion_ahead_same_runner"
+    },
+    {
+      "id": "rigid-app-frontcache-wall-reject",
+      "kind": "performance_rejection",
+      "family": "rigid_app_front_cache",
+      "capability_id": "rigid_app_front_cache",
+      "run": 35411033267,
+      "context": "direct_var_plus_direct_framed_prune",
+      "semantic_scope": "mathlib_status_parity",
+      "semantic_pass": true,
+      "metric": "mathlib_wall_time",
+      "performance_pass": false,
+      "rank_effect": "pending_instruction_gate",
+      "observations": {
+        "base_runs_s": [
+          93.59,
+          88.58,
+          88.27,
+          89.14,
+          89.49
+        ],
+        "candidate_runs_s": [
+          93.69,
+          90.37,
+          89.15,
+          90.14,
+          90.72
+        ],
+        "base_median_s": 89.14,
+        "candidate_median_s": 90.37,
+        "wall_speedup": 0.986389,
+        "base_rss_kb": 6191944,
+        "candidate_rss_kb": 6219972
+      },
+      "obstruction": "16K exact direct-map front cache increased Mathlib wall time; instruction-rank effect must be measured separately"
     }
   ]
 }
