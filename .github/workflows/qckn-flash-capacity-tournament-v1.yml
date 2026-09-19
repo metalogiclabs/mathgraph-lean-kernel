@@ -1,0 +1,140 @@
+name: Flash hot-map capacity tournament v1
+
+on:
+  push:
+    branches:
+      - qckn-flash-capacity-tournament-v1
+  workflow_dispatch:
+
+concurrency:
+  group: qckn-flash-capacity-tournament-v1
+  cancel-in-progress: true
+
+jobs:
+  tournament:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build four capacity arms
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git worktree add /tmp/base "$GITHUB_SHA"
+          cp -a /tmp/base /tmp/init16
+          cp -a /tmp/base /tmp/keep64
+          cp -a /tmp/base /tmp/combo
+
+          python3 - <<'PY'
+          from pathlib import Path
+          def patch(root, init=None, keep=None):
+              p=Path(root)/'src/util.rs'
+              s=p.read_text()
+              if init is not None:
+                  old='pub(crate) const SESSION_MAP_CAP: usize = 1 << 13;'
+                  new=f'pub(crate) const SESSION_MAP_CAP: usize = 1 << {init};'
+                  assert s.count(old)==1
+                  s=s.replace(old,new,1)
+              if keep is not None:
+                  old='pub(crate) const KEEP_CAP: usize = 1 << 15;'
+                  new=f'pub(crate) const KEEP_CAP: usize = 1 << {keep};'
+                  assert s.count(old)==1
+                  s=s.replace(old,new,1)
+              p.write_text(s)
+          patch('/tmp/init16',init=14)
+          patch('/tmp/keep64',keep=16)
+          patch('/tmp/combo',init=14,keep=16)
+          PY
+
+          for arm in base init16 keep64 combo; do
+            (cd /tmp/$arm && RUSTFLAGS='-C target-cpu=x86-64-v3' cargo build --release --locked)
+            cp /tmp/$arm/target/release/sokonanoda /tmp/$arm.bin
+          done
+
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}
+          EOF
+
+      - name: Build Arena Mathlib and controls
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          cd /tmp/arena
+          for t in mathlib cedar cslib init; do
+            nix develop -c ./lka.py build-test "$t" >/dev/null
+          done
+
+      - name: Exact status parity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          for t in mathlib cedar cslib init; do
+            f="_build/tests/$t.ndjson"
+            set +e
+            /tmp/base.bin /tmp/config.json <"$f" >/tmp/b.out 2>/tmp/b.err; b=$?
+            set -e
+            for arm in init16 keep64 combo; do
+              set +e
+              /tmp/$arm.bin /tmp/config.json <"$f" >/tmp/a.out 2>/tmp/a.err; a=$?
+              set -e
+              test "$a" -eq "$b"
+            done
+          done
+
+      - name: Mathlib capacity tournament
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          f="_build/tests/mathlib.ndjson"
+          : >/tmp/perf.tsv
+          arms=(base init16 keep64 combo)
+          for rep in 1 2 3; do
+            if [ $((rep%2)) -eq 1 ]; then order="base init16 keep64 combo"; else order="combo keep64 init16 base"; fi
+            for arm in $order; do
+              /usr/bin/time -f '%e\t%U\t%M' -o /tmp/time                 /tmp/$arm.bin /tmp/config.json <"$f" >/dev/null 2>/dev/null
+              read -r wall user rss </tmp/time
+              printf '%s\t%s\t%s\t%s\t%s\n' "$arm" "$rep" "$wall" "$user" "$rss" | tee -a /tmp/perf.tsv
+            done
+          done
+
+          python3 - <<'PY' | tee /tmp/scorecard.txt
+          from collections import defaultdict
+          from statistics import median
+          rows=defaultdict(list)
+          for l in open('/tmp/perf.tsv'):
+              arm,rep,wall,user,rss=l.rstrip().split('\t')
+              rows[arm].append((float(wall),float(user),int(rss)))
+          base=median(x[0] for x in rows['base'])
+          print('arm\twall_med\tspeedup\trss_med_kb')
+          best=('base',1.0)
+          for arm in ('base','init16','keep64','combo'):
+              wall=median(x[0] for x in rows[arm])
+              rss=median(x[2] for x in rows[arm])
+              speed=base/wall
+              print(f'{arm}\t{wall:.3f}\t{speed:.4f}\t{rss}')
+              if speed>best[1]:
+                  best=(arm,speed)
+          print('WINNER='+best[0])
+          print(f'WINNER_SPEEDUP={best[1]:.6f}')
+          if best[0]!='base' and best[1]>=1.003:
+              print('FLASH_CAPACITY_TOURNAMENT_PASS')
+          else:
+              print('FLASH_CAPACITY_TOURNAMENT_NO_MATERIAL_WIN')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-capacity-tournament-v1
+          path: |
+            /tmp/perf.tsv
+            /tmp/scorecard.txt
+          if-no-files-found: warn
