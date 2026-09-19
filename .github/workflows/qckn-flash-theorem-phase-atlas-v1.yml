@@ -62,11 +62,11 @@ jobs:
           mkdir -p /tmp/phase/pgo
           (
             cd /tmp/phase
-            RUSTFLAGS="-C target-cpu=native -C debuginfo=1 -Cprofile-generate=/tmp/phase/pgo" cargo build --release --locked
+            RUSTFLAGS="-C target-cpu=x86-64 -C target-feature=-avx,-avx2,-avx512f,-fma -C debuginfo=1 -Cprofile-generate=/tmp/phase/pgo" cargo build --release --locked
             target/release/sokonanoda /tmp/config.json </tmp/arena/_build/tests/init-prelude.ndjson >/dev/null
             "$LLVM_PROFDATA" merge -o /tmp/phase/pgo/merged.profdata /tmp/phase/pgo
             rm -rf target
-            RUSTFLAGS="-C target-cpu=native -C debuginfo=1 -Cprofile-use=/tmp/phase/pgo/merged.profdata" cargo build --release --locked
+            RUSTFLAGS="-C target-cpu=x86-64 -C target-feature=-avx,-avx2,-avx512f,-fma -C debuginfo=1 -Cprofile-use=/tmp/phase/pgo/merged.profdata" cargo build --release --locked
             cp target/release/sokonanoda /tmp/phase.bin
           )
 
