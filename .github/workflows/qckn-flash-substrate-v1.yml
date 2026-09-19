@@ -48,6 +48,9 @@ jobs:
       - name: Test strict authority joining
         run: python3 experiments/test_flash_authority_join_v1.py
 
+      - name: Test typed evidence ingestion
+        run: python3 experiments/test_flash_event_v1.py
+
       - name: Test Flash impact index
         shell: bash
         run: |
