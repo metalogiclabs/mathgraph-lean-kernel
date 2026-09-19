@@ -6,11 +6,11 @@ SCHEMA="mathgraph.flash.arena-objective.v1"
 
 def rank_key(x):
     # Mirrors the Arena's lexicographic ordering for tied participants:
-    # 1) wrong accepts, 2) wrong rejects, 3) Mathlib wall time, 4) declines.
+    # 1) wrong accepts, 2) wrong rejects, 3) Mathlib instruction count, 4) declines.
     return (
         int(x.get("wrong_accepts",0)),
         int(x.get("wrong_rejects",0)),
-        float(x["mathlib_wall_s"]),
+        int(x["mathlib_instructions"]),
         int(x.get("declines",0)),
     )
 
@@ -26,8 +26,8 @@ def performance_admission(candidate, incumbent, *, min_mathlib_gain=0.002, catas
         return False, "wrong_reject_regression"
 
     # If correctness remains tied, Mathlib is the actual ranking objective.
-    base=float(incumbent["mathlib_wall_s"])
-    cand=float(candidate["mathlib_wall_s"])
+    base=float(incumbent["mathlib_instructions"])
+    cand=float(candidate["mathlib_instructions"])
     speedup=base/cand
     if speedup < 1.0 + min_mathlib_gain:
         return False, "mathlib_gain_below_threshold"
