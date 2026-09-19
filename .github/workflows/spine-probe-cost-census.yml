@@ -1,0 +1,28 @@
+name: Spine probe cost census
+
+on:
+  pull_request:
+    branches: [mathgraph]
+    paths:
+      - 'scripts/run_spine_probe_cost_census.sh'
+      - '.github/workflows/spine-probe-cost-census.yml'
+  workflow_dispatch:
+
+jobs:
+  census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Run spine-probe cost census
+        run: bash scripts/run_spine_probe_cost_census.sh
+      - name: Upload census
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spine-probe-cost-census
+          path: spine-probe-cost-census.txt
+          if-no-files-found: warn
