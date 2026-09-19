@@ -21,11 +21,7 @@ jobs:
         run: |
           set -euxo pipefail
           rm -rf /tmp/flash-v1
-          python3 experiments/flash_controller_v1.py \
-            experiments/flash_closure_v1_evidence.json \
-            experiments/flash_capability_manifest_v1.json \
-            /tmp/flash-v1 \
-            /tmp/flash.rs | tee /tmp/flash-controller.log
+          python3 experiments/flash_controller_v1.py             experiments/flash_closure_v1_evidence.json             experiments/flash_capability_manifest_v1.json             /tmp/flash-v1             /tmp/flash.rs | tee /tmp/flash-controller.log
 
           grep -q '^FLASH_CONTROLLER_FIXED_POINT$' /tmp/flash-controller.log
           grep -q '^PROMOTED=direct_framed_prune,direct_var_eval$' /tmp/flash-controller.log
@@ -63,10 +59,7 @@ jobs:
         run: |
           set -euxo pipefail
           python3 experiments/test_flash_plan_v1.py
-          python3 experiments/flash_plan_v1.py \
-            /tmp/flash-v1/closure.json \
-            experiments/flash_action_registry_v1.json \
-            /tmp/flash-action-plan.json | tee /tmp/flash-action-plan.log
+          python3 experiments/flash_plan_v1.py             /tmp/flash-v1/closure.json             experiments/flash_action_registry_v1.json             /tmp/flash-action-plan.json | tee /tmp/flash-action-plan.log
           grep -q '^SELECTED_ACTION=revalidate_ordinary_unfold_neutral$' /tmp/flash-action-plan.log
           grep -q '^STATUS=ready$' /tmp/flash-action-plan.log
 
@@ -74,29 +67,8 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          python3 experiments/flash_index_v1.py \
-            experiments/flash_capability_manifest_v1.json \
-            experiments/flash_closure_v1_evidence.json \
-            /tmp/flash-impact-index.json | tee /tmp/flash-impact-index.log
-          grep -q '^FLASH_IMPACT_INDEX_PASS
-        run: |
-          cargo test --release --locked -- \
-            --skip reject_rec_rule_with_forged_lambda_domains \
-            --skip reject_unlisted_recursor
-
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: qckn-flash-current-v1
-          path: |
-            /tmp/flash-v1
-            /tmp/flash-controller.log
-            /tmp/flash-impact-index.json
-            /tmp/flash-impact-index.log
-            /tmp/flash-action-plan.json
-            /tmp/flash-action-plan.log
-          if-no-files-found: warn
- /tmp/flash-impact-index.log
+          python3 experiments/flash_index_v1.py             experiments/flash_capability_manifest_v1.json             experiments/flash_closure_v1_evidence.json             /tmp/flash-impact-index.json | tee /tmp/flash-impact-index.log
+          grep -q '^FLASH_IMPACT_INDEX_PASS$' /tmp/flash-impact-index.log
           python3 experiments/test_flash_index_v1.py
 
       - name: Test Arena ranking objective
@@ -104,9 +76,7 @@ jobs:
 
       - name: Build compiled inner policy
         run: |
-          cargo test --release --locked -- \
-            --skip reject_rec_rule_with_forged_lambda_domains \
-            --skip reject_unlisted_recursor
+          cargo test --release --locked --             --skip reject_rec_rule_with_forged_lambda_domains             --skip reject_unlisted_recursor
 
       - uses: actions/upload-artifact@v4
         if: always()
