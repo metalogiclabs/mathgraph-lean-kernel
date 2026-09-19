@@ -194,7 +194,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         // Flash-reused repair: historical v91/v93 evidence identified direct
         // Framed cold-prunes as the transferable subclass. Reverify on the
         // current post-Var present rather than rediscovering the repair.
-        if FLASH_DIRECT_FRAMED_PRUNE {
+        if crate::flash::DIRECT_FRAMED_PRUNE {
             if let value::Env::Framed { mask: fmask, slots, .. } = e {
                 let mut buf: [std::mem::MaybeUninit<V<'t>>; 64] =
                     [const { std::mem::MaybeUninit::uninit() }; 64];
@@ -588,8 +588,6 @@ const WHNF_ADMIT_THRESHOLD: u8 = 2;
 
 const FAIL_CLOSURE: u8 = 1;
 const FAIL_DEPTH: u8 = 7;
-
-pub(crate) const FLASH_DIRECT_FRAMED_PRUNE: bool = true;
 
 #[inline(always)]
 pub(crate) fn eval_direct_var_index(e: ExprPtr<'_>) -> Option<u16> {
