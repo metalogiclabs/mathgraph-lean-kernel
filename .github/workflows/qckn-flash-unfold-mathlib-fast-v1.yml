@@ -1,0 +1,110 @@
+name: Flash Unfold Mathlib fast gate
+
+on:
+  push:
+    branches:
+      - qckn-flash-unfold-mathlib-fast-v1
+  workflow_dispatch:
+
+concurrency:
+  group: qckn-flash-unfold-mathlib-fast-v1
+  cancel-in-progress: true
+
+jobs:
+  mathlib:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build base and Unfold-activated candidate
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git worktree add /tmp/base "$GITHUB_SHA"
+          cp -a /tmp/base /tmp/candidate
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/candidate/src/flash.rs')
+          s=p.read_text()
+          old='pub(crate) const ORDINARY_UNFOLD_NEUTRAL: bool = false;'
+          new='pub(crate) const ORDINARY_UNFOLD_NEUTRAL: bool = true;'
+          assert s.count(old)==1
+          p.write_text(s.replace(old,new,1))
+          PY
+          for arm in base candidate; do
+            (cd /tmp/$arm && RUSTFLAGS='-C target-cpu=x86-64-v3' cargo build --release --locked)
+            cp /tmp/$arm/target/release/sokonanoda /tmp/$arm.bin
+          done
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}
+          EOF
+
+      - name: Build Mathlib export
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test mathlib >/dev/null
+
+      - name: Verify Mathlib status parity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          set +e
+          /tmp/base.bin /tmp/config.json <"$f" >/tmp/b.out 2>/tmp/b.err; b=$?
+          /tmp/candidate.bin /tmp/config.json <"$f" >/tmp/c.out 2>/tmp/c.err; c=$?
+          set -e
+          test "$b" -eq "$c"
+          echo "MATHLIB_STATUS_PARITY_PASS"
+
+      - name: Five-replay Mathlib causal gate
+        shell: bash
+        run: |
+          set -euxo pipefail
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          : >/tmp/perf.tsv
+          for rep in 1 2 3 4 5; do
+            if [ $((rep%2)) -eq 1 ]; then order="base candidate"; else order="candidate base"; fi
+            for arm in $order; do
+              /usr/bin/time -f '%e\t%U\t%M' -o /tmp/time                 /tmp/$arm.bin /tmp/config.json <"$f" >/dev/null 2>/dev/null
+              read -r wall user rss </tmp/time
+              printf '%s\t%s\t%s\t%s\t%s\n' "$arm" "$rep" "$wall" "$user" "$rss" | tee -a /tmp/perf.tsv
+            done
+          done
+          python3 - <<'PY' | tee /tmp/scorecard.txt
+          from collections import defaultdict
+          from statistics import median
+          rows=defaultdict(list)
+          for l in open('/tmp/perf.tsv'):
+              arm,rep,w,u,rss=l.rstrip().split('\t')
+              rows[arm].append((float(w),float(u),int(rss)))
+          bm=median(x[0] for x in rows['base'])
+          cm=median(x[0] for x in rows['candidate'])
+          print('base_runs='+repr([x[0] for x in rows['base']]))
+          print('candidate_runs='+repr([x[0] for x in rows['candidate']]))
+          print(f'BASE_MEDIAN_S={bm:.6f}')
+          print(f'CANDIDATE_MEDIAN_S={cm:.6f}')
+          print(f'MATHLIB_SPEEDUP={bm/cm:.6f}')
+          print(f'MATHLIB_DELTA_PERCENT={(cm/bm-1)*100:.4f}')
+          if bm/cm >= 1.002:
+              print('FLASH_UNFOLD_CURRENT_PRESENT_MATHLIB_PASS')
+          else:
+              print('FLASH_UNFOLD_CURRENT_PRESENT_MATHLIB_REJECT')
+              raise SystemExit(1)
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-unfold-mathlib-fast-v1
+          path: |
+            /tmp/perf.tsv
+            /tmp/scorecard.txt
+          if-no-files-found: warn
