@@ -1,0 +1,30 @@
+name: Flash Arena objective v1
+
+on:
+  push:
+    branches:
+      - qckn-flash-arena-objective-v1
+  workflow_dispatch:
+
+jobs:
+  objective:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test Arena-objective semantics
+        run: python3 experiments/test_flash_arena_objective_v1.py
+      - name: Check contract ranking order
+        run: |
+          python3 - <<'PY'
+          import json
+          x=json.load(open('experiments/flash_closure_v1_evidence.json'))
+          rank=x['contract']['arena_ranking']
+          assert rank['lexicographic']==[
+            'wrong_accepts_invalid_proofs',
+            'wrong_rejects_valid_proofs',
+            'mathlib_wall_time',
+            'declined_tests',
+          ]
+          assert rank['primary_performance_metric']=='mathlib_wall_time'
+          print('FLASH_ARENA_CONTRACT_PASS')
+          PY
