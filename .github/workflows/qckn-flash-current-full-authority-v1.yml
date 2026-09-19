@@ -1,0 +1,144 @@
+name: Flash current full authority v1
+
+on:
+  push:
+    branches:
+      - qckn-flash-current-full-authority-v1
+  workflow_dispatch:
+
+concurrency:
+  group: qckn-flash-current-full-authority-v1
+  cancel-in-progress: true
+
+jobs:
+  authority:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build compiled present and conservative ablation
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git worktree add /tmp/present "$GITHUB_SHA"
+          cp -a /tmp/present /tmp/reference
+
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/reference/src/flash.rs')
+          s=p.read_text()
+          for old,new in [
+            ('pub(crate) const DIRECT_VAR_EVAL: bool = true;','pub(crate) const DIRECT_VAR_EVAL: bool = false;'),
+            ('pub(crate) const DIRECT_FRAMED_PRUNE: bool = true;','pub(crate) const DIRECT_FRAMED_PRUNE: bool = false;'),
+            ('pub(crate) const ORDINARY_UNFOLD_NEUTRAL: bool = false;','pub(crate) const ORDINARY_UNFOLD_NEUTRAL: bool = false;'),
+          ]:
+            assert s.count(old)==1, old
+            s=s.replace(old,new,1)
+          p.write_text(s)
+          PY
+
+          for arm in reference present; do
+            (cd /tmp/$arm && RUSTFLAGS='-C target-cpu=x86-64-v3' cargo build --release --locked)
+            cp /tmp/$arm/target/release/sokonanoda /tmp/$arm.bin
+          done
+
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}
+          EOF
+
+      - name: Build every current Arena export
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          cd /tmp/arena
+          : >/tmp/build-tests.tsv
+          while IFS= read -r y; do
+            t=${y#tests/}; t=${t%.yaml}
+            echo "BUILD $t" | tee -a /tmp/build-tests.tsv
+            nix develop -c ./lka.py build-test "$t" >/dev/null
+          done < <(find tests -type f -name '*.yaml' | sort)
+          find _build/tests -type f -name '*.ndjson' | sort >/tmp/built-exports.txt
+          test -s /tmp/built-exports.txt
+          echo "built $(wc -l </tmp/built-exports.txt) exports"
+
+      - name: Full 409-export semantic authority
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          : >/tmp/semantic.tsv
+          : >/tmp/mismatches.tsv
+          while IFS= read -r f; do
+            set +e
+            /tmp/reference.bin /tmp/config.json <"$f" >/tmp/r.out 2>/tmp/r.err; r=$?
+            /tmp/present.bin /tmp/config.json <"$f" >/tmp/p.out 2>/tmp/p.err; p=$?
+            set -e
+            if [ "$r" -ne "$p" ] || ! cmp -s /tmp/r.out /tmp/p.out; then
+              printf 'SEMANTIC_MISMATCH\t%s\treference=%s\tpresent=%s\n' "$f" "$r" "$p" | tee -a /tmp/mismatches.tsv /tmp/semantic.tsv
+            else
+              printf 'MATCH\t%s\t%s\n' "$p" "$f" >>/tmp/semantic.tsv
+            fi
+          done </tmp/built-exports.txt
+
+          exports=$(wc -l </tmp/built-exports.txt)
+          mismatches=$(grep -c '^SEMANTIC_MISMATCH' /tmp/mismatches.tsv || true)
+          printf 'exports=%s semantic_mismatches=%s\n' "$exports" "$mismatches" | tee /tmp/semantic-summary.txt
+          test "$mismatches" -eq 0
+          echo FLASH_CURRENT_FULL_SEMANTIC_AUTHORITY_PASS
+
+      - name: Native current-present scorecard
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          : >/tmp/perf.tsv
+          for t in mathlib cslib cedar init perf/grind-ring-5; do
+            f="_build/tests/$t.ndjson"
+            reps=3
+            [ "$t" = mathlib ] && reps=5
+            for rep in $(seq 1 "$reps"); do
+              if [ $((rep%2)) -eq 1 ]; then order="reference present"; else order="present reference"; fi
+              for arm in $order; do
+                /usr/bin/time -f '%e\t%U\t%M' -o /tmp/time \
+                  /tmp/$arm.bin /tmp/config.json <"$f" >/dev/null 2>/dev/null
+                read -r wall user rss </tmp/time
+                printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$t" "$arm" "$rep" "$wall" "$user" "$rss" >>/tmp/perf.tsv
+              done
+            done
+          done
+
+          python3 - <<'PY' | tee /tmp/scorecard.txt
+          from collections import defaultdict
+          from statistics import median
+          rows=defaultdict(lambda:defaultdict(list))
+          for l in open('/tmp/perf.tsv'):
+              t,a,r,w,u,m=l.rstrip().split('\t')
+              rows[t][a].append((float(w),float(u),int(m)))
+          print('test\treference\tpresent\tspeedup')
+          for t in rows:
+              rw=median(x[0] for x in rows[t]['reference'])
+              pw=median(x[0] for x in rows[t]['present'])
+              print(f'{t}\t{rw:.3f}\t{pw:.3f}\t{rw/pw:.4f}')
+          print('FLASH_CURRENT_SCORECARD_COMPLETE')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-current-full-authority-v1
+          path: |
+            /tmp/build-tests.tsv
+            /tmp/built-exports.txt
+            /tmp/semantic.tsv
+            /tmp/mismatches.tsv
+            /tmp/semantic-summary.txt
+            /tmp/perf.tsv
+            /tmp/scorecard.txt
+          if-no-files-found: warn
