@@ -83,11 +83,9 @@ jobs:
             /tmp/cand.semantic.bin /tmp/config.json <"$f" >/tmp/cand.out 2>/tmp/cand.err; c=$?
             set -e
             if [ "$b" -ne "$c" ] || ! cmp -s /tmp/base.out /tmp/cand.out; then
-              printf 'MISMATCH	%s	base=%s	cand=%s
-' "$f" "$b" "$c" | tee -a /tmp/mismatches.tsv
+              printf 'MISMATCH\\t%s\\tbase=%s\\tcand=%s\\n' "$f" "$b" "$c" | tee -a /tmp/mismatches.tsv
             else
-              printf 'MATCH	%s	%s
-' "$c" "$f" >>/tmp/semantic.tsv
+              printf 'MATCH\\t%s\\t%s\\n' "$c" "$f" >>/tmp/semantic.tsv
             fi
           done </tmp/exports.txt
           n=$(grep -c '^MISMATCH' /tmp/mismatches.tsv || true)
@@ -121,8 +119,7 @@ jobs:
             for arm in "${order[@]}"; do
               /usr/bin/time -f '%e	%U	%S	%M' -o /tmp/time                 /tmp/$arm.pgo.bin /tmp/config.json <"$f" >/dev/null 2>/dev/null
               read -r wall user sys rss </tmp/time
-              printf '%s	%s	%s	%s	%s	%s
-' "$arm" "$rep" "$wall" "$user" "$sys" "$rss" | tee -a /tmp/native.tsv
+              printf '%s\\t%s\\t%s\\t%s\\t%s\\t%s\\n' "$arm" "$rep" "$wall" "$user" "$sys" "$rss" | tee -a /tmp/native.tsv
             done
           done
           python3 - <<'PY' | tee /tmp/native-scorecard.txt
@@ -171,8 +168,7 @@ jobs:
             timeout 8000s "$VALGRIND" --tool=callgrind --quiet --collect-jumps=no               --callgrind-out-file=/tmp/$arm.callgrind               /tmp/$arm.valgrind.bin /tmp/config.json <"$f" >/tmp/$arm.cg.out 2>/tmp/$arm.cg.err
             ir=$(awk '/^summary:/ {print $2; exit}' /tmp/$arm.callgrind)
             test -n "$ir"
-            printf '%s	%s
-' "$arm" "$ir" | tee -a /tmp/ir.tsv
+            printf '%s\\t%s\\n' "$arm" "$ir" | tee -a /tmp/ir.tsv
           done
           python3 - <<'PY' | tee /tmp/ir-scorecard.txt
           rows={}
