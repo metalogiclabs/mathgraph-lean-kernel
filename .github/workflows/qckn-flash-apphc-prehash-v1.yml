@@ -1,0 +1,162 @@
+name: Flash app_hc prehash transition gate
+
+on:
+  push:
+    branches:
+      - qckn-flash-apphc-prehash-v1
+  workflow_dispatch:
+
+concurrency:
+  group: qckn-flash-apphc-prehash-v1
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build champion and prehash candidate
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git worktree add /tmp/champion 28bc6a91d68ee547ee94fca395f58e8f100879ea
+          git worktree add /tmp/candidate "$GITHUB_SHA"
+          for arm in champion candidate; do
+            (cd /tmp/$arm && cargo test --release --locked -- \
+              --skip reject_rec_rule_with_forged_lambda_domains \
+              --skip reject_unlisted_recursor)
+            (cd /tmp/$arm && RUSTFLAGS='-C target-cpu=x86-64-v3' cargo build --release --locked)
+            cp /tmp/$arm/target/release/sokonanoda /tmp/$arm.native.bin
+          done
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}
+          EOF
+
+      - name: Build focused Arena panel
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          cd /tmp/arena
+          for t in mathlib cslib cedar init perf/grind-ring-5 init-prelude; do
+            nix develop -c ./lka.py build-test "$t" >/dev/null
+          done
+
+      - name: Exact focused semantic parity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          : >/tmp/parity.tsv
+          for t in mathlib cslib cedar init perf/grind-ring-5; do
+            f="_build/tests/$t.ndjson"
+            for arm in champion candidate; do
+              set +e
+              /tmp/$arm.native.bin /tmp/config.json <"$f" >/tmp/$arm.out 2>/tmp/$arm.err
+              rc=$?
+              set -e
+              printf '%s\t%s\t%s\n' "$t" "$arm" "$rc" >>/tmp/parity.tsv
+            done
+            test "$(awk -v t="$t" '$1==t{print $3}' /tmp/parity.tsv | sort -u | wc -l)" -eq 1
+            cmp /tmp/champion.out /tmp/candidate.out
+          done
+          echo APPHC_PREHASH_PARITY_PASS
+
+      - name: Native Mathlib causal timing
+        shell: bash
+        run: |
+          set -euxo pipefail
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          : >/tmp/native.tsv
+          for rep in 1 2 3 4 5; do
+            if [ $((rep%2)) -eq 1 ]; then order="champion candidate"; else order="candidate champion"; fi
+            for arm in $order; do
+              /usr/bin/time -f '%e\t%U\t%M' -o /tmp/time /tmp/$arm.native.bin /tmp/config.json <"$f" >/dev/null 2>/dev/null
+              read -r wall user rss </tmp/time
+              printf '%s\t%s\t%s\t%s\t%s\n' "$arm" "$rep" "$wall" "$user" "$rss" >>/tmp/native.tsv
+            done
+          done
+          python3 - <<'PY' | tee /tmp/native-scorecard.txt
+          from collections import defaultdict
+          from statistics import median
+          rows=defaultdict(list)
+          for l in open('/tmp/native.tsv'):
+              a,r,w,u,m=l.rstrip().split('\t'); rows[a].append((float(w),float(u),int(m)))
+          c=median(x[0] for x in rows['champion'])
+          x=median(x[0] for x in rows['candidate'])
+          print('champion_runs='+repr([v[0] for v in rows['champion']]))
+          print('candidate_runs='+repr([v[0] for v in rows['candidate']]))
+          print(f'CHAMPION_MEDIAN_S={c:.6f}')
+          print(f'CANDIDATE_MEDIAN_S={x:.6f}')
+          print(f'APPHC_PREHASH_WALL_SPEEDUP={c/x:.6f}')
+          print(f'APPHC_PREHASH_WALL_DELTA_PERCENT={(x/c-1)*100:.4f}')
+          PY
+
+      - name: Deterministic PGO build
+        shell: bash
+        run: |
+          set -euxo pipefail
+          LLVM_PROFDATA=$(nix shell nixpkgs#llvmPackages_21.llvm -c sh -c 'command -v llvm-profdata')
+          FLAGS='-C target-cpu=x86-64 -C target-feature=-avx,-avx2,-avx512f,-fma'
+          for arm in champion candidate; do
+            rm -rf /tmp/$arm/target /tmp/$arm/pgo
+            mkdir -p /tmp/$arm/pgo
+            (
+              cd /tmp/$arm
+              RUSTFLAGS="$FLAGS -Cprofile-generate=/tmp/$arm/pgo" cargo build --release --locked
+              target/release/sokonanoda /tmp/config.json </tmp/arena/_build/tests/init-prelude.ndjson >/dev/null
+              "$LLVM_PROFDATA" merge -o /tmp/$arm/pgo/merged.profdata /tmp/$arm/pgo
+              rm -rf target
+              RUSTFLAGS="$FLAGS -Cprofile-use=/tmp/$arm/pgo/merged.profdata" cargo build --release --locked
+              cp target/release/sokonanoda /tmp/$arm.pgo.bin
+            )
+          done
+
+      - name: Deterministic Mathlib Callgrind rank proxy
+        shell: bash
+        run: |
+          set -euxo pipefail
+          VALGRIND=$(nix shell nixpkgs#valgrind -c sh -c 'command -v valgrind')
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          : >/tmp/callgrind.tsv
+          for arm in champion candidate; do
+            out=/tmp/$arm.callgrind
+            timeout 7200s "$VALGRIND" --tool=callgrind --quiet --collect-jumps=no \
+              --callgrind-out-file="$out" /tmp/$arm.pgo.bin /tmp/config.json <"$f" >/dev/null 2>/dev/null
+            ir=$(awk '/^summary:/ {print $2; exit}' "$out")
+            test -n "$ir"
+            printf '%s\t%s\n' "$arm" "$ir" | tee -a /tmp/callgrind.tsv
+          done
+          python3 - <<'PY' | tee /tmp/callgrind-scorecard.txt
+          vals={}
+          for l in open('/tmp/callgrind.tsv'):
+              a,n=l.rstrip().split('\t'); vals[a]=int(n)
+          c=vals['champion']; x=vals['candidate']
+          print(f'CHAMPION_CALLGRIND_IR={c}')
+          print(f'CANDIDATE_CALLGRIND_IR={x}')
+          print(f'APPHC_PREHASH_IR_SPEEDUP={c/x:.9f}')
+          print(f'APPHC_PREHASH_IR_DELTA_PERCENT={(x/c-1)*100:.4f}')
+          if x < c:
+              print('FLASH_APPHC_PREHASH_RANK_PROXY_PASS')
+          else:
+              print('FLASH_APPHC_PREHASH_RANK_PROXY_REJECT')
+              raise SystemExit(1)
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-apphc-prehash-v1
+          path: |
+            /tmp/parity.tsv
+            /tmp/native.tsv
+            /tmp/native-scorecard.txt
+            /tmp/callgrind.tsv
+            /tmp/callgrind-scorecard.txt
+          if-no-files-found: warn
