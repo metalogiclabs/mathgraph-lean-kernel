@@ -1034,6 +1034,8 @@ pub struct NameCache<'p> {
 
 pub(crate) const PRUNE_DM_LEN: usize = 1 << 10;
 pub(crate) const PRUNE_DM_SHIFT: u32 = 64 - 10;
+pub(crate) const RIGID_APP_DM_LEN: usize = 1 << 14;
+pub(crate) const RIGID_APP_DM_SHIFT: u32 = 64 - 14;
 
 pub struct TcCache<'a, 't> {
     pub(crate) unfold_const_cache: FxHashMap<(NamePtr<'t>, LevelsPtr<'t>), V<'a>>,
@@ -1059,6 +1061,7 @@ pub struct TcCache<'a, 't> {
     pub(crate) bvar_hc: FxHashMap<(u32, usize), V<'a>>,
     pub(crate) spine_hc: FxHashMap<(usize, u64), S<'a>>,
     pub(crate) app_hc: FxHashMap<(usize, usize), V<'a>>,
+    pub(crate) rigid_app_dm: Box<[(usize, usize, Option<V<'a>>); RIGID_APP_DM_LEN]>,
     pub(crate) env_hc: FxHashMap<(usize, usize), E<'a>>,
     pub(crate) lam_hc: FxHashMap<(ExprPtr<'t>, usize, ExprPtr<'t>), V<'a>>,
     pub(crate) pi_hc: FxHashMap<(usize, usize, ExprPtr<'t>, usize), V<'a>>,
@@ -1111,6 +1114,7 @@ impl<'a, 't> TcCache<'a, 't> {
             bvar_hc: session_small_fx_hash_map(),
             spine_hc: session_fx_hash_map(),
             app_hc: session_fx_hash_map(),
+            rigid_app_dm: Box::new([(0, 0, None); RIGID_APP_DM_LEN]),
             env_hc: session_fx_hash_map(),
             lam_hc: session_small_fx_hash_map(),
             pi_hc: session_small_fx_hash_map(),
@@ -1161,6 +1165,7 @@ impl<'a, 't> TcCache<'a, 't> {
         self.bvar_hc.clear();
         self.spine_hc.clear();
         self.app_hc.clear();
+        self.rigid_app_dm.fill((0, 0, None));
         self.env_hc.clear();
         self.lam_hc.clear();
         self.pi_hc.clear();
@@ -1208,6 +1213,7 @@ impl<'a, 't> TcCache<'a, 't> {
         shrink_map(&mut self.bvar_hc);
         shrink_map(&mut self.spine_hc);
         shrink_map(&mut self.app_hc);
+        self.rigid_app_dm.fill((0, 0, None));
         shrink_map(&mut self.env_hc);
         shrink_map(&mut self.lam_hc);
         shrink_map(&mut self.pi_hc);
