@@ -1,0 +1,144 @@
+name: Flash ordinary-Unfold exact-PGO instruction gate
+
+on:
+  push:
+    branches:
+      - qckn-flash-unfold-instruction-gate-v1
+  workflow_dispatch:
+
+concurrency:
+  group: qckn-flash-unfold-instruction-gate-v1
+  cancel-in-progress: true
+
+jobs:
+  rank-gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build exact Arena exports
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test init-prelude >/dev/null
+          nix develop -c ./lka.py build-test mathlib >/dev/null
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}
+          EOF
+          nix develop -c perf --version | tee /tmp/perf-version.txt
+
+      - name: Build base and Unfold candidate with exact native PGO
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git worktree add /tmp/base "$GITHUB_SHA"
+          cp -a /tmp/base /tmp/candidate
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/candidate/src/flash.rs')
+          s=p.read_text()
+          old='pub(crate) const ORDINARY_UNFOLD_NEUTRAL: bool = false;'
+          new='pub(crate) const ORDINARY_UNFOLD_NEUTRAL: bool = true;'
+          assert s.count(old)==1
+          p.write_text(s.replace(old,new,1))
+          PY
+
+          LLVM_PROFDATA=$(nix shell nixpkgs#llvmPackages_21.llvm -c sh -c 'command -v llvm-profdata')
+          for arm in base candidate; do
+            rm -rf /tmp/$arm/target /tmp/$arm/pgo
+            mkdir -p /tmp/$arm/pgo
+            (
+              cd /tmp/$arm
+              RUSTFLAGS="-C target-cpu=native -Cprofile-generate=/tmp/$arm/pgo" cargo build --release --locked
+              target/release/sokonanoda /tmp/config.json </tmp/arena/_build/tests/init-prelude.ndjson >/dev/null
+              "$LLVM_PROFDATA" merge -o /tmp/$arm/pgo/merged.profdata /tmp/$arm/pgo
+              test -s /tmp/$arm/pgo/merged.profdata
+              rm -rf target
+              RUSTFLAGS="-C target-cpu=native -Cprofile-use=/tmp/$arm/pgo/merged.profdata" cargo build --release --locked
+              cp target/release/sokonanoda /tmp/$arm.bin
+            )
+          done
+
+      - name: Verify Mathlib status parity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          set +e
+          /tmp/base.bin /tmp/config.json <"$f" >/tmp/base.out 2>/tmp/base.err; b=$?
+          /tmp/candidate.bin /tmp/config.json <"$f" >/tmp/candidate.out 2>/tmp/candidate.err; c=$?
+          set -e
+          test "$b" -eq "$c"
+          echo "STATUS_MATCH=$c" | tee /tmp/parity.txt
+
+      - name: Arena-rank instruction A/B
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          PERF=$(nix develop -c sh -c 'command -v perf')
+          export LC_ALL=C
+          f="_build/tests/mathlib.ndjson"
+          : >/tmp/instructions.tsv
+
+          for rep in 1 2 3; do
+            if [ $((rep%2)) -eq 1 ]; then order="base candidate"; else order="candidate base"; fi
+            for arm in $order; do
+              "$PERF" stat -x $'\t' -e instructions -o /tmp/perf.txt --                 /tmp/$arm.bin /tmp/config.json <"$f" >/dev/null 2>/dev/null
+              python3 - "$arm" "$rep" /tmp/perf.txt <<'PY' >>/tmp/instructions.tsv
+          import sys
+          arm,rep,path=sys.argv[1:]
+          value=None
+          for line in open(path):
+              parts=line.rstrip("\n").split("\t")
+              if len(parts)>=3 and parts[2].strip().startswith("instructions"):
+                  raw=parts[0].strip().replace(",","")
+                  if raw and raw not in ("<not counted>","<not supported>"):
+                      value=int(float(raw)); break
+          if value is None:
+              raise SystemExit("instructions counter unavailable")
+          print(f"{arm}\t{rep}\t{value}")
+          PY
+            done
+          done
+
+          cat /tmp/instructions.tsv
+          python3 - <<'PY' | tee /tmp/scorecard.txt
+          from collections import defaultdict
+          from statistics import median
+          rows=defaultdict(list)
+          for line in open('/tmp/instructions.tsv'):
+              arm,rep,n=line.rstrip().split('\t')
+              rows[arm].append(int(n))
+          base=median(rows['base'])
+          cand=median(rows['candidate'])
+          print('base_runs='+repr(rows['base']))
+          print('candidate_runs='+repr(rows['candidate']))
+          print(f'BASE_MEDIAN_INSTRUCTIONS={int(base)}')
+          print(f'CANDIDATE_MEDIAN_INSTRUCTIONS={int(cand)}')
+          print(f'MATHLIB_INSTRUCTION_SPEEDUP={base/cand:.6f}')
+          print(f'INSTRUCTION_DELTA_PERCENT={(cand/base-1)*100:.4f}')
+          if cand < base:
+              print('FLASH_UNFOLD_INSTRUCTION_RANK_PASS')
+          else:
+              print('FLASH_UNFOLD_INSTRUCTION_RANK_REJECT')
+              raise SystemExit(1)
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-unfold-instruction-gate-v1
+          path: |
+            /tmp/parity.txt
+            /tmp/instructions.tsv
+            /tmp/scorecard.txt
+            /tmp/perf-version.txt
+          if-no-files-found: warn
