@@ -1,0 +1,70 @@
+name: QCKN Flash theorem proof shape census V1
+
+on:
+  push:
+    branches:
+      - qckn-flash-arena-instruction-v1
+    paths:
+      - 'scripts/apply_qckn_theorem_shape_census_v1.py'
+      - '.github/workflows/qckn-flash-theorem-shape-census-v1.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: qckn-flash-theorem-shape-census-v1
+  cancel-in-progress: true
+
+jobs:
+  census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Materialize shape-census frozen RC1
+        shell: bash
+        run: |
+          set -euxo pipefail
+          SOURCE=a342c74f6eb913c25c6dae4138158023d1b9aa6a
+          ARENA=510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          git worktree add --detach /tmp/census "$SOURCE"
+          (cd /tmp/census && python3 "$GITHUB_WORKSPACE/scripts/apply_qckn_theorem_shape_census_v1.py")
+          (cd /tmp/census && cargo build --release --locked)
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q "$ARENA"
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test mathlib >/dev/null
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+
+      - name: Run Mathlib theorem shape census
+        shell: bash
+        run: |
+          set -euxo pipefail
+          QCKN_THEOREM_SHAPES=1 /tmp/census/target/release/sokonanoda /tmp/config.json             </tmp/arena/_build/tests/mathlib.ndjson >/tmp/out.txt 2>/tmp/err.txt
+          grep '^QCKN_THEOREM_SHAPES ' /tmp/err.txt | tee /tmp/theorem-shapes.txt
+          test -s /tmp/theorem-shapes.txt
+          python3 - <<'PY' | tee /tmp/theorem-shape-summary.txt
+          import re
+          s=open('/tmp/theorem-shapes.txt').read().strip()
+          d={k:int(v) for k,v in re.findall(r'(\w+)=(\d+)',s)}
+          total=d['total']
+          print(f'TOTAL_THEOREMS={total}')
+          for k in ['root_var','root_sort','root_const','root_app','root_lam','root_pi','root_let','root_proj','root_nat','root_str','lam_ge1','lam_ge2','lam_ge4','lam_ge8','expected_pi_root']:
+              v=d.get(k,0)
+              print(f'{k.upper()}={v}')
+              print(f'{k.upper()}_SHARE={v/total:.6f}')
+          print(f'AVG_LAMBDA_PREFIX={d.get("lam_prefix_sum",0)/total:.6f}')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-theorem-shape-census-v1
+          path: |
+            /tmp/theorem-shapes.txt
+            /tmp/theorem-shape-summary.txt
+          if-no-files-found: warn
