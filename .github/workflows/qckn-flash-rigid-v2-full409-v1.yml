@@ -1,0 +1,90 @@
+name: Flash rigid V2 full 409 quotient authority
+
+on:
+  push:
+    branches:
+      - qckn-flash-rigid-v2-full409-v1
+  workflow_dispatch:
+
+concurrency:
+  group: qckn-flash-rigid-v2-full409-v1
+  cancel-in-progress: true
+
+jobs:
+  semantic:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build frozen champion and rigid V2
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git worktree add /tmp/champion 28bc6a91d68ee547ee94fca395f58e8f100879ea
+          git worktree add /tmp/candidate "$GITHUB_SHA"
+          for arm in champion candidate; do
+            (cd /tmp/$arm && RUSTFLAGS='-C target-cpu=x86-64-v3' cargo build --release --locked)
+            cp /tmp/$arm/target/release/sokonanoda /tmp/$arm.bin
+          done
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}
+          EOF
+
+      - name: Build full pinned Arena corpus
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          cd /tmp/arena
+          while IFS= read -r y; do
+            t=${y#tests/}; t=${t%.yaml}
+            nix develop -c ./lka.py build-test "$t" >/dev/null
+          done < <(find tests -type f -name '*.yaml' | sort)
+          find _build/tests -type f -name '*.ndjson' | sort >/tmp/exports.txt
+          test "$(wc -l </tmp/exports.txt)" -eq 409
+
+      - name: Full semantic congruence check
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          : >/tmp/semantic.tsv
+          : >/tmp/mismatches.tsv
+          while IFS= read -r f; do
+            set +e
+            /tmp/champion.bin /tmp/config.json <"$f" >/tmp/b.out 2>/tmp/b.err; b=$?
+            /tmp/candidate.bin /tmp/config.json <"$f" >/tmp/c.out 2>/tmp/c.err; c=$?
+            set -e
+            if [ "$b" -ne "$c" ] || ! cmp -s /tmp/b.out /tmp/c.out; then
+              printf 'DIST\t%s\tchampion=%s\tcandidate=%s\n' "$f" "$b" "$c" | tee -a /tmp/mismatches.tsv /tmp/semantic.tsv
+            else
+              printf 'EQ\t%s\t%s\n' "$c" "$f" >>/tmp/semantic.tsv
+            fi
+          done </tmp/exports.txt
+          mismatches=$(grep -c '^DIST' /tmp/mismatches.tsv || true)
+          echo "exports=409" | tee /tmp/summary.txt
+          echo "mismatches=$mismatches" | tee -a /tmp/summary.txt
+          if [ "$mismatches" -eq 0 ]; then
+            echo "QCKN_QUOTIENT_EQ=PASS" | tee -a /tmp/summary.txt
+            echo "QCKN_RIGHT_CONGRUENCE_ARENA409=PASS" | tee -a /tmp/summary.txt
+          else
+            echo "QCKN_QUOTIENT_EQ=FAIL" | tee -a /tmp/summary.txt
+            echo "QCKN_RIGHT_CONGRUENCE_ARENA409=FAIL" | tee -a /tmp/summary.txt
+            exit 1
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-rigid-v2-full409-v1
+          path: |
+            /tmp/exports.txt
+            /tmp/semantic.tsv
+            /tmp/mismatches.tsv
+            /tmp/summary.txt
+          if-no-files-found: warn
