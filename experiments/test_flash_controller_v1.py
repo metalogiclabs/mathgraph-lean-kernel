@@ -21,7 +21,7 @@ unfold_pass["events"].append({
 })
 up=fc.close(unfold_pass,deepcopy(manifest))
 assert up["runtime_policy"]["promoted"]==["direct_framed_prune","direct_var_eval","ordinary_unfold_neutral"]
-assert up["selected_action"]=="app_simple_apply_new_representation"
+assert up["selected_action"]=="rigid_inductive_exact_interface_census"
 
 failed=deepcopy(evidence)
 failed["events"].append({
