@@ -1,0 +1,278 @@
+name: Flash DirectVar x Unfold factorial V1
+
+on:
+  push:
+    branches:
+      - qckn-flash-dv-unfold-factorial-v1
+    paths:
+      - '.github/workflows/qckn-flash-dv-unfold-factorial-v1.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: qckn-flash-dv-unfold-factorial-v1
+  cancel-in-progress: true
+
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Record provenance and materialize factorial arms
+        shell: bash
+        run: |
+          set -euxo pipefail
+          SOURCE=a342c74f6eb913c25c6dae4138158023d1b9aa6a
+          LEADER=28c03d0103e004610e4d47a4828965efb2b70af9
+          ARENA=510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          cat >/tmp/provenance.tsv <<EOF
+          frozen_source_sha	$SOURCE
+          arena_sokonanoda_sha	$LEADER
+          arena_suite_sha	$ARENA
+          fixed_capabilities	direct_framed_prune,rigid_inductive_neutral,app_hc_prealloc
+          factorial_axes	direct_var_eval,ordinary_unfold_neutral
+          EOF
+
+          for arm in off_off dv_only unfold_only dv_unfold; do
+            git worktree add --detach /tmp/$arm "$SOURCE"
+          done
+          git worktree add --detach /tmp/leader "$LEADER"
+
+          python3 - <<'PY'
+          from pathlib import Path
+          states = {
+              "off_off": (False, False),
+              "dv_only": (True, False),
+              "unfold_only": (False, True),
+              "dv_unfold": (True, True),
+          }
+          for arm, (dv, uf) in states.items():
+              p = Path("/tmp") / arm / "src/flash.rs"
+              s = p.read_text()
+              s = s.replace(
+                  "pub(crate) const DIRECT_VAR_EVAL: bool = true;",
+                  f"pub(crate) const DIRECT_VAR_EVAL: bool = {str(dv).lower()};",
+              )
+              s = s.replace(
+                  "pub(crate) const DIRECT_VAR_EVAL: bool = false;",
+                  f"pub(crate) const DIRECT_VAR_EVAL: bool = {str(dv).lower()};",
+              )
+              s = s.replace(
+                  "pub(crate) const ORDINARY_UNFOLD_NEUTRAL: bool = false;",
+                  f"pub(crate) const ORDINARY_UNFOLD_NEUTRAL: bool = {str(uf).lower()};",
+              )
+              s = s.replace(
+                  "pub(crate) const ORDINARY_UNFOLD_NEUTRAL: bool = true;",
+                  f"pub(crate) const ORDINARY_UNFOLD_NEUTRAL: bool = {str(uf).lower()};",
+              )
+              p.write_text(s)
+              assert f"DIRECT_VAR_EVAL: bool = {str(dv).lower()}" in s
+              assert f"ORDINARY_UNFOLD_NEUTRAL: bool = {str(uf).lower()}" in s
+          PY
+
+          for arm in off_off dv_only unfold_only dv_unfold; do
+            printf '%s\t' "$arm" >>/tmp/factorial-state.tsv
+            grep -E 'DIRECT_VAR_EVAL|ORDINARY_UNFOLD_NEUTRAL' /tmp/$arm/src/flash.rs | tr '\n' ' ' >>/tmp/factorial-state.tsv
+            echo >>/tmp/factorial-state.tsv
+          done
+
+      - name: Build complete pinned Arena corpus
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          cd /tmp/arena
+          : >/tmp/build-tests.tsv
+          while IFS= read -r y; do
+            t=${y#tests/}; t=${t%.yaml}
+            echo "BUILD $t" >>/tmp/build-tests.tsv
+            nix develop -c ./lka.py build-test "$t" >/dev/null
+          done < <(find tests -type f -name '*.yaml' | sort)
+          find _build/tests -type f -name '*.ndjson' | sort >/tmp/exports.txt
+          count=$(wc -l </tmp/exports.txt)
+          echo "exports=$count" | tee /tmp/export-count.txt
+          test "$count" -eq 409
+
+      - name: Build semantic reference binaries
+        shell: bash
+        run: |
+          set -euxo pipefail
+          for arm in dv_only off_off unfold_only dv_unfold; do
+            (cd /tmp/$arm && RUSTFLAGS='-C target-cpu=x86-64-v3' cargo build --release --locked)
+            cp /tmp/$arm/target/release/sokonanoda /tmp/$arm.semantic.bin
+          done
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}
+          EOF
+
+      - name: Exact Arena-style native PGO build for all factorial arms and leader
+        shell: bash
+        run: |
+          set -euxo pipefail
+          LLVM_PROFDATA=$(nix shell nixpkgs#llvmPackages_21.llvm -c sh -c 'command -v llvm-profdata')
+          init=/tmp/arena/_build/tests/init-prelude.ndjson
+          for arm in off_off dv_only unfold_only dv_unfold leader; do
+            rm -rf /tmp/$arm/target /tmp/$arm/pgo
+            mkdir -p /tmp/$arm/pgo
+            (
+              cd /tmp/$arm
+              RUSTFLAGS="-C target-cpu=native -Cprofile-generate=/tmp/$arm/pgo" cargo build --release --locked
+              target/release/sokonanoda /tmp/config.json <"$init" >/dev/null
+              "$LLVM_PROFDATA" merge -o /tmp/$arm/pgo/merged.profdata /tmp/$arm/pgo
+              test -s /tmp/$arm/pgo/merged.profdata
+              rm -rf target
+              RUSTFLAGS="-C target-cpu=native -Cprofile-use=/tmp/$arm/pgo/merged.profdata" cargo build --release --locked
+              cp target/release/sokonanoda /tmp/$arm.pgo.bin
+            )
+          done
+
+      - name: Five-replay PGO Mathlib factorial
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          f="_build/tests/mathlib.ndjson"
+          : >/tmp/mathlib-factorial.tsv
+          arms=(off_off dv_only unfold_only dv_unfold leader)
+          for rep in 1 2 3 4 5; do
+            if [ $((rep%2)) -eq 1 ]; then
+              order=(off_off dv_only unfold_only dv_unfold leader)
+            else
+              order=(leader dv_unfold unfold_only dv_only off_off)
+            fi
+            for arm in "${order[@]}"; do
+              /usr/bin/time -f '%e\t%U\t%M' -o /tmp/time /tmp/$arm.pgo.bin /tmp/config.json <"$f" >/dev/null 2>/dev/null
+              read -r wall user rss </tmp/time
+              printf '%s\t%s\t%s\t%s\t%s\n' "$arm" "$rep" "$wall" "$user" "$rss" | tee -a /tmp/mathlib-factorial.tsv
+            done
+          done
+
+          python3 - <<'PY' | tee /tmp/factorial-scorecard.txt
+          from collections import defaultdict
+          from statistics import median
+          rows=defaultdict(list)
+          for line in open('/tmp/mathlib-factorial.tsv'):
+              arm,rep,wall,user,rss=line.rstrip().split('\t')
+              rows[arm].append((float(wall),float(user),int(rss)))
+          med={a: median(x[0] for x in xs) for a,xs in rows.items()}
+          print("arm\tmedian_s\tvs_leader_speedup\tmargin_percent")
+          leader=med["leader"]
+          for a in ("off_off","dv_only","unfold_only","dv_unfold","leader"):
+              print(f"{a}\t{med[a]:.6f}\t{leader/med[a]:.6f}\t{(leader/med[a]-1)*100:.4f}")
+          print(f"DV_EFFECT_U0={med['off_off']/med['dv_only']:.6f}")
+          print(f"DV_EFFECT_U1={med['unfold_only']/med['dv_unfold']:.6f}")
+          print(f"UNFOLD_EFFECT_D0={med['off_off']/med['unfold_only']:.6f}")
+          print(f"UNFOLD_EFFECT_D1={med['dv_only']/med['dv_unfold']:.6f}")
+          expected=(med['off_off']/med['dv_only'])*(med['off_off']/med['unfold_only'])
+          observed=med['off_off']/med['dv_unfold']
+          print(f"EXPECTED_MULTIPLICATIVE_COMBINED={expected:.6f}")
+          print(f"OBSERVED_COMBINED={observed:.6f}")
+          print(f"INTERACTION_RATIO={observed/expected:.6f}")
+          candidates=("off_off","dv_only","unfold_only","dv_unfold")
+          winner=min(candidates,key=med.get)
+          print("FACTORIAL_WINNER="+winner)
+          print(f"WINNER_MEDIAN_S={med[winner]:.6f}")
+          print(f"WINNER_VS_DV_ONLY_SPEEDUP={med['dv_only']/med[winner]:.6f}")
+          print(f"WINNER_VS_LEADER_SPEEDUP={leader/med[winner]:.6f}")
+          print(f"WINNER_MARGIN_PERCENT={(leader/med[winner]-1)*100:.4f}")
+          open('/tmp/winner.txt','w').write(winner+'\n')
+          PY
+
+      - name: Full 409 semantic parity for factorial winner
+        shell: bash
+        run: |
+          set -euxo pipefail
+          winner=$(cat /tmp/winner.txt)
+          cd /tmp/arena
+          : >/tmp/semantic.tsv
+          : >/tmp/mismatches.tsv
+          while IFS= read -r f; do
+            set +e
+            /tmp/dv_only.semantic.bin /tmp/config.json <"$f" >/tmp/base.out 2>/tmp/base.err; b=$?
+            /tmp/$winner.semantic.bin /tmp/config.json <"$f" >/tmp/win.out 2>/tmp/win.err; w=$?
+            set -e
+            if [ "$b" -ne "$w" ] || ! cmp -s /tmp/base.out /tmp/win.out; then
+              printf 'MISMATCH\t%s\tdv_only=%s\t%s=%s\n' "$f" "$b" "$winner" "$w" | tee -a /tmp/mismatches.tsv /tmp/semantic.tsv
+            else
+              printf 'MATCH\t%s\t%s\n' "$w" "$f" >>/tmp/semantic.tsv
+            fi
+          done </tmp/exports.txt
+          mismatches=$(grep -c '^MISMATCH' /tmp/mismatches.tsv || true)
+          {
+            echo "winner=$winner"
+            echo "exports=409"
+            echo "semantic_mismatches=$mismatches"
+          } | tee /tmp/semantic-summary.txt
+          test "$mismatches" -eq 0
+          echo FACTORIAL_WINNER_409_PARITY_PASS | tee -a /tmp/semantic-summary.txt
+
+      - name: PGO broad panel for winner versus leader
+        shell: bash
+        run: |
+          set -euxo pipefail
+          winner=$(cat /tmp/winner.txt)
+          cd /tmp/arena
+          : >/tmp/panel.tsv
+          for t in cslib cedar init perf/grind-ring-5; do
+            f="_build/tests/$t.ndjson"
+            for rep in 1 2 3; do
+              if [ $((rep%2)) -eq 1 ]; then order="leader winner"; else order="winner leader"; fi
+              for label in $order; do
+                if [ "$label" = winner ]; then arm="$winner"; else arm=leader; fi
+                /usr/bin/time -f '%e\t%U\t%M' -o /tmp/time /tmp/$arm.pgo.bin /tmp/config.json <"$f" >/dev/null 2>/dev/null
+                read -r wall user rss </tmp/time
+                printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$t" "$label" "$rep" "$wall" "$user" "$rss" >>/tmp/panel.tsv
+              done
+            done
+          done
+          python3 - <<'PY' | tee /tmp/panel-scorecard.txt
+          from collections import defaultdict
+          from statistics import median
+          rows=defaultdict(lambda:defaultdict(list))
+          for line in open('/tmp/panel.tsv'):
+              t,a,r,w,u,m=line.rstrip().split('\t')
+              rows[t][a].append(float(w))
+          print("test\tleader\twinner\tspeedup")
+          for t in rows:
+              l=median(rows[t]["leader"]); w=median(rows[t]["winner"])
+              print(f"{t}\t{l:.3f}\t{w:.3f}\t{l/w:.4f}")
+          PY
+
+      - name: Emit decision
+        shell: bash
+        run: |
+          set -euxo pipefail
+          winner=$(cat /tmp/winner.txt)
+          test "$(grep -c '^MISMATCH' /tmp/mismatches.tsv || true)" -eq 0
+          {
+            echo "FLASH_DV_UNFOLD_FACTORIAL_V1=PASS"
+            echo "winner=$winner"
+            cat /tmp/semantic-summary.txt
+            grep -E '^(DV_EFFECT|UNFOLD_EFFECT|EXPECTED_MULTIPLICATIVE_COMBINED|OBSERVED_COMBINED|INTERACTION_RATIO|FACTORIAL_WINNER|WINNER_)' /tmp/factorial-scorecard.txt
+          } | tee /tmp/decision.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-dv-unfold-factorial-v1
+          path: |
+            /tmp/provenance.tsv
+            /tmp/factorial-state.tsv
+            /tmp/build-tests.tsv
+            /tmp/exports.txt
+            /tmp/export-count.txt
+            /tmp/mathlib-factorial.tsv
+            /tmp/factorial-scorecard.txt
+            /tmp/winner.txt
+            /tmp/semantic.tsv
+            /tmp/mismatches.tsv
+            /tmp/semantic-summary.txt
+            /tmp/panel.tsv
+            /tmp/panel-scorecard.txt
+            /tmp/decision.txt
+          if-no-files-found: warn
