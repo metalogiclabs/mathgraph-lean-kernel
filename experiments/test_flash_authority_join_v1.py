@@ -9,19 +9,19 @@ aj=importlib.util.module_from_spec(spec); spec.loader.exec_module(aj)
 semantic={
  "id":"s","kind":"semantic_authority","capability_id":"c","family":"f",
  "run":1,"semantic_scope":"409_current_arena_exports","semantic_pass":True,
- "implementation_blob_sha":"abc",
+ "implementation_identity":"abc",
 }
 performance={
  "id":"p","kind":"performance_authority","capability_id":"c","family":"f",
- "run":2,"performance_pass":True,"implementation_blob_sha":"abc",
+ "run":2,"performance_pass":True,"implementation_identity":"abc",
  "observations":{"speedup":1.04},
 }
 j=aj.join(semantic,performance)
 assert j["authority_join_verified"] is True
 assert j["semantic_run"]==1 and j["run"]==2
-assert j["implementation_blob_sha"]=="abc"
+assert j["implementation_identity"]=="abc"
 
-bad=dict(performance); bad["implementation_blob_sha"]="def"
+bad=dict(performance); bad["implementation_identity"]="def"
 try:
     aj.join(semantic,bad)
 except ValueError as e:
