@@ -1,0 +1,130 @@
+name: Flash app_hc capacity instruction sweep v1
+
+on:
+  push:
+    branches:
+      - qckn-flash-app-hc-capacity-sweep-v1
+  workflow_dispatch:
+
+concurrency:
+  group: qckn-flash-app-hc-capacity-sweep-v1
+  cancel-in-progress: true
+
+jobs:
+  sweep:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 210
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build exact Arena exports
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test init-prelude >/dev/null
+          nix develop -c ./lka.py build-test mathlib >/dev/null
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}
+          EOF
+
+      - name: Materialize capacity states
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git worktree add /tmp/base "$GITHUB_SHA"
+          for arm in cap14 cap15 cap16 cap17; do cp -a /tmp/base /tmp/$arm; done
+          python3 - <<'PY'
+          from pathlib import Path
+          states={'cap14':14,'cap15':15,'cap16':16,'cap17':17}
+          for arm,pow2 in states.items():
+              fp=Path('/tmp')/arm/'src/flash.rs'
+              s=fp.read_text()
+              old='pub(crate) const APP_HC_PREALLOC: bool = false;'
+              assert old in s
+              fp.write_text(s.replace(old,'pub(crate) const APP_HC_PREALLOC: bool = true;',1))
+              up=Path('/tmp')/arm/'src/util.rs'
+              u=up.read_text()
+              import re
+              u2,n=re.subn(r'pub\(crate\) const APP_HC_PREALLOC_CAP: usize = 1 << \d+;',
+                           f'pub(crate) const APP_HC_PREALLOC_CAP: usize = 1 << {pow2};',u,count=1)
+              assert n==1
+              up.write_text(u2)
+          PY
+
+      - name: Exact native-PGO build states
+        shell: bash
+        run: |
+          set -euxo pipefail
+          LLVM_PROFDATA=$(nix shell nixpkgs#llvmPackages_21.llvm -c sh -c 'command -v llvm-profdata')
+          for arm in base cap14 cap15 cap16 cap17; do
+            rm -rf /tmp/$arm/target /tmp/$arm/pgo
+            mkdir -p /tmp/$arm/pgo
+            (
+              cd /tmp/$arm
+              RUSTFLAGS="-C target-cpu=native -Cprofile-generate=/tmp/$arm/pgo" cargo build --release --locked
+              target/release/sokonanoda /tmp/config.json </tmp/arena/_build/tests/init-prelude.ndjson >/dev/null
+              "$LLVM_PROFDATA" merge -o /tmp/$arm/pgo/merged.profdata /tmp/$arm/pgo
+              rm -rf target
+              RUSTFLAGS="-C target-cpu=native -Cprofile-use=/tmp/$arm/pgo/merged.profdata" cargo build --release --locked
+              cp target/release/sokonanoda /tmp/$arm.bin
+            )
+          done
+
+      - name: Instruction sweep
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          PERF=$(nix develop -c sh -c 'command -v perf')
+          export LC_ALL=C
+          f="_build/tests/mathlib.ndjson"
+          : >/tmp/instructions.tsv
+          for rep in 1 2; do
+            if [ "$rep" -eq 1 ]; then order="base cap14 cap15 cap16 cap17"; else order="cap17 cap16 cap15 cap14 base"; fi
+            for arm in $order; do
+              "$PERF" stat -x $'\t' -e instructions -o /tmp/perf.txt --                 /tmp/$arm.bin /tmp/config.json <"$f" >/dev/null 2>/dev/null
+              python3 - "$arm" "$rep" /tmp/perf.txt <<'PY' >>/tmp/instructions.tsv
+          import sys
+          arm,rep,path=sys.argv[1:]
+          value=None
+          for line in open(path):
+              p=line.rstrip().split('\t')
+              if len(p)>=3 and p[2].strip().startswith('instructions'):
+                  raw=p[0].replace(',','').strip()
+                  if raw and raw not in ('<not counted>','<not supported>'):
+                      value=int(float(raw)); break
+          if value is None: raise SystemExit('instructions unavailable')
+          print(f'{arm}\t{rep}\t{value}')
+          PY
+            done
+          done
+          python3 - <<'PY' | tee /tmp/scorecard.txt
+          from collections import defaultdict
+          from statistics import median
+          rows=defaultdict(list)
+          for l in open('/tmp/instructions.tsv'):
+              a,r,n=l.rstrip().split('\t'); rows[a].append(int(n))
+          med={a:median(v) for a,v in rows.items()}
+          for a in ('base','cap14','cap15','cap16','cap17'):
+              print(f'{a}_runs={rows[a]}')
+              print(f'{a}_median={int(med[a])}')
+              print(f'{a}_vs_base={med["base"]/med[a]:.6f}')
+          winner=min(med,key=med.get)
+          print('APP_HC_CAPACITY_WINNER='+winner)
+          print('WINNER_INSTRUCTIONS='+str(int(med[winner])))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-app-hc-capacity-sweep-v1
+          path: |
+            /tmp/instructions.tsv
+            /tmp/scorecard.txt
+          if-no-files-found: warn
