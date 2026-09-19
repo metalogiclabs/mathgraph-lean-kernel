@@ -5,7 +5,7 @@ from pathlib import Path
 SCHEMA="mathgraph.flash.authority-join.v1"
 
 def join(semantic, performance):
-    required=("capability_id","implementation_blob_sha")
+    required=("capability_id","implementation_identity")
     for x in (semantic, performance):
         for k in required:
             if k not in x:
@@ -13,7 +13,7 @@ def join(semantic, performance):
 
     if semantic["capability_id"] != performance["capability_id"]:
         raise ValueError("capability mismatch")
-    if semantic["implementation_blob_sha"] != performance["implementation_blob_sha"]:
+    if semantic["implementation_identity"] != performance["implementation_identity"]:
         raise ValueError("implementation mismatch")
     if semantic.get("semantic_scope") != "409_current_arena_exports":
         raise ValueError("insufficient semantic scope")
@@ -32,7 +32,7 @@ def join(semantic, performance):
         "semantic_scope": semantic["semantic_scope"],
         "semantic_pass": True,
         "performance_pass": True,
-        "implementation_blob_sha": semantic["implementation_blob_sha"],
+        "implementation_identity": semantic["implementation_identity"],
         "authority_join_verified": True,
         "joined_from": [semantic["id"], performance["id"]],
         "performance": performance.get("observations", {}),
@@ -46,7 +46,7 @@ def main():
     op.write_text(json.dumps(out,indent=2,sort_keys=True)+"\n")
     print("FLASH_AUTHORITY_JOIN_PASS")
     print("CAPABILITY="+out["capability_id"])
-    print("IMPLEMENTATION="+out["implementation_blob_sha"])
+    print("IMPLEMENTATION="+out["implementation_identity"])
 
 if __name__=="__main__":
     main()
