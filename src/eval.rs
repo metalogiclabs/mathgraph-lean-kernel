@@ -589,6 +589,40 @@ const WHNF_ADMIT_THRESHOLD: u8 = 2;
 const FAIL_CLOSURE: u8 = 1;
 const FAIL_DEPTH: u8 = 7;
 
+#[cfg(feature = "qckn-rigid-interface-atlas")]
+static QCKN_RIGID_INTERFACE_ATLAS: [std::sync::atomic::AtomicU64; 14] =
+    [const { std::sync::atomic::AtomicU64::new(0) }; 14];
+
+#[cfg(feature = "qckn-rigid-interface-atlas")]
+#[inline]
+fn rigid_interface_atlas_record(index: usize) {
+    QCKN_RIGID_INTERFACE_ATLAS[index].fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+}
+
+#[cfg(feature = "qckn-rigid-interface-atlas")]
+pub fn dump_rigid_interface_atlas() {
+    const LABELS: [&str; 14] = [
+        "rigid_inductive_simple_total",
+        "f_pre_canonical",
+        "a_pre_canonical",
+        "f_post_same_ptr",
+        "a_post_same_ptr",
+        "app_hc_hit",
+        "app_hc_miss",
+        "spine_len_0",
+        "spine_len_1",
+        "spine_len_2_3",
+        "spine_len_4_plus",
+        "spine_closed",
+        "arg_closed",
+        "spine_canonical",
+    ];
+    for (i, label) in LABELS.iter().enumerate() {
+        let n = QCKN_RIGID_INTERFACE_ATLAS[i].load(std::sync::atomic::Ordering::Relaxed);
+        eprintln!("QCKN_RIGID_INTERFACE_ATLAS\t{i}\t{label}\t{n}");
+    }
+}
+
 #[inline(always)]
 pub(crate) fn plain_unfold_neutral_path(nat_extension: bool, is_nat_red: bool) -> bool {
     !nat_extension || !is_nat_red
@@ -729,6 +763,33 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 let clo_body = clo.body;
                 let new_env = self.env_extend(clo_env, a);
                 return self.eval(depth, new_env, clo_body);
+            }
+            #[cfg(feature = "qckn-rigid-interface-atlas")]
+            if let Value::Rigid { head: RigidHead::Inductive(_, _), .. } = f {
+                rigid_interface_atlas_record(0);
+                if f.is_canonical() { rigid_interface_atlas_record(1); }
+                if a.is_canonical() { rigid_interface_atlas_record(2); }
+                let fc = self.canonicalize_for_spine(f);
+                let ac = self.canonicalize_for_spine(a);
+                if std::ptr::eq(fc, f) { rigid_interface_atlas_record(3); }
+                if std::ptr::eq(ac, a) { rigid_interface_atlas_record(4); }
+                let key = (fc as *const Value<'t> as usize, ac as *const Value<'t> as usize);
+                if self.tc_cache.app_hc.contains_key(&key) {
+                    rigid_interface_atlas_record(5);
+                } else {
+                    rigid_interface_atlas_record(6);
+                }
+                if let Value::Rigid { spine, .. } = fc {
+                    match spine.len() {
+                        0 => rigid_interface_atlas_record(7),
+                        1 => rigid_interface_atlas_record(8),
+                        2..=3 => rigid_interface_atlas_record(9),
+                        _ => rigid_interface_atlas_record(10),
+                    }
+                    if spine.is_closed() { rigid_interface_atlas_record(11); }
+                    if spine.is_canonical() { rigid_interface_atlas_record(13); }
+                }
+                if ac.is_closed() { rigid_interface_atlas_record(12); }
             }
             if crate::flash::ORDINARY_UNFOLD_NEUTRAL {
                 if let Value::Unfold { head, .. } = f {
