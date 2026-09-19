@@ -120,7 +120,15 @@ def close(evidence, manifest):
             "reason":"neutral dispatch rejected; function canonical=100%, argument canonical=90.0%, app_hc hit=43.95%; measure interning cost before new representation",
         })
 
-    if "app_first_sight_bypass" not in killed_families and evalc.get("app_simple_apply_share_eval",0) > 0:
+    rigid_share_eval = appkind.get("rigid_inductive_share_eval_estimate",0)
+    if unfold_cap and unfold_cap.get("status") == "promoted" and rigid_share_eval > 0:
+        frontier.append({
+            "id":"rigid_inductive_exact_interface_census",
+            "mode":"observation_request",
+            "priority": rigid_share_eval,
+            "reason":"next known App basin after ordinary-Unfold; V39 forbids generic digest reuse without exact structural equality",
+        })
+    elif "app_first_sight_bypass" not in killed_families and evalc.get("app_simple_apply_share_eval",0) > 0:
         frontier.append({
             "id":"app_simple_apply_search",
             "mode":"new_search",
