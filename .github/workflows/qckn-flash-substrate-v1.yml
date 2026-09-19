@@ -3,9 +3,6 @@ name: QCKN Flash substrate preflight
 on:
   push:
     branches:
-      - qckn-flash-substrate-v1
-      - qckn-flash-unfold-reclosure-v1
-      - qckn-flash-index-v1
       - qckn-flash-current-v1
   workflow_dispatch:
 
@@ -18,14 +15,19 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+
       - name: Close evidence graph and compile runtime
+        shell: bash
         run: |
           set -euxo pipefail
           rm -rf /tmp/flash-v1
           python3 experiments/flash_controller_v1.py             experiments/flash_closure_v1_evidence.json             experiments/flash_capability_manifest_v1.json             /tmp/flash-v1             /tmp/flash.rs | tee /tmp/flash-controller.log
+
           grep -q '^FLASH_CONTROLLER_FIXED_POINT$' /tmp/flash-controller.log
-          grep -q '^PROMOTED=direct_framed_prune,direct_var_eval
+          grep -q '^PROMOTED=direct_framed_prune,direct_var_eval$' /tmp/flash-controller.log
+          grep -q '^SELECTED_ACTION=revalidate_ordinary_unfold_neutral$' /tmp/flash-controller.log
           cmp src/flash.rs /tmp/flash.rs
+
           python3 - <<'PY'
           import json
           c=json.load(open('/tmp/flash-v1/closure.json'))
@@ -39,28 +41,29 @@ jobs:
           assert len(cert['closure_sha256'])==64
           print('FLASH_SUBSTRATE_PREFLIGHT_PASS')
           PY
+
       - name: Test Flash transition semantics
         run: python3 experiments/test_flash_controller_v1.py
+
+      - name: Test Flash impact index
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 experiments/flash_index_v1.py             experiments/flash_capability_manifest_v1.json             experiments/flash_closure_v1_evidence.json             /tmp/flash-impact-index.json | tee /tmp/flash-impact-index.log
+          grep -q '^FLASH_IMPACT_INDEX_PASS$' /tmp/flash-impact-index.log
+          python3 experiments/test_flash_index_v1.py
+
       - name: Build compiled inner policy
         run: |
           cargo test --release --locked --             --skip reject_rec_rule_with_forged_lambda_domains             --skip reject_unlisted_recursor
- /tmp/flash-controller.log
-          cmp src/flash.rs /tmp/flash.rs
-          python3 - <<'PY'
-          import json
-          c=json.load(open('/tmp/flash-v1/closure.json'))
-          assert c['runtime_policy']['promoted']==['direct_var_eval']
-          assert 'universe_equality_search' in c['cancelled_work']
-          assert 'app_first_sight_bypass' in c['killed_families']
-          assert 'same_head_unfold_continuation' in c['killed_families']
-          assert any(x['id']=='revalidate_ordinary_unfold_neutral' for x in c['frontier'])
-          assert c['selected_action']=='revalidate_direct_framed_prune'
-          cert=json.load(open('/tmp/flash-v1/certificate.json'))
-          assert len(cert['closure_sha256'])==64
-          print('FLASH_SUBSTRATE_PREFLIGHT_PASS')
-          PY
-      - name: Test Flash transition semantics
-        run: python3 experiments/test_flash_controller_v1.py
-      - name: Build compiled inner policy
-        run: |
-          cargo test --release --locked --             --skip reject_rec_rule_with_forged_lambda_domains             --skip reject_unlisted_recursor
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-current-v1
+          path: |
+            /tmp/flash-v1
+            /tmp/flash-controller.log
+            /tmp/flash-impact-index.json
+            /tmp/flash-impact-index.log
+          if-no-files-found: warn
