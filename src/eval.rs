@@ -730,6 +730,13 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 let new_env = self.env_extend(clo_env, a);
                 return self.eval(depth, new_env, clo_body);
             }
+            if crate::rigid_profile::enabled() {
+                if let Value::Rigid { head, .. } = f {
+                    if matches!(*head, RigidHead::Inductive(_, _)) {
+                        return self.neutral_app_rigid_inductive_profile(f, a);
+                    }
+                }
+            }
             if crate::flash::ORDINARY_UNFOLD_NEUTRAL {
                 if let Value::Unfold { head, .. } = f {
                     if plain_unfold_neutral_path(self.nat_extension, self.is_nat_red_name(head.name)) {
@@ -893,6 +900,33 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
             }
             Value::Pi { domain, .. } => domain,
             _ => panic!("lam_domain: not a Lam/Pi"),
+        }
+    }
+
+    fn neutral_app_rigid_inductive_profile(&mut self, f: V<'t>, a: V<'t>) -> V<'t> {
+        let spine_len = match f {
+            Value::Rigid { spine, .. } => spine.len(),
+            _ => 0,
+        };
+        crate::rigid_profile::note_pre(f.is_canonical(), a.is_canonical(), spine_len);
+
+        let f = self.canonicalize_for_spine(f);
+        let a = self.canonicalize_for_spine(a);
+        let key = (f as *const Value<'t> as usize, a as *const Value<'t> as usize);
+        match self.tc_cache.app_hc.entry(key) {
+            Entry::Occupied(o) => {
+                crate::rigid_profile::note_app_hc(true);
+                o.get()
+            }
+            Entry::Vacant(slot) => {
+                crate::rigid_profile::note_app_hc(false);
+                let Value::Rigid { head, spine, .. } = f else { unreachable!() };
+                let spine = value::spine_snoc(self.arena, spine, Elim::app(a));
+                let v = value::mk_rigid(self.arena, *head, spine);
+                spine.mark_canonical();
+                v.mark_canonical();
+                slot.insert(v)
+            }
         }
     }
 
