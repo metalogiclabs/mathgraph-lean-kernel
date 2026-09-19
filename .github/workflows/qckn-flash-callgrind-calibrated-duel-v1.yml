@@ -1,0 +1,134 @@
+name: Flash calibrated Callgrind duel v1
+
+on:
+  push:
+    branches:
+      - qckn-flash-callgrind-calibrated-duel-v1
+  workflow_dispatch:
+
+concurrency:
+  group: qckn-flash-callgrind-calibrated-duel-v1
+  cancel-in-progress: true
+
+jobs:
+  duel:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build exact Arena exports
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test init-prelude >/dev/null
+          nix develop -c ./lka.py build-test mathlib >/dev/null
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}
+          EOF
+
+      - name: Materialize leader, public MathGraph, and champion
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git worktree add /tmp/champion "$GITHUB_SHA"
+          git worktree add /tmp/leader 28c03d0103e004610e4d47a4828965efb2b70af9
+          git worktree add /tmp/public d6a73279e6765e637f9741180cefbd7ef957d8e5
+
+      - name: Build all three with deterministic PGO regime
+        shell: bash
+        run: |
+          set -euxo pipefail
+          LLVM_PROFDATA=$(nix shell nixpkgs#llvmPackages_21.llvm -c sh -c 'command -v llvm-profdata')
+          FLAGS='-C target-cpu=x86-64 -C target-feature=-avx,-avx2,-avx512f,-fma'
+          for arm in leader public champion; do
+            rm -rf /tmp/$arm/target /tmp/$arm/pgo
+            mkdir -p /tmp/$arm/pgo
+            (
+              cd /tmp/$arm
+              RUSTFLAGS="$FLAGS -Cprofile-generate=/tmp/$arm/pgo" cargo build --release --locked
+              target/release/sokonanoda /tmp/config.json </tmp/arena/_build/tests/init-prelude.ndjson >/dev/null
+              "$LLVM_PROFDATA" merge -o /tmp/$arm/pgo/merged.profdata /tmp/$arm/pgo
+              test -s /tmp/$arm/pgo/merged.profdata
+              rm -rf target
+              RUSTFLAGS="$FLAGS -Cprofile-use=/tmp/$arm/pgo/merged.profdata" cargo build --release --locked
+              cp target/release/sokonanoda /tmp/$arm.bin
+            )
+          done
+          sha256sum /tmp/leader.bin /tmp/public.bin /tmp/champion.bin | tee /tmp/binaries.sha256
+
+      - name: Verify Mathlib status parity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          : >/tmp/parity.tsv
+          for arm in leader public champion; do
+            set +e
+            /tmp/$arm.bin /tmp/config.json <"$f" >/tmp/$arm.out 2>/tmp/$arm.err
+            rc=$?
+            set -e
+            printf '%s\t%s\n' "$arm" "$rc" | tee -a /tmp/parity.tsv
+          done
+          test "$(cut -f2 /tmp/parity.tsv | sort -u | wc -l)" -eq 1
+
+      - name: Deterministic Mathlib Callgrind duel
+        shell: bash
+        run: |
+          set -euxo pipefail
+          VALGRIND=$(nix shell nixpkgs#valgrind -c sh -c 'command -v valgrind')
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          : >/tmp/callgrind.tsv
+          for arm in leader public champion; do
+            out=/tmp/$arm.callgrind
+            set +e
+            timeout 7200s "$VALGRIND" --tool=callgrind --quiet --collect-jumps=no               --callgrind-out-file="$out"               /tmp/$arm.bin /tmp/config.json <"$f" >/tmp/$arm.cg.out 2>/tmp/$arm.cg.err
+            rc=$?
+            set -e
+            test "$rc" -eq 0
+            ir=$(awk '/^summary:/ {print $2; exit}' "$out")
+            test -n "$ir"
+            printf '%s\t%s\n' "$arm" "$ir" | tee -a /tmp/callgrind.tsv
+          done
+
+          python3 - <<'PY' | tee /tmp/scorecard.txt
+          vals={}
+          for l in open('/tmp/callgrind.tsv'):
+              a,n=l.rstrip().split('\t'); vals[a]=int(n)
+          l=vals['leader']; p=vals['public']; c=vals['champion']
+          official_public=834128776012/746890956754
+          proxy_public=p/l
+          proxy_champion=c/l
+          scale=official_public/proxy_public
+          calibrated=proxy_champion*scale
+          print(f'LEADER_CALLGRIND_IR={l}')
+          print(f'PUBLIC_CALLGRIND_IR={p}')
+          print(f'CHAMPION_CALLGRIND_IR={c}')
+          print(f'PUBLIC_PROXY_RATIO={proxy_public:.9f}')
+          print(f'PUBLIC_ARENA_INSTRUCTION_RATIO={official_public:.9f}')
+          print(f'PROXY_CALIBRATION_SCALE={scale:.9f}')
+          print(f'CHAMPION_PROXY_RATIO={proxy_champion:.9f}')
+          print(f'CALIBRATED_CHAMPION_ARENA_RATIO_ESTIMATE={calibrated:.9f}')
+          print(f'CALIBRATED_CHAMPION_GAP_PERCENT_ESTIMATE={(calibrated-1)*100:.4f}')
+          if c < l:
+              print('CALLGRIND_CHAMPION_BELOW_LEADER')
+          else:
+              print('CALLGRIND_CHAMPION_ABOVE_LEADER')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-callgrind-calibrated-duel-v1
+          path: |
+            /tmp/parity.tsv
+            /tmp/callgrind.tsv
+            /tmp/scorecard.txt
+            /tmp/binaries.sha256
+          if-no-files-found: warn
