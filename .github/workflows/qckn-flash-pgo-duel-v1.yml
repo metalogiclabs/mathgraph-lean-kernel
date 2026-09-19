@@ -1,0 +1,119 @@
+name: Flash Arena-faithful PGO duel
+
+on:
+  push:
+    branches:
+      - qckn-flash-pgo-duel-v1
+  workflow_dispatch:
+
+concurrency:
+  group: qckn-flash-pgo-duel-v1
+  cancel-in-progress: true
+
+jobs:
+  mathlib-pgo-duel:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build exact Arena training and target exports
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test init-prelude >/dev/null
+          nix develop -c ./lka.py build-test mathlib >/dev/null
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}
+          EOF
+
+      - name: Build current and leader with public PGO recipe
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git worktree add /tmp/current "$GITHUB_SHA"
+          git worktree add /tmp/leader 28c03d0103e004610e4d47a4828965efb2b70af9
+          LLVM_PROFDATA=$(nix shell nixpkgs#llvmPackages_21.llvm -c sh -lc 'command -v llvm-profdata')
+          for arm in leader current; do
+            rm -rf /tmp/$arm/target /tmp/$arm/pgo
+            mkdir -p /tmp/$arm/pgo
+            (
+              cd /tmp/$arm
+              RUSTFLAGS="-C target-cpu=native -Cprofile-generate=$PWD/pgo" cargo build --release --locked
+              target/release/sokonanoda /tmp/config.json </tmp/arena/_build/tests/init-prelude.ndjson >/dev/null
+              "$LLVM_PROFDATA" merge -o "$PWD/pgo/merged.profdata" "$PWD/pgo"
+              test -s "$PWD/pgo/merged.profdata"
+              rm -rf target
+              RUSTFLAGS="-C target-cpu=native -Cprofile-use=$PWD/pgo/merged.profdata" cargo build --release --locked
+            )
+            cp /tmp/$arm/target/release/sokonanoda /tmp/$arm.bin
+            sha256sum /tmp/$arm.bin
+          done
+
+      - name: Exact status parity on Mathlib
+        shell: bash
+        run: |
+          set -euxo pipefail
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          set +e
+          /tmp/leader.bin /tmp/config.json <"$f" >/tmp/l.out 2>/tmp/l.err; l=$?
+          /tmp/current.bin /tmp/config.json <"$f" >/tmp/c.out 2>/tmp/c.err; c=$?
+          set -e
+          test "$l" -eq "$c"
+          printf 'STATUS_MATCH\t%s\n' "$c" >/tmp/parity.tsv
+
+      - name: Five-replay PGO Mathlib duel
+        shell: bash
+        run: |
+          set -euxo pipefail
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          : >/tmp/mathlib.tsv
+          for rep in 1 2 3 4 5; do
+            if [ $((rep%2)) -eq 1 ]; then order="leader current"; else order="current leader"; fi
+            for arm in $order; do
+              /usr/bin/time -f '%e\t%U\t%M' -o /tmp/time                 /tmp/$arm.bin /tmp/config.json <"$f" >/dev/null 2>/dev/null
+              read -r wall user rss </tmp/time
+              printf '%s\t%s\t%s\t%s\t%s\n' "$arm" "$rep" "$wall" "$user" "$rss" | tee -a /tmp/mathlib.tsv
+            done
+          done
+          python3 - <<'PY' | tee /tmp/scorecard.txt
+          from collections import defaultdict
+          from statistics import median
+          rows=defaultdict(list)
+          for line in open('/tmp/mathlib.tsv'):
+              arm,rep,wall,user,rss=line.rstrip().split('\t')
+              rows[arm].append((float(wall),float(user),int(rss)))
+          lm=median(x[0] for x in rows['leader'])
+          cm=median(x[0] for x in rows['current'])
+          lu=median(x[1] for x in rows['leader'])
+          cu=median(x[1] for x in rows['current'])
+          lr=median(x[2] for x in rows['leader'])
+          cr=median(x[2] for x in rows['current'])
+          print('leader_runs='+repr([x[0] for x in rows['leader']]))
+          print('current_runs='+repr([x[0] for x in rows['current']]))
+          print(f'LEADER_MEDIAN_S={lm:.6f}')
+          print(f'CURRENT_MEDIAN_S={cm:.6f}')
+          print(f'LEADER_USER_MEDIAN_S={lu:.6f}')
+          print(f'CURRENT_USER_MEDIAN_S={cu:.6f}')
+          print(f'CURRENT_VS_LEADER_RATIO={cm/lm:.6f}')
+          print(f'CURRENT_GAP_PERCENT={(cm/lm-1)*100:.4f}')
+          print(f'LEADER_RSS_KB={int(lr)}')
+          print(f'CURRENT_RSS_KB={int(cr)}')
+          print('FLASH_CURRENT_AHEAD_OF_SOKONANODA' if cm < lm else 'FLASH_CURRENT_BEHIND_SOKONANODA')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-pgo-duel-v1
+          path: |
+            /tmp/parity.tsv
+            /tmp/mathlib.tsv
+            /tmp/scorecard.txt
+          if-no-files-found: warn
