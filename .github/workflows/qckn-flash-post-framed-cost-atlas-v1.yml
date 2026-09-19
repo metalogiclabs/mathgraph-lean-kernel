@@ -1,0 +1,28 @@
+name: Flash post-Framed Mathlib cost atlas v1
+
+on:
+  push:
+    branches:
+      - qckn-flash-post-framed-cost-atlas-v1
+  workflow_dispatch:
+
+concurrency:
+  group: qckn-flash-post-framed-cost-atlas-v1
+  cancel-in-progress: true
+
+jobs:
+  full-mathlib-cost-atlas:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Run post-Framed full Mathlib cost atlas
+        run: bash experiments/run_qckn_flash_post_framed_cost_atlas_v1.sh
+      - name: Upload post-Framed cost atlas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qckn-flash-post-framed-cost-atlas-v1
+          path: /tmp/qckn-flash-post-framed-cost-atlas-v1/evidence
+          if-no-files-found: warn
