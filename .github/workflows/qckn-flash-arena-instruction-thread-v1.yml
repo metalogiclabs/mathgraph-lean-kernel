@@ -1,0 +1,124 @@
+name: QCKN Flash Arena instruction thread tournament V1
+
+on:
+  push:
+    branches:
+      - qckn-flash-arena-instruction-v1
+    paths:
+      - '.github/workflows/qckn-flash-arena-instruction-thread-v1.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: qckn-flash-arena-instruction-thread-v1
+  cancel-in-progress: true
+
+jobs:
+  measure:
+    strategy:
+      fail-fast: false
+      matrix:
+        threads: [1, 2, 4]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Materialize frozen Flash RC1 and pinned Mathlib
+        shell: bash
+        run: |
+          set -euxo pipefail
+          SOURCE=a342c74f6eb913c25c6dae4138158023d1b9aa6a
+          ARENA=510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          git worktree add --detach /tmp/candidate "$SOURCE"
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q "$ARENA"
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test init-prelude >/dev/null
+          nix develop -c ./lka.py build-test mathlib >/dev/null
+          cat >/tmp/config.json <<EOF
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":${{ matrix.threads }},"print_success_message":false}
+          EOF
+          cat >/tmp/provenance.tsv <<EOF
+          frozen_source_sha	$SOURCE
+          arena_suite_sha	$ARENA
+          threads	${{ matrix.threads }}
+          objective	retired_instructions
+          score_rate	6000000000
+          EOF
+
+      - name: Native PGO build trained at matching thread count
+        shell: bash
+        run: |
+          set -euxo pipefail
+          LLVM_PROFDATA=$(nix shell nixpkgs#llvmPackages_21.llvm -c sh -c 'command -v llvm-profdata')
+          rm -rf /tmp/candidate/target /tmp/candidate/pgo
+          mkdir -p /tmp/candidate/pgo
+          (
+            cd /tmp/candidate
+            RUSTFLAGS="-C target-cpu=native -Cprofile-generate=/tmp/candidate/pgo" cargo build --release --locked
+            target/release/sokonanoda /tmp/config.json </tmp/arena/_build/tests/init-prelude.ndjson >/dev/null
+            "$LLVM_PROFDATA" merge -o /tmp/candidate/pgo/merged.profdata /tmp/candidate/pgo
+            rm -rf target
+            RUSTFLAGS="-C target-cpu=native -Cprofile-use=/tmp/candidate/pgo/merged.profdata" cargo build --release --locked
+            cp target/release/sokonanoda /tmp/candidate.bin
+          )
+
+      - name: Try exact retired-instruction measurement
+        shell: bash
+        run: |
+          set -uxo pipefail
+          PERF=$(nix shell nixpkgs#linuxPackages.perf -c sh -c 'command -v perf')
+          sudo sysctl -w kernel.perf_event_paranoid=-1 || true
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          set +e
+          "$PERF" stat -x, -e instructions:u -o /tmp/perf.txt --             /usr/bin/time -f 'wall_s=%e\nuser_s=%U\nsys_s=%S\nmax_rss_kb=%M' -o /tmp/native.time             /tmp/candidate.bin /tmp/config.json <"$f" >/tmp/native.stdout 2>/tmp/native.stderr
+          rc=$?
+          set -e
+          echo "native_rc=$rc" | tee /tmp/native-summary.txt
+          cat /tmp/perf.txt | tee -a /tmp/native-summary.txt || true
+          cat /tmp/native.time | tee -a /tmp/native-summary.txt || true
+          instr=$(awk -F, '$3 ~ /^instructions/ {gsub(/[[:space:]]/,"",$1); if ($1 ~ /^[0-9]+$/) print $1}' /tmp/perf.txt | tail -1)
+          if [ -n "$instr" ]; then
+            echo "PERF_INSTRUCTIONS=$instr" | tee -a /tmp/native-summary.txt
+            python3 - "$instr" <<'PY' | tee -a /tmp/native-summary.txt
+          import sys
+          n=int(sys.argv[1])
+          print(f"ARENA_VIRTUAL_SECONDS={n/6_000_000_000:.6f}")
+          PY
+          else
+            echo "PERF_INSTRUCTIONS=UNAVAILABLE" | tee -a /tmp/native-summary.txt
+          fi
+
+      - name: Deterministic Callgrind instruction proxy
+        shell: bash
+        run: |
+          set -euxo pipefail
+          VALGRIND=$(nix shell nixpkgs#valgrind -c sh -c 'command -v valgrind')
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          timeout 7200s "$VALGRIND" --tool=callgrind --quiet --collect-jumps=no             --callgrind-out-file=/tmp/mathlib.callgrind             /tmp/candidate.bin /tmp/config.json <"$f" >/tmp/callgrind.stdout 2>/tmp/callgrind.stderr
+          ir=$(awk '/^summary:/ {print $2; exit}' /tmp/mathlib.callgrind)
+          test -n "$ir"
+          {
+            echo "CALLGRIND_IR=$ir"
+            python3 - "$ir" <<'PY'
+          import sys
+          n=int(sys.argv[1])
+          print(f"CALLGRIND_EQUIV_SECONDS={n/6_000_000_000:.6f}")
+          PY
+          } | tee /tmp/callgrind-summary.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-arena-instruction-thread-${{ matrix.threads }}
+          path: |
+            /tmp/provenance.tsv
+            /tmp/native-summary.txt
+            /tmp/native.time
+            /tmp/perf.txt
+            /tmp/callgrind-summary.txt
+            /tmp/mathlib.callgrind
+          if-no-files-found: warn
