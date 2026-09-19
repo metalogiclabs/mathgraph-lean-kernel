@@ -1,0 +1,157 @@
+name: Flash V61 law transplant tournament
+
+on:
+  push:
+    branches:
+      - qckn-flash-v61-transplant-v1
+  workflow_dispatch:
+
+concurrency:
+  group: qckn-flash-v61-transplant-v1
+  cancel-in-progress: true
+
+jobs:
+  tournament:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build base, Pi, relevance-off, and combo arms
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git worktree add /tmp/base "$GITHUB_SHA"
+          cp -a /tmp/base /tmp/pi
+          cp -a /tmp/base /tmp/propoff
+          cp -a /tmp/base /tmp/combo
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def patch_pi(root):
+              p=Path(root)/'src/eval.rs'
+              s=p.read_text()
+              old="""    pub(crate) fn force_all(&mut self, depth: u32, v: V<'t>) -> V<'t> {
+                  if let Some(r) = self.store_lookup(depth, v) {"""
+              new="""    pub(crate) fn force_all(&mut self, depth: u32, v: V<'t>) -> V<'t> {
+                  if matches!(v, Value::Pi { .. }) { return v; }
+                  if let Some(r) = self.store_lookup(depth, v) {"""
+              assert s.count(old)==1
+              p.write_text(s.replace(old,new,1))
+
+          def patch_prop(root):
+              p=Path(root)/'src/relevance.rs'
+              s=p.read_text()
+              old="""                for k in (0..n).rev() {
+                          let Some(s) = dom[k] else { break };
+                          let im = self.ctx.imax(s, r);
+                          r = self.ctx.simplify(im);
+                          result_known |= 1u64 << k;
+                          if self.ctx.is_zero(r) {
+                              prop_result |= 1u64 << k;
+                          }
+                      }"""
+              assert s.count(old)==1
+              p.write_text(s.replace(old,"                let _ = r;",1))
+
+          patch_pi('/tmp/pi')
+          patch_prop('/tmp/propoff')
+          patch_pi('/tmp/combo')
+          patch_prop('/tmp/combo')
+          PY
+
+          for arm in base pi propoff combo; do
+            (cd /tmp/$arm && RUSTFLAGS='-C target-cpu=x86-64-v3' cargo build --release --locked)
+            cp /tmp/$arm/target/release/sokonanoda /tmp/$arm.bin
+          done
+
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}
+          EOF
+
+      - name: Build Mathlib and semantic controls
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          cd /tmp/arena
+          for t in mathlib cedar std; do
+            nix develop -c ./lka.py build-test "$t" >/dev/null
+          done
+
+      - name: Exact focused semantic replay
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          : >/tmp/parity.tsv
+          for t in mathlib cedar std; do
+            f="_build/tests/$t.ndjson"
+            set +e
+            /tmp/base.bin /tmp/config.json <"$f" >/tmp/base.out 2>/tmp/base.err; b=$?
+            set -e
+            for arm in pi propoff combo; do
+              set +e
+              /tmp/$arm.bin /tmp/config.json <"$f" >/tmp/$arm.out 2>/tmp/$arm.err; a=$?
+              set -e
+              test "$a" -eq "$b"
+              cmp /tmp/base.out /tmp/$arm.out
+              printf 'MATCH\t%s\t%s\t%s\n' "$arm" "$a" "$t" >>/tmp/parity.tsv
+            done
+          done
+          echo V61_CURRENT_FOCUSED_PARITY_PASS
+
+      - name: Five-run Mathlib tournament
+        shell: bash
+        run: |
+          set -euxo pipefail
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          : >/tmp/perf.tsv
+          for rep in 1 2 3 4 5; do
+            if [ $((rep%2)) -eq 1 ]; then order="base pi propoff combo"; else order="combo propoff pi base"; fi
+            for arm in $order; do
+              /usr/bin/time -f '%e\t%U\t%M' -o /tmp/time                 /tmp/$arm.bin /tmp/config.json <"$f" >/dev/null 2>/dev/null
+              read -r wall user rss </tmp/time
+              printf '%s\t%s\t%s\t%s\t%s\n' "$arm" "$rep" "$wall" "$user" "$rss" | tee -a /tmp/perf.tsv
+            done
+          done
+
+          python3 - <<'PY' | tee /tmp/scorecard.txt
+          from collections import defaultdict
+          from statistics import median
+          rows=defaultdict(list)
+          for l in open('/tmp/perf.tsv'):
+              arm,rep,w,u,rss=l.rstrip().split('\t')
+              rows[arm].append((float(w),float(u),int(rss)))
+          base=median(x[0] for x in rows['base'])
+          print('arm\twall_med\tspeedup\tdelta_pct\trss_med_kb')
+          best=('base',1.0)
+          for arm in ('base','pi','propoff','combo'):
+              w=median(x[0] for x in rows[arm])
+              rss=median(x[2] for x in rows[arm])
+              sp=base/w
+              print(f'{arm}\t{w:.3f}\t{sp:.4f}\t{(w/base-1)*100:+.4f}\t{rss}')
+              if sp>best[1]:
+                  best=(arm,sp)
+          print('WINNER='+best[0])
+          print(f'WINNER_SPEEDUP={best[1]:.6f}')
+          if best[0] != 'base' and best[1] >= 1.002:
+              print('FLASH_V61_TRANSPLANT_MATHLIB_PASS')
+          else:
+              print('FLASH_V61_TRANSPLANT_NO_MATERIAL_WIN')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-v61-transplant-v1
+          path: |
+            /tmp/parity.tsv
+            /tmp/perf.tsv
+            /tmp/scorecard.txt
+          if-no-files-found: warn
