@@ -1,0 +1,37 @@
+name: QCKN Flash event emitter v2
+
+on:
+  push:
+    branches: [qckn-flash-event-emitter-v2]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  emit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify ordinary-Unfold qualification
+        run: |
+          test "$(gh api repos/metalogiclabs/mathgraph-lean-kernel/actions/runs/35409042523 --jq .conclusion)" = success
+          for job in 105804854735 105804854776 105804854792 105804854807; do
+            test "$(gh api repos/metalogiclabs/mathgraph-lean-kernel/actions/jobs/$job --jq .conclusion)" = success
+          done
+      - name: Run emitter tests
+        working-directory: experiments
+        run: python3 -m unittest test_emit_qckn_flash_event_v2 -v
+      - name: Emit canonical Flash event
+        run: |
+          mkdir -p /tmp/qckn-flash-event
+          python3 experiments/emit_qckn_flash_event_v2.py --commit "$GITHUB_SHA" --out /tmp/qckn-flash-event
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lean-qckn-flash-event-v2
+          path: /tmp/qckn-flash-event/
+          if-no-files-found: error
