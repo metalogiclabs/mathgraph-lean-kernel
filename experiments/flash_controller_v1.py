@@ -58,6 +58,9 @@ def close(evidence, manifest):
         for e in evidence["events"]:
             if e.get("kind") != "current_revalidation":
                 continue
+            if e.get("authority_join_verified") is not True:
+                trace.append([gen,"IGNORE_UNVERIFIED_AUTHORITY_JOIN",e.get("id","<unnamed>")])
+                continue
             cid = e["capability_id"]
             c = caps[cid]
             if e.get("semantic_pass") and e.get("performance_pass"):
