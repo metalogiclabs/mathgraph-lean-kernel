@@ -1,0 +1,140 @@
+name: Flash exact-PGO instruction duel vs sokonanoda
+
+on:
+  push:
+    branches:
+      - qckn-flash-head-to-head-v3-instructions
+  workflow_dispatch:
+
+concurrency:
+  group: qckn-flash-head-to-head-v3-instructions
+  cancel-in-progress: true
+
+jobs:
+  exact-instruction-duel:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build exact Arena exports
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test init-prelude >/dev/null
+          nix develop -c ./lka.py build-test mathlib >/dev/null
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}
+          EOF
+          nix develop -c perf --version | tee /tmp/perf-version.txt
+
+      - name: Build both checkers with exact native PGO regime
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git worktree add /tmp/current "$GITHUB_SHA"
+          git worktree add /tmp/leader 28c03d0103e004610e4d47a4828965efb2b70af9
+
+          LLVM_PROFDATA=$(nix shell nixpkgs#llvmPackages_21.llvm -c sh -c 'command -v llvm-profdata')
+          for arm in current leader; do
+            rm -rf /tmp/$arm/target /tmp/$arm/pgo
+            mkdir -p /tmp/$arm/pgo
+            (
+              cd /tmp/$arm
+              RUSTFLAGS="-C target-cpu=native -Cprofile-generate=/tmp/$arm/pgo" cargo build --release --locked
+              target/release/sokonanoda /tmp/config.json </tmp/arena/_build/tests/init-prelude.ndjson >/dev/null
+              "$LLVM_PROFDATA" merge -o /tmp/$arm/pgo/merged.profdata /tmp/$arm/pgo
+              test -s /tmp/$arm/pgo/merged.profdata
+              rm -rf target
+              RUSTFLAGS="-C target-cpu=native -Cprofile-use=/tmp/$arm/pgo/merged.profdata" cargo build --release --locked
+              cp target/release/sokonanoda /tmp/$arm.bin
+            )
+          done
+          sha256sum /tmp/current.bin /tmp/leader.bin | tee /tmp/binaries.sha256
+
+      - name: Verify Mathlib status parity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          set +e
+          /tmp/current.bin /tmp/config.json <"$f" >/tmp/current.out 2>/tmp/current.err; c=$?
+          /tmp/leader.bin /tmp/config.json <"$f" >/tmp/leader.out 2>/tmp/leader.err; l=$?
+          set -e
+          test "$c" -eq "$l"
+          echo "STATUS_MATCH=$c" | tee /tmp/parity.txt
+
+      - name: Arena-rank instruction duel
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          PERF=$(nix develop -c sh -c 'command -v perf')
+          export LC_ALL=C
+          f="_build/tests/mathlib.ndjson"
+          : >/tmp/instructions.tsv
+
+          for rep in 1 2 3; do
+            if [ $((rep%2)) -eq 1 ]; then order="leader current"; else order="current leader"; fi
+            for arm in $order; do
+              "$PERF" stat -x $'\t' -e instructions -o /tmp/perf.txt --                 /tmp/$arm.bin /tmp/config.json <"$f" >/dev/null 2>/dev/null
+              cat /tmp/perf.txt
+              python3 - "$arm" "$rep" /tmp/perf.txt <<'PY' >>/tmp/instructions.tsv
+          import sys,re
+          arm,rep,path=sys.argv[1:]
+          value=None
+          for line in open(path):
+              parts=line.rstrip("\n").split("\t")
+              if len(parts)>=3 and parts[2].strip().startswith("instructions"):
+                  raw=parts[0].strip().replace(",","")
+                  if raw and raw not in ("<not counted>","<not supported>"):
+                      value=int(float(raw))
+                      break
+          if value is None:
+              raise SystemExit("instructions counter unavailable")
+          print(f"{arm}\t{rep}\t{value}")
+          PY
+            done
+          done
+
+          cat /tmp/instructions.tsv
+
+          python3 - <<'PY' | tee /tmp/scorecard.txt
+          from collections import defaultdict
+          from statistics import median
+          rows=defaultdict(list)
+          for line in open('/tmp/instructions.tsv'):
+              arm,rep,n=line.rstrip().split('\t')
+              rows[arm].append(int(n))
+
+          leader=median(rows['leader'])
+          current=median(rows['current'])
+          print('leader_runs='+repr(rows['leader']))
+          print('current_runs='+repr(rows['current']))
+          print(f'LEADER_MEDIAN_INSTRUCTIONS={int(leader)}')
+          print(f'CURRENT_MEDIAN_INSTRUCTIONS={int(current)}')
+          print(f'CURRENT_VS_LEADER_INSTRUCTION_SPEEDUP={leader/current:.6f}')
+          print(f'CURRENT_INSTRUCTION_GAP_PERCENT={(current/leader-1)*100:.4f}')
+          if current < leader:
+              print('FLASH_CURRENT_RANKS_AHEAD_OF_SOKONANODA_BY_MATHLIB_INSTRUCTIONS')
+          else:
+              print('FLASH_CURRENT_RANKS_BEHIND_SOKONANODA_BY_MATHLIB_INSTRUCTIONS')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-head-to-head-v3-instructions
+          path: |
+            /tmp/parity.txt
+            /tmp/instructions.tsv
+            /tmp/scorecard.txt
+            /tmp/binaries.sha256
+            /tmp/perf-version.txt
+          if-no-files-found: warn
