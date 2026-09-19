@@ -72,6 +72,7 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
+          cd /tmp/arena
           : >/tmp/mismatches.tsv
           : >/tmp/semantic.tsv
           while IFS= read -r f; do
