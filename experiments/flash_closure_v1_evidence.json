@@ -226,6 +226,26 @@
         "grind_ring_5_speedup": 1,
         "protected_regressions": []
       }
+    },
+    {
+      "id": "ordinary-unfold-neutral-isolated-causal",
+      "kind": "causal_observation",
+      "family": "ordinary_unfold_neutral",
+      "capability_id": "ordinary_unfold_neutral",
+      "run": 35406140894,
+      "semantic_scope": "focused_panel_exact_parity",
+      "semantic_pass": true,
+      "performance_pass": true,
+      "context": "direct_var_without_framed_prune",
+      "observations": {
+        "mathlib_speedup": 1.027036,
+        "cslib_speedup": 1.0085,
+        "cedar_speedup": 1.0078,
+        "init_speedup": 1.0103,
+        "grind_ring_5_speedup": 0.9853,
+        "protected_regressions": []
+      },
+      "promotion_blocker": "must_revalidate_in_current_framed_plus_var_present"
     }
   ]
 }
