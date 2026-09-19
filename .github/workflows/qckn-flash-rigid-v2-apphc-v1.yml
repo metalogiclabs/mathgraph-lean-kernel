@@ -1,0 +1,138 @@
+name: Flash rigid V2 + app_hc causal gate
+
+on:
+  push:
+    branches:
+      - qckn-flash-rigid-v2-apphc-v1
+  workflow_dispatch:
+
+concurrency:
+  group: qckn-flash-rigid-v2-apphc-v1
+  cancel-in-progress: true
+
+jobs:
+  causal:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build champion, rigid V2, and combined candidate
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git worktree add /tmp/champion 28bc6a91d68ee547ee94fca395f58e8f100879ea
+          git worktree add /tmp/source "$GITHUB_SHA"
+          cp -a /tmp/source /tmp/rigid
+          cp -a /tmp/source /tmp/combined
+          python3 - <<'PY'
+          from pathlib import Path
+          for arm,prealloc in [('rigid',False),('combined',True)]:
+              p=Path('/tmp')/arm/'src/flash.rs'
+              s=p.read_text()
+              s=s.replace('pub(crate) const RIGID_INDUCTIVE_NEUTRAL: bool = false;',
+                          'pub(crate) const RIGID_INDUCTIVE_NEUTRAL: bool = true;')
+              if prealloc:
+                  s=s.replace('pub(crate) const APP_HC_PREALLOC: bool = false;',
+                              'pub(crate) const APP_HC_PREALLOC: bool = true;')
+              p.write_text(s)
+          PY
+          for arm in champion rigid combined; do
+            (cd /tmp/$arm && RUSTFLAGS='-C target-cpu=x86-64-v3' cargo build --release --locked)
+            cp /tmp/$arm/target/release/sokonanoda /tmp/$arm.bin
+          done
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}
+          EOF
+
+      - name: Build focused Arena panel
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          cd /tmp/arena
+          for t in mathlib cslib cedar init perf/grind-ring-5; do
+            nix develop -c ./lka.py build-test "$t" >/dev/null
+          done
+
+      - name: Exact focused parity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          for t in mathlib cslib cedar init perf/grind-ring-5; do
+            f="_build/tests/$t.ndjson"
+            for arm in champion rigid combined; do
+              set +e
+              /tmp/$arm.bin /tmp/config.json <"$f" >/tmp/$arm.out 2>/tmp/$arm.err
+              rc=$?
+              set -e
+              printf '%s\t%s\t%s\n' "$t" "$arm" "$rc" >>/tmp/parity.tsv
+            done
+            test "$(awk -v t="$t" '$1==t{print $3}' /tmp/parity.tsv | sort -u | wc -l)" -eq 1
+            cmp /tmp/champion.out /tmp/rigid.out
+            cmp /tmp/champion.out /tmp/combined.out
+          done
+          echo RIGID_V2_APPHC_PARITY_PASS
+
+      - name: Native three-way causal timing
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          : >/tmp/perf.tsv
+          for t in mathlib cslib cedar init perf/grind-ring-5; do
+            f="_build/tests/$t.ndjson"
+            reps=3
+            [ "$t" = mathlib ] && reps=5
+            for rep in $(seq 1 "$reps"); do
+              case $((rep%3)) in
+                1) order="champion rigid combined";;
+                2) order="combined champion rigid";;
+                0) order="rigid combined champion";;
+              esac
+              for arm in $order; do
+                /usr/bin/time -f '%e\t%U\t%M' -o /tmp/time /tmp/$arm.bin /tmp/config.json <"$f" >/dev/null 2>/dev/null
+                read -r wall user rss </tmp/time
+                printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$t" "$arm" "$rep" "$wall" "$user" "$rss" >>/tmp/perf.tsv
+              done
+            done
+          done
+          python3 - <<'PY' | tee /tmp/scorecard.txt
+          from collections import defaultdict
+          from statistics import median
+          rows=defaultdict(lambda:defaultdict(list))
+          for l in open('/tmp/perf.tsv'):
+              t,a,r,w,u,m=l.rstrip().split('\t')
+              rows[t][a].append((float(w),float(u),int(m)))
+          print('test\tchampion\trigid\tcombined\trigid_speedup\tcombined_speedup\tcombined_vs_rigid')
+          for t in rows:
+              c=median(x[0] for x in rows[t]['champion'])
+              r=median(x[0] for x in rows[t]['rigid'])
+              x=median(x[0] for x in rows[t]['combined'])
+              print(f'{t}\t{c:.3f}\t{r:.3f}\t{x:.3f}\t{c/r:.4f}\t{c/x:.4f}\t{r/x:.4f}')
+          c=median(x[0] for x in rows['mathlib']['champion'])
+          r=median(x[0] for x in rows['mathlib']['rigid'])
+          x=median(x[0] for x in rows['mathlib']['combined'])
+          print(f'RIGID_V2_MATHLIB_SPEEDUP={c/r:.6f}')
+          print(f'COMBINED_MATHLIB_SPEEDUP={c/x:.6f}')
+          print(f'COMBINED_VS_RIGID={r/x:.6f}')
+          if x < r:
+              print('FLASH_RIGID_V2_APPHC_COMPOUNDING_PASS')
+          else:
+              print('FLASH_RIGID_V2_APPHC_NO_COMPOUNDING')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-rigid-v2-apphc-v1
+          path: |
+            /tmp/parity.tsv
+            /tmp/perf.tsv
+            /tmp/scorecard.txt
+          if-no-files-found: warn
