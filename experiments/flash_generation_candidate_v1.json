@@ -1,0 +1,25 @@
+{
+  "schema": "mathgraph.flash.generation-candidate.v1",
+  "capability_id": "ordinary_unfold_neutral",
+  "family": "ordinary_unfold_neutral",
+  "policy_file": "src/flash.rs",
+  "policy_constant": "ORDINARY_UNFOLD_NEUTRAL",
+  "reference_value": false,
+  "candidate_value": true,
+  "mathlib_min_speedup": 1.003,
+  "protected_min_speedup": 0.98,
+  "protected_tests": [
+    "cslib",
+    "cedar",
+    "init",
+    "perf/grind-ring-5"
+  ],
+  "perf_tests": [
+    "mathlib",
+    "cslib",
+    "cedar",
+    "init",
+    "perf/grind-ring-5"
+  ],
+  "arena_sha": "510fbfead6f02bed1a0179d01729a6ddf5bfd06d"
+}
