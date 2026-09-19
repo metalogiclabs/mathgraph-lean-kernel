@@ -31,6 +31,19 @@
       "type": "new_search",
       "authority": "proposal_only_until_verified",
       "prepared": false
+    },
+    "revalidate_rigid_inductive_v2": {
+      "type": "generation_gate",
+      "workflow": ".github/workflows/qckn-flash-rigid-inductive-v1.yml",
+      "branch": "qckn-flash-rigid-inductive-v2",
+      "capability_id": "rigid_inductive_neutral_v2",
+      "authority": "focused_semantic_plus_arena_objective_then_full_409_if_positive",
+      "prepared": true
+    },
+    "rigid_app_hc_new_representation": {
+      "type": "new_search",
+      "authority": "proposal_only_until_verified",
+      "prepared": false
     }
   }
 }
