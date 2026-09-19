@@ -44,6 +44,14 @@
       "type": "new_search",
       "authority": "proposal_only_until_verified",
       "prepared": false
+    },
+    "measure_ordinary_unfold_instructions": {
+      "type": "rank_gate",
+      "workflow": ".github/workflows/qckn-flash-unfold-instruction-gate-v1.yml",
+      "branch": "qckn-flash-unfold-instruction-gate-v1",
+      "capability_id": "ordinary_unfold_neutral",
+      "authority": "exact_native_pgo_mathlib_instructions",
+      "prepared": true
     }
   }
 }
