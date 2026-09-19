@@ -496,6 +496,7 @@ pub(crate) fn small_fx_hash_map<K, V>() -> FxHashMap<K, V> {
 }
 
 pub(crate) const SESSION_MAP_CAP: usize = 1 << 13;
+pub(crate) const HOT_SESSION_MAP_CAP: usize = 1 << 16;
 
 pub(crate) const SESSION_MAP_CAP_SMALL: usize = 1 << 12;
 
@@ -1106,18 +1107,30 @@ impl<'a, 't> TcCache<'a, 't> {
             whnf_admit: vec![0u8; WHNF_ADMIT_LEN].into_boxed_slice().try_into().expect("admit table size"),
             lam_domain_cache: session_small_fx_hash_map(),
             global_value_cache: session_fx_hash_map(),
-            open_eval_cache: session_fx_hash_map(),
+            open_eval_cache: if crate::flash::HOT_MAP_PREALLOC {
+                FxHashMap::with_capacity_and_hasher(HOT_SESSION_MAP_CAP, Default::default())
+            } else {
+                session_fx_hash_map()
+            },
             open_eval_seen: small_fx_hash_set(),
             bvar_hc: session_small_fx_hash_map(),
             spine_hc: session_fx_hash_map(),
             app_hc: session_fx_hash_map(),
-            env_hc: session_fx_hash_map(),
+            env_hc: if crate::flash::HOT_MAP_PREALLOC {
+                FxHashMap::with_capacity_and_hasher(HOT_SESSION_MAP_CAP, Default::default())
+            } else {
+                session_fx_hash_map()
+            },
             lam_hc: session_small_fx_hash_map(),
             pi_hc: session_small_fx_hash_map(),
             type_cache: session_fx_hash_map(),
             thunk_hc: session_fx_hash_map(),
             quote_cache: session_fx_hash_map(),
-            frames: hashbrown::HashTable::with_capacity(SESSION_MAP_CAP),
+            frames: hashbrown::HashTable::with_capacity(if crate::flash::HOT_MAP_PREALLOC {
+                HOT_SESSION_MAP_CAP
+            } else {
+                SESSION_MAP_CAP
+            }),
             lsub_bases: small_fx_hash_map(),
             level_subs: small_fx_hash_map(),
             prune_dm: Box::new([(0, 0, None); PRUNE_DM_LEN]),
