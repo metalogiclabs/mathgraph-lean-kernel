@@ -1,0 +1,135 @@
+name: Flash champion V1 full qualification
+
+on:
+  push:
+    branches:
+      - qckn-flash-champion-v1
+  workflow_dispatch:
+
+concurrency:
+  group: qckn-flash-champion-v1
+  cancel-in-progress: true
+
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build frozen champion, semantic baseline, and public leader
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git worktree add /tmp/champion "$GITHUB_SHA"
+          git worktree add /tmp/baseline 74dc5ddb4584e1254f5687615e5b02795b8dc6f3
+          git worktree add /tmp/leader 28c03d0103e004610e4d47a4828965efb2b70af9
+          for arm in champion baseline leader; do
+            (cd /tmp/$arm && RUSTFLAGS='-C target-cpu=x86-64-v3' cargo build --release --locked)
+            cp /tmp/$arm/target/release/sokonanoda /tmp/$arm.bin
+          done
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}
+          EOF
+          printf 'champion_sha\t%s\n' "$GITHUB_SHA" >/tmp/provenance.tsv
+          printf 'semantic_baseline_sha\t%s\n' 74dc5ddb4584e1254f5687615e5b02795b8dc6f3 >>/tmp/provenance.tsv
+          printf 'leader_sha\t%s\n' 28c03d0103e004610e4d47a4828965efb2b70af9 >>/tmp/provenance.tsv
+
+      - name: Build full pinned Arena corpus
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          printf 'arena_sha\t%s\n' "$(git -C /tmp/arena rev-parse HEAD)" >>/tmp/provenance.tsv
+          cd /tmp/arena
+          : >/tmp/build-tests.tsv
+          while IFS= read -r y; do
+            t=${y#tests/}; t=${t%.yaml}
+            echo "BUILD $t" | tee -a /tmp/build-tests.tsv
+            nix develop -c ./lka.py build-test "$t" >/dev/null
+          done < <(find tests -type f -name '*.yaml' | sort)
+          find _build/tests -type f -name '*.ndjson' | sort >/tmp/exports.txt
+          echo "exports=$(wc -l </tmp/exports.txt)" | tee /tmp/export-count.txt
+          test "$(wc -l </tmp/exports.txt)" -eq 409
+
+      - name: Full 409 semantic parity against qualified baseline
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          : >/tmp/semantic.tsv
+          : >/tmp/mismatches.tsv
+          while IFS= read -r f; do
+            set +e
+            /tmp/baseline.bin /tmp/config.json <"$f" >/tmp/b.out 2>/tmp/b.err; b=$?
+            /tmp/champion.bin /tmp/config.json <"$f" >/tmp/c.out 2>/tmp/c.err; c=$?
+            set -e
+            if [ "$b" -ne "$c" ] || ! cmp -s /tmp/b.out /tmp/c.out; then
+              printf 'MISMATCH\t%s\tbaseline=%s\tchampion=%s\n' "$f" "$b" "$c" | tee -a /tmp/mismatches.tsv /tmp/semantic.tsv
+            else
+              printf 'MATCH\t%s\t%s\n' "$c" "$f" >>/tmp/semantic.tsv
+            fi
+          done </tmp/exports.txt
+          mismatches=$(grep -c '^MISMATCH' /tmp/mismatches.tsv || true)
+          echo "semantic_mismatches=$mismatches" | tee /tmp/semantic-summary.txt
+          test "$mismatches" -eq 0
+          echo FLASH_CHAMPION_409_PARITY_PASS
+
+      - name: Seven-replay same-runner Mathlib duel
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          f="_build/tests/mathlib.ndjson"
+          : >/tmp/mathlib-duel.tsv
+          for rep in 1 2 3 4 5 6 7; do
+            if [ $((rep%2)) -eq 1 ]; then order="leader champion"; else order="champion leader"; fi
+            for arm in $order; do
+              /usr/bin/time -f '%e\t%U\t%M' -o /tmp/time                 /tmp/$arm.bin /tmp/config.json <"$f" >/dev/null 2>/dev/null
+              read -r wall user rss </tmp/time
+              printf '%s\t%s\t%s\t%s\t%s\n' "$arm" "$rep" "$wall" "$user" "$rss" | tee -a /tmp/mathlib-duel.tsv
+            done
+          done
+          python3 - <<'PY' | tee /tmp/champion-scorecard.txt
+          from collections import defaultdict
+          from statistics import median
+          rows=defaultdict(list)
+          for l in open('/tmp/mathlib-duel.tsv'):
+              arm,rep,wall,user,rss=l.rstrip().split('\t')
+              rows[arm].append((float(wall),float(user),int(rss)))
+          lm=median(x[0] for x in rows['leader'])
+          cm=median(x[0] for x in rows['champion'])
+          print('leader_runs='+repr([x[0] for x in rows['leader']]))
+          print('champion_runs='+repr([x[0] for x in rows['champion']]))
+          print(f'LEADER_MEDIAN_S={lm:.6f}')
+          print(f'CHAMPION_MEDIAN_S={cm:.6f}')
+          print(f'CHAMPION_VS_LEADER_SPEEDUP={lm/cm:.6f}')
+          print(f'CHAMPION_MARGIN_PERCENT={(lm/cm-1)*100:.4f}')
+          print(f'LEADER_RSS_KB={int(median(x[2] for x in rows["leader"]))}')
+          print(f'CHAMPION_RSS_KB={int(median(x[2] for x in rows["champion"]))}')
+          if cm < lm:
+              print('FLASH_CHAMPION_AHEAD_OF_SOKONANODA')
+          else:
+              print('FLASH_CHAMPION_NOT_AHEAD')
+              raise SystemExit(1)
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-champion-v1
+          path: |
+            /tmp/provenance.tsv
+            /tmp/build-tests.tsv
+            /tmp/exports.txt
+            /tmp/export-count.txt
+            /tmp/semantic.tsv
+            /tmp/mismatches.tsv
+            /tmp/semantic-summary.txt
+            /tmp/mathlib-duel.tsv
+            /tmp/champion-scorecard.txt
+          if-no-files-found: warn
