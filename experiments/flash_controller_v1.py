@@ -21,26 +21,50 @@ def close(evidence, manifest):
     killed_families = set()
     frontier = []
 
+    # Collapse authority history to one current authority event per capability.
+    # Event order is causal order in the evidence ledger: the latest verified
+    # revalidation overrides older promotion evidence. History remains provenance,
+    # but only the reduced current authority may mutate the compiled present.
+    latest_revalidation = {}
+    for e in evidence["events"]:
+        if e.get("kind") == "current_revalidation" and e.get("authority_join_verified") is True:
+            cid = e["capability_id"]
+            if cid in caps:
+                latest_revalidation[cid] = e
+
+    # Seed capabilities that have no newer current revalidation.
+    for e in evidence["events"]:
+        cid = e.get("capability_id") or {
+            "direct-var": "direct_var_eval",
+            "cold-prune-direct-v93": "direct_framed_prune",
+        }.get(e["id"])
+        if not cid or cid not in caps or cid in latest_revalidation:
+            continue
+        if e.get("action") == "promote" and e.get("semantic_pass"):
+            old = caps[cid]["status"]
+            if old != "promoted":
+                caps[cid]["status"] = "promoted"
+                trace.append([0,"PROMOTE_SEED",cid,old])
+
+    # Apply the latest verified current authority exactly once.
+    for cid,e in latest_revalidation.items():
+        c = caps[cid]
+        old = c["status"]
+        if e.get("semantic_pass") and e.get("performance_pass"):
+            c["status"] = "promoted"
+            c.setdefault("evidence",{})["current_revalidation"] = e["run"]
+            if old != "promoted":
+                trace.append([0,"PROMOTE_REVALIDATED",cid,old])
+        else:
+            c["status"] = "rejected"
+            if old != "rejected":
+                trace.append([0,"REJECT_REVALIDATED",cid,old])
+
     changed = True
     gen = 0
     while changed:
         gen += 1
         changed = False
-
-        # Promote only evidence explicitly admitted by authority.
-        for e in evidence["events"]:
-            cid = e.get("capability_id") or {
-                "direct-var": "direct_var_eval",
-                "cold-prune-direct-v93": "direct_framed_prune",
-            }.get(e["id"])
-            if not cid or cid not in caps:
-                continue
-            if e.get("action") == "promote" and e.get("semantic_pass"):
-                if caps[cid]["status"] != "promoted":
-                    old = caps[cid]["status"]
-                    caps[cid]["status"] = "promoted"
-                    trace.append([gen,"PROMOTE",cid,old])
-                    changed = True
 
         # Rejected implementation families become obstructions/cancelled search.
         fam_rejects = {}
@@ -53,27 +77,6 @@ def close(evidence, manifest):
                 cancelled.add(fam)
                 trace.append([gen,"KILL_FAMILY",fam])
                 changed = True
-
-        # Candidate capability revalidation: only current-present authority can promote it.
-        for e in evidence["events"]:
-            if e.get("kind") != "current_revalidation":
-                continue
-            if e.get("authority_join_verified") is not True:
-                trace.append([gen,"IGNORE_UNVERIFIED_AUTHORITY_JOIN",e.get("id","<unnamed>")])
-                continue
-            cid = e["capability_id"]
-            c = caps[cid]
-            if e.get("semantic_pass") and e.get("performance_pass"):
-                if c["status"] != "promoted":
-                    old=c["status"]; c["status"]="promoted"
-                    c.setdefault("evidence",{})["current_revalidation"] = e["run"]
-                    trace.append([gen,"PROMOTE_REVALIDATED",cid,old])
-                    changed=True
-            else:
-                if c["status"] not in ("rejected","revoked"):
-                    old=c["status"]; c["status"]="rejected"
-                    trace.append([gen,"REJECT_REVALIDATED",cid,old])
-                    changed=True
 
         # Dependency closure / revocation.
         for cid,c in caps.items():
