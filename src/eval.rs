@@ -896,31 +896,37 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         }
     }
 
+    #[inline(always)]
+    fn app_pair_hash(fp: usize, ap: usize) -> u64 {
+        (fp as u64).wrapping_mul(0x9E3779B97F4A7C15)
+            ^ (ap as u64).rotate_left(29).wrapping_mul(0xD6E8FEB86659FD93)
+    }
+
     fn neutral_app(&mut self, f: V<'t>, a: V<'t>) -> V<'t> {
         let f = self.canonicalize_for_spine(f);
         let a = self.canonicalize_for_spine(a);
-        let key = (f as *const Value<'t> as usize, a as *const Value<'t> as usize);
-        match self.tc_cache.app_hc.entry(key) {
-            Entry::Occupied(o) => o.get(),
-            Entry::Vacant(slot) => {
-                let (v, spine) = match f {
-                    Value::Rigid { head, spine, .. } => {
-                        let spine = value::spine_snoc(self.arena, spine, Elim::app(a));
-                        (value::mk_rigid(self.arena, *head, spine), spine)
-                    }
-                    Value::Unfold { head, spine, head_value, .. } => {
-                        let spine = value::spine_snoc(self.arena, spine, Elim::app(a));
-                        (value::mk_unfold(self.arena, head.name, head.levels, spine, head_value), spine)
-                    }
-                    _ => unreachable!(),
-                };
-                // Both inputs have passed canonicalization. Literal values do
-                // not have a canonical flag, but are interned by content there.
-                spine.mark_canonical();
-                v.mark_canonical();
-                slot.insert(v)
-            }
+        let fp = f as *const Value<'t> as usize;
+        let ap = a as *const Value<'t> as usize;
+        let hash = Self::app_pair_hash(fp, ap);
+        if let Some((_, _, v)) = self.tc_cache.app_hc.find(hash, |(ef, ea, _)| *ef == fp && *ea == ap) {
+            return *v;
         }
+
+        let (v, spine) = match f {
+            Value::Rigid { head, spine, .. } => {
+                let spine = value::spine_snoc(self.arena, spine, Elim::app(a));
+                (value::mk_rigid(self.arena, *head, spine), spine)
+            }
+            Value::Unfold { head, spine, head_value, .. } => {
+                let spine = value::spine_snoc(self.arena, spine, Elim::app(a));
+                (value::mk_unfold(self.arena, head.name, head.levels, spine, head_value), spine)
+            }
+            _ => unreachable!(),
+        };
+        spine.mark_canonical();
+        v.mark_canonical();
+        self.tc_cache.app_hc.insert_unique(hash, (fp, ap, v), |(ef, ea, _)| Self::app_pair_hash(*ef, *ea));
+        v
     }
 
     #[inline]
