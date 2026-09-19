@@ -4,7 +4,19 @@
     "target": "Lean Kernel Arena / Mathlib",
     "active_base": "74dc5ddb4584e1254f5687615e5b02795b8dc6f3",
     "protected_semantics": "exact Arena checker status/stdout parity",
-    "promotion_authority": "Arena-style native performance plus full semantic replay"
+    "promotion_authority": "Arena-style native performance plus full semantic replay",
+    "arena_ranking": {
+      "source": "https://arena.lean-lang.org/",
+      "lexicographic": [
+        "wrong_accepts_invalid_proofs",
+        "wrong_rejects_valid_proofs",
+        "mathlib_wall_time",
+        "declined_tests"
+      ],
+      "primary_performance_metric": "mathlib_wall_time",
+      "secondary_workloads": "diagnostic_unless_timeout_or_resource_failure",
+      "timing_noise_floor_speedup": 1.002
+    }
   },
   "events": [
     {
