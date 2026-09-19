@@ -12,8 +12,8 @@ manifest=json.loads((ROOT/"experiments/flash_capability_manifest_v1.json").read_
 
 base=fc.close(deepcopy(evidence),deepcopy(manifest))
 assert base["runtime_policy"]["promoted"]==["direct_framed_prune","direct_var_eval"]
-assert next(c for c in base["manifest"]["capabilities"] if c["id"]=="ordinary_unfold_neutral")["status"]=="rejected"
-assert base["selected_action"]=="revalidate_rigid_inductive_v2"
+assert next(c for c in base["manifest"]["capabilities"] if c["id"]=="ordinary_unfold_neutral")["status"]=="candidate_reverify"
+assert base["selected_action"]=="measure_ordinary_unfold_instructions"
 
 unfold_pass=deepcopy(evidence)
 unfold_pass["events"].append({
@@ -23,6 +23,16 @@ unfold_pass["events"].append({
 up=fc.close(unfold_pass,deepcopy(manifest))
 assert up["runtime_policy"]["promoted"]==["direct_framed_prune","direct_var_eval","ordinary_unfold_neutral"]
 assert up["selected_action"]=="revalidate_rigid_inductive_v2"
+
+rank_reject=deepcopy(evidence)
+rank_reject["events"].append({
+    "id":"test-unfold-rank-reject","kind":"performance_rejection",
+    "capability_id":"ordinary_unfold_neutral","run":6,
+    "metric":"mathlib_instructions","performance_rejection_verified":True,
+})
+ur=fc.close(rank_reject,deepcopy(manifest))
+assert next(c for c in ur["manifest"]["capabilities"] if c["id"]=="ordinary_unfold_neutral")["status"]=="rejected"
+assert ur["selected_action"]=="revalidate_rigid_inductive_v2"
 
 failed=deepcopy(evidence)
 failed["events"].append({
