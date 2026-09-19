@@ -1,0 +1,135 @@
+name: QCKN Flash theorem instruction phase atlas V1
+
+on:
+  push:
+    branches:
+      - qckn-flash-arena-instruction-v1
+    paths:
+      - 'scripts/apply_qckn_theorem_phase_v1.py'
+      - '.github/workflows/qckn-flash-theorem-phase-atlas-v1.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: qckn-flash-theorem-phase-atlas-v1
+  cancel-in-progress: true
+
+jobs:
+  atlas:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Materialize phase-instrumented frozen RC1
+        shell: bash
+        run: |
+          set -euxo pipefail
+          SOURCE=a342c74f6eb913c25c6dae4138158023d1b9aa6a
+          ARENA=510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          git worktree add --detach /tmp/phase "$SOURCE"
+          (cd /tmp/phase && python3 "$GITHUB_WORKSPACE/scripts/apply_qckn_theorem_phase_v1.py")
+          (cd /tmp/phase && cargo build --release --locked)
+          cat >/tmp/provenance.tsv <<EOF
+          frozen_source_sha	$SOURCE
+          arena_suite_sha	$ARENA
+          objective	instruction_attribution
+          phase_scope	theorem_checking
+          semantics	refactor_only
+          EOF
+
+      - name: Build pinned Mathlib corpus
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test init-prelude >/dev/null
+          nix develop -c ./lka.py build-test mathlib >/dev/null
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+
+      - name: Native PGO phase binary
+        shell: bash
+        run: |
+          set -euxo pipefail
+          LLVM_PROFDATA=$(nix shell nixpkgs#llvmPackages_21.llvm -c sh -c 'command -v llvm-profdata')
+          rm -rf /tmp/phase/target /tmp/phase/pgo
+          mkdir -p /tmp/phase/pgo
+          (
+            cd /tmp/phase
+            RUSTFLAGS="-C target-cpu=native -C debuginfo=1 -Cprofile-generate=/tmp/phase/pgo" cargo build --release --locked
+            target/release/sokonanoda /tmp/config.json </tmp/arena/_build/tests/init-prelude.ndjson >/dev/null
+            "$LLVM_PROFDATA" merge -o /tmp/phase/pgo/merged.profdata /tmp/phase/pgo
+            rm -rf target
+            RUSTFLAGS="-C target-cpu=native -C debuginfo=1 -Cprofile-use=/tmp/phase/pgo/merged.profdata" cargo build --release --locked
+            cp target/release/sokonanoda /tmp/phase.bin
+          )
+
+      - name: Full Mathlib Callgrind theorem phase attribution
+        shell: bash
+        run: |
+          set -euxo pipefail
+          VALGRIND=$(nix shell nixpkgs#valgrind -c sh -c 'command -v valgrind')
+          ANNOTATE=$(nix shell nixpkgs#valgrind -c sh -c 'command -v callgrind_annotate')
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          timeout 7200s "$VALGRIND" --tool=callgrind --quiet --collect-jumps=no             --callgrind-out-file=/tmp/mathlib-phase.callgrind             /tmp/phase.bin /tmp/config.json <"$f" >/tmp/mathlib.stdout 2>/tmp/mathlib.stderr
+          ir=$(awk '/^summary:/ {print $2; exit}' /tmp/mathlib-phase.callgrind)
+          echo "MATHLIB_CALLGRIND_IR=$ir" | tee /tmp/phase-summary.txt
+          "$ANNOTATE" --inclusive=yes --threshold=0.0 /tmp/mathlib-phase.callgrind > /tmp/mathlib-phase.inclusive.txt
+          "$ANNOTATE" --inclusive=no --threshold=0.0 /tmp/mathlib-phase.callgrind > /tmp/mathlib-phase.self.txt
+          {
+            echo "=== THEOREM PHASE SYMBOLS / INCLUSIVE ==="
+            grep -E 'qckn_theorem_(statement|proof_infer|declared_eval|final_defeq)_phase' /tmp/mathlib-phase.inclusive.txt || true
+            echo "=== THEOREM PHASE SYMBOLS / SELF ==="
+            grep -E 'qckn_theorem_(statement|proof_infer|declared_eval|final_defeq)_phase' /tmp/mathlib-phase.self.txt || true
+          } | tee -a /tmp/phase-summary.txt
+
+      - name: Parse theorem phase shares
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY' | tee /tmp/phase-parsed.txt
+          import re
+          from pathlib import Path
+          total=None
+          for line in Path('/tmp/phase-summary.txt').read_text().splitlines():
+              if line.startswith('MATHLIB_CALLGRIND_IR='):
+                  total=int(line.split('=',1)[1])
+          text=Path('/tmp/mathlib-phase.inclusive.txt').read_text(errors='replace').splitlines()
+          names=['statement','proof_infer','declared_eval','final_defeq']
+          vals={}
+          for line in text:
+              for n in names:
+                  if f'qckn_theorem_{n}_phase' in line:
+                      m=re.match(r'\s*([0-9,]+)\s+', line)
+                      if m:
+                          vals[n]=max(vals.get(n,0), int(m.group(1).replace(',','')))
+          print(f'TOTAL_IR={total}')
+          for n in names:
+              v=vals.get(n,0)
+              print(f'{n.upper()}_IR={v}')
+              if total:
+                  print(f'{n.upper()}_SHARE_OF_TOTAL={v/total:.6f}')
+          s=sum(vals.values())
+          print(f'THEOREM_PHASE_SUM_IR={s}')
+          if total:
+              print(f'THEOREM_PHASE_SUM_SHARE={s/total:.6f}')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-theorem-phase-atlas-v1
+          path: |
+            /tmp/provenance.tsv
+            /tmp/phase-summary.txt
+            /tmp/phase-parsed.txt
+            /tmp/mathlib-phase.inclusive.txt
+            /tmp/mathlib-phase.self.txt
+            /tmp/mathlib-phase.callgrind
+          if-no-files-found: warn
