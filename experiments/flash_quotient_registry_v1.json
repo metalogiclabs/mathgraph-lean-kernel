@@ -1,0 +1,185 @@
+{
+  "schema": "mathgraph.flash.quotient-hunt.v1",
+  "contract": {
+    "protected_consequence": "Lean Kernel Arena accept/reject behavior on pinned corpus",
+    "arena_sha": "510fbfead6f02bed1a0179d01729a6ddf5bfd06d",
+    "preference_metric": "Mathlib retired instructions; calibrated Callgrind proxy when hardware counter unavailable",
+    "epistemic_states": [
+      "EQ",
+      "DIST",
+      "UNKNOWN"
+    ],
+    "rule": "never merge UNKNOWN"
+  },
+  "current_present": [
+    "direct_var_eval",
+    "direct_framed_prune"
+  ],
+  "distinctions": [
+    {
+      "id": "eval.var.generic_dispatch",
+      "hotspot": "eval",
+      "claim": "Var evaluation is consequentially equivalent to direct environment lookup plus force_thunk",
+      "representative": "direct_var_eval",
+      "requires": [],
+      "conflicts": [],
+      "estimated_eval_share": 0.287665,
+      "authority": {
+        "ground": "PASS",
+        "semantic": "EQ",
+        "congruence": "PASS",
+        "preference": "PASS"
+      },
+      "status": "PROMOTED",
+      "evidence": {
+        "causal_run": 35380563756,
+        "semantic_run": 35380841937
+      }
+    },
+    {
+      "id": "prune.framed.generic_reconstruction",
+      "hotspot": "prune_env_cold",
+      "claim": "Framed-source cold prune can use the direct framed transition without generic reconstruction",
+      "representative": "direct_framed_prune",
+      "requires": [
+        "direct_var_eval"
+      ],
+      "conflicts": [],
+      "estimated_self_cost_share": 0.116,
+      "authority": {
+        "ground": "PASS",
+        "semantic": "EQ",
+        "congruence": "PASS",
+        "preference": "PASS"
+      },
+      "status": "PROMOTED",
+      "evidence": {
+        "causal_run": 35405256169,
+        "semantic_run": 35404941215
+      }
+    },
+    {
+      "id": "app.ordinary_unfold.generic_apply",
+      "hotspot": "app_simple_apply",
+      "claim": "Ordinary Unfold application can substitute neutral application",
+      "representative": "ordinary_unfold_neutral",
+      "requires": [
+        "direct_var_eval"
+      ],
+      "conflicts": [
+        "direct_framed_prune"
+      ],
+      "estimated_eval_share": 0.103477,
+      "authority": {
+        "ground": "PASS",
+        "semantic": "EQ",
+        "congruence": "PASS",
+        "preference": "REJECT_CURRENT_CONTEXT"
+      },
+      "status": "RESERVE_SCOPED",
+      "separator": {
+        "kind": "context_separator",
+        "witness": "direct_framed_prune active",
+        "evidence_run": 35409322776,
+        "effect": "candidate became 1.60% slower in the Framed present"
+      },
+      "evidence": {
+        "isolated_qualification_run": 35409042523,
+        "composed_reject_run": 35409322776
+      }
+    },
+    {
+      "id": "app.rigid_inductive.redundant_function_canonicalization",
+      "hotspot": "rigid_inductive_simple_apply",
+      "claim": "For canonical rigid-inductive functions, rechecking/canonicalizing the function before neutral application is consequentially redundant",
+      "representative": "rigid_inductive_neutral_v2",
+      "requires": [
+        "direct_var_eval",
+        "direct_framed_prune"
+      ],
+      "conflicts": [],
+      "estimated_eval_share": 0.0476,
+      "authority": {
+        "ground": "PASS",
+        "semantic": "EQ_FOCUSED",
+        "congruence": "UNKNOWN",
+        "preference": "PASS_NATIVE_RANK_UNKNOWN"
+      },
+      "status": "CANDIDATE",
+      "pending": {
+        "congruence_run": 35414200000,
+        "callgrind_run": 35413473486
+      },
+      "evidence": {
+        "structural_atlas_run": 35409947942,
+        "causal_run": 35410788584,
+        "native_mathlib_speedup": 1.054554
+      }
+    },
+    {
+      "id": "app.canonical_pair.generic_hashing",
+      "hotspot": "app_hc",
+      "claim": "Canonical application identity can be represented by one exact prehashed transition table without changing canonical uniqueness",
+      "representative": "app_hc_prehash",
+      "requires": [
+        "direct_var_eval",
+        "direct_framed_prune"
+      ],
+      "conflicts": [],
+      "estimated_reuse_hit_rate": 0.5154,
+      "authority": {
+        "ground": "PASS",
+        "semantic": "UNKNOWN",
+        "congruence": "UNKNOWN",
+        "preference": "UNKNOWN"
+      },
+      "status": "CANDIDATE",
+      "pending": {
+        "gate_run": 35414037061
+      }
+    },
+    {
+      "id": "iota.behavioural_class.compiled_plan",
+      "hotspot": "iota",
+      "claim": "Large behavioural quotient admits a compiled reduction plan",
+      "representative": "compiled_iota_plan",
+      "requires": [],
+      "conflicts": [],
+      "authority": {
+        "ground": "PASS",
+        "semantic": "EQ_PROBES",
+        "congruence": "UNKNOWN",
+        "preference": "REJECT_HISTORIC"
+      },
+      "status": "DESCRIPTIVE_QUOTIENT",
+      "separator": {
+        "kind": "computational_separator",
+        "witness": "compiled representative did not reduce protected instruction cost",
+        "evidence_run": 32163168087
+      },
+      "evidence": {
+        "quotient_census_run": 32136305064,
+        "transfer_run": 34009355502
+      }
+    },
+    {
+      "id": "relevance.terminal_mask",
+      "hotspot": "relevance",
+      "claim": "Terminal relevance masks admit a coarser quotient",
+      "representative": "terminal_mask_quotient",
+      "requires": [],
+      "conflicts": [],
+      "authority": {
+        "ground": "PASS",
+        "semantic": "EQ_MATHLIB_REPLAY",
+        "congruence": "UNKNOWN",
+        "preference": "REJECT_WEAK"
+      },
+      "status": "DESCRIPTIVE_QUOTIENT",
+      "evidence": {
+        "run": 33955869303,
+        "mathlib_delta_percent": 0.6631
+      }
+    }
+  ]
+}
