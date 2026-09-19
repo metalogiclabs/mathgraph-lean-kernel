@@ -1,0 +1,27 @@
+name: Flash perf counter permission probe
+
+on:
+  push:
+    branches:
+      - qckn-flash-perf-counter-probe-v1
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Probe perf permissions
+        shell: bash
+        run: |
+          set +e
+          PERF=$(nix shell nixpkgs#linuxPackages.perf -c sh -c 'command -v perf')
+          "$PERF" --version
+          cat /proc/sys/kernel/perf_event_paranoid || true
+          for ev in instructions instructions:u cycles:u task-clock; do
+            echo "=== $ev ==="
+            "$PERF" stat -e "$ev" -- true
+            echo "rc=$?"
+          done
+          exit 0
