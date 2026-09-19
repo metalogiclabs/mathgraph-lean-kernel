@@ -45,6 +45,9 @@ jobs:
       - name: Test Flash transition semantics
         run: python3 experiments/test_flash_controller_v1.py
 
+      - name: Test strict authority joining
+        run: python3 experiments/test_flash_authority_join_v1.py
+
       - name: Test Flash impact index
         shell: bash
         run: |
