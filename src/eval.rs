@@ -919,7 +919,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         };
 
         let out = match self.tc_cache.app_hc.entry(key) {
-            Entry::Occupied(o) => o.get(),
+            Entry::Occupied(o) => *o.get(),
             Entry::Vacant(slot) => {
                 let (v, spine) = match f {
                     Value::Rigid { head, spine, .. } => {
