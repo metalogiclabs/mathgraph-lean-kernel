@@ -27,6 +27,7 @@ fn main() {
             }
         }
     };
+    sokonanoda::rigid_profile::report();
     match out {
         Ok(Some(msg)) => println!("{}", msg),
         Ok(None) => {}
