@@ -20,7 +20,9 @@ jobs:
       - name: Verify authoritative source runs
         run: |
           test "$(gh api repos/metalogiclabs/mathgraph-lean-kernel/actions/runs/35380841937 --jq .conclusion)" = success
-          test "$(gh api repos/metalogiclabs/mathgraph-lean-kernel/actions/runs/35380563756 --jq .conclusion)" = success
+          test "$(gh api repos/metalogiclabs/mathgraph-lean-kernel/actions/jobs/105715714333 --jq .conclusion)" = success
+          test "$(gh api repos/metalogiclabs/mathgraph-lean-kernel/actions/jobs/105715714344 --jq .conclusion)" = success
+          test "$(gh api repos/metalogiclabs/mathgraph-lean-kernel/actions/jobs/105715714369 --jq .conclusion)" = success
       - name: Run emitter tests
         working-directory: experiments
         run: python3 -m unittest test_emit_qckn_flash_event -v
