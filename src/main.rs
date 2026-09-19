@@ -27,6 +27,8 @@ fn main() {
             }
         }
     };
+    #[cfg(feature = "qckn-rigid-interface-atlas")]
+    sokonanoda::eval::dump_rigid_interface_atlas();
     match out {
         Ok(Some(msg)) => println!("{}", msg),
         Ok(None) => {}
