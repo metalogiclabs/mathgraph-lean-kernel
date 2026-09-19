@@ -317,6 +317,42 @@
         "arg_closed_rate": 0.115186,
         "spine_canonical_rate": 1
       }
+    },
+    {
+      "id": "flash-champion-head-to-head-sokonanoda",
+      "kind": "benchmark_authority",
+      "family": "arena_objective",
+      "run": 35409990848,
+      "champion_source_sha": "a5a97263e6b8c463a24ac493c7a32036c916a89f",
+      "champion_eval_blob_sha": "bf86521923ac27b142b058df36cd21a1a4a2008d",
+      "champion_flash_blob_sha": "4dc040098fc34c5f06ef4b5c19aaa72c1d696994",
+      "leader_source_sha": "28c03d0103e004610e4d47a4828965efb2b70af9",
+      "arena_sha": "510fbfead6f02bed1a0179d01729a6ddf5bfd06d",
+      "same_runner": true,
+      "repetitions": 5,
+      "observations": {
+        "leader_runs_s": [
+          75.08,
+          74.49,
+          74.2,
+          71.43,
+          73.66
+        ],
+        "champion_runs_s": [
+          77.45,
+          77.9,
+          72.27,
+          70.29,
+          70.58
+        ],
+        "leader_median_s": 74.2,
+        "champion_median_s": 72.27,
+        "champion_vs_leader_speedup": 1.026705,
+        "champion_margin_percent": 2.6011,
+        "leader_rss_kb": 6140636,
+        "champion_rss_kb": 6248524
+      },
+      "verdict": "champion_ahead_same_runner"
     }
   ]
 }
