@@ -1,0 +1,244 @@
+name: Flash generation gate v1
+
+on:
+  workflow_dispatch:
+
+jobs:
+  generation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: cachix/install-nix-action@v31
+
+      - name: Materialize candidate and exact reference
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          c=json.loads(Path('experiments/flash_generation_candidate_v1.json').read_text())
+          assert c['schema']=='mathgraph.flash.generation-candidate.v1'
+          Path('/tmp/candidate-contract.json').write_text(json.dumps(c,indent=2)+'\n')
+          PY
+
+          git worktree add /tmp/reference "$GITHUB_SHA"
+          cp -a /tmp/reference /tmp/candidate
+
+          python3 - <<'PY'
+          import json,re
+          from pathlib import Path
+          c=json.load(open('/tmp/candidate-contract.json'))
+          p=Path('/tmp/candidate')/c['policy_file']
+          s=p.read_text()
+          old=f"pub(crate) const {c['policy_constant']}: bool = {'true' if c['reference_value'] else 'false'};"
+          new=f"pub(crate) const {c['policy_constant']}: bool = {'true' if c['candidate_value'] else 'false'};"
+          assert s.count(old)==1,(old,s.count(old))
+          p.write_text(s.replace(old,new,1))
+          PY
+
+          base_tree=$(git rev-parse "$GITHUB_SHA^{tree}")
+          eval_blob=$(git hash-object /tmp/candidate/src/eval.rs)
+          flash_blob=$(git hash-object /tmp/candidate/src/flash.rs)
+          identity="tree:$base_tree|eval:$eval_blob|flash:$flash_blob|rustflags:x86-64-v3"
+          printf '%s\n' "$identity" >/tmp/implementation-identity.txt
+          printf 'source_sha\t%s\nbase_tree\t%s\neval_blob\t%s\nflash_blob\t%s\nidentity\t%s\n' \
+            "$GITHUB_SHA" "$base_tree" "$eval_blob" "$flash_blob" "$identity" >/tmp/provenance.tsv
+
+          for arm in reference candidate; do
+            (cd /tmp/$arm && RUSTFLAGS='-C target-cpu=x86-64-v3' cargo build --release --locked)
+            cp /tmp/$arm/target/release/sokonanoda /tmp/$arm.bin
+          done
+
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}
+          EOF
+
+      - name: Build pinned Arena corpus once
+        shell: bash
+        run: |
+          set -euxo pipefail
+          arena_sha=$(python3 -c "import json;print(json.load(open('/tmp/candidate-contract.json'))['arena_sha'])")
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q "$arena_sha"
+          cd /tmp/arena
+          : >/tmp/build-tests.tsv
+          while IFS= read -r y; do
+            t=${y#tests/}; t=${t%.yaml}
+            echo "BUILD $t" | tee -a /tmp/build-tests.tsv
+            nix develop -c ./lka.py build-test "$t" >/dev/null
+          done < <(find tests -type f -name '*.yaml' | sort)
+          find _build/tests -type f -name '*.ndjson' | sort >/tmp/built-exports.txt
+          test -s /tmp/built-exports.txt
+          echo "built $(wc -l </tmp/built-exports.txt) exports"
+
+      - name: Full semantic authority on all current exports
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          : >/tmp/semantic.tsv
+          : >/tmp/mismatches.tsv
+          while IFS= read -r f; do
+            set +e
+            /tmp/reference.bin /tmp/config.json <"$f" >/tmp/r.out 2>/tmp/r.err; r=$?
+            /tmp/candidate.bin /tmp/config.json <"$f" >/tmp/c.out 2>/tmp/c.err; c=$?
+            set -e
+            if [ "$r" -ne "$c" ] || ! cmp -s /tmp/r.out /tmp/c.out; then
+              printf 'SEMANTIC_MISMATCH\t%s\treference=%s\tcandidate=%s\n' "$f" "$r" "$c" | tee -a /tmp/mismatches.tsv /tmp/semantic.tsv
+            else
+              printf 'MATCH\t%s\t%s\n' "$c" "$f" >>/tmp/semantic.tsv
+            fi
+          done </tmp/built-exports.txt
+
+          exports=$(wc -l </tmp/built-exports.txt)
+          mismatches=$(grep -c '^SEMANTIC_MISMATCH' /tmp/mismatches.tsv || true)
+          printf 'exports=%s semantic_mismatches=%s\n' "$exports" "$mismatches" | tee /tmp/semantic-summary.txt
+          test "$mismatches" -eq 0
+
+      - name: Native performance authority on same generation
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          : >/tmp/perf.tsv
+          python3 - <<'PY' >/tmp/perf-tests.txt
+          import json
+          c=json.load(open('/tmp/candidate-contract.json'))
+          print('\n'.join(c['perf_tests']))
+          PY
+
+          while IFS= read -r t; do
+            f="_build/tests/$t.ndjson"
+            test -f "$f"
+            reps=3
+            [ "$t" = mathlib ] && reps=5
+            for rep in $(seq 1 "$reps"); do
+              if [ $((rep%2)) -eq 1 ]; then order="reference candidate"; else order="candidate reference"; fi
+              for arm in $order; do
+                /usr/bin/time -f '%e\t%U\t%M' -o /tmp/time \
+                  /tmp/$arm.bin /tmp/config.json <"$f" >/dev/null 2>/dev/null
+                read -r wall user rss </tmp/time
+                printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$t" "$arm" "$rep" "$wall" "$user" "$rss" >>/tmp/perf.tsv
+              done
+            done
+          done </tmp/perf-tests.txt
+
+          python3 - <<'PY' | tee /tmp/scorecard.txt
+          import json
+          from collections import defaultdict
+          from statistics import median
+          c=json.load(open('/tmp/candidate-contract.json'))
+          rows=defaultdict(lambda:defaultdict(list))
+          for l in open('/tmp/perf.tsv'):
+              t,a,r,w,u,m=l.rstrip().split('\t')
+              rows[t][a].append((float(w),float(u),int(m)))
+
+          speeds={}
+          obs={}
+          print('test\treference\tcandidate\tspeedup')
+          for t in rows:
+              rw=median(x[0] for x in rows[t]['reference'])
+              cw=median(x[0] for x in rows[t]['candidate'])
+              ru=median(x[1] for x in rows[t]['reference'])
+              cu=median(x[1] for x in rows[t]['candidate'])
+              rr=median(x[2] for x in rows[t]['reference'])
+              cr=median(x[2] for x in rows[t]['candidate'])
+              sp=rw/cw
+              speeds[t]=sp
+              obs[t]={'reference_wall_s':rw,'candidate_wall_s':cw,'speedup':sp,
+                      'reference_user_s':ru,'candidate_user_s':cu,
+                      'reference_rss_kb':rr,'candidate_rss_kb':cr}
+              print(f'{t}\t{rw:.3f}\t{cw:.3f}\t{sp:.6f}')
+
+          regress=[t for t in c['protected_tests'] if speeds[t] < c['protected_min_speedup']]
+          perf_pass=speeds['mathlib'] >= c['mathlib_min_speedup'] and not regress
+          observations={
+              'mathlib_speedup':speeds['mathlib'],
+              'protected_regressions':regress,
+              'tests':obs,
+              'thresholds':{
+                  'mathlib_min_speedup':c['mathlib_min_speedup'],
+                  'protected_min_speedup':c['protected_min_speedup']
+              }
+          }
+          open('/tmp/observations.json','w').write(json.dumps(observations,indent=2,sort_keys=True)+'\n')
+          open('/tmp/performance-pass.txt','w').write('1\n' if perf_pass else '0\n')
+          print(f"MATHLIB_SPEEDUP={speeds['mathlib']:.6f}")
+          print("PROTECTED_REGRESSIONS="+(",".join(regress) if regress else "none"))
+          print("PERFORMANCE_AUTHORITY_PASS="+str(perf_pass).lower())
+          PY
+
+      - name: Emit typed authorities and strict join
+        shell: bash
+        run: |
+          set -euxo pipefail
+          capability=$(python3 -c "import json;print(json.load(open('/tmp/candidate-contract.json'))['capability_id'])")
+          family=$(python3 -c "import json;print(json.load(open('/tmp/candidate-contract.json'))['family'])")
+          identity=$(cat /tmp/implementation-identity.txt)
+
+          python3 experiments/flash_emit_authority_v1.py \
+            --kind semantic_authority \
+            --id "$capability-semantic-$GITHUB_RUN_ID" \
+            --family "$family" --capability-id "$capability" --run "$GITHUB_RUN_ID" \
+            --implementation-identity "$identity" \
+            --semantic-scope 409_current_arena_exports --semantic-pass \
+            --out /tmp/semantic-event.json
+
+          if [ "$(cat /tmp/performance-pass.txt)" = 1 ]; then
+            python3 experiments/flash_emit_authority_v1.py \
+              --kind performance_authority \
+              --id "$capability-performance-$GITHUB_RUN_ID" \
+              --family "$family" --capability-id "$capability" --run "$GITHUB_RUN_ID" \
+              --implementation-identity "$identity" --performance-pass \
+              --observations-json /tmp/observations.json \
+              --out /tmp/performance-event.json
+
+            python3 experiments/flash_authority_join_v1.py \
+              /tmp/semantic-event.json /tmp/performance-event.json /tmp/joined-event.json
+            echo FLASH_GENERATION_PROMOTABLE
+          else
+            python3 - <<'PY'
+          import json,os
+          c=json.load(open('/tmp/candidate-contract.json'))
+          obs=json.load(open('/tmp/observations.json'))
+          event={
+              'schema':'mathgraph.flash.event.v1',
+              'id':f"{c['capability_id']}-performance-reject-{os.environ['GITHUB_RUN_ID']}",
+              'kind':'causal_observation',
+              'family':c['family'],
+              'run':int(os.environ['GITHUB_RUN_ID']),
+              'capability_id':c['capability_id'],
+              'context':'generation_gate',
+              'performance_pass':False,
+              'observations':obs,
+          }
+          open('/tmp/rejection-event.json','w').write(json.dumps(event,indent=2,sort_keys=True)+'\n')
+          print('FLASH_GENERATION_REJECTED')
+          PY
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-generation-gate-v1
+          path: |
+            /tmp/candidate-contract.json
+            /tmp/provenance.tsv
+            /tmp/build-tests.tsv
+            /tmp/built-exports.txt
+            /tmp/semantic.tsv
+            /tmp/mismatches.tsv
+            /tmp/semantic-summary.txt
+            /tmp/perf.tsv
+            /tmp/scorecard.txt
+            /tmp/observations.json
+            /tmp/semantic-event.json
+            /tmp/performance-event.json
+            /tmp/joined-event.json
+            /tmp/rejection-event.json
+          if-no-files-found: warn
