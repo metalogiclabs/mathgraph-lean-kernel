@@ -1,0 +1,198 @@
+name: Flash Rigid V2 + Infer-Pi quotient portfolio
+
+on:
+  push:
+    branches:
+      - qckn-flash-rigid-v2-infer-pi-v1
+  workflow_dispatch:
+
+concurrency:
+  group: qckn-flash-rigid-v2-infer-pi-v1
+  cancel-in-progress: true
+
+jobs:
+  portfolio:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Materialize quotient portfolio
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git worktree add /tmp/champion 28bc6a91d68ee547ee94fca395f58e8f100879ea
+          git worktree add /tmp/source "$GITHUB_SHA"
+          cp -a /tmp/source /tmp/rigid
+          cp -a /tmp/source /tmp/infer
+          cp -a /tmp/source /tmp/combined
+          python3 - <<'PY'
+          from pathlib import Path
+          configs={
+            'rigid':(True,False),
+            'infer':(False,True),
+            'combined':(True,True),
+          }
+          for arm,(rigid,infer) in configs.items():
+              p=Path('/tmp')/arm/'src/flash.rs'
+              s=p.read_text()
+              if rigid:
+                  s=s.replace('pub(crate) const RIGID_INDUCTIVE_NEUTRAL: bool = false;',
+                              'pub(crate) const RIGID_INDUCTIVE_NEUTRAL: bool = true;')
+              if infer:
+                  s=s.replace('pub(crate) const INFER_PI_DEMAND_BYPASS: bool = false;',
+                              'pub(crate) const INFER_PI_DEMAND_BYPASS: bool = true;')
+              p.write_text(s)
+          PY
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}
+          EOF
+          for arm in champion rigid infer combined; do
+            (cd /tmp/$arm && RUSTFLAGS='-C target-cpu=x86-64-v3' cargo build --release --locked)
+            cp /tmp/$arm/target/release/sokonanoda /tmp/$arm.native.bin
+          done
+
+      - name: Build focused Arena panel
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          cd /tmp/arena
+          for t in mathlib cedar cslib init perf/beta-ladder perf/grind-ring-5 init-prelude; do
+            nix develop -c ./lka.py build-test "$t" >/dev/null
+          done
+
+      - name: Exact focused semantic parity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          : >/tmp/parity.tsv
+          for t in mathlib cedar cslib init perf/beta-ladder perf/grind-ring-5; do
+            f="_build/tests/$t.ndjson"
+            for arm in champion rigid infer combined; do
+              set +e
+              /tmp/$arm.native.bin /tmp/config.json <"$f" >/tmp/$arm.out 2>/tmp/$arm.err
+              rc=$?
+              set -e
+              printf '%s\t%s\t%s\n' "$t" "$arm" "$rc" >>/tmp/parity.tsv
+            done
+            test "$(awk -v t="$t" '$1==t{print $3}' /tmp/parity.tsv | sort -u | wc -l)" -eq 1
+            cmp /tmp/champion.out /tmp/rigid.out
+            cmp /tmp/champion.out /tmp/infer.out
+            cmp /tmp/champion.out /tmp/combined.out
+          done
+          echo QCKN_QUOTIENT_PORTFOLIO_FOCUSED_EQ_PASS
+
+      - name: Native four-way Mathlib tournament
+        shell: bash
+        run: |
+          set -euxo pipefail
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          : >/tmp/native.tsv
+          orders=(
+            "champion rigid infer combined"
+            "combined champion rigid infer"
+            "infer combined champion rigid"
+            "rigid infer combined champion"
+            "champion combined infer rigid"
+          )
+          rep=0
+          for order in "${orders[@]}"; do
+            rep=$((rep+1))
+            for arm in $order; do
+              /usr/bin/time -f '%e\t%U\t%M' -o /tmp/time /tmp/$arm.native.bin /tmp/config.json <"$f" >/dev/null 2>/dev/null
+              read -r wall user rss </tmp/time
+              printf '%s\t%s\t%s\t%s\t%s\n' "$arm" "$rep" "$wall" "$user" "$rss" | tee -a /tmp/native.tsv
+            done
+          done
+          python3 - <<'PY' | tee /tmp/native-scorecard.txt
+          from collections import defaultdict
+          from statistics import median
+          rows=defaultdict(list)
+          for l in open('/tmp/native.tsv'):
+              a,r,w,u,m=l.rstrip().split('\t')
+              rows[a].append((float(w),float(u),int(m)))
+          med={a:median(x[0] for x in xs) for a,xs in rows.items()}
+          for a in ('champion','rigid','infer','combined'):
+              print(f'{a}_runs={[x[0] for x in rows[a]]}')
+              print(f'{a}_median={med[a]:.6f}')
+          winner=min(med,key=med.get)
+          print('NATIVE_WINNER='+winner)
+          print(f'RIGID_SPEEDUP={med["champion"]/med["rigid"]:.6f}')
+          print(f'INFER_SPEEDUP={med["champion"]/med["infer"]:.6f}')
+          print(f'COMBINED_SPEEDUP={med["champion"]/med["combined"]:.6f}')
+          print(f'COMBINED_VS_BEST_SINGLE={min(med["rigid"],med["infer"])/med["combined"]:.6f}')
+          PY
+
+      - name: Deterministic PGO build
+        shell: bash
+        run: |
+          set -euxo pipefail
+          LLVM_PROFDATA=$(nix shell nixpkgs#llvmPackages_21.llvm -c sh -c 'command -v llvm-profdata')
+          FLAGS='-C target-cpu=x86-64 -C target-feature=-avx,-avx2,-avx512f,-fma'
+          for arm in champion rigid infer combined; do
+            rm -rf /tmp/$arm/target /tmp/$arm/pgo
+            mkdir -p /tmp/$arm/pgo
+            (
+              cd /tmp/$arm
+              RUSTFLAGS="$FLAGS -Cprofile-generate=/tmp/$arm/pgo" cargo build --release --locked
+              target/release/sokonanoda /tmp/config.json </tmp/arena/_build/tests/init-prelude.ndjson >/dev/null
+              "$LLVM_PROFDATA" merge -o /tmp/$arm/pgo/merged.profdata /tmp/$arm/pgo
+              rm -rf target
+              RUSTFLAGS="$FLAGS -Cprofile-use=/tmp/$arm/pgo/merged.profdata" cargo build --release --locked
+              cp target/release/sokonanoda /tmp/$arm.pgo.bin
+            )
+          done
+
+      - name: Callgrind quotient preference tournament
+        shell: bash
+        run: |
+          set -euxo pipefail
+          VALGRIND=$(nix shell nixpkgs#valgrind -c sh -c 'command -v valgrind')
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          : >/tmp/callgrind.tsv
+          for arm in champion rigid infer combined; do
+            out=/tmp/$arm.callgrind
+            timeout 7200s "$VALGRIND" --tool=callgrind --quiet --collect-jumps=no \
+              --callgrind-out-file="$out" /tmp/$arm.pgo.bin /tmp/config.json <"$f" >/dev/null 2>/dev/null
+            ir=$(awk '/^summary:/ {print $2; exit}' "$out")
+            test -n "$ir"
+            printf '%s\t%s\n' "$arm" "$ir" | tee -a /tmp/callgrind.tsv
+          done
+          python3 - <<'PY' | tee /tmp/callgrind-scorecard.txt
+          vals={}
+          for l in open('/tmp/callgrind.tsv'):
+              a,n=l.rstrip().split('\t'); vals[a]=int(n)
+          c=vals['champion']
+          for a in ('champion','rigid','infer','combined'):
+              print(f'{a}_ir={vals[a]}')
+          winner=min(vals,key=vals.get)
+          print('CALLGRIND_WINNER='+winner)
+          print(f'RIGID_IR_SPEEDUP={c/vals["rigid"]:.9f}')
+          print(f'INFER_IR_SPEEDUP={c/vals["infer"]:.9f}')
+          print(f'COMBINED_IR_SPEEDUP={c/vals["combined"]:.9f}')
+          print(f'COMBINED_VS_BEST_SINGLE_IR={min(vals["rigid"],vals["infer"])/vals["combined"]:.9f}')
+          if winner=='combined':
+              print('QCKN_QUOTIENT_PORTFOLIO_COMPOUNDING_PASS')
+          elif winner in ('rigid','infer'):
+              print('QCKN_QUOTIENT_PORTFOLIO_SINGLE_REPRESENTATIVE_WINS')
+          else:
+              print('QCKN_QUOTIENT_PORTFOLIO_CHAMPION_REMAINS')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-rigid-v2-infer-pi-v1
+          path: |
+            /tmp/parity.tsv
+            /tmp/native.tsv
+            /tmp/native-scorecard.txt
+            /tmp/callgrind.tsv
+            /tmp/callgrind-scorecard.txt
+          if-no-files-found: warn
