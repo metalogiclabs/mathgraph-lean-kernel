@@ -1,0 +1,36 @@
+{
+  "schema": "mathgraph.flash.action-registry.v1",
+  "actions": {
+    "revalidate_ordinary_unfold_neutral": {
+      "type": "generation_gate",
+      "workflow": ".github/workflows/qckn-flash-generation-gate-v1.yml",
+      "branch": "qckn-flash-generation-gate-v1",
+      "capability_id": "ordinary_unfold_neutral",
+      "authority": "full_409_plus_native_performance",
+      "prepared": true
+    },
+    "ordinary_unfold_app_hc_economics": {
+      "type": "observation_request",
+      "branch": "qckn-var-r2-unfold-atlas-v1",
+      "authority": "observational_only",
+      "prepared": true
+    },
+    "rigid_inductive_exact_interface_census": {
+      "type": "observation_request",
+      "branch": "qckn-flash-rigid-interface-reserve-v1",
+      "authority": "observational_only",
+      "prepared": true,
+      "activation_env": "QCKN_FLASH_RIGID_INTERFACE_PROFILE=1"
+    },
+    "cold_prune_new_representation": {
+      "type": "new_search",
+      "authority": "proposal_only_until_verified",
+      "prepared": false
+    },
+    "app_simple_apply_new_representation": {
+      "type": "new_search",
+      "authority": "proposal_only_until_verified",
+      "prepared": false
+    }
+  }
+}
