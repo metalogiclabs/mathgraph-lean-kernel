@@ -97,12 +97,20 @@ def close(evidence, manifest):
     # Derived live frontier after closure.
     atlas = events.get("current-cost-atlas",{}).get("observations",{})
     evalc = events.get("post-var-eval-census",{}).get("observations",{})
-    if caps.get("direct_framed_prune",{}).get("status") != "promoted" and atlas.get("prune_env_cold_self_share",0) >= .05:
+    framed_status = caps.get("direct_framed_prune",{}).get("status")
+    if framed_status == "candidate_reverify" and atlas.get("prune_env_cold_self_share",0) >= .05:
         frontier.append({
             "id":"revalidate_direct_framed_prune",
             "mode":"reuse_then_reverify",
             "priority": atlas["prune_env_cold_self_share"],
             "reason":"current high-cost residual matches previously verified repair family",
+        })
+    elif framed_status == "rejected" and atlas.get("prune_env_cold_self_share",0) >= .05:
+        frontier.append({
+            "id":"cold_prune_new_representation",
+            "mode":"new_search",
+            "priority": atlas["prune_env_cold_self_share"],
+            "reason":"current direct-Framed implementation was rejected; preserve residual but do not replay identical candidate",
         })
     appkind = events.get("post-var-simple-apply-kind-census",{}).get("observations",{})
     unfold_cap = caps.get("ordinary_unfold_neutral",{})
