@@ -1,0 +1,56 @@
+name: Flash generation gate sanity
+
+on:
+  push:
+    branches:
+      - qckn-flash-generation-gate-v1
+  workflow_dispatch:
+
+concurrency:
+  group: qckn-flash-generation-gate-sanity
+  cancel-in-progress: true
+
+jobs:
+  sanity:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate candidate contract and policy toggle
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          c=json.loads(Path('experiments/flash_generation_candidate_v1.json').read_text())
+          assert c['schema']=='mathgraph.flash.generation-candidate.v1'
+          p=Path(c['policy_file'])
+          s=p.read_text()
+          old=f"pub(crate) const {c['policy_constant']}: bool = {'true' if c['reference_value'] else 'false'};"
+          new=f"pub(crate) const {c['policy_constant']}: bool = {'true' if c['candidate_value'] else 'false'};"
+          assert s.count(old)==1
+          Path('/tmp/candidate-flash.rs').write_text(s.replace(old,new,1))
+          assert new in Path('/tmp/candidate-flash.rs').read_text()
+          print('FLASH_GENERATION_POLICY_TOGGLE_PASS')
+          PY
+
+      - name: Test authority event pipeline
+        run: |
+          python3 experiments/test_flash_emit_authority_v1.py
+          python3 experiments/test_flash_authority_join_v1.py
+          python3 experiments/test_flash_event_v1.py
+
+      - name: Compile reference source
+        run: cargo check --locked
+
+      - name: Validate generation workflow shell fragments
+        shell: bash
+        run: |
+          set -euxo pipefail
+          grep -q 'Build pinned Arena corpus once' .github/workflows/qckn-flash-generation-gate-v1.yml
+          grep -q 'Full semantic authority on all current exports' .github/workflows/qckn-flash-generation-gate-v1.yml
+          grep -q 'Emit typed authorities and strict join' .github/workflows/qckn-flash-generation-gate-v1.yml
+          echo FLASH_GENERATION_GATE_SANITY_PASS
