@@ -127,7 +127,9 @@
         "a_already_canonical_rate": 0.900231,
         "app_hc_hit_rate": 0.439501,
         "app_hc_miss_rate": 0.560499,
-        "shallow_spine_rate": 0.507307
+        "shallow_spine_rate": 0.507307,
+        "rigid_inductive_count": 80125554,
+        "rigid_inductive_share_eval_estimate": 0.0476
       }
     },
     {
@@ -246,6 +248,21 @@
         "protected_regressions": []
       },
       "promotion_blocker": "must_revalidate_in_current_framed_plus_var_present"
+    },
+    {
+      "id": "rigid-payload-v39-obstruction",
+      "kind": "obstruction_fingerprint",
+      "family": "rigid_structural_reuse",
+      "run": 33855926339,
+      "semantic_pass": true,
+      "observations": {
+        "rigid_exposure_pct_of_sampled": 33.8257,
+        "repeat_digest_pct": 5.0348,
+        "dominant_head": "bvar",
+        "inductive_diff_sample_count": 26786,
+        "spine0_diff_sample_count": 85948
+      },
+      "obstruction": "no_semantic_reuse_without_exact_structural_verifier_safe_equality"
     }
   ]
 }
