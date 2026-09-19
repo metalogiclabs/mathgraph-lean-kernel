@@ -111,10 +111,10 @@ def close(evidence, manifest):
         })
     elif unfold_cap and unfold_cap.get("status") == "rejected" and unfold_share_eval > 0:
         frontier.append({
-            "id":"ordinary_unfold_new_representation",
-            "mode":"new_search_not_same_head",
+            "id":"ordinary_unfold_app_hc_economics",
+            "mode":"observation_request",
             "priority": unfold_share_eval,
-            "reason":"neutral candidate rejected; same-head continuation family already killed",
+            "reason":"neutral dispatch rejected; function canonical=100%, argument canonical=90.0%, app_hc hit=43.95%; measure interning cost before new representation",
         })
 
     if "app_first_sight_bypass" not in killed_families and evalc.get("app_simple_apply_share_eval",0) > 0:
@@ -137,8 +137,9 @@ def close(evidence, manifest):
         "reuse_then_reverify":0,
         "candidate_reverify":1,
         "new_search_not_first_sight_bypass":2,
-        "new_search_not_same_head":2,
-        "new_search":2,
+        "observation_request":2,
+        "new_search_not_same_head":3,
+        "new_search":3,
     }
     frontier.sort(key=lambda x:(mode_rank.get(x["mode"],9),-x["priority"],x["id"]))
 
