@@ -1,0 +1,129 @@
+name: Flash infer Pi-demand bypass causal gate
+
+on:
+  push:
+    branches:
+      - qckn-flash-infer-pi-bypass-v1
+  workflow_dispatch:
+
+concurrency:
+  group: qckn-flash-infer-pi-bypass-v1
+  cancel-in-progress: true
+
+jobs:
+  causal:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build candidate and exact ablation
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git worktree add /tmp/candidate "$GITHUB_SHA"
+          cp -a /tmp/candidate /tmp/ablated
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/ablated/src/flash.rs')
+          s=p.read_text()
+          old='pub(crate) const INFER_PI_DEMAND_BYPASS: bool = true;'
+          new='pub(crate) const INFER_PI_DEMAND_BYPASS: bool = false;'
+          assert s.count(old)==1
+          p.write_text(s.replace(old,new,1))
+          PY
+          for arm in candidate ablated; do
+            (cd /tmp/$arm && RUSTFLAGS='-C target-cpu=x86-64-v3' cargo build --release --locked)
+            cp /tmp/$arm/target/release/sokonanoda /tmp/$arm.bin
+          done
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}
+          EOF
+
+      - name: Build focused Arena panel
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          cd /tmp/arena
+          for t in mathlib cedar cslib init perf/beta-ladder; do
+            nix develop -c ./lka.py build-test "$t" >/dev/null
+          done
+
+      - name: Exact focused parity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          : >/tmp/parity.tsv
+          for t in mathlib cedar cslib init perf/beta-ladder; do
+            f="_build/tests/$t.ndjson"
+            set +e
+            /tmp/ablated.bin /tmp/config.json <"$f" >/tmp/a.out 2>/tmp/a.err; a=$?
+            /tmp/candidate.bin /tmp/config.json <"$f" >/tmp/c.out 2>/tmp/c.err; c=$?
+            set -e
+            test "$a" -eq "$c"
+            cmp /tmp/a.out /tmp/c.out
+            printf 'MATCH\t%s\t%s\n' "$c" "$t" >>/tmp/parity.tsv
+          done
+          echo INFER_PI_FOCUSED_SEMANTIC_PARITY_PASS
+
+      - name: Native Arena-objective timing
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          : >/tmp/perf.tsv
+          for t in mathlib cedar cslib init perf/beta-ladder; do
+            f="_build/tests/$t.ndjson"
+            reps=3
+            [ "$t" = mathlib ] && reps=5
+            for rep in $(seq 1 "$reps"); do
+              if [ $((rep%2)) -eq 1 ]; then order="ablated candidate"; else order="candidate ablated"; fi
+              for arm in $order; do
+                /usr/bin/time -f '%e\t%U\t%M' -o /tmp/time                   /tmp/$arm.bin /tmp/config.json <"$f" >/dev/null 2>/dev/null
+                read -r wall user rss </tmp/time
+                printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$t" "$arm" "$rep" "$wall" "$user" "$rss" >>/tmp/perf.tsv
+              done
+            done
+          done
+
+          python3 - <<'PY' | tee /tmp/scorecard.txt
+          from collections import defaultdict
+          from statistics import median
+          rows=defaultdict(lambda:defaultdict(list))
+          for l in open('/tmp/perf.tsv'):
+              t,a,r,w,u,m=l.rstrip().split('\t')
+              rows[t][a].append((float(w),float(u),int(m)))
+          print('test\tablated\tcandidate\tspeedup')
+          speeds={}
+          for t in rows:
+              aw=median(x[0] for x in rows[t]['ablated'])
+              cw=median(x[0] for x in rows[t]['candidate'])
+              s=aw/cw
+              speeds[t]=s
+              print(f'{t}\t{aw:.3f}\t{cw:.3f}\t{s:.4f}')
+          catastrophic=[t for t in ('cedar','cslib','init') if speeds[t] < .90]
+          print(f"MATHLIB_SPEEDUP={speeds['mathlib']:.6f}")
+          print(f"BETA_SPEEDUP={speeds['perf/beta-ladder']:.6f}")
+          print("CATASTROPHIC_SECONDARY_REGRESSIONS="+(",".join(catastrophic) if catastrophic else "none"))
+          if speeds['mathlib'] >= 1.002 and not catastrophic:
+              print("FLASH_INFER_PI_BYPASS_CAUSAL_PASS")
+          else:
+              print("FLASH_INFER_PI_BYPASS_CAUSAL_REJECT")
+              raise SystemExit(1)
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-infer-pi-bypass-v1
+          path: |
+            /tmp/parity.tsv
+            /tmp/perf.tsv
+            /tmp/scorecard.txt
+          if-no-files-found: warn
