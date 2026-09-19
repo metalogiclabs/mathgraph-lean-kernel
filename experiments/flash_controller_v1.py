@@ -25,20 +25,26 @@ def close(evidence, manifest):
     # Event order is causal order in the evidence ledger: the latest verified
     # revalidation overrides older promotion evidence. History remains provenance,
     # but only the reduced current authority may mutate the compiled present.
-    latest_revalidation = {}
+    latest_decision = {}
     for e in evidence["events"]:
-        if e.get("kind") == "current_revalidation" and e.get("authority_join_verified") is True:
-            cid = e["capability_id"]
+        kind=e.get("kind")
+        verified = (
+            (kind == "current_revalidation" and e.get("authority_join_verified") is True)
+            or
+            (kind == "performance_rejection" and e.get("performance_rejection_verified") is True)
+        )
+        if verified:
+            cid=e["capability_id"]
             if cid in caps:
-                latest_revalidation[cid] = e
+                latest_decision[cid]=e
 
-    # Seed capabilities that have no newer current revalidation.
+    # Seed capabilities that have no newer verified current decision.
     for e in evidence["events"]:
         cid = e.get("capability_id") or {
             "direct-var": "direct_var_eval",
             "cold-prune-direct-v93": "direct_framed_prune",
         }.get(e["id"])
-        if not cid or cid not in caps or cid in latest_revalidation:
+        if not cid or cid not in caps or cid in latest_decision:
             continue
         if e.get("action") == "promote" and e.get("semantic_pass"):
             old = caps[cid]["status"]
@@ -46,11 +52,18 @@ def close(evidence, manifest):
                 caps[cid]["status"] = "promoted"
                 trace.append([0,"PROMOTE_SEED",cid,old])
 
-    # Apply the latest verified current authority exactly once.
-    for cid,e in latest_revalidation.items():
-        c = caps[cid]
-        old = c["status"]
-        if e.get("semantic_pass") and e.get("performance_pass"):
+    # Apply the latest verified current decision exactly once.
+    # A performance rejection is allowed to kill a candidate without claiming
+    # a full semantic authority result: being slower is sufficient to reject it.
+    for cid,e in latest_decision.items():
+        c=caps[cid]
+        old=c["status"]
+        if e.get("kind") == "performance_rejection":
+            c["status"]="rejected"
+            c.setdefault("evidence",{})["current_performance_rejection"]=e["run"]
+            if old != "rejected":
+                trace.append([0,"REJECT_PERFORMANCE",cid,old])
+        elif e.get("semantic_pass") and e.get("performance_pass"):
             c["status"] = "promoted"
             c.setdefault("evidence",{})["current_revalidation"] = e["run"]
             if old != "promoted":
@@ -132,12 +145,28 @@ def close(evidence, manifest):
         })
 
     rigid_share_eval = appkind.get("rigid_inductive_share_eval_estimate",0)
-    if unfold_cap and unfold_cap.get("status") == "promoted" and rigid_share_eval > 0:
+    rigid_cap = caps.get("rigid_inductive_neutral_v2",{})
+    rigid_atlas = events.get("rigid-inductive-exact-interface-atlas",{})
+    if rigid_cap and rigid_cap.get("status") == "candidate_reverify" and rigid_atlas and rigid_share_eval > 0:
+        frontier.append({
+            "id":"revalidate_rigid_inductive_v2",
+            "mode":"candidate_reverify",
+            "priority": rigid_share_eval,
+            "reason":"80M rigid-inductive simple apps; function canonical 100%, argument pointer-stable 93.7%, app_hc exact hit 51.5%",
+        })
+    elif rigid_cap and rigid_cap.get("status") == "rejected" and rigid_share_eval > 0:
+        frontier.append({
+            "id":"rigid_app_hc_new_representation",
+            "mode":"new_search",
+            "priority": rigid_share_eval,
+            "reason":"rigid V2 rejected; retain exact-interface residual but do not replay identical dispatch specialization",
+        })
+    elif not rigid_atlas and rigid_share_eval > 0:
         frontier.append({
             "id":"rigid_inductive_exact_interface_census",
             "mode":"observation_request",
             "priority": rigid_share_eval,
-            "reason":"next known App basin after ordinary-Unfold; V39 forbids generic digest reuse without exact structural equality",
+            "reason":"V39 forbids generic digest reuse without exact structural equality",
         })
     elif "app_first_sight_bypass" not in killed_families and evalc.get("app_simple_apply_share_eval",0) > 0:
         frontier.append({
