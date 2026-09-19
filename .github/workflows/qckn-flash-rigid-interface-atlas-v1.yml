@@ -1,0 +1,78 @@
+name: Flash rigid exact-interface atlas v1
+
+on:
+  push:
+    branches:
+      - qckn-flash-rigid-interface-atlas-v1
+  workflow_dispatch:
+
+concurrency:
+  group: qckn-flash-rigid-interface-atlas-v1
+  cancel-in-progress: true
+
+jobs:
+  mathlib-census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build Mathlib export
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test mathlib >/dev/null
+
+      - name: Run rigid exact-interface census
+        shell: bash
+        run: |
+          set -euxo pipefail
+          RUSTFLAGS='-C target-cpu=x86-64-v3' cargo build --release --locked --features qckn-rigid-interface-atlas
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}
+          EOF
+          set +e
+          /usr/bin/time -f 'wall_s=%e\nuser_s=%U\nmax_rss_kb=%M' -o /tmp/time             target/release/sokonanoda /tmp/config.json             </tmp/arena/_build/tests/mathlib.ndjson >/tmp/stdout 2>/tmp/stderr
+          rc=$?
+          set -e
+          test "$rc" -eq 0
+          grep '^QCKN_RIGID_INTERFACE_ATLAS' /tmp/stderr >/tmp/atlas.tsv
+          test -s /tmp/atlas.tsv
+
+          python3 - <<'PY' | tee /tmp/summary.txt
+          rows={}
+          for line in open('/tmp/atlas.tsv'):
+              tag,i,label,n=line.rstrip().split('\t')
+              assert tag=='QCKN_RIGID_INTERFACE_ATLAS'
+              rows[label]=int(n)
+          total=rows['rigid_inductive_simple_total']
+          assert total>0
+          assert rows['app_hc_hit']+rows['app_hc_miss']==total
+          assert rows['spine_len_0']+rows['spine_len_1']+rows['spine_len_2_3']+rows['spine_len_4_plus']==total
+          print(f'rigid_inductive_simple_total={total}')
+          for k in [
+              'f_pre_canonical','a_pre_canonical','f_post_same_ptr','a_post_same_ptr',
+              'app_hc_hit','app_hc_miss','spine_len_0','spine_len_1','spine_len_2_3',
+              'spine_len_4_plus','spine_closed','arg_closed','spine_canonical'
+          ]:
+              print(f'{k}\tcount={rows[k]}\tshare={rows[k]/total:.6f}')
+          print(f"exact_pointer_app_reuse={rows['app_hc_hit']/total:.6f}")
+          print(f"spine_empty_or_one={(rows['spine_len_0']+rows['spine_len_1'])/total:.6f}")
+          print('DECISION=OBSERVATIONAL_RIGID_INTERFACE_CENSUS_ONLY')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-rigid-interface-atlas-v1
+          path: |
+            /tmp/atlas.tsv
+            /tmp/summary.txt
+            /tmp/time
+            /tmp/stdout
+            /tmp/stderr
+          if-no-files-found: warn
