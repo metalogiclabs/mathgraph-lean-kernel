@@ -1,0 +1,23 @@
+name: Deferred open-cache materialization census
+
+on:
+  pull_request:
+    branches: [mathgraph]
+  workflow_dispatch:
+
+jobs:
+  census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Run deferred materialization census
+        run: bash scripts/run_deferred_open_materialization_census.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: deferred-open-cache-materialization-census
+          path: /tmp/deferred-mat
