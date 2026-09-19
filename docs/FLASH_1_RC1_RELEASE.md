@@ -5,7 +5,8 @@ Status: **qualification in progress / not yet proposed upstream**
 ## Frozen source
 
 - Repository: `metalogiclabs/mathgraph-lean-kernel`
-- Release-candidate branch: `flash-1-rc1`
+- Qualification/documentation branch: `flash-1-rc1`
+- Frozen source branch: `flash-1-rc1-source`
 - Frozen candidate source revision: `a342c74f6eb913c25c6dae4138158023d1b9aa6a`
 - Lineage: fork of Jeremy Chen's / intgrah's `sokonanoda`
 - Current Arena sokonanoda pin: `28c03d0103e004610e4d47a4828965efb2b70af9`
