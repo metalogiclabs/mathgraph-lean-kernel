@@ -17,7 +17,7 @@ assert base["selected_action"]=="revalidate_ordinary_unfold_neutral"
 unfold_pass=deepcopy(evidence)
 unfold_pass["events"].append({
     "id":"test-unfold-pass","kind":"current_revalidation","capability_id":"ordinary_unfold_neutral",
-    "run":5,"semantic_pass":True,"performance_pass":True,
+    "run":5,"semantic_pass":True,"performance_pass":True,"authority_join_verified":True,
 })
 up=fc.close(unfold_pass,deepcopy(manifest))
 assert up["runtime_policy"]["promoted"]==["direct_framed_prune","direct_var_eval","ordinary_unfold_neutral"]
@@ -26,7 +26,7 @@ assert up["selected_action"]=="app_simple_apply_new_representation"
 failed=deepcopy(evidence)
 failed["events"].append({
     "id":"test-framed-fail","kind":"current_revalidation","capability_id":"direct_framed_prune",
-    "run":2,"semantic_pass":True,"performance_pass":False,
+    "run":2,"semantic_pass":True,"performance_pass":False,"authority_join_verified":True,
 })
 f=fc.close(failed,deepcopy(manifest))
 assert f["runtime_policy"]["promoted"]==["direct_var_eval"]
@@ -36,7 +36,7 @@ assert next(c for c in f["manifest"]["capabilities"] if c["id"]=="direct_framed_
 rev=deepcopy(evidence)
 rev["events"].append(
     {"id":"test-var-fail","kind":"current_revalidation","capability_id":"direct_var_eval",
-     "run":4,"semantic_pass":False,"performance_pass":False}
+     "run":4,"semantic_pass":False,"performance_pass":False,"authority_join_verified":True}
 )
 rv=fc.close(rev,deepcopy(manifest))
 statuses={c["id"]:c["status"] for c in rv["manifest"]["capabilities"]}
