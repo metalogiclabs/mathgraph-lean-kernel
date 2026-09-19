@@ -1,0 +1,35 @@
+name: QCKN Flash event emitter v3
+
+on:
+  push:
+    branches:
+      - qckn-flash-event-emitter-v3
+  workflow_dispatch:
+
+jobs:
+  emit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Emit ordinary-Unfold and direct-Framed bundles
+        shell: bash
+        run: |
+          set -euxo pipefail
+          sha="$(git rev-parse HEAD)"
+          python3 experiments/emit_qckn_flash_event_v2.py --commit "$sha" --out /tmp/unfold
+          python3 experiments/emit_qckn_flash_framed_event_v1.py --commit "$sha" --out /tmp/framed
+          python3 - <<'PY'
+          import json
+          u=json.load(open('/tmp/unfold/event.json'))
+          f=json.load(open('/tmp/framed/event.json'))
+          assert u['event_id']=='lean:ordinary-unfold-neutral:v1'
+          assert f['event_id']=='lean:direct-framed-prune:v1'
+          assert f['payload']['support_ids']==['lean:direct-var:v1']
+          print('QCKN_FLASH_EVENT_EMITTER_V3_PASS')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qckn-flash-event-emitter-v3
+          path: |
+            /tmp/unfold
+            /tmp/framed
