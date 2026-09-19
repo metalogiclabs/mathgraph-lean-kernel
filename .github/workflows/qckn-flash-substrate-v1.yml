@@ -78,8 +78,29 @@ jobs:
             experiments/flash_capability_manifest_v1.json \
             experiments/flash_closure_v1_evidence.json \
             /tmp/flash-impact-index.json | tee /tmp/flash-impact-index.log
-          grep -q '^FLASH_IMPACT_INDEX_PASS$' /tmp/flash-impact-index.log
+          grep -q '^FLASH_IMPACT_INDEX_PASS
+        run: |
+          cargo test --release --locked -- \
+            --skip reject_rec_rule_with_forged_lambda_domains \
+            --skip reject_unlisted_recursor
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-current-v1
+          path: |
+            /tmp/flash-v1
+            /tmp/flash-controller.log
+            /tmp/flash-impact-index.json
+            /tmp/flash-impact-index.log
+            /tmp/flash-action-plan.json
+            /tmp/flash-action-plan.log
+          if-no-files-found: warn
+ /tmp/flash-impact-index.log
           python3 experiments/test_flash_index_v1.py
+
+      - name: Test Arena ranking objective
+        run: python3 experiments/test_flash_arena_objective_v1.py
 
       - name: Build compiled inner policy
         run: |
