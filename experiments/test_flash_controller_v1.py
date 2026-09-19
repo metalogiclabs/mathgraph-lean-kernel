@@ -12,7 +12,8 @@ manifest=json.loads((ROOT/"experiments/flash_capability_manifest_v1.json").read_
 
 base=fc.close(deepcopy(evidence),deepcopy(manifest))
 assert base["runtime_policy"]["promoted"]==["direct_framed_prune","direct_var_eval"]
-assert base["selected_action"]=="revalidate_ordinary_unfold_neutral"
+assert next(c for c in base["manifest"]["capabilities"] if c["id"]=="ordinary_unfold_neutral")["status"]=="rejected"
+assert base["selected_action"]=="revalidate_rigid_inductive_v2"
 
 unfold_pass=deepcopy(evidence)
 unfold_pass["events"].append({
@@ -21,7 +22,7 @@ unfold_pass["events"].append({
 })
 up=fc.close(unfold_pass,deepcopy(manifest))
 assert up["runtime_policy"]["promoted"]==["direct_framed_prune","direct_var_eval","ordinary_unfold_neutral"]
-assert up["selected_action"]=="rigid_inductive_exact_interface_census"
+assert up["selected_action"]=="revalidate_rigid_inductive_v2"
 
 failed=deepcopy(evidence)
 failed["events"].append({
