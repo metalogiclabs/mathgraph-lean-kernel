@@ -193,7 +193,39 @@
       "semantic_pass": true,
       "performance_pass": true,
       "mathlib_speedup": 1.040781,
-      "protected_regressions": []
+      "protected_regressions": [],
+      "authority_join_verified": true,
+      "joined_from": [
+        "direct-framed-prune-full-semantic",
+        "direct-framed-prune-causal-performance"
+      ]
+    },
+    {
+      "id": "direct-framed-prune-full-semantic",
+      "kind": "semantic_authority",
+      "family": "cold_prune",
+      "capability_id": "direct_framed_prune",
+      "run": 35404941215,
+      "semantic_scope": "409_current_arena_exports",
+      "semantic_pass": true,
+      "implementation_blob_sha": "003900f6d5adc0328bf6dc7f7a63b2b109698d3f"
+    },
+    {
+      "id": "direct-framed-prune-causal-performance",
+      "kind": "performance_authority",
+      "family": "cold_prune",
+      "capability_id": "direct_framed_prune",
+      "run": 35405256169,
+      "performance_pass": true,
+      "implementation_blob_sha": "003900f6d5adc0328bf6dc7f7a63b2b109698d3f",
+      "observations": {
+        "mathlib_speedup": 1.040781,
+        "cslib_speedup": 0.994,
+        "cedar_speedup": 1.0228,
+        "init_speedup": 1.0265,
+        "grind_ring_5_speedup": 1,
+        "protected_regressions": []
+      }
     }
   ]
 }
