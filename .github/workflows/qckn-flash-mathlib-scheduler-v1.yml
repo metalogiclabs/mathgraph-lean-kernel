@@ -1,0 +1,147 @@
+name: QCKN Flash Mathlib scheduler geometry V1
+
+on:
+  push:
+    branches:
+      - qckn-flash-mathlib-coherence-v1
+    paths:
+      - '.github/workflows/qckn-flash-mathlib-scheduler-v1.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: qckn-flash-mathlib-scheduler-v1
+  cancel-in-progress: true
+
+jobs:
+  tournament:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Materialize scheduler geometry arms
+        shell: bash
+        run: |
+          set -euxo pipefail
+          SOURCE=a342c74f6eb913c25c6dae4138158023d1b9aa6a
+          LEADER=28c03d0103e004610e4d47a4828965efb2b70af9
+          ARENA=510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          cat >/tmp/provenance.tsv <<EOF
+          frozen_source_sha	$SOURCE
+          arena_sokonanoda_sha	$LEADER
+          arena_suite_sha	$ARENA
+          protected_semantics	unchanged_checker_logic
+          preference	Arena-style 4-thread Mathlib wall
+          flash_frontier	scheduler_geometry
+          EOF
+          for n in 8 16 32 64 128; do
+            git worktree add --detach /tmp/chunk$n "$SOURCE"
+            sed -i "s/const CHUNK_SIZE: usize = 64;/const CHUNK_SIZE: usize = $n;/" /tmp/chunk$n/src/tc.rs
+            grep 'const CHUNK_SIZE' /tmp/chunk$n/src/tc.rs
+          done
+          git worktree add --detach /tmp/leader "$LEADER"
+
+      - name: Build pinned Mathlib corpus
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test init-prelude >/dev/null
+          nix develop -c ./lka.py build-test mathlib >/dev/null
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}
+          EOF
+
+      - name: Arena-style native PGO builds
+        shell: bash
+        run: |
+          set -euxo pipefail
+          LLVM_PROFDATA=$(nix shell nixpkgs#llvmPackages_21.llvm -c sh -c 'command -v llvm-profdata')
+          init=/tmp/arena/_build/tests/init-prelude.ndjson
+          for arm in chunk8 chunk16 chunk32 chunk64 chunk128 leader; do
+            rm -rf /tmp/$arm/target /tmp/$arm/pgo
+            mkdir -p /tmp/$arm/pgo
+            (
+              cd /tmp/$arm
+              RUSTFLAGS="-C target-cpu=native -Cprofile-generate=/tmp/$arm/pgo" cargo build --release --locked
+              target/release/sokonanoda /tmp/config.json <"$init" >/dev/null
+              "$LLVM_PROFDATA" merge -o /tmp/$arm/pgo/merged.profdata /tmp/$arm/pgo
+              test -s /tmp/$arm/pgo/merged.profdata
+              rm -rf target
+              RUSTFLAGS="-C target-cpu=native -Cprofile-use=/tmp/$arm/pgo/merged.profdata" cargo build --release --locked
+              cp target/release/sokonanoda /tmp/$arm.pgo.bin
+            )
+          done
+
+      - name: Five-replay Mathlib scheduler tournament
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          f=_build/tests/mathlib.ndjson
+          : >/tmp/scheduler.tsv
+          for rep in 1 2 3 4 5; do
+            if [ $((rep%2)) -eq 1 ]; then
+              order=(chunk8 chunk16 chunk32 chunk64 chunk128 leader)
+            else
+              order=(leader chunk128 chunk64 chunk32 chunk16 chunk8)
+            fi
+            for arm in "${order[@]}"; do
+              /usr/bin/time -f '%e\t%U\t%S\t%M' -o /tmp/time /tmp/$arm.pgo.bin /tmp/config.json <"$f" >/dev/null 2>/dev/null
+              read -r wall user sys rss </tmp/time
+              printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$arm" "$rep" "$wall" "$user" "$sys" "$rss" | tee -a /tmp/scheduler.tsv
+            done
+          done
+          python3 - <<'PY' | tee /tmp/scheduler-scorecard.txt
+          from collections import defaultdict
+          from statistics import median
+          rows=defaultdict(list)
+          for line in open('/tmp/scheduler.tsv'):
+              arm,rep,wall,user,sys,rss=line.rstrip().split('\t')
+              rows[arm].append((float(wall),float(user),float(sys),int(rss)))
+          med={a:median(x[0] for x in xs) for a,xs in rows.items()}
+          leader=med['leader']
+          base=med['chunk64']
+          print('arm\tmedian_wall_s\tvs_chunk64\tvs_leader\tmargin_vs_leader_pct')
+          for a in ('chunk8','chunk16','chunk32','chunk64','chunk128','leader'):
+              print(f'{a}\t{med[a]:.6f}\t{base/med[a]:.6f}\t{leader/med[a]:.6f}\t{(leader/med[a]-1)*100:.4f}')
+          cands=('chunk8','chunk16','chunk32','chunk64','chunk128')
+          winner=min(cands,key=med.get)
+          print('SCHEDULER_WINNER='+winner)
+          print(f'WINNER_MEDIAN_S={med[winner]:.6f}')
+          print(f'WINNER_VS_CHUNK64_SPEEDUP={base/med[winner]:.6f}')
+          print(f'WINNER_VS_LEADER_SPEEDUP={leader/med[winner]:.6f}')
+          print(f'WINNER_MARGIN_PERCENT={(leader/med[winner]-1)*100:.4f}')
+          print(f'TARGET_60_GAP_PERCENT={(med[winner]/60-1)*100:.4f}')
+          PY
+
+      - name: Semantic smoke across scheduler arms
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          for t in init mathlib; do
+            f=_build/tests/$t.ndjson
+            /tmp/chunk64.pgo.bin /tmp/config.json <"$f" >/tmp/base.out
+            for arm in chunk8 chunk16 chunk32 chunk128; do
+              /tmp/$arm.pgo.bin /tmp/config.json <"$f" >/tmp/$arm.out
+              cmp /tmp/base.out /tmp/$arm.out
+            done
+          done
+          echo SCHEDULER_SEMANTIC_SMOKE=PASS | tee /tmp/semantic-smoke.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-mathlib-scheduler-v1
+          path: |
+            /tmp/provenance.tsv
+            /tmp/scheduler.tsv
+            /tmp/scheduler-scorecard.txt
+            /tmp/semantic-smoke.txt
+          if-no-files-found: warn
