@@ -1,0 +1,117 @@
+name: Flash head-to-head vs sokonanoda
+
+on:
+  push:
+    branches:
+      - qckn-flash-head-to-head-v1
+  workflow_dispatch:
+
+concurrency:
+  group: qckn-flash-head-to-head-v1
+  cancel-in-progress: true
+
+jobs:
+  mathlib-duel:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build current Flash present and sokonanoda leader
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git worktree add /tmp/current "$GITHUB_SHA"
+          git worktree add /tmp/leader 28c03d0103e004610e4d47a4828965efb2b70af9
+
+          for arm in current leader; do
+            (cd /tmp/$arm && RUSTFLAGS='-C target-cpu=x86-64-v3' cargo build --release --locked)
+            cp /tmp/$arm/target/release/sokonanoda /tmp/$arm.bin
+          done
+
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}
+          EOF
+
+      - name: Build exact Arena workloads
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          cd /tmp/arena
+          for t in mathlib cedar cslib init std; do
+            nix develop -c ./lka.py build-test "$t" >/dev/null
+          done
+
+      - name: Verify status parity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          : >/tmp/parity.tsv
+          for t in mathlib cedar cslib init std; do
+            f="_build/tests/$t.ndjson"
+            set +e
+            /tmp/current.bin /tmp/config.json <"$f" >/tmp/c.out 2>/tmp/c.err; c=$?
+            /tmp/leader.bin /tmp/config.json <"$f" >/tmp/l.out 2>/tmp/l.err; l=$?
+            set -e
+            test "$c" -eq "$l"
+            printf 'STATUS_MATCH\t%s\t%s\n' "$c" "$t" >>/tmp/parity.tsv
+          done
+
+      - name: Same-runner Mathlib duel
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          f="_build/tests/mathlib.ndjson"
+          : >/tmp/mathlib.tsv
+          for rep in 1 2 3 4 5; do
+            if [ $((rep%2)) -eq 1 ]; then order="leader current"; else order="current leader"; fi
+            for arm in $order; do
+              /usr/bin/time -f '%e\t%U\t%M' -o /tmp/time                 /tmp/$arm.bin /tmp/config.json <"$f" >/dev/null 2>/dev/null
+              read -r wall user rss </tmp/time
+              printf '%s\t%s\t%s\t%s\t%s\n' "$arm" "$rep" "$wall" "$user" "$rss" | tee -a /tmp/mathlib.tsv
+            done
+          done
+
+          python3 - <<'PY' | tee /tmp/scorecard.txt
+          from collections import defaultdict
+          from statistics import median
+          rows=defaultdict(list)
+          for line in open('/tmp/mathlib.tsv'):
+              arm,rep,wall,user,rss=line.rstrip().split('\t')
+              rows[arm].append((float(wall),float(user),int(rss)))
+          for arm in ('leader','current'):
+              print(arm+'_runs='+repr([x[0] for x in rows[arm]]))
+          lm=median(x[0] for x in rows['leader'])
+          cm=median(x[0] for x in rows['current'])
+          lr=median(x[2] for x in rows['leader'])
+          cr=median(x[2] for x in rows['current'])
+          ratio=lm/cm
+          gap=(cm/lm-1)*100
+          print(f'LEADER_MEDIAN_S={lm:.6f}')
+          print(f'CURRENT_MEDIAN_S={cm:.6f}')
+          print(f'CURRENT_VS_LEADER_SPEEDUP={ratio:.6f}')
+          print(f'CURRENT_GAP_PERCENT={gap:.4f}')
+          print(f'LEADER_RSS_KB={int(lr)}')
+          print(f'CURRENT_RSS_KB={int(cr)}')
+          if cm < lm:
+              print('FLASH_CURRENT_AHEAD_OF_SOKONANODA')
+          else:
+              print('FLASH_CURRENT_BEHIND_SOKONANODA')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-head-to-head-v1
+          path: |
+            /tmp/parity.tsv
+            /tmp/mathlib.tsv
+            /tmp/scorecard.txt
+          if-no-files-found: warn
