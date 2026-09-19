@@ -2,9 +2,10 @@
 // Only externally promoted capabilities may be active here.
 
 pub(crate) const DIRECT_VAR_EVAL: bool = true;
-pub(crate) const DIRECT_FRAMED_PRUNE: bool = false;
+pub(crate) const DIRECT_FRAMED_PRUNE: bool = true;
 pub(crate) const ORDINARY_UNFOLD_NEUTRAL: bool = false;
 
 pub(crate) const PROMOTED_CAPABILITY_IDS: &[&str] = &[
+    "direct_framed_prune",
     "direct_var_eval",
 ];
