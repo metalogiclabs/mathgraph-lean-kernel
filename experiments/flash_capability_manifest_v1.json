@@ -75,6 +75,28 @@
       "evidence_families": [
         "app_simple_apply"
       ]
+    },
+    {
+      "id": "rigid_inductive_neutral_v2",
+      "status": "candidate_reverify",
+      "guard": "simple_apply_function_is_rigid_inductive_and_function_already_canonical",
+      "implementation": "neutral_app_canonical_f",
+      "evidence": {
+        "atlas_run": 35409947942,
+        "causal_run": 35410788584,
+        "rigid_inductive_simple_total": 80072931,
+        "function_canonical_rate": 1,
+        "argument_pointer_stable_rate": 0.937191,
+        "app_hc_hit_rate": 0.515358
+      },
+      "dependencies": [
+        "direct_var_eval",
+        "direct_framed_prune"
+      ],
+      "evidence_families": [
+        "rigid_structural_reuse",
+        "app_simple_apply"
+      ]
     }
   ],
   "obstructions": [
