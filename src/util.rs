@@ -496,6 +496,7 @@ pub(crate) fn small_fx_hash_map<K, V>() -> FxHashMap<K, V> {
 }
 
 pub(crate) const SESSION_MAP_CAP: usize = 1 << 13;
+pub(crate) const APP_HC_PREALLOC_CAP: usize = 1 << 16;
 
 pub(crate) const SESSION_MAP_CAP_SMALL: usize = 1 << 12;
 
@@ -1110,7 +1111,11 @@ impl<'a, 't> TcCache<'a, 't> {
             open_eval_seen: small_fx_hash_set(),
             bvar_hc: session_small_fx_hash_map(),
             spine_hc: session_fx_hash_map(),
-            app_hc: session_fx_hash_map(),
+            app_hc: if crate::flash::APP_HC_PREALLOC {
+                FxHashMap::with_capacity_and_hasher(APP_HC_PREALLOC_CAP, Default::default())
+            } else {
+                session_fx_hash_map()
+            },
             env_hc: session_fx_hash_map(),
             lam_hc: session_small_fx_hash_map(),
             pi_hc: session_small_fx_hash_map(),
