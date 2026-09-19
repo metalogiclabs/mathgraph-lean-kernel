@@ -31,7 +31,14 @@ def close(evidence, manifest):
         verified = (
             (kind == "current_revalidation" and e.get("authority_join_verified") is True)
             or
-            (kind == "performance_rejection" and e.get("performance_rejection_verified") is True)
+            (
+                kind == "performance_rejection"
+                and e.get("performance_rejection_verified") is True
+                and (
+                    e.get("metric") == evidence.get("contract",{}).get("ranking_metric")
+                    or e.get("operational_veto") is True
+                )
+            )
         )
         if verified:
             cid=e["capability_id"]
@@ -129,13 +136,27 @@ def close(evidence, manifest):
     unfold_cap = caps.get("ordinary_unfold_neutral",{})
     unfold_share_eval = appkind.get("unfold_other_share_eval_estimate",0)
 
+    unfold_nonrank_reject = next((
+        e for e in reversed(evidence["events"])
+        if e.get("kind")=="performance_rejection"
+        and e.get("capability_id")=="ordinary_unfold_neutral"
+        and e.get("metric") != evidence.get("contract",{}).get("ranking_metric")
+    ), None)
     if unfold_cap and unfold_cap.get("status") == "candidate_reverify" and unfold_share_eval > 0:
-        frontier.append({
-            "id":"revalidate_ordinary_unfold_neutral",
-            "mode":"candidate_reverify",
-            "priority": unfold_share_eval,
-            "reason":"61.2% of simple-apply functions are ordinary Unfold; implemented neutral fast path awaits authority",
-        })
+        if unfold_nonrank_reject:
+            frontier.append({
+                "id":"measure_ordinary_unfold_instructions",
+                "mode":"rank_revalidation",
+                "priority": unfold_share_eval,
+                "reason":"wall-time composition was negative, but Arena ranks Mathlib instructions; measure exact-PGO instructions before rejecting",
+            })
+        else:
+            frontier.append({
+                "id":"revalidate_ordinary_unfold_neutral",
+                "mode":"candidate_reverify",
+                "priority": unfold_share_eval,
+                "reason":"61.2% of simple-apply functions are ordinary Unfold; implemented neutral fast path awaits authority",
+            })
     elif unfold_cap and unfold_cap.get("status") == "rejected" and unfold_share_eval > 0:
         frontier.append({
             "id":"ordinary_unfold_app_hc_economics",
@@ -186,6 +207,7 @@ def close(evidence, manifest):
     # revalidation, and revalidate an existing candidate before opening new search.
     mode_rank={
         "reuse_then_reverify":0,
+        "rank_revalidation":1,
         "candidate_reverify":1,
         "new_search_not_first_sight_bypass":2,
         "observation_request":2,
