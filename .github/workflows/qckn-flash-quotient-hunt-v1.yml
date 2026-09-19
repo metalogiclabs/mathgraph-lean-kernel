@@ -23,8 +23,50 @@ jobs:
           python3 experiments/test_flash_quotient_hunt_v1.py
           python3 experiments/flash_quotient_hunt_v1.py             experiments/flash_quotient_registry_v1.json             --out /tmp/quotient-plan.json | tee /tmp/quotient-plan.log
           grep -q '^FLASH_QUOTIENT_HUNT_PASS$' /tmp/quotient-plan.log
-          grep -q '^SELECTED_DISTINCTION=app.rigid_inductive.redundant_function_canonicalization$' /tmp/quotient-plan.log
-          grep -q '^SELECTED_ACTION=MEASURE_RIGHT_CONGRUENCE$' /tmp/quotient-plan.log
+          grep -q '^SELECTED_DISTINCTION=infer.pi.redundant_force_all
+
+      - name: Assert epistemic safety
+        run: |
+          python3 - <<'PY'
+          import json
+          p=json.load(open('/tmp/quotient-plan.json'))
+          assert p['invariants']['unknown_never_merged']
+          assert p['invariants']['context_conflict_never_promoted']
+          u=next(x for x in p['rows'] if x['id']=='app.ordinary_unfold.generic_apply')
+          assert u['epistemic']=='DIST_CONTEXT'
+          assert u['action']=='RETAIN_SEPARATOR'
+          print('QCKN_QUOTIENT_EPISTEMIC_SAFETY_PASS')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qckn-flash-quotient-hunt-v1
+          path: |
+            /tmp/quotient-plan.json
+            /tmp/quotient-plan.log
+ /tmp/quotient-plan.log
+          grep -q '^SELECTED_ACTION=MEASURE_ARENA_PREFERENCE
+
+      - name: Assert epistemic safety
+        run: |
+          python3 - <<'PY'
+          import json
+          p=json.load(open('/tmp/quotient-plan.json'))
+          assert p['invariants']['unknown_never_merged']
+          assert p['invariants']['context_conflict_never_promoted']
+          u=next(x for x in p['rows'] if x['id']=='app.ordinary_unfold.generic_apply')
+          assert u['epistemic']=='DIST_CONTEXT'
+          assert u['action']=='RETAIN_SEPARATOR'
+          print('QCKN_QUOTIENT_EPISTEMIC_SAFETY_PASS')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qckn-flash-quotient-hunt-v1
+          path: |
+            /tmp/quotient-plan.json
+            /tmp/quotient-plan.log
+ /tmp/quotient-plan.log
 
       - name: Assert epistemic safety
         run: |
