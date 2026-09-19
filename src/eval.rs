@@ -899,9 +899,29 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
     fn neutral_app(&mut self, f: V<'t>, a: V<'t>) -> V<'t> {
         let f = self.canonicalize_for_spine(f);
         let a = self.canonicalize_for_spine(a);
-        let key = (f as *const Value<'t> as usize, a as *const Value<'t> as usize);
-        match self.tc_cache.app_hc.entry(key) {
-            Entry::Occupied(o) => o.get(),
+        let fp = f as *const Value<'t> as usize;
+        let ap = a as *const Value<'t> as usize;
+        let key = (fp, ap);
+
+        let rigid_inductive = matches!(f, Value::Rigid { head: RigidHead::Inductive(_, _), .. });
+        let dm_slot = if crate::flash::RIGID_APP_FRONT_CACHE && rigid_inductive {
+            let h = (fp as u64).wrapping_mul(0x9E3779B97F4A7C15)
+                ^ (ap as u64).wrapping_mul(0xD6E8FEB86659FD93);
+            Some((h >> crate::util::RIGID_APP_DM_SHIFT) as usize)
+        } else {
+            None
+        };
+        if let Some(i) = dm_slot {
+            let ent = self.tc_cache.rigid_app_dm[i];
+            if ent.0 == fp && ent.1 == ap {
+                if let Some(v) = ent.2 {
+                    return v;
+                }
+            }
+        }
+
+        let out = match self.tc_cache.app_hc.entry(key) {
+            Entry::Occupied(o) => *o.get(),
             Entry::Vacant(slot) => {
                 let (v, spine) = match f {
                     Value::Rigid { head, spine, .. } => {
@@ -918,9 +938,13 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 // not have a canonical flag, but are interned by content there.
                 spine.mark_canonical();
                 v.mark_canonical();
-                slot.insert(v)
+                *slot.insert(v)
             }
+        };
+        if let Some(i) = dm_slot {
+            self.tc_cache.rigid_app_dm[i] = (fp, ap, Some(out));
         }
+        out
     }
 
     #[inline]
