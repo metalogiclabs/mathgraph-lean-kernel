@@ -1,13 +1,13 @@
-name: Flash rigid-inductive neutral causal gate
+name: Flash rigid-inductive canonical-f causal gate
 
 on:
   push:
     branches:
-      - qckn-flash-rigid-inductive-v1
+      - qckn-flash-rigid-inductive-v2
   workflow_dispatch:
 
 concurrency:
-  group: qckn-flash-rigid-inductive-v1
+  group: qckn-flash-rigid-inductive-v2
   cancel-in-progress: true
 
 jobs:
@@ -111,16 +111,16 @@ jobs:
           print(f"MATHLIB_SPEEDUP={speeds['mathlib']:.6f}")
           print("CATASTROPHIC_SECONDARY_REGRESSIONS="+(",".join(catastrophic) if catastrophic else "none"))
           if speeds['mathlib'] >= 1.002 and not catastrophic:
-              print("FLASH_RIGID_INDUCTIVE_CAUSAL_PASS")
+              print("FLASH_RIGID_INDUCTIVE_V2_CAUSAL_PASS")
           else:
-              print("FLASH_RIGID_INDUCTIVE_CAUSAL_REJECT")
+              print("FLASH_RIGID_INDUCTIVE_V2_CAUSAL_REJECT")
               raise SystemExit(1)
           PY
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: qckn-flash-rigid-inductive-v1
+          name: qckn-flash-rigid-inductive-v2
           path: |
             /tmp/parity.tsv
             /tmp/perf.tsv
