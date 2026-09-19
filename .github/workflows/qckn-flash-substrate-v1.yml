@@ -25,7 +25,7 @@ jobs:
 
           grep -q '^FLASH_CONTROLLER_FIXED_POINT$' /tmp/flash-controller.log
           grep -q '^PROMOTED=direct_framed_prune,direct_var_eval$' /tmp/flash-controller.log
-          grep -q '^SELECTED_ACTION=revalidate_rigid_inductive_v2$' /tmp/flash-controller.log
+          grep -q '^SELECTED_ACTION=measure_ordinary_unfold_instructions$' /tmp/flash-controller.log
           cmp src/flash.rs /tmp/flash.rs
 
           python3 - <<'PY'
@@ -35,9 +35,9 @@ jobs:
           assert 'universe_equality_search' in c['cancelled_work']
           assert 'app_first_sight_bypass' in c['killed_families']
           assert 'same_head_unfold_continuation' in c['killed_families']
-          assert next(x for x in c['manifest']['capabilities'] if x['id']=='ordinary_unfold_neutral')['status']=='rejected'
-          assert any(x['id']=='revalidate_rigid_inductive_v2' for x in c['frontier'])
-          assert c['selected_action']=='revalidate_rigid_inductive_v2'
+          assert next(x for x in c['manifest']['capabilities'] if x['id']=='ordinary_unfold_neutral')['status']=='candidate_reverify'
+          assert any(x['id']=='measure_ordinary_unfold_instructions' for x in c['frontier'])
+          assert c['selected_action']=='measure_ordinary_unfold_instructions'
           cert=json.load(open('/tmp/flash-v1/certificate.json'))
           assert len(cert['closure_sha256'])==64
           print('FLASH_SUBSTRATE_PREFLIGHT_PASS')
@@ -61,7 +61,7 @@ jobs:
           set -euxo pipefail
           python3 experiments/test_flash_plan_v1.py
           python3 experiments/flash_plan_v1.py             /tmp/flash-v1/closure.json             experiments/flash_action_registry_v1.json             /tmp/flash-action-plan.json | tee /tmp/flash-action-plan.log
-          grep -q '^SELECTED_ACTION=revalidate_rigid_inductive_v2$' /tmp/flash-action-plan.log
+          grep -q '^SELECTED_ACTION=measure_ordinary_unfold_instructions$' /tmp/flash-action-plan.log
           grep -q '^STATUS=ready$' /tmp/flash-action-plan.log
 
       - name: Test Flash impact index
