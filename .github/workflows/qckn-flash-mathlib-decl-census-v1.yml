@@ -1,0 +1,203 @@
+name: QCKN Flash Mathlib declaration heat graph V1
+
+on:
+  push:
+    branches:
+      - qckn-flash-mathlib-coherence-v1
+    paths:
+      - 'scripts/apply_qckn_decl_census_v1.py'
+      - '.github/workflows/qckn-flash-mathlib-decl-census-v1.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: qckn-flash-mathlib-decl-census-v1
+  cancel-in-progress: true
+
+jobs:
+  census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Materialize frozen Flash RC1 and apply declaration census
+        shell: bash
+        run: |
+          set -euxo pipefail
+          SOURCE=a342c74f6eb913c25c6dae4138158023d1b9aa6a
+          ARENA=510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          git worktree add --detach /tmp/census "$SOURCE"
+          (cd /tmp/census && python3 "$GITHUB_WORKSPACE/scripts/apply_qckn_decl_census_v1.py")
+          cat >/tmp/provenance.tsv <<EOF
+          frozen_source_sha	$SOURCE
+          arena_suite_sha	$ARENA
+          protected_semantics	unchanged
+          profiling_only	true
+          flash_frontier	Mathlib declarations
+          observation	per-declaration elapsed time plus thread/chunk critical path
+          EOF
+          (cd /tmp/census && cargo test --release --locked -q || true)
+
+      - name: Build pinned Mathlib corpus
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test init-prelude >/dev/null
+          nix develop -c ./lka.py build-test mathlib >/dev/null
+          cat >/tmp/config4.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}
+          EOF
+          cat >/tmp/config1.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+
+      - name: Build native PGO census binary
+        shell: bash
+        run: |
+          set -euxo pipefail
+          LLVM_PROFDATA=$(nix shell nixpkgs#llvmPackages_21.llvm -c sh -c 'command -v llvm-profdata')
+          rm -rf /tmp/census/target /tmp/census/pgo
+          mkdir -p /tmp/census/pgo
+          (
+            cd /tmp/census
+            RUSTFLAGS="-C target-cpu=native -Cprofile-generate=/tmp/census/pgo" cargo build --release --locked
+            target/release/sokonanoda /tmp/config4.json </tmp/arena/_build/tests/init-prelude.ndjson >/dev/null
+            "$LLVM_PROFDATA" merge -o /tmp/census/pgo/merged.profdata /tmp/census/pgo
+            rm -rf target
+            RUSTFLAGS="-C target-cpu=native -Cprofile-use=/tmp/census/pgo/merged.profdata" cargo build --release --locked
+            cp target/release/sokonanoda /tmp/census.bin
+          )
+
+      - name: Four-thread declaration heat graph
+        shell: bash
+        run: |
+          set -euxo pipefail
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          QCKN_DECL_CENSUS=1 /usr/bin/time -f 'wall_s=%e\nuser_s=%U\nsys_s=%S\nmax_rss_kb=%M' -o /tmp/mathlib4.time             /tmp/census.bin /tmp/config4.json <"$f" >/tmp/mathlib4.stdout 2>/tmp/mathlib4.stderr
+          grep '^QCKN_DECL' /tmp/mathlib4.stderr >/tmp/mathlib4.decls.tsv
+          test -s /tmp/mathlib4.decls.tsv
+
+      - name: Serial declaration reference graph
+        shell: bash
+        run: |
+          set -euxo pipefail
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          QCKN_DECL_CENSUS=1 /usr/bin/time -f 'wall_s=%e\nuser_s=%U\nsys_s=%S\nmax_rss_kb=%M' -o /tmp/mathlib1.time             /tmp/census.bin /tmp/config1.json <"$f" >/tmp/mathlib1.stdout 2>/tmp/mathlib1.stderr
+          grep '^QCKN_DECL' /tmp/mathlib1.stderr >/tmp/mathlib1.decls.tsv
+          test -s /tmp/mathlib1.decls.tsv
+
+      - name: Build Flash residual quotient atlas
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY' | tee /tmp/mathlib-decl-atlas.txt
+          from collections import defaultdict
+          from statistics import median
+
+          def load(path):
+              rows=[]
+              with open(path) as f:
+                  for line in f:
+                      tag,thread,idx,h,k,ns=line.rstrip().split('\t')
+                      rows.append(dict(thread=thread,idx=int(idx),hash=int(h),kind=int(k),ns=int(ns)))
+              return rows
+
+          p4=load('/tmp/mathlib4.decls.tsv')
+          p1=load('/tmp/mathlib1.decls.tsv')
+          serial={r['idx']:r for r in p1}
+          parallel={r['idx']:r for r in p4}
+
+          def report(rows,label):
+              total=sum(r['ns'] for r in rows)
+              ordered=sorted(rows,key=lambda r:r['ns'],reverse=True)
+              print(f'[{label}] declarations={len(rows)} total_decl_ns={total}')
+              for n in (10,25,50,100,250,500,1000):
+                  s=sum(r['ns'] for r in ordered[:n])
+                  print(f'{label}_TOP_{n}_SHARE={s/total:.6f}')
+              print(f'{label}_TOP_DECLARATIONS_BEGIN')
+              for r in ordered[:100]:
+                  print(f"{label}\tidx={r['idx']}\thash={r['hash']}\tkind={r['kind']}\tthread={r['thread']}\tns={r['ns']}")
+              print(f'{label}_TOP_DECLARATIONS_END')
+              return ordered,total
+
+          o4,t4=report(p4,'PAR4')
+          o1,t1=report(p1,'SER1')
+
+          chunks=defaultdict(lambda:{'ns':0,'count':0,'threads':defaultdict(int)})
+          for r in p4:
+              cid=r['idx']//64
+              chunks[cid]['ns']+=r['ns']
+              chunks[cid]['count']+=1
+              chunks[cid]['threads'][r['thread']]+=r['ns']
+          print('PAR4_CHUNK64_HOT_BEGIN')
+          for cid,v in sorted(chunks.items(),key=lambda kv:kv[1]['ns'],reverse=True)[:50]:
+              owner=max(v['threads'],key=v['threads'].get) if v['threads'] else '?'
+              print(f"chunk={cid}\tstart={cid*64}\tend={cid*64+63}\tns={v['ns']}\tcount={v['count']}\towner={owner}")
+          print('PAR4_CHUNK64_HOT_END')
+
+          threads=defaultdict(int)
+          for r in p4: threads[r['thread']]+=r['ns']
+          print('PAR4_THREAD_LOAD_BEGIN')
+          for th,ns in sorted(threads.items(),key=lambda kv:kv[1],reverse=True):
+              print(f'{th}\tns={ns}\tshare={ns/t4:.6f}')
+          print('PAR4_THREAD_LOAD_END')
+
+          # Consequential quotient: logarithmic serial-cost bucket × declaration kind.
+          buckets=defaultdict(lambda:{'count':0,'ns':0,'indices':[]})
+          for r in p1:
+              us=r['ns']/1000
+              if us < 10: b='<10us'
+              elif us < 50: b='10-50us'
+              elif us < 200: b='50-200us'
+              elif us < 1000: b='0.2-1ms'
+              elif us < 5000: b='1-5ms'
+              elif us < 20000: b='5-20ms'
+              elif us < 100000: b='20-100ms'
+              else: b='>=100ms'
+              q=(r['kind'],b)
+              buckets[q]['count']+=1
+              buckets[q]['ns']+=r['ns']
+              if len(buckets[q]['indices'])<20: buckets[q]['indices'].append(r['idx'])
+          print('RESIDUAL_QUOTIENTS_BEGIN')
+          for (kind,b),v in sorted(buckets.items(),key=lambda kv:kv[1]['ns'],reverse=True):
+              print(f'kind={kind}\tbucket={b}\tcount={v["count"]}\tns={v["ns"]}\tshare={v["ns"]/t1:.6f}\treps={v["indices"]}')
+          print('RESIDUAL_QUOTIENTS_END')
+
+          # Cross-view ranks identify declarations that stay hot independent of parallel scheduling.
+          r1={r['idx']:i for i,r in enumerate(o1)}
+          r4={r['idx']:i for i,r in enumerate(o4)}
+          common=sorted(serial, key=lambda i:(r1[i]+r4.get(i,10**9)))
+          print('STABLE_HOT_BEGIN')
+          for idx in common[:100]:
+              a=serial[idx]; b=parallel.get(idx)
+              if b:
+                  print(f"idx={idx}\thash={a['hash']}\tkind={a['kind']}\tserial_ns={a['ns']}\tparallel_ns={b['ns']}\trank1={r1[idx]}\trank4={r4[idx]}")
+          print('STABLE_HOT_END')
+          PY
+
+          {
+            echo '--- 4-thread wall ---'
+            cat /tmp/mathlib4.time
+            echo '--- serial wall ---'
+            cat /tmp/mathlib1.time
+          } | tee /tmp/mathlib-wall.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-mathlib-decl-census-v1
+          path: |
+            /tmp/provenance.tsv
+            /tmp/mathlib4.time
+            /tmp/mathlib1.time
+            /tmp/mathlib4.decls.tsv
+            /tmp/mathlib1.decls.tsv
+            /tmp/mathlib-decl-atlas.txt
+            /tmp/mathlib-wall.txt
+          if-no-files-found: warn
