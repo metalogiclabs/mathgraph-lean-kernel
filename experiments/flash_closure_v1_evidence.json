@@ -178,6 +178,22 @@
         "protected_regressions": []
       },
       "promotion_blocker": "await_full_409_export_authority"
+    },
+    {
+      "id": "direct-framed-prune-current-authority",
+      "kind": "current_revalidation",
+      "family": "cold_prune",
+      "capability_id": "direct_framed_prune",
+      "run": 35405256169,
+      "semantic_run": 35404941215,
+      "semantic_source_sha": "f2ccd3ecbb9337583baba9d364d605da597933d4",
+      "causal_source_sha": "50e55cc974243991df0577c761bf3e3b50d828be",
+      "implementation_blob_sha": "003900f6d5adc0328bf6dc7f7a63b2b109698d3f",
+      "semantic_scope": "409_current_arena_exports",
+      "semantic_pass": true,
+      "performance_pass": true,
+      "mathlib_speedup": 1.040781,
+      "protected_regressions": []
     }
   ]
 }
