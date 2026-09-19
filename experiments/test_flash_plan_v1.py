@@ -12,6 +12,11 @@ assert x["status"]=="ready"
 assert x["type"]=="generation_gate"
 assert x["capability_id"]=="ordinary_unfold_neutral"
 
+xr=fp.plan({"selected_action":"measure_ordinary_unfold_instructions"},reg)
+assert xr["status"]=="ready"
+assert xr["type"]=="rank_gate"
+assert xr["capability_id"]=="ordinary_unfold_neutral"
+
 y=fp.plan({"selected_action":"rigid_inductive_exact_interface_census"},reg)
 assert y["status"]=="ready"
 assert y["authority"]=="observational_only"
