@@ -180,6 +180,34 @@
         "run": 33955869303,
         "mathlib_delta_percent": 0.6631
       }
+    },
+    {
+      "id": "infer.pi.redundant_force_all",
+      "hotspot": "infer application spine",
+      "claim": "When infer_value already returns Value::Pi, force_all is consequentially redundant before domain/body decomposition",
+      "representative": "infer_pi_demand_bypass",
+      "requires": [
+        "direct_var_eval",
+        "direct_framed_prune"
+      ],
+      "conflicts": [],
+      "estimated_eval_share": 0,
+      "authority": {
+        "ground": "PASS",
+        "semantic": "EQ",
+        "congruence": "PASS",
+        "preference": "PASS_NATIVE_RANK_UNKNOWN"
+      },
+      "status": "CANDIDATE",
+      "pending": {
+        "callgrind_run": 35413686852,
+        "portfolio_run": 35415599611
+      },
+      "evidence": {
+        "causal_run": 35410254647,
+        "full_409_run": 35413664982,
+        "native_mathlib_speedup": 1.021085
+      }
     }
   ]
 }
