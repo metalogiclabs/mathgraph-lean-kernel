@@ -739,7 +739,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
             }
             if crate::flash::RIGID_INDUCTIVE_NEUTRAL {
                 if let Value::Rigid { head: RigidHead::Inductive(_, _), .. } = f {
-                    return self.neutral_app(f, a);
+                    return self.neutral_app_canonical_f(f, a);
                 }
             }
             return self.apply(depth, f, a);
@@ -921,6 +921,28 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 };
                 // Both inputs have passed canonicalization. Literal values do
                 // not have a canonical flag, but are interned by content there.
+                spine.mark_canonical();
+                v.mark_canonical();
+                slot.insert(v)
+            }
+        }
+    }
+
+    #[inline]
+    fn neutral_app_canonical_f(&mut self, f: V<'t>, a: V<'t>) -> V<'t> {
+        debug_assert!(f.is_canonical());
+        let a = self.canonicalize_for_spine(a);
+        let key = (f as *const Value<'t> as usize, a as *const Value<'t> as usize);
+        match self.tc_cache.app_hc.entry(key) {
+            Entry::Occupied(o) => o.get(),
+            Entry::Vacant(slot) => {
+                let (v, spine) = match f {
+                    Value::Rigid { head, spine, .. } => {
+                        let spine = value::spine_snoc(self.arena, spine, Elim::app(a));
+                        (value::mk_rigid(self.arena, *head, spine), spine)
+                    }
+                    _ => unreachable!(),
+                };
                 spine.mark_canonical();
                 v.mark_canonical();
                 slot.insert(v)
