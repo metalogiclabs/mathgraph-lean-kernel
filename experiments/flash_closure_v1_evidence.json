@@ -11,7 +11,8 @@
       "mathlib_time",
       "declines"
     ],
-    "secondary_performance_role": "diagnostic unless timeout/resource risk"
+    "secondary_performance_role": "diagnostic unless timeout/resource risk",
+    "ranking_metric": "mathlib_instructions"
   },
   "events": [
     {
@@ -291,7 +292,9 @@
         "init_speedup": 1.0131,
         "grind_ring_5_speedup": 1.0196
       },
-      "obstruction": "positive isolated gain did not survive composition with direct_framed_prune"
+      "obstruction": "positive isolated gain did not survive composition with direct_framed_prune",
+      "metric": "mathlib_wall_time",
+      "rank_effect": "unknown_until_instruction_gate"
     },
     {
       "id": "rigid-inductive-exact-interface-atlas",
