@@ -1,0 +1,118 @@
+name: Flash general cross-corpus PGO tournament
+
+on:
+  push:
+    branches:
+      - qckn-flash-general-pgo-v1
+  workflow_dispatch:
+
+concurrency:
+  group: qckn-flash-general-pgo-v1
+  cancel-in-progress: true
+
+jobs:
+  pgo:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build non-target training exports and Mathlib target
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          cd /tmp/arena
+          for t in init-prelude init std mathlib; do
+            nix develop -c ./lka.py build-test "$t" >/dev/null
+          done
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}
+          EOF
+
+      - name: Build baseline and broad-transfer PGO arms
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git worktree add /tmp/initpgo "$GITHUB_SHA"
+          git worktree add /tmp/broadpgo "$GITHUB_SHA"
+          LLVM_PROFDATA=$(nix shell nixpkgs#llvmPackages_21.llvm -c sh -lc 'command -v llvm-profdata')
+
+          for arm in initpgo broadpgo; do
+            rm -rf /tmp/$arm/target /tmp/$arm/pgo
+            mkdir -p /tmp/$arm/pgo
+            (
+              cd /tmp/$arm
+              RUSTFLAGS="-C target-cpu=native -Cprofile-generate=$PWD/pgo" cargo build --release --locked
+              target/release/sokonanoda /tmp/config.json </tmp/arena/_build/tests/init-prelude.ndjson >/dev/null
+              if [ "$arm" = broadpgo ]; then
+                target/release/sokonanoda /tmp/config.json </tmp/arena/_build/tests/init.ndjson >/dev/null
+                target/release/sokonanoda /tmp/config.json </tmp/arena/_build/tests/std.ndjson >/dev/null
+              fi
+              "$LLVM_PROFDATA" merge -o "$PWD/pgo/merged.profdata" "$PWD/pgo"
+              test -s "$PWD/pgo/merged.profdata"
+              rm -rf target
+              RUSTFLAGS="-C target-cpu=native -Cprofile-use=$PWD/pgo/merged.profdata" cargo build --release --locked
+            )
+            cp /tmp/$arm/target/release/sokonanoda /tmp/$arm.bin
+          done
+
+      - name: Status parity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          set +e
+          /tmp/initpgo.bin /tmp/config.json <"$f" >/tmp/i.out 2>/tmp/i.err; i=$?
+          /tmp/broadpgo.bin /tmp/config.json <"$f" >/tmp/b.out 2>/tmp/b.err; b=$?
+          set -e
+          test "$i" -eq "$b"
+          echo "PGO_STATUS_PARITY_PASS"
+
+      - name: Five-replay cross-corpus PGO transfer
+        shell: bash
+        run: |
+          set -euxo pipefail
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          : >/tmp/perf.tsv
+          for rep in 1 2 3 4 5; do
+            if [ $((rep%2)) -eq 1 ]; then order="initpgo broadpgo"; else order="broadpgo initpgo"; fi
+            for arm in $order; do
+              /usr/bin/time -f '%e\t%U\t%M' -o /tmp/time                 /tmp/$arm.bin /tmp/config.json <"$f" >/dev/null 2>/dev/null
+              read -r wall user rss </tmp/time
+              printf '%s\t%s\t%s\t%s\t%s\n' "$arm" "$rep" "$wall" "$user" "$rss" | tee -a /tmp/perf.tsv
+            done
+          done
+          python3 - <<'PY' | tee /tmp/scorecard.txt
+          from collections import defaultdict
+          from statistics import median
+          rows=defaultdict(list)
+          for line in open('/tmp/perf.tsv'):
+              arm,rep,w,u,rss=line.rstrip().split('\t')
+              rows[arm].append((float(w),float(u),int(rss)))
+          im=median(x[0] for x in rows['initpgo'])
+          bm=median(x[0] for x in rows['broadpgo'])
+          print('initpgo_runs='+repr([x[0] for x in rows['initpgo']]))
+          print('broadpgo_runs='+repr([x[0] for x in rows['broadpgo']]))
+          print(f'INIT_ONLY_MEDIAN_S={im:.6f}')
+          print(f'BROAD_TRANSFER_MEDIAN_S={bm:.6f}')
+          print(f'BROAD_TRANSFER_SPEEDUP={im/bm:.6f}')
+          print(f'BROAD_TRANSFER_DELTA_PERCENT={(bm/im-1)*100:.4f}')
+          if im/bm >= 1.002:
+              print('FLASH_GENERAL_PGO_TRANSFER_PASS')
+          else:
+              print('FLASH_GENERAL_PGO_TRANSFER_NO_MATERIAL_WIN')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-general-pgo-v1
+          path: |
+            /tmp/perf.tsv
+            /tmp/scorecard.txt
+          if-no-files-found: warn
