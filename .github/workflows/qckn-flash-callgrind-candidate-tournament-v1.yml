@@ -42,6 +42,7 @@ jobs:
           git worktree add /tmp/rigid_v2 cfd6a56c1b88d510bad60ea29dc1c30fa2b8ba89
           git worktree add /tmp/frontcache 45264b0eaa5c1f96e449ed4daf4ea4c6183d0e08
           git worktree add /tmp/prealloc be6c2e8b70aba6650f29e24c0aa179bc7cf54af6
+          git worktree add /tmp/infer_pi b414e35b6d89cd83407f199e388e5ff0a7dac6c8
 
           python3 - <<'PY'
           from pathlib import Path
@@ -66,7 +67,7 @@ jobs:
           set -euxo pipefail
           LLVM_PROFDATA=$(nix shell nixpkgs#llvmPackages_21.llvm -c sh -c 'command -v llvm-profdata')
           FLAGS='-C target-cpu=x86-64 -C target-feature=-avx,-avx2,-avx512f,-fma'
-          for arm in base unfold rigid_v2 frontcache prealloc; do
+          for arm in base unfold rigid_v2 frontcache prealloc infer_pi; do
             rm -rf /tmp/$arm/target /tmp/$arm/pgo
             mkdir -p /tmp/$arm/pgo
             (
@@ -87,7 +88,7 @@ jobs:
           set -euxo pipefail
           f=/tmp/arena/_build/tests/mathlib.ndjson
           : >/tmp/parity.tsv
-          for arm in base unfold rigid_v2 frontcache prealloc; do
+          for arm in base unfold rigid_v2 frontcache prealloc infer_pi; do
             set +e
             /tmp/$arm.bin /tmp/config.json <"$f" >/tmp/$arm.out 2>/tmp/$arm.err
             rc=$?
@@ -103,7 +104,7 @@ jobs:
           VALGRIND=$(nix shell nixpkgs#valgrind -c sh -c 'command -v valgrind')
           f=/tmp/arena/_build/tests/mathlib.ndjson
           : >/tmp/callgrind.tsv
-          for arm in base unfold rigid_v2 frontcache prealloc; do
+          for arm in base unfold rigid_v2 frontcache prealloc infer_pi; do
             out=/tmp/$arm.callgrind
             set +e
             timeout 7200s "$VALGRIND" --tool=callgrind --quiet --collect-jumps=no               --callgrind-out-file="$out"               /tmp/$arm.bin /tmp/config.json <"$f" >/tmp/$arm.cg.out 2>/tmp/$arm.cg.err
@@ -119,7 +120,7 @@ jobs:
           for l in open('/tmp/callgrind.tsv'):
               a,n=l.rstrip().split('\t'); vals[a]=int(n)
           base=vals['base']
-          for a in ('base','unfold','rigid_v2','frontcache','prealloc'):
+          for a in ('base','unfold','rigid_v2','frontcache','prealloc','infer_pi'):
               print(f'{a}_ir={vals[a]}')
               print(f'{a}_vs_base={base/vals[a]:.9f}')
               print(f'{a}_delta_percent={(vals[a]/base-1)*100:.5f}')
