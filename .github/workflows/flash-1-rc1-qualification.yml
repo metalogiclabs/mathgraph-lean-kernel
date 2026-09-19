@@ -1,0 +1,223 @@
+name: Flash 1 RC1 release qualification
+
+on:
+  push:
+    branches:
+      - flash-1-rc1
+    paths:
+      - 'src/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/flash-1-rc1-qualification.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: flash-1-rc1-qualification
+  cancel-in-progress: true
+
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Record frozen provenance
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cat >/tmp/provenance.tsv <<'EOF'
+          candidate_source_sha	a342c74f6eb913c25c6dae4138158023d1b9aa6a
+          qualified_champion_sha	09262b922034280ed9a1a293738f9be6410915e5
+          arena_sokonanoda_sha	28c03d0103e004610e4d47a4828965efb2b70af9
+          arena_suite_sha	510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          causal_composition_run	35413932085
+          rigid_full409_run	35415353691
+          EOF
+
+      - name: Materialize frozen candidate, champion, and Arena leader
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git worktree add /tmp/candidate a342c74f6eb913c25c6dae4138158023d1b9aa6a
+          git worktree add /tmp/champion 09262b922034280ed9a1a293738f9be6410915e5
+          git worktree add /tmp/leader 28c03d0103e004610e4d47a4828965efb2b70af9
+
+          for arm in candidate champion; do
+            (cd /tmp/$arm && RUSTFLAGS='-C target-cpu=x86-64-v3' cargo build --release --locked)
+            cp /tmp/$arm/target/release/sokonanoda /tmp/$arm.semantic.bin
+          done
+
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}
+          EOF
+
+      - name: Build complete pinned Arena corpus
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          cd /tmp/arena
+          : >/tmp/build-tests.tsv
+          while IFS= read -r y; do
+            t=${y#tests/}; t=${t%.yaml}
+            echo "BUILD $t" >>/tmp/build-tests.tsv
+            nix develop -c ./lka.py build-test "$t" >/dev/null
+          done < <(find tests -type f -name '*.yaml' | sort)
+          find _build/tests -type f -name '*.ndjson' | sort >/tmp/exports.txt
+          count=$(wc -l </tmp/exports.txt)
+          echo "exports=$count" | tee /tmp/export-count.txt
+          test "$count" -eq 409
+
+      - name: Full 409 semantic parity against qualified Flash champion
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          : >/tmp/semantic.tsv
+          : >/tmp/mismatches.tsv
+          while IFS= read -r f; do
+            set +e
+            /tmp/champion.semantic.bin /tmp/config.json <"$f" >/tmp/b.out 2>/tmp/b.err; b=$?
+            /tmp/candidate.semantic.bin /tmp/config.json <"$f" >/tmp/c.out 2>/tmp/c.err; c=$?
+            set -e
+            if [ "$b" -ne "$c" ] || ! cmp -s /tmp/b.out /tmp/c.out; then
+              printf 'MISMATCH\t%s\tchampion=%s\tcandidate=%s\n' "$f" "$b" "$c" | tee -a /tmp/mismatches.tsv /tmp/semantic.tsv
+            else
+              printf 'MATCH\t%s\t%s\n' "$c" "$f" >>/tmp/semantic.tsv
+            fi
+          done </tmp/exports.txt
+          mismatches=$(grep -c '^MISMATCH' /tmp/mismatches.tsv || true)
+          {
+            echo "exports=409"
+            echo "semantic_mismatches=$mismatches"
+          } | tee /tmp/semantic-summary.txt
+          test "$mismatches" -eq 0
+          echo FLASH_1_RC1_409_PARITY_PASS | tee -a /tmp/semantic-summary.txt
+
+      - name: Exact Arena-style native PGO build
+        shell: bash
+        run: |
+          set -euxo pipefail
+          LLVM_PROFDATA=$(nix shell nixpkgs#llvmPackages_21.llvm -c sh -c 'command -v llvm-profdata')
+          init=/tmp/arena/_build/tests/init-prelude.ndjson
+          for arm in candidate leader; do
+            rm -rf /tmp/$arm/target /tmp/$arm/pgo
+            mkdir -p /tmp/$arm/pgo
+            (
+              cd /tmp/$arm
+              RUSTFLAGS="-C target-cpu=native -Cprofile-generate=/tmp/$arm/pgo" cargo build --release --locked
+              target/release/sokonanoda /tmp/config.json <"$init" >/dev/null
+              "$LLVM_PROFDATA" merge -o /tmp/$arm/pgo/merged.profdata /tmp/$arm/pgo
+              test -s /tmp/$arm/pgo/merged.profdata
+              rm -rf target
+              RUSTFLAGS="-C target-cpu=native -Cprofile-use=/tmp/$arm/pgo/merged.profdata" cargo build --release --locked
+              cp target/release/sokonanoda /tmp/$arm.pgo.bin
+            )
+          done
+
+      - name: PGO Mathlib seven-replay duel against current Arena sokonanoda
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          f="_build/tests/mathlib.ndjson"
+          : >/tmp/mathlib-duel.tsv
+          for rep in 1 2 3 4 5 6 7; do
+            if [ $((rep%2)) -eq 1 ]; then order="leader candidate"; else order="candidate leader"; fi
+            for arm in $order; do
+              /usr/bin/time -f '%e\t%U\t%M' -o /tmp/time /tmp/$arm.pgo.bin /tmp/config.json <"$f" >/dev/null 2>/dev/null
+              read -r wall user rss </tmp/time
+              printf '%s\t%s\t%s\t%s\t%s\n' "$arm" "$rep" "$wall" "$user" "$rss" | tee -a /tmp/mathlib-duel.tsv
+            done
+          done
+          python3 - <<'PY' | tee /tmp/mathlib-scorecard.txt
+          from collections import defaultdict
+          from statistics import median
+          rows=defaultdict(list)
+          for line in open('/tmp/mathlib-duel.tsv'):
+              arm,rep,wall,user,rss=line.rstrip().split('\t')
+              rows[arm].append((float(wall),float(user),int(rss)))
+          lm=median(x[0] for x in rows['leader'])
+          cm=median(x[0] for x in rows['candidate'])
+          print('leader_runs='+repr([x[0] for x in rows['leader']]))
+          print('candidate_runs='+repr([x[0] for x in rows['candidate']]))
+          print(f'LEADER_MEDIAN_S={lm:.6f}')
+          print(f'CANDIDATE_MEDIAN_S={cm:.6f}')
+          print(f'CANDIDATE_VS_LEADER_SPEEDUP={lm/cm:.6f}')
+          print(f'CANDIDATE_MARGIN_PERCENT={(lm/cm-1)*100:.4f}')
+          print(f'LEADER_RSS_KB={int(median(x[2] for x in rows["leader"]))}')
+          print(f'CANDIDATE_RSS_KB={int(median(x[2] for x in rows["candidate"]))}')
+          if cm < lm:
+              print('FLASH_1_RC1_AHEAD_OF_ARENA_SOKONANODA')
+          else:
+              print('FLASH_1_RC1_NOT_AHEAD_OF_ARENA_SOKONANODA')
+              raise SystemExit(1)
+          PY
+
+      - name: PGO broad regression panel
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          : >/tmp/panel.tsv
+          for t in cslib cedar init perf/grind-ring-5; do
+            f="_build/tests/$t.ndjson"
+            for rep in 1 2 3; do
+              if [ $((rep%2)) -eq 1 ]; then order="leader candidate"; else order="candidate leader"; fi
+              for arm in $order; do
+                /usr/bin/time -f '%e\t%U\t%M' -o /tmp/time /tmp/$arm.pgo.bin /tmp/config.json <"$f" >/dev/null 2>/dev/null
+                read -r wall user rss </tmp/time
+                printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$t" "$arm" "$rep" "$wall" "$user" "$rss" >>/tmp/panel.tsv
+              done
+            done
+          done
+          python3 - <<'PY' | tee /tmp/panel-scorecard.txt
+          from collections import defaultdict
+          from statistics import median
+          rows=defaultdict(lambda:defaultdict(list))
+          for line in open('/tmp/panel.tsv'):
+              t,a,r,w,u,m=line.rstrip().split('\t')
+              rows[t][a].append((float(w),float(u),int(m)))
+          print('test\tleader\tcandidate\tspeedup')
+          for t in rows:
+              l=median(x[0] for x in rows[t]['leader'])
+              c=median(x[0] for x in rows[t]['candidate'])
+              print(f'{t}\t{l:.3f}\t{c:.3f}\t{l/c:.4f}')
+          print('FLASH_1_RC1_PANEL_COMPLETE')
+          PY
+
+      - name: Emit release decision
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test "$(grep -c '^MISMATCH' /tmp/mismatches.tsv || true)" -eq 0
+          grep -q '^FLASH_1_RC1_AHEAD_OF_ARENA_SOKONANODA$' /tmp/mathlib-scorecard.txt
+          {
+            echo "FLASH_1_RC1_RELEASE_GATE=PASS"
+            cat /tmp/semantic-summary.txt
+            grep -E '^(LEADER_MEDIAN_S|CANDIDATE_MEDIAN_S|CANDIDATE_VS_LEADER_SPEEDUP|CANDIDATE_MARGIN_PERCENT|LEADER_RSS_KB|CANDIDATE_RSS_KB)=' /tmp/mathlib-scorecard.txt
+          } | tee /tmp/release-decision.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-1-rc1-qualification
+          path: |
+            /tmp/provenance.tsv
+            /tmp/build-tests.tsv
+            /tmp/exports.txt
+            /tmp/export-count.txt
+            /tmp/semantic.tsv
+            /tmp/mismatches.tsv
+            /tmp/semantic-summary.txt
+            /tmp/mathlib-duel.tsv
+            /tmp/mathlib-scorecard.txt
+            /tmp/panel.tsv
+            /tmp/panel-scorecard.txt
+            /tmp/release-decision.txt
+          if-no-files-found: warn
