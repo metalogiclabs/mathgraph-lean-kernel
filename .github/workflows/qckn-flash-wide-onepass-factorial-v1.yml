@@ -61,14 +61,27 @@ jobs:
             (cd /tmp/$arm && python3 "$GITHUB_WORKSPACE/scripts/apply_flash_wide_onepass_v1.py")
           done
 
-      - name: Compile and test one-pass transplant before spending benchmark budget
+      - name: Differential compile/test preflight against frozen RC1
         shell: bash
         run: |
           set -euxo pipefail
-          for arm in wide unfold_wide; do
-            (cd /tmp/$arm && cargo test --release --locked -q)
+          : >/tmp/preflight.txt
+          for arm in base wide unfold_wide; do
+            (cd /tmp/$arm && cargo build --release --locked -q)
+            set +e
+            (cd /tmp/$arm && cargo test --release --locked -q) >"/tmp/$arm.tests" 2>&1
+            rc=$?
+            set -e
+            printf '%s_rc=%s\n' "$arm" "$rc" | tee -a /tmp/preflight.txt
+            awk '/^    tests::/ {print $1}' "/tmp/$arm.tests" | sort -u >"/tmp/$arm.failed"
+            {
+              echo "[$arm failures]"
+              cat "/tmp/$arm.failed"
+            } | tee -a /tmp/preflight.txt
           done
-          echo WIDE_ONEPASS_COMPILE_AND_TEST=PASS | tee /tmp/preflight.txt
+          diff -u /tmp/base.failed /tmp/wide.failed
+          diff -u /tmp/base.failed /tmp/unfold_wide.failed
+          echo WIDE_ONEPASS_DIFFERENTIAL_PREFLIGHT=PASS | tee -a /tmp/preflight.txt
 
       - name: Build complete pinned Arena corpus
         shell: bash
