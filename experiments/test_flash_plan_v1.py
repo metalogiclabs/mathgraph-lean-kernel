@@ -16,6 +16,11 @@ y=fp.plan({"selected_action":"rigid_inductive_exact_interface_census"},reg)
 assert y["status"]=="ready"
 assert y["authority"]=="observational_only"
 
+z=fp.plan({"selected_action":"revalidate_rigid_inductive_v2"},reg)
+assert z["status"]=="ready"
+assert z["type"]=="generation_gate"
+assert z["capability_id"]=="rigid_inductive_neutral_v2"
+
 try:
     fp.plan({"selected_action":"invent_something_unregistered"},reg)
 except ValueError as e:
