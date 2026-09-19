@@ -1,0 +1,118 @@
+name: Flash infer Pi Callgrind A/B v1
+
+on:
+  push:
+    branches:
+      - qckn-flash-infer-pi-callgrind-v1
+  workflow_dispatch:
+
+concurrency:
+  group: qckn-flash-infer-pi-callgrind-v1
+  cancel-in-progress: true
+
+jobs:
+  ab:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build exact Arena exports
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test init-prelude >/dev/null
+          nix develop -c ./lka.py build-test mathlib >/dev/null
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}
+          EOF
+
+      - name: Build candidate and exact ablation with deterministic PGO
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git worktree add /tmp/candidate "$GITHUB_SHA"
+          cp -a /tmp/candidate /tmp/ablated
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/ablated/src/flash.rs')
+          s=p.read_text()
+          old='pub(crate) const INFER_PI_DEMAND_BYPASS: bool = true;'
+          new='pub(crate) const INFER_PI_DEMAND_BYPASS: bool = false;'
+          assert s.count(old)==1
+          p.write_text(s.replace(old,new,1))
+          PY
+          LLVM_PROFDATA=$(nix shell nixpkgs#llvmPackages_21.llvm -c sh -c 'command -v llvm-profdata')
+          FLAGS='-C target-cpu=x86-64 -C target-feature=-avx,-avx2,-avx512f,-fma'
+          for arm in ablated candidate; do
+            rm -rf /tmp/$arm/target /tmp/$arm/pgo
+            mkdir -p /tmp/$arm/pgo
+            (
+              cd /tmp/$arm
+              RUSTFLAGS="$FLAGS -Cprofile-generate=/tmp/$arm/pgo" cargo build --release --locked
+              target/release/sokonanoda /tmp/config.json </tmp/arena/_build/tests/init-prelude.ndjson >/dev/null
+              "$LLVM_PROFDATA" merge -o /tmp/$arm/pgo/merged.profdata /tmp/$arm/pgo
+              rm -rf target
+              RUSTFLAGS="$FLAGS -Cprofile-use=/tmp/$arm/pgo/merged.profdata" cargo build --release --locked
+              cp target/release/sokonanoda /tmp/$arm.bin
+            )
+          done
+
+      - name: Verify Mathlib status parity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          set +e
+          /tmp/ablated.bin /tmp/config.json <"$f" >/tmp/a.out 2>/tmp/a.err; a=$?
+          /tmp/candidate.bin /tmp/config.json <"$f" >/tmp/c.out 2>/tmp/c.err; c=$?
+          set -e
+          test "$a" -eq "$c"
+          cmp /tmp/a.out /tmp/c.out
+          echo "STATUS_MATCH=$c" >/tmp/parity.txt
+
+      - name: Deterministic Callgrind A/B
+        shell: bash
+        run: |
+          set -euxo pipefail
+          VALGRIND=$(nix shell nixpkgs#valgrind -c sh -c 'command -v valgrind')
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          : >/tmp/callgrind.tsv
+          for arm in ablated candidate; do
+            out=/tmp/$arm.callgrind
+            timeout 7200s "$VALGRIND" --tool=callgrind --quiet --collect-jumps=no               --callgrind-out-file="$out"               /tmp/$arm.bin /tmp/config.json <"$f" >/dev/null 2>/tmp/$arm.cg.err
+            ir=$(awk '/^summary:/ {print $2; exit}' "$out")
+            test -n "$ir"
+            printf '%s\t%s\n' "$arm" "$ir" | tee -a /tmp/callgrind.tsv
+          done
+          python3 - <<'PY' | tee /tmp/scorecard.txt
+          vals={}
+          for l in open('/tmp/callgrind.tsv'):
+              a,n=l.rstrip().split('\t'); vals[a]=int(n)
+          a=vals['ablated']; c=vals['candidate']
+          print(f'ABLATED_IR={a}')
+          print(f'CANDIDATE_IR={c}')
+          print(f'CALLGRIND_SPEEDUP={a/c:.9f}')
+          print(f'CALLGRIND_DELTA_PERCENT={(c/a-1)*100:.5f}')
+          if c<a:
+              print('FLASH_INFER_PI_CALLGRIND_PASS')
+          else:
+              print('FLASH_INFER_PI_CALLGRIND_REJECT')
+              raise SystemExit(1)
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-infer-pi-callgrind-v1
+          path: |
+            /tmp/parity.txt
+            /tmp/callgrind.tsv
+            /tmp/scorecard.txt
+          if-no-files-found: warn
