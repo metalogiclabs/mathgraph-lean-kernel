@@ -1,0 +1,139 @@
+name: Flash Callgrind candidate tournament v1
+
+on:
+  push:
+    branches:
+      - qckn-flash-callgrind-candidate-tournament-v1
+  workflow_dispatch:
+
+concurrency:
+  group: qckn-flash-callgrind-candidate-tournament-v1
+  cancel-in-progress: true
+
+jobs:
+  tournament:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build exact Arena exports
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test init-prelude >/dev/null
+          nix develop -c ./lka.py build-test mathlib >/dev/null
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}
+          EOF
+
+      - name: Materialize candidate states
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git worktree add /tmp/base 28bc6a91d68ee547ee94fca395f58e8f100879ea
+          git worktree add /tmp/unfold 709fc615089b72bf9b5b2e288f7aa9a7c18a2915
+          git worktree add /tmp/rigid_v2 cfd6a56c1b88d510bad60ea29dc1c30fa2b8ba89
+          git worktree add /tmp/frontcache 45264b0eaa5c1f96e449ed4daf4ea4c6183d0e08
+          git worktree add /tmp/prealloc be6c2e8b70aba6650f29e24c0aa179bc7cf54af6
+
+          python3 - <<'PY'
+          from pathlib import Path
+          toggles={
+            'unfold':'ORDINARY_UNFOLD_NEUTRAL',
+            'rigid_v2':'RIGID_INDUCTIVE_NEUTRAL',
+            'frontcache':'RIGID_APP_FRONT_CACHE',
+            'prealloc':'APP_HC_PREALLOC',
+          }
+          for arm,const in toggles.items():
+              p=Path('/tmp')/arm/'src/flash.rs'
+              s=p.read_text()
+              old=f'pub(crate) const {const}: bool = false;'
+              new=f'pub(crate) const {const}: bool = true;'
+              assert s.count(old)==1,(arm,const)
+              p.write_text(s.replace(old,new,1))
+          PY
+
+      - name: Build all states with deterministic PGO
+        shell: bash
+        run: |
+          set -euxo pipefail
+          LLVM_PROFDATA=$(nix shell nixpkgs#llvmPackages_21.llvm -c sh -c 'command -v llvm-profdata')
+          FLAGS='-C target-cpu=x86-64 -C target-feature=-avx,-avx2,-avx512f,-fma'
+          for arm in base unfold rigid_v2 frontcache prealloc; do
+            rm -rf /tmp/$arm/target /tmp/$arm/pgo
+            mkdir -p /tmp/$arm/pgo
+            (
+              cd /tmp/$arm
+              RUSTFLAGS="$FLAGS -Cprofile-generate=/tmp/$arm/pgo" cargo build --release --locked
+              target/release/sokonanoda /tmp/config.json </tmp/arena/_build/tests/init-prelude.ndjson >/dev/null
+              "$LLVM_PROFDATA" merge -o /tmp/$arm/pgo/merged.profdata /tmp/$arm/pgo
+              test -s /tmp/$arm/pgo/merged.profdata
+              rm -rf target
+              RUSTFLAGS="$FLAGS -Cprofile-use=/tmp/$arm/pgo/merged.profdata" cargo build --release --locked
+              cp target/release/sokonanoda /tmp/$arm.bin
+            )
+          done
+
+      - name: Verify Mathlib status parity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          : >/tmp/parity.tsv
+          for arm in base unfold rigid_v2 frontcache prealloc; do
+            set +e
+            /tmp/$arm.bin /tmp/config.json <"$f" >/tmp/$arm.out 2>/tmp/$arm.err
+            rc=$?
+            set -e
+            printf '%s\t%s\n' "$arm" "$rc" | tee -a /tmp/parity.tsv
+          done
+          test "$(cut -f2 /tmp/parity.tsv | sort -u | wc -l)" -eq 1
+
+      - name: Callgrind tournament
+        shell: bash
+        run: |
+          set -euxo pipefail
+          VALGRIND=$(nix shell nixpkgs#valgrind -c sh -c 'command -v valgrind')
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          : >/tmp/callgrind.tsv
+          for arm in base unfold rigid_v2 frontcache prealloc; do
+            out=/tmp/$arm.callgrind
+            set +e
+            timeout 7200s "$VALGRIND" --tool=callgrind --quiet --collect-jumps=no               --callgrind-out-file="$out"               /tmp/$arm.bin /tmp/config.json <"$f" >/tmp/$arm.cg.out 2>/tmp/$arm.cg.err
+            rc=$?
+            set -e
+            test "$rc" -eq 0
+            ir=$(awk '/^summary:/ {print $2; exit}' "$out")
+            test -n "$ir"
+            printf '%s\t%s\n' "$arm" "$ir" | tee -a /tmp/callgrind.tsv
+          done
+          python3 - <<'PY' | tee /tmp/scorecard.txt
+          vals={}
+          for l in open('/tmp/callgrind.tsv'):
+              a,n=l.rstrip().split('\t'); vals[a]=int(n)
+          base=vals['base']
+          for a in ('base','unfold','rigid_v2','frontcache','prealloc'):
+              print(f'{a}_ir={vals[a]}')
+              print(f'{a}_vs_base={base/vals[a]:.9f}')
+              print(f'{a}_delta_percent={(vals[a]/base-1)*100:.5f}')
+          winner=min(vals,key=vals.get)
+          print('CALLGRIND_TOURNAMENT_WINNER='+winner)
+          print('WINNER_IR='+str(vals[winner]))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-callgrind-candidate-tournament-v1
+          path: |
+            /tmp/parity.tsv
+            /tmp/callgrind.tsv
+            /tmp/scorecard.txt
+          if-no-files-found: warn
