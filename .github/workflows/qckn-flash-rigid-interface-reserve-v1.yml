@@ -1,0 +1,24 @@
+name: Flash rigid-interface reserve sanity
+
+on:
+  push:
+    branches:
+      - qckn-flash-rigid-interface-reserve-v1
+  workflow_dispatch:
+
+concurrency:
+  group: qckn-flash-rigid-interface-reserve-v1
+  cancel-in-progress: true
+
+jobs:
+  sanity:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build dormant rigid-interface profiler
+        run: |
+          set -euxo pipefail
+          cargo test --locked --no-run
+          cargo build --release --locked
+          QCKN_FLASH_RIGID_INTERFACE_PROFILE=1 target/release/sokonanoda --help >/dev/null
+          echo FLASH_RIGID_INTERFACE_RESERVE_SANITY_PASS
