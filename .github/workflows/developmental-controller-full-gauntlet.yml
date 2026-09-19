@@ -1,0 +1,32 @@
+name: Developmental controller full gauntlet
+on:
+  pull_request:
+    paths:
+      - 'experiments/developmental_controller_gauntlet/**'
+      - '.github/workflows/developmental-controller-full-gauntlet.yml'
+  workflow_dispatch:
+jobs:
+  run:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run full gauntlet
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p /tmp/developmental-gauntlet
+          cd experiments/developmental_controller_gauntlet
+          python3 run.py | tee /tmp/developmental-gauntlet/summary.txt
+          cp results.json /tmp/developmental-gauntlet/
+      - name: Run frozen held-out transfer
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd experiments/developmental_controller_gauntlet
+          python3 heldout_transfer.py | tee /tmp/developmental-gauntlet/heldout_summary.txt
+          cp heldout_results.json /tmp/developmental-gauntlet/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: developmental-controller-full-gauntlet
+          path: /tmp/developmental-gauntlet/
