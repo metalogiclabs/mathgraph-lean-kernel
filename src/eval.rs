@@ -737,6 +737,11 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                     }
                 }
             }
+            if crate::flash::RIGID_INDUCTIVE_NEUTRAL {
+                if let Value::Rigid { head: RigidHead::Inductive(_, _), .. } = f {
+                    return self.neutral_app(f, a);
+                }
+            }
             return self.apply(depth, f, a);
         }
         match first {
