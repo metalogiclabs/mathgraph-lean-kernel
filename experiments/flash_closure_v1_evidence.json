@@ -4,7 +4,14 @@
     "target": "Lean Kernel Arena / Mathlib",
     "active_base": "74dc5ddb4584e1254f5687615e5b02795b8dc6f3",
     "protected_semantics": "exact Arena checker status/stdout parity",
-    "promotion_authority": "Arena-style native performance plus full semantic replay"
+    "promotion_authority": "Arena-style native performance plus full semantic replay",
+    "ranking_objective": [
+      "wrong_accepts",
+      "wrong_rejects",
+      "mathlib_time",
+      "declines"
+    ],
+    "secondary_performance_role": "diagnostic unless timeout/resource risk"
   },
   "events": [
     {
@@ -263,6 +270,50 @@
         "spine0_diff_sample_count": 85948
       },
       "obstruction": "no_semantic_reuse_without_exact_structural_verifier_safe_equality"
+    },
+    {
+      "id": "ordinary-unfold-neutral-composed-reject",
+      "kind": "performance_rejection",
+      "family": "ordinary_unfold_neutral",
+      "capability_id": "ordinary_unfold_neutral",
+      "run": 35409322776,
+      "context": "direct_var_plus_direct_framed_prune",
+      "implementation_blob_sha": "bf86521923ac27b142b058df36cd21a1a4a2008d",
+      "focused_semantic_parity": true,
+      "performance_pass": false,
+      "performance_rejection_verified": true,
+      "observations": {
+        "mathlib_base_s": 78.73,
+        "mathlib_candidate_s": 80.01,
+        "mathlib_speedup": 0.984002,
+        "cslib_speedup": 1.0103,
+        "cedar_speedup": 0.9882,
+        "init_speedup": 1.0131,
+        "grind_ring_5_speedup": 1.0196
+      },
+      "obstruction": "positive isolated gain did not survive composition with direct_framed_prune"
+    },
+    {
+      "id": "rigid-inductive-exact-interface-atlas",
+      "kind": "residual",
+      "family": "rigid_structural_reuse",
+      "run": 35409947942,
+      "observations": {
+        "rigid_inductive_simple_total": 80072931,
+        "f_pre_canonical_rate": 1,
+        "a_pre_canonical_rate": 0.931163,
+        "f_post_same_ptr_rate": 1,
+        "a_post_same_ptr_rate": 0.937191,
+        "app_hc_hit_rate": 0.515358,
+        "app_hc_miss_rate": 0.484642,
+        "spine_len_0_rate": 0.376055,
+        "spine_len_1_rate": 0.246197,
+        "spine_len_2_3_rate": 0.266304,
+        "spine_len_4_plus_rate": 0.111444,
+        "spine_closed_rate": 0.458874,
+        "arg_closed_rate": 0.115186,
+        "spine_canonical_rate": 1
+      }
     }
   ]
 }
