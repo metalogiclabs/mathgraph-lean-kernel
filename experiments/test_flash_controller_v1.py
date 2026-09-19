@@ -11,19 +11,10 @@ evidence=json.loads((ROOT/"experiments/flash_closure_v1_evidence.json").read_tex
 manifest=json.loads((ROOT/"experiments/flash_capability_manifest_v1.json").read_text())
 
 base=fc.close(deepcopy(evidence),deepcopy(manifest))
-assert base["runtime_policy"]["promoted"]==["direct_var_eval"]
-assert base["selected_action"]=="revalidate_direct_framed_prune"
+assert base["runtime_policy"]["promoted"]==["direct_framed_prune","direct_var_eval"]
+assert base["selected_action"]=="revalidate_ordinary_unfold_neutral"
 
-passed=deepcopy(evidence)
-passed["events"].append({
-    "id":"test-framed-pass","kind":"current_revalidation","capability_id":"direct_framed_prune",
-    "run":1,"semantic_pass":True,"performance_pass":True,
-})
-p=fc.close(passed,deepcopy(manifest))
-assert p["runtime_policy"]["promoted"]==["direct_framed_prune","direct_var_eval"]
-assert p["selected_action"]=="revalidate_ordinary_unfold_neutral"
-
-unfold_pass=deepcopy(passed)
+unfold_pass=deepcopy(evidence)
 unfold_pass["events"].append({
     "id":"test-unfold-pass","kind":"current_revalidation","capability_id":"ordinary_unfold_neutral",
     "run":5,"semantic_pass":True,"performance_pass":True,
@@ -41,14 +32,12 @@ f=fc.close(failed,deepcopy(manifest))
 assert f["runtime_policy"]["promoted"]==["direct_var_eval"]
 assert next(c for c in f["manifest"]["capabilities"] if c["id"]=="direct_framed_prune")["status"]=="rejected"
 
-# Dependency revocation: promote framed, then reject its required direct-Var dependency.
+# Dependency revocation: reject direct-Var after Framed has already been promoted.
 rev=deepcopy(evidence)
-rev["events"] += [
-    {"id":"test-framed-pass2","kind":"current_revalidation","capability_id":"direct_framed_prune",
-     "run":3,"semantic_pass":True,"performance_pass":True},
+rev["events"].append(
     {"id":"test-var-fail","kind":"current_revalidation","capability_id":"direct_var_eval",
-     "run":4,"semantic_pass":False,"performance_pass":False},
-]
+     "run":4,"semantic_pass":False,"performance_pass":False}
+)
 rv=fc.close(rev,deepcopy(manifest))
 statuses={c["id"]:c["status"] for c in rv["manifest"]["capabilities"]}
 assert statuses["direct_var_eval"]=="rejected"
