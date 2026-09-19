@@ -900,7 +900,25 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         let f = self.canonicalize_for_spine(f);
         let a = self.canonicalize_for_spine(a);
         let key = (f as *const Value<'t> as usize, a as *const Value<'t> as usize);
-        match self.tc_cache.app_hc.entry(key) {
+
+        let dm_idx = if crate::flash::APP_FRONT_DM {
+            let x = key.0.rotate_left(17)
+                ^ key.1.wrapping_mul(0x9E37_79B9_7F4A_7C15usize);
+            let idx = (x ^ (x >> 29)) & (crate::util::APP_FRONT_DM_LEN - 1);
+            if let Some(dm) = self.tc_cache.app_front_dm.as_ref() {
+                let ent = dm[idx];
+                if ent.0 == key.0 && ent.1 == key.1 {
+                    if let Some(v) = ent.2 {
+                        return v;
+                    }
+                }
+            }
+            Some(idx)
+        } else {
+            None
+        };
+
+        let out = match self.tc_cache.app_hc.entry(key) {
             Entry::Occupied(o) => o.get(),
             Entry::Vacant(slot) => {
                 let (v, spine) = match f {
@@ -920,7 +938,14 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 v.mark_canonical();
                 slot.insert(v)
             }
+        };
+
+        if let Some(idx) = dm_idx {
+            if let Some(dm) = self.tc_cache.app_front_dm.as_mut() {
+                dm[idx] = (key.0, key.1, Some(out));
+            }
         }
+        out
     }
 
     #[inline]
