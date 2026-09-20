@@ -1,0 +1,107 @@
+name: QCKN Flash app opportunity census V1
+
+on:
+  push:
+    branches:
+      - qckn-flash-app-opportunity-census-v1
+    paths:
+      - scripts/apply_qckn_app_opportunity_census_v1.py
+      - .github/workflows/qckn-flash-app-opportunity-census-v1.yml
+  workflow_dispatch:
+
+concurrency:
+  group: qckn-flash-app-opportunity-census-v1
+  cancel-in-progress: true
+
+jobs:
+  census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: cachix/install-nix-action@v31
+
+      - name: Materialize instrumented frozen RC1
+        shell: bash
+        run: |
+          set -euxo pipefail
+          SOURCE=a342c74f6eb913c25c6dae4138158023d1b9aa6a
+          git worktree add --detach /tmp/census "$SOURCE"
+          cd /tmp/census
+          python3 "$GITHUB_WORKSPACE/scripts/apply_qckn_app_opportunity_census_v1.py"
+          printf 'source\t%s\nobjective\tapp_check_opportunity_census\nsemantic_change\tnone\n' "$SOURCE" >/tmp/provenance.tsv
+
+      - name: Build Mathlib corpus only
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test mathlib >/dev/null
+          test -f _build/tests/mathlib.ndjson
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+
+      - name: Build instrumented checker
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/census
+          cargo build --release --locked
+          cp target/release/sokonanoda /tmp/census.bin
+
+      - name: Run one Mathlib census
+        shell: bash
+        run: |
+          set -euxo pipefail
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          QCKN_APP_CENSUS=1 /usr/bin/time -f 'WALL_S=%e\nUSER_S=%U\nSYS_S=%S\nRSS_KB=%M' \
+            -o /tmp/time.txt \
+            /tmp/census.bin /tmp/config.json <"$f" >/tmp/stdout.txt 2>/tmp/stderr.txt
+          grep 'QCKN_APP_CENSUS ' /tmp/stderr.txt | tail -1 | tee /tmp/census-line.txt
+          cat /tmp/time.txt
+
+      - name: Summarize opportunity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY' | tee /tmp/census-summary.txt
+          import re
+          line=open('/tmp/census-line.txt').read().strip()
+          vals={k:int(v) for k,v in re.findall(r'([a-z_]+)=(\d+)', line)}
+          total=vals['total']
+          def pct(k,den=total):
+              return 100.0*vals.get(k,0)/den if den else 0.0
+          print(f"APP_ARG_TOTAL={total}")
+          for k in [
+              'expr_repeat','key_repeat','same_expr_diff_env',
+              'exact_checked','exact_unchecked','exact_other_scope',
+              'closed_syntax','kind_app','kind_lambda','kind_pi',
+              'kind_let','kind_proj','kind_atomic'
+          ]:
+              print(f"{k.upper()}={vals.get(k,0)}")
+              print(f"{k.upper()}_PCT={pct(k):.4f}")
+          conv=vals.get('conv_total',0)
+          rep=vals.get('conv_pair_repeat',0)
+          print(f"CONV_TOTAL={conv}")
+          print(f"CONV_PAIR_REPEAT={rep}")
+          print(f"CONV_PAIR_REPEAT_PCT={(100.0*rep/conv if conv else 0):.4f}")
+          scope_op=vals.get('exact_other_scope',0)
+          print(f"SCOPE_MISMATCH_OPPORTUNITY_PCT={100.0*scope_op/total if total else 0:.6f}")
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-app-opportunity-census-v1
+          path: |
+            /tmp/provenance.tsv
+            /tmp/census-line.txt
+            /tmp/census-summary.txt
+            /tmp/time.txt
+          if-no-files-found: warn
