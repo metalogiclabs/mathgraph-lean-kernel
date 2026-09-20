@@ -35,7 +35,7 @@ jobs:
           SOURCE=a342c74f6eb913c25c6dae4138158023d1b9aa6a
           git worktree add --detach /tmp/arm "$SOURCE"
 
-          python3 - "\${{ matrix.arm }}" <<'PY'
+          python3 - "${{ matrix.arm }}" <<'PY'
           import re, sys
           from pathlib import Path
 
@@ -77,7 +77,7 @@ jobs:
           print(f"APP_CHECK_ABLATION_ARM={arm}")
           PY
 
-          printf 'arm\t%s\nsource\t%s\nclaim\tdiagnostic_only_not_promotable\n' "\${{ matrix.arm }}" "$SOURCE" >/tmp/provenance.tsv
+          printf 'arm\t%s\nsource\t%s\nclaim\tdiagnostic_only_not_promotable\n' "${{ matrix.arm }}" "$SOURCE" >/tmp/provenance.tsv
 
       - name: Build pinned Mathlib and init
         shell: bash
@@ -120,7 +120,7 @@ jobs:
           ir=$(awk '/^summary:/ {print $2; exit}' /tmp/app-ablation.callgrind)
           test -n "$ir"
 
-          python3 - "\${{ matrix.arm }}" "$ir" <<'PY' | tee /tmp/result.txt
+          python3 - "${{ matrix.arm }}" "$ir" <<'PY' | tee /tmp/result.txt
           import sys
           arm=sys.argv[1]
           ir=int(sys.argv[2])
@@ -132,7 +132,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: app-check-ablation-\${{ matrix.arm }}
+          name: app-check-ablation-${{ matrix.arm }}
           path: |
             /tmp/provenance.tsv
             /tmp/result.txt
