@@ -1,0 +1,57 @@
+{
+  "callgrind_proxy": {
+    "BASE_CALLGRIND_IR": "795878267572",
+    "CALLGRIND_DELTA_PERCENT": "0.05782",
+    "CALLGRIND_PROXY_RESULT": "WORSE_OR_EQUAL",
+    "CANDIDATE_CALLGRIND_IR": "796338473695",
+    "CANDIDATE_VS_BASE_CALLGRIND_SPEEDUP": "0.999422097"
+  },
+  "callgrind_proxy_status": "AVAILABLE",
+  "claim_boundary": "Wall time is diagnostic and Callgrind Ir is a proxy; neither is the official Arena hardware-instruction metric.",
+  "hardware_counter": {
+    "available": false,
+    "perf_probe_rc": 127,
+    "stderr": "/home/runner/work/_temp/ed85eb70-1fd4-42e5-9a79-26b622a0e5c4.sh: line 4: : command not found\n"
+  },
+  "headline_gates": {
+    "MR10_parent_developmental_result_unchanged": true,
+    "MR1_parent_identity_recorded": true,
+    "MR2_exact_one_toggle_candidate": true,
+    "MR3_identical_pgo_regime": true,
+    "MR4_perf_probe_recorded": true,
+    "MR5_mathlib_status_parity": true,
+    "MR6_five_alternating_wall_replays": true,
+    "MR7_wall_labeled_diagnostic": true,
+    "MR8_callgrind_reported_or_unavailable": true,
+    "MR9_callgrind_labeled_proxy": true
+  },
+  "parent_authority": {
+    "job": 106113555314,
+    "run": 35524257419
+  },
+  "precommit_commit": "427a14e2513601ae9dda12c2e06fabc5b085f070",
+  "protocol": "LEAN_GROW_DISSOLVE_SEARCH_V1B",
+  "status_parity": {
+    "pass": true,
+    "rows": [
+      [
+        "base",
+        "0"
+      ],
+      [
+        "candidate",
+        "0"
+      ]
+    ]
+  },
+  "verdict": "PASS_SELECTED_ACTION_MEASUREMENT_RECOVERY_V1B",
+  "wall_diagnostic": {
+    "BASE_MEDIAN_S": "85.860000",
+    "BASE_RUNS": "[83.88, 85.32, 85.86, 89.08, 86.34]",
+    "CANDIDATE_MEDIAN_S": "84.830000",
+    "CANDIDATE_RUNS": "[84.65, 85.33, 84.56, 85.95, 84.83]",
+    "CANDIDATE_VS_BASE_WALL_SPEEDUP": "1.012142",
+    "CANDIDATE_WALL_DELTA_PERCENT": "-1.1996",
+    "WALL_DIAGNOSTIC": "BETTER"
+  }
+}
