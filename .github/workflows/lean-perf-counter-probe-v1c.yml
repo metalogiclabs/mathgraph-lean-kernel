@@ -1,0 +1,228 @@
+name: Lean Perf Counter Probe V1C
+
+on:
+  push:
+    branches:
+      - experiment/lean-perf-counter-probe-v1c
+    paths:
+      - 'experiments/LEAN_PERF_COUNTER_PROBE_V1C_PRECOMMIT.md'
+      - '.github/workflows/lean-perf-counter-probe-v1c.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: experiment/lean-perf-counter-probe-v1c
+          fetch-depth: 0
+
+      - uses: cachix/install-nix-action@v31
+
+      - name: Verify prospective freeze
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git merge-base --is-ancestor 2511d395ef623d38303b5d00641b63a911819ae2 HEAD
+          test -f experiments/LEAN_PERF_COUNTER_PROBE_V1C_PRECOMMIT.md
+
+      - name: Materialize pinned Arena environment
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          test "$(git -C /tmp/arena rev-parse HEAD)" = "510fbfead6f02bed1a0179d01729a6ddf5bfd06d"
+          printf 'arena_sha\t%s\n' "$(git -C /tmp/arena rev-parse HEAD)" | tee /tmp/arena-provenance.tsv
+
+      - name: Resolve perf from correct Arena Nix environment
+        shell: bash
+        run: |
+          set +e
+          cd /tmp/arena
+          PERF=$(nix develop -c sh -c 'command -v perf')
+          rc=$?
+          set -e
+          printf '%s\n' "$rc" >/tmp/perf-resolve.rc
+          printf '%s\n' "$PERF" >/tmp/perf-path.txt
+          echo "PERF_RESOLVE_RC=$rc"
+          echo "PERF_PATH=$PERF"
+          if [ "$rc" -eq 0 ] && [ -n "$PERF" ]; then
+            "$PERF" --version | tee /tmp/perf-version.txt
+          else
+            : >/tmp/perf-version.txt
+          fi
+
+      - name: Record kernel perf policy
+        shell: bash
+        run: |
+          set -euxo pipefail
+          if [ -r /proc/sys/kernel/perf_event_paranoid ]; then
+            cat /proc/sys/kernel/perf_event_paranoid | tee /tmp/perf-event-paranoid.txt
+          else
+            echo UNREADABLE | tee /tmp/perf-event-paranoid.txt
+          fi
+
+      - name: Probe perf events explicitly
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PERF=$(cat /tmp/perf-path.txt)
+          resolve_rc=$(cat /tmp/perf-resolve.rc)
+
+          probe () {
+            name="$1"
+            event="$2"
+            stdout="/tmp/${name}.stdout"
+            stderr="/tmp/${name}.stderr"
+            rcfile="/tmp/${name}.rc"
+            if [ "$resolve_rc" -ne 0 ] || [ -z "$PERF" ]; then
+              echo "127" >"$rcfile"
+              : >"$stdout"
+              echo "perf unresolved" >"$stderr"
+              return 0
+            fi
+            set +e
+            "$PERF" stat -x $'\t' -e "$event" true >"$stdout" 2>"$stderr"
+            rc=$?
+            set -e
+            echo "$rc" >"$rcfile"
+            echo "=== $name rc=$rc event=$event ==="
+            cat "$stdout" || true
+            cat "$stderr" || true
+          }
+
+          probe instructions instructions
+          probe cycles cycles
+          probe task_clock task-clock
+
+      - name: Classify counter availability
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p results/lean_perf_counter_probe_v1c
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,re
+
+          resolve_rc=int(Path('/tmp/perf-resolve.rc').read_text().strip())
+          perf_path=Path('/tmp/perf-path.txt').read_text().strip()
+          perf_version=Path('/tmp/perf-version.txt').read_text().strip()
+          paranoid=Path('/tmp/perf-event-paranoid.txt').read_text().strip()
+
+          def read_probe(name):
+              return {
+                  'rc':int(Path(f'/tmp/{name}.rc').read_text().strip()),
+                  'stdout':Path(f'/tmp/{name}.stdout').read_text(errors='replace'),
+                  'stderr':Path(f'/tmp/{name}.stderr').read_text(errors='replace'),
+              }
+
+          probes={k:read_probe(k) for k in ('instructions','cycles','task_clock')}
+          inst=probes['instructions']
+          txt=(inst['stdout']+'\n'+inst['stderr']).lower()
+
+          numeric=False
+          for line in (inst['stdout']+'\n'+inst['stderr']).splitlines():
+              cols=line.split('\t')
+              if cols:
+                  raw=cols[0].strip().replace(',','')
+                  if re.fullmatch(r'\d+(?:\.\d+)?',raw):
+                      numeric=True
+                      break
+
+          if resolve_rc != 0 or not perf_path:
+              classification='PERF_RESOLUTION_FAILURE'
+          elif inst['rc']==0 and numeric:
+              classification='COUNTER_AVAILABLE'
+          elif any(s in txt for s in ('permission','not supported','not counted','access to performance monitoring')):
+              classification='HARDWARE_COUNTER_DENIED'
+          else:
+              classification='PERF_EXECUTION_FAILURE'
+
+          gates={
+              'PC1_pinned_arena_exact':True,
+              'PC2_correct_working_directory':True,
+              'PC3_perf_resolution_recorded':True,
+              'PC4_perf_version_recorded_if_resolved':(resolve_rc!=0 or bool(perf_version)),
+              'PC5_perf_event_paranoid_recorded':bool(paranoid),
+              'PC6_instructions_probe_complete':all(k in inst for k in ('rc','stdout','stderr')),
+              'PC7_cycles_probe_complete':all(k in probes['cycles'] for k in ('rc','stdout','stderr')),
+              'PC8_task_clock_probe_complete':all(k in probes['task_clock'] for k in ('rc','stdout','stderr')),
+              'PC9_frozen_classification':classification in {
+                  'COUNTER_AVAILABLE',
+                  'HARDWARE_COUNTER_DENIED',
+                  'PERF_EXECUTION_FAILURE',
+                  'PERF_RESOLUTION_FAILURE'
+              },
+              'PC10_no_long_benchmark':True,
+          }
+
+          result={
+              'protocol':'LEAN_PERF_COUNTER_PROBE_V1C',
+              'precommit_commit':'2511d395ef623d38303b5d00641b63a911819ae2',
+              'parent':{'run':35533345013,'job':106137872850},
+              'classification':classification,
+              'perf_resolution':{
+                  'rc':resolve_rc,
+                  'path':perf_path,
+                  'version':perf_version,
+                  'perf_event_paranoid':paranoid,
+              },
+              'probes':probes,
+              'headline_gates':gates,
+              'verdict':'PASS_LEAN_PERF_COUNTER_PROBE_V1C' if all(gates.values()) else 'PARTIAL_LEAN_PERF_COUNTER_PROBE_V1C',
+              'claim_boundary':'Counter-availability diagnostic only; no MathGraph performance measurement.',
+          }
+          out=Path('results/lean_perf_counter_probe_v1c')
+          (out/'result.json').write_text(json.dumps(result,indent=2,sort_keys=True)+'\n')
+          (out/'summary.json').write_text(json.dumps({
+              'classification':classification,
+              'perf_resolution':result['perf_resolution'],
+              'probe_rcs':{k:v['rc'] for k,v in probes.items()},
+              'headline_gates':gates,
+              'verdict':result['verdict'],
+          },indent=2,sort_keys=True)+'\n')
+          print('SCIENTIFIC_VERDICT='+result['verdict'])
+          print('CLASSIFICATION='+classification)
+          print(json.dumps(result,indent=2,sort_keys=True))
+          if result['verdict']!='PASS_LEAN_PERF_COUNTER_PROBE_V1C':
+              raise SystemExit(1)
+          PY
+
+      - name: Commit authoritative result
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git config user.name mathgraph-bot
+          git config user.email 32909488+heathsanchez@users.noreply.github.com
+          git add results/lean_perf_counter_probe_v1c
+          git commit -m 'Record Lean perf counter probe V1C result' || exit 0
+          git push origin HEAD:experiment/lean-perf-counter-probe-v1c
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lean-perf-counter-probe-v1c-evidence
+          path: |
+            results/lean_perf_counter_probe_v1c
+            /tmp/arena-provenance.tsv
+            /tmp/perf-resolve.rc
+            /tmp/perf-path.txt
+            /tmp/perf-version.txt
+            /tmp/perf-event-paranoid.txt
+            /tmp/instructions.stdout
+            /tmp/instructions.stderr
+            /tmp/instructions.rc
+            /tmp/cycles.stdout
+            /tmp/cycles.stderr
+            /tmp/cycles.rc
+            /tmp/task_clock.stdout
+            /tmp/task_clock.stderr
+            /tmp/task_clock.rc
+          if-no-files-found: warn
