@@ -1,0 +1,140 @@
+name: QCKN Flash app-check ablation V1
+
+on:
+  push:
+    branches:
+      - qckn-flash-app-check-ablation-v1
+    paths:
+      - .github/workflows/qckn-flash-app-check-ablation-v1.yml
+  workflow_dispatch:
+
+concurrency:
+  group: qckn-flash-app-check-ablation-v1
+  cancel-in-progress: true
+
+jobs:
+  measure:
+    strategy:
+      fail-fast: false
+      matrix:
+        arm: [baseline, no_conv, inferonly_conv, no_check]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: cachix/install-nix-action@v31
+
+      - name: Materialize arm
+        shell: bash
+        run: |
+          set -euxo pipefail
+          SOURCE=a342c74f6eb913c25c6dae4138158023d1b9aa6a
+          git worktree add --detach /tmp/arm "$SOURCE"
+
+          python3 - "\${{ matrix.arm }}" <<'PY'
+          import re, sys
+          from pathlib import Path
+
+          arm=sys.argv[1]
+          p=Path('/tmp/arm/src/infer.rs')
+          c=p.read_text()
+
+          pat=re.compile(
+              r'''            if flag == Check \{\n'''
+              r'''                let arg_ty = self\.infer_value\(flag, depth, env, ctx, arg\);\n'''
+              r'''                assert!\(self\.conv_types_at\(depth, domain, arg_ty\), "app arg def_eq failed"\);\n'''
+              r'''            \}'''
+          )
+
+          if arm == "baseline":
+              repl=None
+          elif arm == "no_conv":
+              repl='''            if flag == Check {
+                  let _arg_ty = self.infer_value(flag, depth, env, ctx, arg);
+              }'''
+          elif arm == "inferonly_conv":
+              repl='''            if flag == Check {
+                  let arg_ty = self.infer_value(InferOnly, depth, env, ctx, arg);
+                  assert!(self.conv_types_at(depth, domain, arg_ty), "app arg def_eq failed");
+              }'''
+          elif arm == "no_check":
+              repl='''            if flag == Check {
+                  // Diagnostic ablation only.
+              }'''
+          else:
+              raise SystemExit(arm)
+
+          if repl is not None:
+              c,n=pat.subn(repl,c,count=1)
+              if n != 1:
+                  raise SystemExit(f"app-check anchor count={n}")
+              p.write_text(c)
+
+          print(f"APP_CHECK_ABLATION_ARM={arm}")
+          PY
+
+          printf 'arm\t%s\nsource\t%s\nclaim\tdiagnostic_only_not_promotable\n' "\${{ matrix.arm }}" "$SOURCE" >/tmp/provenance.tsv
+
+      - name: Build pinned Mathlib and init
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test init-prelude >/dev/null
+          nix develop -c ./lka.py build-test mathlib >/dev/null
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+
+      - name: Build Valgrind-safe PGO binary
+        shell: bash
+        run: |
+          set -euxo pipefail
+          LLVM_PROFDATA=$(nix shell nixpkgs#llvmPackages_21.llvm -c sh -c 'command -v llvm-profdata')
+          CPU='-C target-cpu=x86-64 -C target-feature=-avx,-avx2,-avx512f,-fma'
+          rm -rf /tmp/arm/target /tmp/arm/pgo
+          mkdir -p /tmp/arm/pgo
+          cd /tmp/arm
+          RUSTFLAGS="$CPU -Cprofile-generate=/tmp/arm/pgo" cargo build --release --locked
+          target/release/sokonanoda /tmp/config.json </tmp/arena/_build/tests/init-prelude.ndjson >/dev/null
+          "$LLVM_PROFDATA" merge -o /tmp/arm/pgo/merged.profdata /tmp/arm/pgo
+          rm -rf target
+          RUSTFLAGS="$CPU -Cprofile-use=/tmp/arm/pgo/merged.profdata" cargo build --release --locked
+          cp target/release/sokonanoda /tmp/arm.bin
+
+      - name: Full Mathlib Callgrind
+        shell: bash
+        run: |
+          set -euxo pipefail
+          VALGRIND=$(nix shell nixpkgs#valgrind -c sh -c 'command -v valgrind')
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          timeout 8000s "$VALGRIND" --tool=callgrind --quiet --collect-jumps=no \
+            --callgrind-out-file=/tmp/app-ablation.callgrind \
+            /tmp/arm.bin /tmp/config.json <"$f" >/tmp/out.txt 2>/tmp/err.txt
+          ir=$(awk '/^summary:/ {print $2; exit}' /tmp/app-ablation.callgrind)
+          test -n "$ir"
+
+          python3 - "\${{ matrix.arm }}" "$ir" <<'PY' | tee /tmp/result.txt
+          import sys
+          arm=sys.argv[1]
+          ir=int(sys.argv[2])
+          print(f"ARM={arm}")
+          print(f"IR={ir}")
+          print(f"VIRTUAL_S={ir/6_000_000_000:.6f}")
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: app-check-ablation-\${{ matrix.arm }}
+          path: |
+            /tmp/provenance.tsv
+            /tmp/result.txt
+            /tmp/app-ablation.callgrind
+          if-no-files-found: warn
