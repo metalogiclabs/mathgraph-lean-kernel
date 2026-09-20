@@ -43,6 +43,7 @@ jobs:
           git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
           git -C /tmp/arena checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
           cd /tmp/arena
+          nix develop -c ./lka.py build-test init-prelude >/dev/null
           nix develop -c ./lka.py build-test mathlib >/dev/null
           cat >/tmp/config.json <<'EOF'
           {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
