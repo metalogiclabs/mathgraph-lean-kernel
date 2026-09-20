@@ -1,0 +1,105 @@
+name: QCKN Flash app conversion direct-map V1
+
+on:
+  push:
+    branches:
+      - qckn-flash-app-conv-directmap-v1
+    paths:
+      - scripts/apply_qckn_app_conv_directmap_v1.py
+      - .github/workflows/qckn-flash-app-conv-directmap-v1.yml
+  workflow_dispatch:
+
+concurrency:
+  group: qckn-flash-app-conv-directmap-v1
+  cancel-in-progress: true
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: cachix/install-nix-action@v31
+
+      - name: Materialize baseline and candidate
+        shell: bash
+        run: |
+          set -euxo pipefail
+          SOURCE=a342c74f6eb913c25c6dae4138158023d1b9aa6a
+          git worktree add --detach /tmp/base "$SOURCE"
+          git worktree add --detach /tmp/cand "$SOURCE"
+          cd /tmp/cand
+          python3 "$GITHUB_WORKSPACE/scripts/apply_qckn_app_conv_directmap_v1.py"
+          printf 'source\t%s\nobjective\tcheap_app_conversion_directmap_gate\nfull_qualification\tfalse\n' "$SOURCE" >/tmp/provenance.tsv
+
+      - name: Build Mathlib corpus only
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test mathlib >/dev/null
+          test -f _build/tests/mathlib.ndjson
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+
+      - name: Build native release binaries
+        shell: bash
+        run: |
+          set -euxo pipefail
+          for arm in base cand; do
+            cd /tmp/$arm
+            RUSTFLAGS='-C target-cpu=native' cargo build --release --locked
+            cp target/release/sokonanoda /tmp/$arm.bin
+          done
+
+      - name: Two-replay Mathlib native gate
+        shell: bash
+        run: |
+          set -euxo pipefail
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          : >/tmp/native.tsv
+          for rep in 1 2; do
+            if [ "$rep" -eq 1 ]; then
+              order=(base cand)
+            else
+              order=(cand base)
+            fi
+            for arm in "${order[@]}"; do
+              /usr/bin/time -f '%e %U %S %M' -o /tmp/time                 /tmp/$arm.bin /tmp/config.json <"$f" >/dev/null 2>/tmp/$arm.err
+              read -r wall user sys rss </tmp/time
+              echo "$arm $rep $wall $user $sys $rss" | tee -a /tmp/native.tsv
+            done
+          done
+          python3 - <<'PY' | tee /tmp/scorecard.txt
+          from collections import defaultdict
+          from statistics import median
+          d=defaultdict(list); u=defaultdict(list)
+          for line in open('/tmp/native.tsv'):
+              arm,rep,wall,user,sys,rss=line.split()
+              d[arm].append(float(wall))
+              u[arm].append(float(user)+float(sys))
+          bw=median(d['base']); cw=median(d['cand'])
+          bc=median(u['base']); cc=median(u['cand'])
+          print(f'BASE_MEDIAN_WALL_S={bw:.6f}')
+          print(f'CAND_MEDIAN_WALL_S={cw:.6f}')
+          print(f'WALL_MARGIN_PERCENT={(bw/cw-1)*100:.4f}')
+          print(f'BASE_MEDIAN_CPU_S={bc:.6f}')
+          print(f'CAND_MEDIAN_CPU_S={cc:.6f}')
+          print(f'CPU_REDUCTION_PERCENT={(1-cc/bc)*100:.4f}')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-app-conv-directmap-v1
+          path: |
+            /tmp/provenance.tsv
+            /tmp/native.tsv
+            /tmp/scorecard.txt
+          if-no-files-found: warn
