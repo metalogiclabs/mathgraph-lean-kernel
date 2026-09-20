@@ -1,0 +1,46 @@
+{
+  "claim_boundary": "Counter-availability diagnostic only; no MathGraph performance measurement.",
+  "classification": "HARDWARE_COUNTER_DENIED",
+  "headline_gates": {
+    "PC10_no_long_benchmark": true,
+    "PC1_pinned_arena_exact": true,
+    "PC2_correct_working_directory": true,
+    "PC3_perf_resolution_recorded": true,
+    "PC4_perf_version_recorded_if_resolved": true,
+    "PC5_perf_event_paranoid_recorded": true,
+    "PC6_instructions_probe_complete": true,
+    "PC7_cycles_probe_complete": true,
+    "PC8_task_clock_probe_complete": true,
+    "PC9_frozen_classification": true
+  },
+  "parent": {
+    "job": 106137872850,
+    "run": 35533345013
+  },
+  "perf_resolution": {
+    "path": "/nix/store/kqisbwng31aq0r1f6mla1a39xw523pf4-perf-linux-7.1.3/bin/perf",
+    "perf_event_paranoid": "4",
+    "rc": 0,
+    "version": "perf version 7.1.3"
+  },
+  "precommit_commit": "2511d395ef623d38303b5d00641b63a911819ae2",
+  "probes": {
+    "cycles": {
+      "rc": 1,
+      "stderr": "Error:\nNo supported events found.\nAccess to performance monitoring and observability operations is limited.\nConsider adjusting /proc/sys/kernel/perf_event_paranoid setting to open\naccess to performance monitoring and observability operations for processes\nwithout CAP_PERFMON, CAP_SYS_PTRACE or CAP_SYS_ADMIN Linux capability.\nMore information can be found at 'Perf events and tool security' document:\nhttps://www.kernel.org/doc/html/latest/admin-guide/perf-security.html\nperf_event_paranoid setting is 4:\n  -1: Allow use of (almost) all events by all users\n      Ignore mlock limit after perf_event_mlock_kb without CAP_IPC_LOCK\n>= 0: Disallow raw and ftrace function tracepoint access\n>= 1: Disallow CPU event access\n>= 2: Disallow kernel profiling\nTo make the adjusted perf_event_paranoid setting permanent preserve it\nin /etc/sysctl.conf (e.g. kernel.perf_event_paranoid = <setting>)\n",
+      "stdout": ""
+    },
+    "instructions": {
+      "rc": 1,
+      "stderr": "Error:\nNo supported events found.\nAccess to performance monitoring and observability operations is limited.\nConsider adjusting /proc/sys/kernel/perf_event_paranoid setting to open\naccess to performance monitoring and observability operations for processes\nwithout CAP_PERFMON, CAP_SYS_PTRACE or CAP_SYS_ADMIN Linux capability.\nMore information can be found at 'Perf events and tool security' document:\nhttps://www.kernel.org/doc/html/latest/admin-guide/perf-security.html\nperf_event_paranoid setting is 4:\n  -1: Allow use of (almost) all events by all users\n      Ignore mlock limit after perf_event_mlock_kb without CAP_IPC_LOCK\n>= 0: Disallow raw and ftrace function tracepoint access\n>= 1: Disallow CPU event access\n>= 2: Disallow kernel profiling\nTo make the adjusted perf_event_paranoid setting permanent preserve it\nin /etc/sysctl.conf (e.g. kernel.perf_event_paranoid = <setting>)\n",
+      "stdout": ""
+    },
+    "task_clock": {
+      "rc": 1,
+      "stderr": "Error:\nNo supported events found.\nAccess to performance monitoring and observability operations is limited.\nConsider adjusting /proc/sys/kernel/perf_event_paranoid setting to open\naccess to performance monitoring and observability operations for processes\nwithout CAP_PERFMON, CAP_SYS_PTRACE or CAP_SYS_ADMIN Linux capability.\nMore information can be found at 'Perf events and tool security' document:\nhttps://www.kernel.org/doc/html/latest/admin-guide/perf-security.html\nperf_event_paranoid setting is 4:\n  -1: Allow use of (almost) all events by all users\n      Ignore mlock limit after perf_event_mlock_kb without CAP_IPC_LOCK\n>= 0: Disallow raw and ftrace function tracepoint access\n>= 1: Disallow CPU event access\n>= 2: Disallow kernel profiling\nTo make the adjusted perf_event_paranoid setting permanent preserve it\nin /etc/sysctl.conf (e.g. kernel.perf_event_paranoid = <setting>)\n",
+      "stdout": ""
+    }
+  },
+  "protocol": "LEAN_PERF_COUNTER_PROBE_V1C",
+  "verdict": "PASS_LEAN_PERF_COUNTER_PROBE_V1C"
+}
