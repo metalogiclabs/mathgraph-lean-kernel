@@ -1,0 +1,97 @@
+name: QCKN bounded conversion cost probe V1
+on:
+  push:
+    branches: [qckn-conv-cost-probe-v1]
+    paths:
+      - scripts/apply_qckn_conv_cost_probe.py
+      - scripts/qckn_conv_cost_probe.rs
+      - scripts/cost_tools.py
+      - scripts/test_cost_tools.py
+      - .github/workflows/qckn-conv-cost-probe-v1.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: qckn-conv-cost-probe-v1
+  cancel-in-progress: false
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate tools and compile before building any corpus
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/qckn-cost-out
+          python3 -m unittest discover -s scripts -p test_cost_tools.py -v
+          SOURCE=a342c74f6eb913c25c6dae4138158023d1b9aa6a
+          git worktree add --detach /tmp/qckn-base "$SOURCE"
+          git worktree add --detach /tmp/qckn-probe "$SOURCE"
+          python3 scripts/apply_qckn_conv_cost_probe.py /tmp/qckn-probe
+          rustc --version | tee /tmp/qckn-cost-out/toolchain.txt
+          cargo --version | tee -a /tmp/qckn-cost-out/toolchain.txt
+          export RUSTFLAGS='-C target-cpu=x86-64-v3'
+          (cd /tmp/qckn-probe && cargo test --release --locked --lib qckn_cost_probe)
+          for arm in base probe; do
+            (cd /tmp/qckn-$arm && cargo build --release --locked)
+            cp /tmp/qckn-$arm/target/release/sokonanoda /tmp/qckn-$arm.bin
+          done
+          git -C /tmp/qckn-probe diff > /tmp/qckn-cost-out/instrumentation.patch
+          printf 'source\t%s\narena\t%s\nkind\tdiagnostic_not_qualified_optimization\n' "$SOURCE" '510fbfead6f02bed1a0179d01729a6ddf5bfd06d' > /tmp/qckn-cost-out/provenance.tsv
+      - name: Prepare pinned Arena checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/qckn-arena
+          git -C /tmp/qckn-arena checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+      - uses: actions/cache/restore@v4
+        id: corpus
+        with:
+          path: /tmp/qckn-arena/_build/tests/mathlib.ndjson
+          key: qckn-mathlib-export-510fbfead6f02bed1a0179d01729a6ddf5bfd06d-v1
+      - uses: cachix/install-nix-action@v31
+        if: steps.corpus.outputs.cache-hit != 'true'
+      - name: Build only Mathlib on a cache miss
+        if: steps.corpus.outputs.cache-hit != 'true'
+        timeout-minutes: 14
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/qckn-arena
+          nix develop -c ./lka.py build-test mathlib > /tmp/qckn-cost-out/corpus-build.log 2>&1
+      - uses: actions/cache/save@v4
+        if: steps.corpus.outputs.cache-hit != 'true'
+        with:
+          path: /tmp/qckn-arena/_build/tests/mathlib.ndjson
+          key: qckn-mathlib-export-510fbfead6f02bed1a0179d01729a6ddf5bfd06d-v1
+      - name: One baseline and two independent sample schedules
+        timeout-minutes: 13
+        shell: bash
+        run: |
+          set -euo pipefail
+          f=/tmp/qckn-arena/_build/tests/mathlib.ndjson
+          test -s "$f"
+          sha256sum "$f" > /tmp/qckn-cost-out/export.sha256
+          cat > /tmp/qckn-config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+          /usr/bin/time -f '%e %U %S %M' -o /tmp/qckn-cost-out/baseline.time timeout 250s /tmp/qckn-base.bin /tmp/qckn-config.json < "$f" > /tmp/qckn-cost-out/baseline.out 2> /tmp/qckn-cost-out/baseline.stderr
+          for seed in 17 99173; do
+            QCKN_COST_SEED="$seed" /usr/bin/time -f '%e %U %S %M' -o /tmp/qckn-cost-out/probe-$seed.time timeout 250s /tmp/qckn-probe.bin /tmp/qckn-config.json < "$f" > /tmp/qckn-cost-out/probe-$seed.out 2> /tmp/qckn-cost-out/probe-$seed.stderr
+            cmp /tmp/qckn-cost-out/baseline.out /tmp/qckn-cost-out/probe-$seed.out
+            grep '^QCKN_CONV_COST ' /tmp/qckn-cost-out/probe-$seed.stderr
+          done
+          python3 scripts/cost_tools.py samples /tmp/qckn-cost-out/probe-17.stderr /tmp/qckn-cost-out/probe-99173.stderr | tee /tmp/qckn-cost-out/summary.json
+          echo 'DIAGNOSTIC_COMPLETE_NO_CHAMPION_PROMOTION'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-conv-cost-probe-v1
+          path: /tmp/qckn-cost-out/
+          if-no-files-found: error
