@@ -1,0 +1,196 @@
+name: QCKN Flash checked-capability V2
+
+on:
+  push:
+    branches:
+      - qckn-flash-checked-capability-v2
+    paths:
+      - scripts/apply_qckn_checked_capability_v2.py
+      - .github/workflows/qckn-flash-checked-capability-v2.yml
+  workflow_dispatch:
+
+concurrency:
+  group: qckn-flash-checked-capability-v2
+  cancel-in-progress: true
+
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: cachix/install-nix-action@v31
+
+      - name: Materialize baseline and candidate
+        shell: bash
+        run: |
+          set -euxo pipefail
+          SOURCE=a342c74f6eb913c25c6dae4138158023d1b9aa6a
+          ARENA=510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          git worktree add --detach /tmp/base "$SOURCE"
+          git worktree add --detach /tmp/cand "$SOURCE"
+          cd /tmp/cand
+          python3 "$GITHUB_WORKSPACE/scripts/apply_qckn_checked_capability_v2.py"
+          cd "$GITHUB_WORKSPACE"
+          printf 'frozen_source_sha\t%s\narena_suite_sha\t%s\ncapability\tchecked_capability_term_local_uparam_promotion\nsemantic_authority\tnum_threads_4\n' "$SOURCE" "$ARENA" >/tmp/provenance.tsv
+
+      - name: Build pinned Arena corpus
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          cd /tmp/arena
+          find tests -type f -name '*.yaml' | sort >/tmp/test-yamls.txt
+          while IFS= read -r y; do
+            t=$(printf '%s' "$y" | sed -e 's#^tests/##' -e 's#\.yaml$##')
+            nix develop -c ./lka.py build-test "$t" >/dev/null
+          done </tmp/test-yamls.txt
+          find _build/tests -type f -name '*.ndjson' | sort >/tmp/exports.txt
+          count=$(wc -l </tmp/exports.txt)
+          echo "exports=$count" | tee /tmp/export-count.txt
+          test "$count" -eq 409
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}
+          EOF
+
+      - name: Build semantic binaries
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/base
+          RUSTFLAGS='-C target-cpu=x86-64-v3' cargo build --release --locked
+          cp target/release/sokonanoda /tmp/base.semantic.bin
+          cd /tmp/cand
+          RUSTFLAGS='-C target-cpu=x86-64-v3' cargo build --release --locked
+          cp target/release/sokonanoda /tmp/cand.semantic.bin
+
+      - name: Full 409 semantic parity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          : >/tmp/mismatches.tsv
+          : >/tmp/semantic.tsv
+          while IFS= read -r f; do
+            set +e
+            /tmp/base.semantic.bin /tmp/config.json <"$f" >/tmp/base.out 2>/tmp/base.err
+            b=$?
+            /tmp/cand.semantic.bin /tmp/config.json <"$f" >/tmp/cand.out 2>/tmp/cand.err
+            c=$?
+            set -e
+            if [ "$b" -ne "$c" ] || ! cmp -s /tmp/base.out /tmp/cand.out; then
+              printf 'MISMATCH\t%s\tbase=%s\tcand=%s\n' "$f" "$b" "$c" | tee -a /tmp/mismatches.tsv
+            else
+              printf 'MATCH\t%s\t%s\n' "$c" "$f" >>/tmp/semantic.tsv
+            fi
+          done </tmp/exports.txt
+          n=$(wc -l </tmp/mismatches.tsv)
+          echo "semantic_mismatches=$n" | tee /tmp/semantic-summary.txt
+          test "$n" -eq 0
+          echo CHECKED_CAPABILITY_V2_409_PARITY_PASS | tee -a /tmp/semantic-summary.txt
+
+      - name: Native PGO Mathlib head-to-head
+        shell: bash
+        run: |
+          set -euxo pipefail
+          LLVM_PROFDATA=$(nix shell nixpkgs#llvmPackages_21.llvm -c sh -c 'command -v llvm-profdata')
+          init=/tmp/arena/_build/tests/init-prelude.ndjson
+          for arm in base cand; do
+            rm -rf /tmp/$arm/target /tmp/$arm/pgo
+            mkdir -p /tmp/$arm/pgo
+            cd /tmp/$arm
+            RUSTFLAGS="-C target-cpu=native -Cprofile-generate=/tmp/$arm/pgo" cargo build --release --locked
+            target/release/sokonanoda /tmp/config.json <"$init" >/dev/null
+            "$LLVM_PROFDATA" merge -o /tmp/$arm/pgo/merged.profdata /tmp/$arm/pgo
+            rm -rf target
+            RUSTFLAGS="-C target-cpu=native -Cprofile-use=/tmp/$arm/pgo/merged.profdata" cargo build --release --locked
+            cp target/release/sokonanoda /tmp/$arm.pgo.bin
+          done
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          : >/tmp/native.tsv
+          for rep in 1 2 3; do
+            for arm in base cand; do
+              /usr/bin/time -f '%e %U %S %M' -o /tmp/time /tmp/$arm.pgo.bin /tmp/config.json <"$f" >/dev/null 2>/dev/null
+              read -r wall user sys rss </tmp/time
+              echo "$arm $rep $wall $user $sys $rss" >>/tmp/native.tsv
+            done
+          done
+          python3 - <<'PY' | tee /tmp/native-scorecard.txt
+          from collections import defaultdict
+          from statistics import median
+          d=defaultdict(list)
+          for line in open('/tmp/native.tsv'):
+              arm,rep,wall,user,sys,rss=line.split()
+              d[arm].append(float(wall))
+          b=median(d['base']); c=median(d['cand'])
+          print(f'BASE_MEDIAN_S={b:.6f}')
+          print(f'CAND_MEDIAN_S={c:.6f}')
+          print(f'CAND_SPEEDUP={b/c:.6f}')
+          print(f'CAND_MARGIN_PERCENT={(b/c-1)*100:.4f}')
+          PY
+
+      - name: Build Valgrind-safe PGO binaries
+        shell: bash
+        run: |
+          set -euxo pipefail
+          LLVM_PROFDATA=$(nix shell nixpkgs#llvmPackages_21.llvm -c sh -c 'command -v llvm-profdata')
+          CPU='-C target-cpu=x86-64 -C target-feature=-avx,-avx2,-avx512f,-fma'
+          init=/tmp/arena/_build/tests/init-prelude.ndjson
+          for arm in base cand; do
+            rm -rf /tmp/$arm/target /tmp/$arm/vpgo
+            mkdir -p /tmp/$arm/vpgo
+            cd /tmp/$arm
+            RUSTFLAGS="$CPU -Cprofile-generate=/tmp/$arm/vpgo" cargo build --release --locked
+            target/release/sokonanoda /tmp/config.json <"$init" >/dev/null
+            "$LLVM_PROFDATA" merge -o /tmp/$arm/vpgo/merged.profdata /tmp/$arm/vpgo
+            rm -rf target
+            RUSTFLAGS="$CPU -Cprofile-use=/tmp/$arm/vpgo/merged.profdata" cargo build --release --locked
+            cp target/release/sokonanoda /tmp/$arm.valgrind.bin
+          done
+
+      - name: Full Mathlib instruction proxy head-to-head
+        shell: bash
+        run: |
+          set -euxo pipefail
+          VALGRIND=$(nix shell nixpkgs#valgrind -c sh -c 'command -v valgrind')
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          : >/tmp/ir.tsv
+          for arm in base cand; do
+            timeout 8000s "$VALGRIND" --tool=callgrind --quiet --collect-jumps=no --callgrind-out-file=/tmp/$arm.callgrind /tmp/$arm.valgrind.bin /tmp/config.json <"$f" >/tmp/$arm.cg.out 2>/tmp/$arm.cg.err
+            ir=$(awk '/^summary:/ {print $2; exit}' /tmp/$arm.callgrind)
+            test -n "$ir"
+            echo "$arm $ir" >>/tmp/ir.tsv
+          done
+          python3 - <<'PY' | tee /tmp/ir-scorecard.txt
+          rows={}
+          for line in open('/tmp/ir.tsv'):
+              arm,n=line.split()
+              rows[arm]=int(n)
+          b=rows['base']; c=rows['cand']
+          print(f'BASE_IR={b}')
+          print(f'CAND_IR={c}')
+          print(f'BASE_VIRTUAL_S={b/6_000_000_000:.6f}')
+          print(f'CAND_VIRTUAL_S={c/6_000_000_000:.6f}')
+          print(f'IR_SPEEDUP={b/c:.6f}')
+          print(f'IR_REDUCTION_PERCENT={(1-c/b)*100:.4f}')
+          print(f'TARGET_360B_GAP={c-360_000_000_000}')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-checked-capability-v2
+          path: |
+            /tmp/provenance.tsv
+            /tmp/export-count.txt
+            /tmp/semantic-summary.txt
+            /tmp/mismatches.tsv
+            /tmp/native.tsv
+            /tmp/native-scorecard.txt
+            /tmp/ir.tsv
+            /tmp/ir-scorecard.txt
+          if-no-files-found: warn
