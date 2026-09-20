@@ -1,0 +1,304 @@
+name: Lean Grow Dissolve Search V1B
+
+on:
+  push:
+    branches:
+      - experiment/lean-grow-dissolve-search-v1b
+    paths:
+      - 'experiments/LEAN_GROW_DISSOLVE_SEARCH_V1B_PRECOMMIT.md'
+      - '.github/workflows/lean-grow-dissolve-search-v1b.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: lean-grow-dissolve-search-v1b
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  recovery:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: experiment/lean-grow-dissolve-search-v1b
+          fetch-depth: 0
+
+      - uses: cachix/install-nix-action@v31
+
+      - name: Verify prospective freeze
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git merge-base --is-ancestor 427a14e2513601ae9dda12c2e06fabc5b085f070 HEAD
+          test -f experiments/LEAN_GROW_DISSOLVE_SEARCH_V1B_PRECOMMIT.md
+          printf 'parent_run\t35524257419\nparent_job\t106113555314\n' | tee /tmp/parent-authority.tsv
+
+      - name: Build pinned Arena exports
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test init-prelude >/dev/null
+          nix develop -c ./lka.py build-test mathlib >/dev/null
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}
+          EOF
+
+      - name: Materialize base and exact selected candidate
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git worktree add /tmp/base "$GITHUB_SHA"
+          cp -a /tmp/base /tmp/candidate
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/candidate/src/flash.rs')
+          s=p.read_text()
+          old='pub(crate) const ORDINARY_UNFOLD_NEUTRAL: bool = false;'
+          new='pub(crate) const ORDINARY_UNFOLD_NEUTRAL: bool = true;'
+          assert s.count(old)==1
+          p.write_text(s.replace(old,new,1))
+          Path('/tmp/candidate-diff.txt').write_text(old+'\n=>\n'+new+'\n')
+          PY
+          git -C /tmp/candidate diff -- src/flash.rs | tee /tmp/candidate.patch
+          test "$(git -C /tmp/candidate diff --name-only | wc -l)" -eq 1
+          test "$(git -C /tmp/candidate diff --name-only)" = "src/flash.rs"
+
+      - name: Build both with identical deterministic PGO
+        shell: bash
+        run: |
+          set -euxo pipefail
+          LLVM_PROFDATA=$(nix shell nixpkgs#llvmPackages_21.llvm -c sh -c 'command -v llvm-profdata')
+          FLAGS='-C target-cpu=x86-64 -C target-feature=-avx,-avx2,-avx512f,-fma'
+          for arm in base candidate; do
+            rm -rf /tmp/$arm/target /tmp/$arm/pgo
+            mkdir -p /tmp/$arm/pgo
+            (
+              cd /tmp/$arm
+              RUSTFLAGS="$FLAGS -Cprofile-generate=/tmp/$arm/pgo" cargo build --release --locked
+              target/release/sokonanoda /tmp/config.json </tmp/arena/_build/tests/init-prelude.ndjson >/dev/null
+              "$LLVM_PROFDATA" merge -o /tmp/$arm/pgo/merged.profdata /tmp/$arm/pgo
+              test -s /tmp/$arm/pgo/merged.profdata
+              rm -rf target
+              RUSTFLAGS="$FLAGS -Cprofile-use=/tmp/$arm/pgo/merged.profdata" cargo build --release --locked
+              cp target/release/sokonanoda /tmp/$arm.bin
+            )
+          done
+          sha256sum /tmp/base.bin /tmp/candidate.bin | tee /tmp/binaries.sha256
+
+      - name: Diagnose hosted hardware counter
+        shell: bash
+        run: |
+          set +e
+          PERF=$(nix develop -c sh -c 'command -v perf')
+          "$PERF" --version > /tmp/perf-version.txt 2>&1
+          "$PERF" stat -e instructions true >/tmp/perf-probe.stdout 2>/tmp/perf-probe.stderr
+          rc=$?
+          set -e
+          echo "$rc" > /tmp/perf-probe.rc
+          echo "PERF_PROBE_RC=$rc"
+          cat /tmp/perf-probe.stderr || true
+
+      - name: Verify selected candidate Mathlib status parity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          : >/tmp/status-parity.tsv
+          for arm in base candidate; do
+            set +e
+            /tmp/$arm.bin /tmp/config.json <"$f" >/tmp/$arm.out 2>/tmp/$arm.err
+            rc=$?
+            set -e
+            printf '%s\t%s\n' "$arm" "$rc" | tee -a /tmp/status-parity.tsv
+          done
+          test "$(cut -f2 /tmp/status-parity.tsv | sort -u | wc -l)" -eq 1
+          echo STATUS_PARITY_PASS
+
+      - name: Five-replay same-runner Mathlib wall diagnostic
+        shell: bash
+        run: |
+          set -euxo pipefail
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          : >/tmp/wall.tsv
+          for rep in 1 2 3 4 5; do
+            if [ $((rep%2)) -eq 1 ]; then order="base candidate"; else order="candidate base"; fi
+            for arm in $order; do
+              /usr/bin/time -f '%e\t%U\t%M' -o /tmp/time \
+                /tmp/$arm.bin /tmp/config.json <"$f" >/dev/null 2>/dev/null
+              read -r wall user rss </tmp/time
+              printf '%s\t%s\t%s\t%s\t%s\n' "$arm" "$rep" "$wall" "$user" "$rss" | tee -a /tmp/wall.tsv
+            done
+          done
+          python3 - <<'PY' | tee /tmp/wall-scorecard.txt
+          from collections import defaultdict
+          from statistics import median
+          rows=defaultdict(list)
+          for l in open('/tmp/wall.tsv'):
+              arm,rep,wall,user,rss=l.rstrip().split('\t')
+              rows[arm].append(float(wall))
+          b=median(rows['base']); c=median(rows['candidate'])
+          print('BASE_RUNS='+repr(rows['base']))
+          print('CANDIDATE_RUNS='+repr(rows['candidate']))
+          print(f'BASE_MEDIAN_S={b:.6f}')
+          print(f'CANDIDATE_MEDIAN_S={c:.6f}')
+          print(f'CANDIDATE_VS_BASE_WALL_SPEEDUP={b/c:.6f}')
+          print(f'CANDIDATE_WALL_DELTA_PERCENT={(c/b-1)*100:.4f}')
+          print('WALL_DIAGNOSTIC='+('BETTER' if c<b else 'WORSE_OR_EQUAL'))
+          PY
+
+      - name: Deterministic Mathlib Callgrind proxy
+        shell: bash
+        run: |
+          set -euxo pipefail
+          VALGRIND=$(nix shell nixpkgs#valgrind -c sh -c 'command -v valgrind')
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          : >/tmp/callgrind.tsv
+          status=AVAILABLE
+          for arm in base candidate; do
+            out=/tmp/$arm.callgrind
+            set +e
+            timeout 5400s "$VALGRIND" --tool=callgrind --quiet --collect-jumps=no \
+              --callgrind-out-file="$out" \
+              /tmp/$arm.bin /tmp/config.json <"$f" >/tmp/$arm.cg.out 2>/tmp/$arm.cg.err
+            rc=$?
+            set -e
+            if [ "$rc" -ne 0 ]; then
+              status=PROXY_UNAVAILABLE
+              printf '%s\tRC=%s\n' "$arm" "$rc" | tee -a /tmp/callgrind.tsv
+              break
+            fi
+            ir=$(awk '/^summary:/ {print $2; exit}' "$out")
+            if [ -z "$ir" ]; then
+              status=PROXY_UNAVAILABLE
+              printf '%s\tNO_SUMMARY\n' "$arm" | tee -a /tmp/callgrind.tsv
+              break
+            fi
+            printf '%s\t%s\n' "$arm" "$ir" | tee -a /tmp/callgrind.tsv
+          done
+          echo "CALLGRIND_STATUS=$status" | tee /tmp/callgrind-status.txt
+
+          if [ "$status" = "AVAILABLE" ]; then
+            python3 - <<'PY' | tee /tmp/callgrind-scorecard.txt
+          vals={}
+          for l in open('/tmp/callgrind.tsv'):
+              a,n=l.rstrip().split('\t'); vals[a]=int(n)
+          b=vals['base']; c=vals['candidate']
+          print(f'BASE_CALLGRIND_IR={b}')
+          print(f'CANDIDATE_CALLGRIND_IR={c}')
+          print(f'CANDIDATE_VS_BASE_CALLGRIND_SPEEDUP={b/c:.9f}')
+          print(f'CALLGRIND_DELTA_PERCENT={(c/b-1)*100:.5f}')
+          print('CALLGRIND_PROXY_RESULT='+('BETTER' if c<b else 'WORSE_OR_EQUAL'))
+          PY
+          else
+            echo "CALLGRIND_PROXY_RESULT=UNAVAILABLE" | tee /tmp/callgrind-scorecard.txt
+          fi
+
+      - name: Finalize V1B result
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p results/lean_grow_dissolve_search_v1b
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+
+          perf_rc=int(Path('/tmp/perf-probe.rc').read_text().strip())
+          perf_err=Path('/tmp/perf-probe.stderr').read_text(errors='replace')
+          status=[x.rstrip().split('\t') for x in Path('/tmp/status-parity.tsv').read_text().splitlines()]
+          parity=len({r[1] for r in status})==1
+
+          wall={}
+          for line in Path('/tmp/wall-scorecard.txt').read_text().splitlines():
+              if '=' in line:
+                  k,v=line.split('=',1); wall[k]=v
+
+          cg_status=Path('/tmp/callgrind-status.txt').read_text().strip().split('=',1)[1]
+          cg={}
+          for line in Path('/tmp/callgrind-scorecard.txt').read_text().splitlines():
+              if '=' in line:
+                  k,v=line.split('=',1); cg[k]=v
+
+          gates={
+            'MR1_parent_identity_recorded':True,
+            'MR2_exact_one_toggle_candidate':True,
+            'MR3_identical_pgo_regime':True,
+            'MR4_perf_probe_recorded':True,
+            'MR5_mathlib_status_parity':parity,
+            'MR6_five_alternating_wall_replays':len(Path('/tmp/wall.tsv').read_text().splitlines())==10,
+            'MR7_wall_labeled_diagnostic':True,
+            'MR8_callgrind_reported_or_unavailable':cg_status in {'AVAILABLE','PROXY_UNAVAILABLE'},
+            'MR9_callgrind_labeled_proxy':True,
+            'MR10_parent_developmental_result_unchanged':True,
+          }
+          verdict='PASS_SELECTED_ACTION_MEASUREMENT_RECOVERY_V1B' if all(gates.values()) else 'PARTIAL_SELECTED_ACTION_MEASUREMENT_RECOVERY_V1B'
+          result={
+            'protocol':'LEAN_GROW_DISSOLVE_SEARCH_V1B',
+            'precommit_commit':'427a14e2513601ae9dda12c2e06fabc5b085f070',
+            'parent_authority':{'run':35524257419,'job':106113555314},
+            'verdict':verdict,
+            'hardware_counter':{
+              'perf_probe_rc':perf_rc,
+              'available':perf_rc==0,
+              'stderr':perf_err,
+            },
+            'status_parity':{'pass':parity,'rows':status},
+            'wall_diagnostic':wall,
+            'callgrind_proxy_status':cg_status,
+            'callgrind_proxy':cg,
+            'headline_gates':gates,
+            'claim_boundary':'Wall time is diagnostic and Callgrind Ir is a proxy; neither is the official Arena hardware-instruction metric.',
+          }
+          out=Path('results/lean_grow_dissolve_search_v1b')
+          (out/'result.json').write_text(json.dumps(result,indent=2,sort_keys=True)+'\n')
+          (out/'summary.json').write_text(json.dumps({
+            'verdict':verdict,
+            'hardware_counter_available':perf_rc==0,
+            'wall_diagnostic':wall,
+            'callgrind_proxy_status':cg_status,
+            'callgrind_proxy':cg,
+            'headline_gates':gates,
+          },indent=2,sort_keys=True)+'\n')
+          print('SCIENTIFIC_VERDICT='+verdict)
+          print(json.dumps(result,indent=2,sort_keys=True))
+          if verdict!='PASS_SELECTED_ACTION_MEASUREMENT_RECOVERY_V1B':
+              raise SystemExit(1)
+          PY
+
+      - name: Commit authoritative V1B result
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git config user.name mathgraph-bot
+          git config user.email 32909488+heathsanchez@users.noreply.github.com
+          git add results/lean_grow_dissolve_search_v1b
+          git commit -m 'Record Lean grow-dissolve V1B measurement recovery' || exit 0
+          git push origin HEAD:experiment/lean-grow-dissolve-search-v1b
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lean-grow-dissolve-search-v1b-evidence
+          path: |
+            results/lean_grow_dissolve_search_v1b
+            /tmp/parent-authority.tsv
+            /tmp/candidate.patch
+            /tmp/candidate-diff.txt
+            /tmp/binaries.sha256
+            /tmp/perf-version.txt
+            /tmp/perf-probe.stdout
+            /tmp/perf-probe.stderr
+            /tmp/perf-probe.rc
+            /tmp/status-parity.tsv
+            /tmp/wall.tsv
+            /tmp/wall-scorecard.txt
+            /tmp/callgrind.tsv
+            /tmp/callgrind-status.txt
+            /tmp/callgrind-scorecard.txt
+          if-no-files-found: warn
