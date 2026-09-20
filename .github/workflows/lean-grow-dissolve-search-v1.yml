@@ -1,0 +1,318 @@
+name: Lean Grow Dissolve Search V1
+
+on:
+  push:
+    branches:
+      - experiment/lean-grow-dissolve-search-v1
+    paths:
+      - 'experiments/LEAN_GROW_DISSOLVE_SEARCH_V1_PRECOMMIT.md'
+      - 'experiments/lean_grow_dissolve_search_v1.py'
+      - '.github/workflows/lean-grow-dissolve-search-v1.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: lean-grow-dissolve-search-v1
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  experiment:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: experiment/lean-grow-dissolve-search-v1
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: cachix/install-nix-action@v31
+
+      - name: Verify prospective freeze
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git merge-base --is-ancestor 73f8975d7627abd6dfa8618b91e2aebafa008bd3 HEAD
+          test -f experiments/LEAN_GROW_DISSOLVE_SEARCH_V1_PRECOMMIT.md
+          test -f experiments/lean_grow_dissolve_search_v1.py
+
+      - name: Run held-out developmental replay
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python experiments/lean_grow_dissolve_search_v1.py | tee /tmp/lean-grow-dissolve-replay.log
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=json.loads(Path('results/lean_grow_dissolve_search_v1/result.json').read_text())
+          assert p['protocol']=='LEAN_GROW_DISSOLVE_SEARCH_V1'
+          assert p['precommit_commit']=='73f8975d7627abd6dfa8618b91e2aebafa008bd3'
+          assert p['developmental_verdict']=='PASS_LEAN_GROW_DISSOLVE_SEARCH_V1'
+          assert all(p['developmental_gates'].values())
+          Path('/tmp/selected-action.txt').write_text(p['analysis']['final_selected_action']+'\n')
+          print('SELECTED_ACTION='+p['analysis']['final_selected_action'])
+          PY
+
+      - name: Build current checker and frozen semantic baseline
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git worktree add /tmp/current "$GITHUB_SHA"
+          git worktree add /tmp/semantic-baseline 74dc5ddb4584e1254f5687615e5b02795b8dc6f3
+          for arm in current semantic-baseline; do
+            (
+              cd /tmp/$arm
+              RUSTFLAGS='-C target-cpu=x86-64-v3' cargo build --release --locked
+            )
+            cp /tmp/$arm/target/release/sokonanoda /tmp/$arm.bin
+          done
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}
+          EOF
+
+      - name: Build full pinned Arena corpus
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          cd /tmp/arena
+          : >/tmp/build-tests.tsv
+          while IFS= read -r y; do
+            t=${y#tests/}
+            t=${t%.yaml}
+            echo "BUILD $t" | tee -a /tmp/build-tests.tsv
+            nix develop -c ./lka.py build-test "$t" >/dev/null
+          done < <(find tests -type f -name '*.yaml' | sort)
+          find _build/tests -type f -name '*.ndjson' | sort >/tmp/exports.txt
+          exports=$(wc -l </tmp/exports.txt)
+          echo "exports=$exports" | tee /tmp/export-count.txt
+          test "$exports" -eq 409
+
+      - name: Full 409 semantic parity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          : >/tmp/semantic.tsv
+          : >/tmp/mismatches.tsv
+          while IFS= read -r f; do
+            set +e
+            /tmp/semantic-baseline.bin /tmp/config.json <"$f" >/tmp/b.out 2>/tmp/b.err; b=$?
+            /tmp/current.bin /tmp/config.json <"$f" >/tmp/c.out 2>/tmp/c.err; c=$?
+            set -e
+            if [ "$b" -ne "$c" ] || ! cmp -s /tmp/b.out /tmp/c.out; then
+              printf 'MISMATCH\t%s\tbaseline=%s\tcurrent=%s\n' "$f" "$b" "$c" | tee -a /tmp/mismatches.tsv /tmp/semantic.tsv
+            else
+              printf 'MATCH\t%s\t%s\n' "$c" "$f" >>/tmp/semantic.tsv
+            fi
+          done </tmp/exports.txt
+          mismatches=$(grep -c '^MISMATCH' /tmp/mismatches.tsv || true)
+          echo "semantic_mismatches=$mismatches" | tee /tmp/semantic-summary.txt
+          test "$mismatches" -eq 0
+          echo LEAN_GROW_DISSOLVE_409_PARITY_PASS
+
+      - name: Execute selected Flash action when prepared
+        shell: bash
+        run: |
+          set -euxo pipefail
+          action=$(cat /tmp/selected-action.txt)
+          printf 'selected_action=%s\n' "$action" | tee /tmp/action-link.txt
+
+          if [ "$action" != "measure_ordinary_unfold_instructions" ]; then
+            echo "ACTION_EXECUTION=SKIPPED_NOT_UNFOLD_GATE" | tee /tmp/action-status.txt
+            echo "RANK_RESULT=NOT_APPLICABLE" | tee /tmp/rank-result.txt
+            echo "STATUS_PARITY=NOT_APPLICABLE" | tee /tmp/selected-action-parity.txt
+            exit 0
+          fi
+
+          rm -rf /tmp/rank-base /tmp/rank-candidate
+          cp -a /tmp/current /tmp/rank-base
+          cp -a /tmp/current /tmp/rank-candidate
+
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/rank-candidate/src/flash.rs')
+          s=p.read_text()
+          old='pub(crate) const ORDINARY_UNFOLD_NEUTRAL: bool = false;'
+          new='pub(crate) const ORDINARY_UNFOLD_NEUTRAL: bool = true;'
+          assert s.count(old)==1
+          p.write_text(s.replace(old,new,1))
+          PY
+
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test init-prelude >/dev/null
+          nix develop -c ./lka.py build-test mathlib >/dev/null
+          PERF=$(nix develop -c sh -c 'command -v perf')
+          "$PERF" --version | tee /tmp/perf-version.txt
+          LLVM_PROFDATA=$(nix shell nixpkgs#llvmPackages_21.llvm -c sh -c 'command -v llvm-profdata')
+
+          for arm in rank-base rank-candidate; do
+            rm -rf /tmp/$arm/target /tmp/$arm/pgo
+            mkdir -p /tmp/$arm/pgo
+            (
+              cd /tmp/$arm
+              RUSTFLAGS="-C target-cpu=native -Cprofile-generate=/tmp/$arm/pgo" cargo build --release --locked
+              target/release/sokonanoda /tmp/config.json </tmp/arena/_build/tests/init-prelude.ndjson >/dev/null
+              "$LLVM_PROFDATA" merge -o /tmp/$arm/pgo/merged.profdata /tmp/$arm/pgo
+              test -s /tmp/$arm/pgo/merged.profdata
+              rm -rf target
+              RUSTFLAGS="-C target-cpu=native -Cprofile-use=/tmp/$arm/pgo/merged.profdata" cargo build --release --locked
+              cp target/release/sokonanoda /tmp/$arm.bin
+            )
+          done
+
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          set +e
+          /tmp/rank-base.bin /tmp/config.json <"$f" >/tmp/rb.out 2>/tmp/rb.err; b=$?
+          /tmp/rank-candidate.bin /tmp/config.json <"$f" >/tmp/rc.out 2>/tmp/rc.err; c=$?
+          set -e
+          test "$b" -eq "$c"
+          echo "STATUS_PARITY=PASS exit=$c" | tee /tmp/selected-action-parity.txt
+
+          cd /tmp/arena
+          export LC_ALL=C
+          : >/tmp/instructions.tsv
+          for rep in 1 2 3; do
+            if [ $((rep%2)) -eq 1 ]; then order="rank-base rank-candidate"; else order="rank-candidate rank-base"; fi
+            for arm in $order; do
+              "$PERF" stat -x $'\t' -e instructions -o /tmp/perf.txt -- \
+                /tmp/$arm.bin /tmp/config.json <"$f" >/dev/null 2>/dev/null
+              python3 - "$arm" "$rep" /tmp/perf.txt <<'PY' >>/tmp/instructions.tsv
+          import sys
+          arm,rep,path=sys.argv[1:]
+          value=None
+          for line in open(path):
+              parts=line.rstrip("\n").split("\t")
+              if len(parts)>=3 and parts[2].strip().startswith("instructions"):
+                  raw=parts[0].strip().replace(",","")
+                  if raw and raw not in ("<not counted>","<not supported>"):
+                      value=int(float(raw)); break
+          if value is None:
+              raise SystemExit("instructions counter unavailable")
+          print(f"{arm}\t{rep}\t{value}")
+          PY
+            done
+          done
+
+          python3 - <<'PY' | tee /tmp/rank-scorecard.txt
+          from collections import defaultdict
+          from statistics import median
+          rows=defaultdict(list)
+          for line in open('/tmp/instructions.tsv'):
+              arm,rep,n=line.rstrip().split('\t')
+              rows[arm].append(int(n))
+          base=median(rows['rank-base'])
+          cand=median(rows['rank-candidate'])
+          speedup=base/cand
+          result='PASS' if cand < base else 'REJECT'
+          print('base_runs='+repr(rows['rank-base']))
+          print('candidate_runs='+repr(rows['rank-candidate']))
+          print(f'BASE_MEDIAN_INSTRUCTIONS={int(base)}')
+          print(f'CANDIDATE_MEDIAN_INSTRUCTIONS={int(cand)}')
+          print(f'MATHLIB_INSTRUCTION_SPEEDUP={speedup:.6f}')
+          print(f'INSTRUCTION_DELTA_PERCENT={(cand/base-1)*100:.4f}')
+          print('RANK_RESULT='+result)
+          open('/tmp/rank-result.txt','w').write('RANK_RESULT='+result+'\n')
+          PY
+          echo "ACTION_EXECUTION=COMPLETED" | tee /tmp/action-status.txt
+
+      - name: Finalize scientific result
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          pth=Path('results/lean_grow_dissolve_search_v1/result.json')
+          p=json.loads(pth.read_text())
+
+          mismatch_line=Path('/tmp/semantic-summary.txt').read_text().strip()
+          mismatches=int(mismatch_line.split('=',1)[1])
+          action=Path('/tmp/selected-action.txt').read_text().strip()
+          link=Path('/tmp/action-link.txt').read_text().strip().split('=',1)[1]
+          linked=(action==link)
+
+          parity=Path('/tmp/selected-action-parity.txt').read_text().strip()
+          rank=Path('/tmp/rank-result.txt').read_text().strip().split('=',1)[1]
+          status=Path('/tmp/action-status.txt').read_text().strip().split('=',1)[1]
+
+          real={
+            'status':'COMPLETE',
+            'LGD12_full_409_semantic_parity':mismatches==0,
+            'LGD13_selected_action_linked':linked,
+            'LGD14_selected_action_status_parity':(
+                True if action!='measure_ordinary_unfold_instructions'
+                else parity.startswith('STATUS_PARITY=PASS')
+            ),
+            'LGD15_rank_result_reported':rank in {'PASS','REJECT','NOT_APPLICABLE'},
+            'selected_action':action,
+            'action_execution':status,
+            'rank_result':rank,
+            'selected_action_parity':parity,
+            'semantic_mismatches':mismatches,
+          }
+
+          if Path('/tmp/rank-scorecard.txt').exists():
+              real['rank_scorecard']=Path('/tmp/rank-scorecard.txt').read_text().splitlines()
+
+          p['real_lean']=real
+          all_dev=all(p['developmental_gates'].values())
+          all_real=all(real[k] for k in (
+              'LGD12_full_409_semantic_parity',
+              'LGD13_selected_action_linked',
+              'LGD14_selected_action_status_parity',
+              'LGD15_rank_result_reported',
+          ))
+          p['final_verdict']='PASS_LEAN_GROW_DISSOLVE_SEARCH_V1' if all_dev and all_real else 'PARTIAL_LEAN_GROW_DISSOLVE_SEARCH_V1'
+          pth.write_text(json.dumps(p,indent=2,sort_keys=True)+'\n')
+
+          sp=Path('results/lean_grow_dissolve_search_v1/summary.json')
+          s=json.loads(sp.read_text())
+          s['real_lean']=real
+          s['final_verdict']=p['final_verdict']
+          sp.write_text(json.dumps(s,indent=2,sort_keys=True)+'\n')
+
+          print('FINAL_SCIENTIFIC_VERDICT='+p['final_verdict'])
+          print(json.dumps(real,indent=2,sort_keys=True))
+          if p['final_verdict']!='PASS_LEAN_GROW_DISSOLVE_SEARCH_V1':
+              raise SystemExit(1)
+          PY
+
+      - name: Commit authoritative result
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git config user.name mathgraph-bot
+          git config user.email 32909488+heathsanchez@users.noreply.github.com
+          git add results/lean_grow_dissolve_search_v1
+          git commit -m 'Record Lean grow-dissolve search V1 result' || exit 0
+          git push origin HEAD:experiment/lean-grow-dissolve-search-v1
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lean-grow-dissolve-search-v1-evidence
+          path: |
+            results/lean_grow_dissolve_search_v1
+            /tmp/lean-grow-dissolve-replay.log
+            /tmp/selected-action.txt
+            /tmp/action-link.txt
+            /tmp/action-status.txt
+            /tmp/semantic-summary.txt
+            /tmp/semantic.tsv
+            /tmp/mismatches.tsv
+            /tmp/export-count.txt
+            /tmp/instructions.tsv
+            /tmp/rank-scorecard.txt
+            /tmp/rank-result.txt
+            /tmp/selected-action-parity.txt
+            /tmp/perf-version.txt
+          if-no-files-found: warn
