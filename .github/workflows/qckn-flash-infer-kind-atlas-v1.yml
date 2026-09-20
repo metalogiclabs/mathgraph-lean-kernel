@@ -1,0 +1,127 @@
+name: QCKN Flash infer-kind atlas V1
+
+on:
+  push:
+    branches:
+      - qckn-flash-infer-kind-atlas-v1
+    paths:
+      - scripts/apply_qckn_infer_kind_atlas_v1.py
+      - .github/workflows/qckn-flash-infer-kind-atlas-v1.yml
+  workflow_dispatch:
+
+concurrency:
+  group: qckn-flash-infer-kind-atlas-v1
+  cancel-in-progress: true
+
+jobs:
+  atlas:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: cachix/install-nix-action@v31
+
+      - name: Materialize instrumented frozen RC1
+        shell: bash
+        run: |
+          set -euxo pipefail
+          SOURCE=a342c74f6eb913c25c6dae4138158023d1b9aa6a
+          ARENA=510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          git worktree add --detach /tmp/atlas "$SOURCE"
+          cd /tmp/atlas
+          python3 "$GITHUB_WORKSPACE/scripts/apply_qckn_infer_kind_atlas_v1.py"
+          cd "$GITHUB_WORKSPACE"
+          printf 'frozen_source_sha\t%s\narena_suite_sha\t%s\nobjective\tinfer_kind_callgrind_atlas\n' "$SOURCE" "$ARENA" >/tmp/provenance.tsv
+
+      - name: Build pinned Mathlib corpus
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test mathlib >/dev/null
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+
+      - name: Build Valgrind-safe PGO atlas binary
+        shell: bash
+        run: |
+          set -euxo pipefail
+          LLVM_PROFDATA=$(nix shell nixpkgs#llvmPackages_21.llvm -c sh -c 'command -v llvm-profdata')
+          CPU='-C target-cpu=x86-64 -C target-feature=-avx,-avx2,-avx512f,-fma -C debuginfo=1'
+          rm -rf /tmp/atlas/target /tmp/atlas/pgo
+          mkdir -p /tmp/atlas/pgo
+          cd /tmp/atlas
+          RUSTFLAGS="$CPU -Cprofile-generate=/tmp/atlas/pgo" cargo build --release --locked
+          target/release/sokonanoda /tmp/config.json </tmp/arena/_build/tests/init-prelude.ndjson >/dev/null
+          "$LLVM_PROFDATA" merge -o /tmp/atlas/pgo/merged.profdata /tmp/atlas/pgo
+          rm -rf target
+          RUSTFLAGS="$CPU -Cprofile-use=/tmp/atlas/pgo/merged.profdata" cargo build --release --locked
+          cp target/release/sokonanoda /tmp/atlas.bin
+
+      - name: Full Mathlib Callgrind infer-kind atlas
+        shell: bash
+        run: |
+          set -euxo pipefail
+          VALGRIND=$(nix shell nixpkgs#valgrind -c sh -c 'command -v valgrind')
+          ANNOTATE=$(nix shell nixpkgs#valgrind -c sh -c 'command -v callgrind_annotate')
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          timeout 8000s "$VALGRIND" --tool=callgrind --quiet --collect-jumps=no \
+            --callgrind-out-file=/tmp/infer-kind.callgrind \
+            /tmp/atlas.bin /tmp/config.json <"$f" >/tmp/atlas.out 2>/tmp/atlas.err
+          ir=$(awk '/^summary:/ {print $2; exit}' /tmp/infer-kind.callgrind)
+          echo "TOTAL_IR=$ir" | tee /tmp/infer-kind-summary.txt
+          "$ANNOTATE" --inclusive=yes --threshold=0.0 /tmp/infer-kind.callgrind >/tmp/infer-kind.inclusive.txt
+          "$ANNOTATE" --inclusive=no --threshold=0.0 /tmp/infer-kind.callgrind >/tmp/infer-kind.self.txt
+          grep -E 'qckn_infer_(lambda|pi|let)_kind|infer_app_v|infer_proj_v' /tmp/infer-kind.inclusive.txt | tee -a /tmp/infer-kind-summary.txt || true
+
+      - name: Parse kind shares
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY' | tee /tmp/infer-kind-parsed.txt
+          import re
+          from pathlib import Path
+          total=None
+          for line in Path('/tmp/infer-kind-summary.txt').read_text(errors='replace').splitlines():
+              if line.startswith('TOTAL_IR='):
+                  total=int(line.split('=',1)[1])
+          names={
+              'APP':'infer_app_v',
+              'LAMBDA':'qckn_infer_lambda_kind',
+              'PI':'qckn_infer_pi_kind',
+              'LET':'qckn_infer_let_kind',
+              'PROJ':'infer_proj_v',
+          }
+          vals={}
+          for line in Path('/tmp/infer-kind.inclusive.txt').read_text(errors='replace').splitlines():
+              for label,needle in names.items():
+                  if needle in line:
+                      m=re.match(r'\s*([0-9,]+)\s+',line)
+                      if m:
+                          vals[label]=max(vals.get(label,0),int(m.group(1).replace(',','')))
+          print(f'TOTAL_IR={total}')
+          for label in names:
+              v=vals.get(label,0)
+              print(f'{label}_IR={v}')
+              if total:
+                  print(f'{label}_SHARE_OF_TOTAL={v/total:.6f}')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-infer-kind-atlas-v1
+          path: |
+            /tmp/provenance.tsv
+            /tmp/infer-kind-summary.txt
+            /tmp/infer-kind-parsed.txt
+            /tmp/infer-kind.inclusive.txt
+            /tmp/infer-kind.self.txt
+            /tmp/infer-kind.callgrind
+          if-no-files-found: warn
