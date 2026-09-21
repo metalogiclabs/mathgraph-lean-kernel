@@ -4,6 +4,7 @@
 pub(crate) const DIRECT_VAR_EVAL: bool = true;
 pub(crate) const DIRECT_FRAMED_PRUNE: bool = true;
 pub(crate) const ORDINARY_UNFOLD_NEUTRAL: bool = false;
+pub(crate) const INFER_PI_DEMAND_BYPASS: bool = true;
 pub(crate) const RIGID_INDUCTIVE_NEUTRAL: bool = true;
 pub(crate) const APP_HC_PREALLOC: bool = true;
 
