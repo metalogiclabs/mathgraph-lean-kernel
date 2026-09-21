@@ -1,0 +1,227 @@
+name: App obligation promotion capacity sweep
+
+on:
+  push:
+    branches: [app-obligation-promotion-v1]
+    paths:
+      - .github/workflows/app-obligation-promotion-v1.yml
+  workflow_dispatch:
+
+concurrency:
+  group: app-obligation-promotion-v1
+  cancel-in-progress: true
+
+jobs:
+  sweep:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Materialize baseline and promoted-obligation variants
+        shell: bash
+        run: |
+          set -euxo pipefail
+          BASE=78c7502bac8a5ba000057b3f083bc0595ac65750
+          for arm in base dm2048 dm8192 dm32768; do
+            git worktree add --detach "/tmp/$arm" "$BASE"
+          done
+          python3 - <<'PY'
+          from pathlib import Path
+
+          variants = {
+              "dm2048": (1 << 11, 64 - 11),
+              "dm8192": (1 << 13, 64 - 13),
+              "dm32768": (1 << 15, 64 - 15),
+          }
+
+          for arm, (length, shift) in variants.items():
+              root = Path("/tmp") / arm
+
+              p = root / "src/util.rs"
+              s = p.read_text()
+              anchor = """pub(crate) const PRUNE_DM_LEN: usize = 1 << 10;
+          pub(crate) const PRUNE_DM_SHIFT: u32 = 64 - 10;
+          """
+              insert = anchor + f"""
+          pub(crate) const APP_CONV_DM_LEN: usize = {length};
+          pub(crate) const APP_CONV_DM_SHIFT: u32 = {shift};
+          """
+              assert s.count(anchor) == 1
+              s = s.replace(anchor, insert, 1)
+
+              field = """    pub(crate) type_cache: FxHashMap<(usize, ExprPtr<'t>), crate::infer::CachedType<'a>>,
+          """
+              assert s.count(field) == 1
+              s = s.replace(field, field + """    pub(crate) app_conv_dm: Box<[(usize, usize); APP_CONV_DM_LEN]>,
+          """, 1)
+
+              init = """            type_cache: session_fx_hash_map(),
+          """
+              assert s.count(init) == 1
+              s = s.replace(init, init + """            app_conv_dm: Box::new([(0usize, 0usize); APP_CONV_DM_LEN]),
+          """, 1)
+
+              clear = """        self.type_cache.clear();
+          """
+              assert s.count(clear) == 1
+              s = s.replace(clear, clear + """        self.app_conv_dm.fill((0, 0));
+          """, 1)
+
+              clear_session = """        shrink_map(&mut self.type_cache);
+          """
+              assert s.count(clear_session) == 1
+              s = s.replace(clear_session, clear_session + """        self.app_conv_dm.fill((0, 0));
+          """, 1)
+              p.write_text(s)
+
+              p = root / "src/infer.rs"
+              s = p.read_text()
+              old = """            if flag == Check {
+                          let arg_ty = self.infer_value(flag, depth, env, ctx, arg);
+                          assert!(self.conv_types_at(depth, domain, arg_ty), "app arg def_eq failed");
+                      }
+          """
+              new = """            if flag == Check {
+                          let arg_ty = self.infer_value(flag, depth, env, ctx, arg);
+                          let da = domain as *const Value<'t> as usize;
+                          let aa = arg_ty as *const Value<'t> as usize;
+                          let pair = if da < aa { (da, aa) } else { (aa, da) };
+                          let slot = ((((pair.0 as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15))
+                              ^ (pair.1 as u64).wrapping_mul(0xD6E8_FEB8_6659_FD93))
+                              >> crate::util::APP_CONV_DM_SHIFT) as usize;
+                          if self.tc_cache.app_conv_dm[slot] != pair {
+                              assert!(self.conv_types_at(depth, domain, arg_ty), "app arg def_eq failed");
+                              self.tc_cache.app_conv_dm[slot] = pair;
+                          }
+                      }
+          """
+              assert s.count(old) == 1, s.count(old)
+              s = s.replace(old, new, 1)
+              p.write_text(s)
+          PY
+          printf 'base\t%s\nmechanism\tverified app-argument equality promotion\n' "$BASE" >/tmp/provenance.tsv
+
+      - name: Unit-test outcome parity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          for arm in base dm2048 dm8192 dm32768; do
+            cd /tmp/$arm
+            set +e
+            RUSTFLAGS='-C target-cpu=x86-64-v3' cargo test --release --locked 2>&1 | tee /tmp/$arm-tests.txt
+            rc=${PIPESTATUS[0]}
+            set -e
+            echo "$rc" >/tmp/$arm-tests.rc
+            grep -E '^test .* \.\.\. (ok|FAILED)$' /tmp/$arm-tests.txt \
+              | sed -E 's/^test //; s/ \.\.\. /\t/' | sort > /tmp/$arm-test-status.tsv
+          done
+          for arm in dm2048 dm8192 dm32768; do
+            cmp /tmp/base-tests.rc /tmp/$arm-tests.rc
+            diff -u /tmp/base-test-status.tsv /tmp/$arm-test-status.tsv
+          done
+          echo UNIT_TEST_OUTCOME_PARITY=PASS
+
+      - name: Prepare current Arena Mathlib corpus
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 41f89e240bce29df974e8bc9aa1efbf265132500
+
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build current Mathlib export
+        shell: bash
+        timeout-minutes: 15
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test mathlib >/dev/null
+          test -s _build/tests/mathlib.ndjson
+
+      - name: Build matched binaries
+        shell: bash
+        run: |
+          set -euxo pipefail
+          for arm in base dm2048 dm8192 dm32768; do
+            cd /tmp/$arm
+            RUSTFLAGS='-C target-cpu=x86-64-v3' cargo build --release --locked
+            cp target/release/sokonanoda /tmp/$arm.bin
+          done
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2,"print_success_message":false}
+          EOF
+
+      - name: Two-replay current-Mathlib sweep
+        shell: bash
+        timeout-minutes: 24
+        run: |
+          set -euxo pipefail
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          : >/tmp/native.tsv
+          orders=(
+            "base dm2048 dm8192 dm32768"
+            "dm32768 dm8192 dm2048 base"
+          )
+          rep=0
+          for order in "${orders[@]}"; do
+            rep=$((rep+1))
+            for arm in $order; do
+              set +e
+              /usr/bin/time -f '%e %U %S %M' -o /tmp/time \
+                timeout 260s /tmp/$arm.bin /tmp/config.json <"$f" >/tmp/$arm.$rep.out 2>/tmp/$arm.$rep.err
+              rc=$?
+              set -e
+              read -r wall user sys rss </tmp/time
+              echo "$arm $rep $rc $wall $user $sys $rss" | tee -a /tmp/native.tsv
+              test "$rc" -eq 0
+            done
+          done
+          for arm in dm2048 dm8192 dm32768; do
+            for rep in 1 2; do cmp /tmp/base.$rep.out /tmp/$arm.$rep.out; done
+          done
+          python3 - <<'PY' | tee /tmp/scorecard.txt
+          from collections import defaultdict
+          from statistics import median
+
+          wall=defaultdict(list)
+          cpu=defaultdict(list)
+          for line in open('/tmp/native.tsv'):
+              arm,rep,rc,w,u,s,rss=line.split()
+              wall[arm].append(float(w))
+              cpu[arm].append(float(u)+float(s))
+
+          arms=['base','dm2048','dm8192','dm32768']
+          bw=median(wall['base'])
+          bc=median(cpu['base'])
+          print(f'BASE_MEDIAN_WALL_S={bw:.6f}')
+          print(f'BASE_MEDIAN_CPU_S={bc:.6f}')
+          best=None
+          for arm in arms[1:]:
+              w=median(wall[arm]); c=median(cpu[arm])
+              wr=(1-w/bw)*100
+              cr=(1-c/bc)*100
+              print(f'{arm.upper()}_MEDIAN_WALL_S={w:.6f}')
+              print(f'{arm.upper()}_WALL_REDUCTION_PERCENT={wr:.4f}')
+              print(f'{arm.upper()}_MEDIAN_CPU_S={c:.6f}')
+              print(f'{arm.upper()}_CPU_REDUCTION_PERCENT={cr:.4f}')
+              key=(cr,wr,arm)
+              if best is None or key>best: best=key
+          print(f'WINNER={best[2]}')
+          print(f'WINNER_CPU_REDUCTION_PERCENT={best[0]:.4f}')
+          print('DECISION=' + ('PROMOTE_TO_INSTRUCTION_PROXY' if best[0] >= 1.0 else 'REJECT'))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: app-obligation-promotion-v1
+          path: |
+            /tmp/provenance.tsv
+            /tmp/native.tsv
+            /tmp/scorecard.txt
+            /tmp/*-test-status.tsv
+          if-no-files-found: warn
