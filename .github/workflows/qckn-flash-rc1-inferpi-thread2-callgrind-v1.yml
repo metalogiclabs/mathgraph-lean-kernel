@@ -1,0 +1,141 @@
+name: QCKN Flash RC1 infer-Pi plus thread2 Callgrind V1
+
+on:
+  push:
+    branches:
+      - qckn-flash-rc1-inferpi-thread2-callgrind-v1
+    paths:
+      - scripts/apply_qckn_rc1_infer_pi_transfer_v1.py
+      - .github/workflows/qckn-flash-rc1-inferpi-thread2-callgrind-v1.yml
+  workflow_dispatch:
+
+concurrency:
+  group: qckn-flash-rc1-inferpi-thread2-callgrind-v1
+  cancel-in-progress: true
+
+jobs:
+  ab:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Materialize frozen RC1 baseline and compound candidate
+        shell: bash
+        run: |
+          set -euxo pipefail
+          SOURCE=a342c74f6eb913c25c6dae4138158023d1b9aa6a
+          ARENA=510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          git worktree add --detach /tmp/base "$SOURCE"
+          git worktree add --detach /tmp/cand "$SOURCE"
+          cd /tmp/cand
+          python3 "$GITHUB_WORKSPACE/scripts/apply_qckn_rc1_infer_pi_transfer_v1.py"
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q "$ARENA"
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test init-prelude >/dev/null
+          nix develop -c ./lka.py build-test mathlib >/dev/null
+          cat >/tmp/provenance.tsv <<EOF
+          frozen_source_sha	$SOURCE
+          arena_suite_sha	$ARENA
+          baseline	RC1_threads4
+          candidate	RC1_plus_infer_pi_threads2
+          objective	compound_Callgrind_Ir
+          score_rate	6000000000
+          EOF
+
+      - name: Build matched Valgrind-safe deterministic-PGO binaries
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cat >/tmp/train.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+          LLVM_PROFDATA=$(nix shell nixpkgs#llvmPackages_21.llvm -c sh -c 'command -v llvm-profdata')
+          FLAGS='-C target-cpu=x86-64 -C target-feature=-avx,-avx2,-avx512f,-fma'
+          for arm in base cand; do
+            rm -rf /tmp/$arm/target /tmp/$arm/pgo
+            mkdir -p /tmp/$arm/pgo
+            (
+              cd /tmp/$arm
+              RUSTFLAGS="$FLAGS -Cprofile-generate=/tmp/$arm/pgo" cargo build --release --locked
+              target/release/sokonanoda /tmp/train.json </tmp/arena/_build/tests/init-prelude.ndjson >/dev/null
+              "$LLVM_PROFDATA" merge -o /tmp/$arm/pgo/merged.profdata /tmp/$arm/pgo
+              rm -rf target
+              RUSTFLAGS="$FLAGS -Cprofile-use=/tmp/$arm/pgo/merged.profdata" cargo build --release --locked
+              cp target/release/sokonanoda /tmp/$arm.bin
+            )
+          done
+          sha256sum /tmp/base.bin /tmp/cand.bin | tee /tmp/binaries.sha256
+
+      - name: Verify native Mathlib output parity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          cat >/tmp/base.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}
+          EOF
+          cat >/tmp/cand.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2,"print_success_message":false}
+          EOF
+          set +e
+          /tmp/base.bin /tmp/base.json <"$f" >/tmp/base.out 2>/tmp/base.err; b=$?
+          /tmp/cand.bin /tmp/cand.json <"$f" >/tmp/cand.out 2>/tmp/cand.err; c=$?
+          set -e
+          test "$b" -eq "$c"
+          cmp /tmp/base.out /tmp/cand.out
+          printf 'BASE_STATUS=%s\nCAND_STATUS=%s\nOUTPUT_PARITY=PASS\n' "$b" "$c" | tee /tmp/parity.txt
+
+      - name: Full Mathlib sequential Callgrind compound A-B
+        shell: bash
+        timeout-minutes: 150
+        run: |
+          set -euxo pipefail
+          VALGRIND=$(nix shell nixpkgs#valgrind -c sh -c 'command -v valgrind')
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          : >/tmp/callgrind.tsv
+          for arm in base cand; do
+            out=/tmp/$arm.callgrind
+            /usr/bin/time -f 'wall_s=%e\nuser_s=%U\nsys_s=%S\nmax_rss_kb=%M' -o /tmp/$arm.time \
+              timeout 8000s "$VALGRIND" --tool=callgrind --quiet --collect-jumps=no \
+              --callgrind-out-file="$out" \
+              /tmp/$arm.bin /tmp/$arm.json <"$f" >/dev/null 2>/tmp/$arm.cg.err
+            ir=$(awk '/^summary:/ {print $2; exit}' "$out")
+            test -n "$ir"
+            printf '%s\t%s\n' "$arm" "$ir" | tee -a /tmp/callgrind.tsv
+          done
+          python3 - <<'PY' | tee /tmp/scorecard.txt
+          vals={}
+          for line in open('/tmp/callgrind.tsv'):
+              arm,ir=line.split()
+              vals[arm]=int(ir)
+          b=vals['base']; c=vals['cand']
+          reduction=(1-c/b)*100
+          print(f'BASE_IR={b}')
+          print(f'CAND_IR={c}')
+          print(f'BASE_VIRTUAL_S={b/6_000_000_000:.6f}')
+          print(f'CAND_VIRTUAL_S={c/6_000_000_000:.6f}')
+          print(f'IR_REDUCTION_PERCENT={reduction:.4f}')
+          print(f'COMPOUND_SPEEDUP={b/c:.6f}')
+          print('DECISION=' + ('BANK_COMPOUND' if reduction >= 2.5 else 'UNDERPERFORMING_COMPOUND'))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-rc1-inferpi-thread2-callgrind-v1
+          path: |
+            /tmp/provenance.tsv
+            /tmp/binaries.sha256
+            /tmp/parity.txt
+            /tmp/callgrind.tsv
+            /tmp/scorecard.txt
+            /tmp/base.time
+            /tmp/cand.time
+            /tmp/base.callgrind
+            /tmp/cand.callgrind
+          if-no-files-found: warn
