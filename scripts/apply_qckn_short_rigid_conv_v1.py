@@ -17,30 +17,40 @@ c=c.replace(old,new,1)
 
 old="""    pub(crate) conv_cache_neg_probe: FxHashSet<(usize, usize)>,
 """
-new=old+"""    pub(crate) short_rigid_conv_dm: Box<[(usize, usize); SHORT_RIGID_CONV_DM_LEN]>,
+new=old+"""    pub(crate) short_rigid_conv_dm: Box<[(usize, usize, u64); SHORT_RIGID_CONV_DM_LEN]>,
 """
 if c.count(old)!=1: raise SystemExit(f"field anchor mismatch {c.count(old)}")
 c=c.replace(old,new,1)
 
 old="""            conv_cache_neg_probe: small_fx_hash_set(),
 """
-new=old+"""            short_rigid_conv_dm: Box::new([(0usize, 0usize); SHORT_RIGID_CONV_DM_LEN]),
+new=old+"""            short_rigid_conv_dm: Box::new([(0usize, 0usize, 0u64); SHORT_RIGID_CONV_DM_LEN]),
 """
 if c.count(old)!=1: raise SystemExit(f"init anchor mismatch {c.count(old)}")
 c=c.replace(old,new,1)
 
 old="""        self.conv_cache_neg_probe.clear();
 """
-new=old+"""        self.short_rigid_conv_dm.fill((0, 0));
+new=old+"""        self.short_rigid_conv_dm.fill((0, 0, 0));
 """
 if c.count(old)!=1: raise SystemExit(f"clear anchor mismatch {c.count(old)}")
 c=c.replace(old,new,1)
 
 old="""        shrink_set(&mut self.conv_cache_neg_probe);
 """
-new=old+"""        self.short_rigid_conv_dm.fill((0, 0));
+new=old+"""        self.short_rigid_conv_dm.fill((0, 0, 0));
 """
 if c.count(old)!=1: raise SystemExit(f"clear_session anchor mismatch {c.count(old)}")
+c=c.replace(old,new,1)
+p.write_text(c)
+
+# env.rs
+p=Path("src/env.rs")
+c=p.read_text()
+old="""    pub fn has_temp_ext(&self) -> bool { self.temp_declars.is_some() }
+"""
+new=old+"""\n    #[inline]\n    pub(crate) fn authority_key(&self) -> u64 {\n        let temp = self.temp_declars.map_or(0usize, |x| x as *const _ as usize) as u64;\n        (self.cutoff as u64).wrapping_mul(0x9E3779B97F4A7C15)\n            ^ temp.rotate_left(23)\n    }\n"""
+if c.count(old)!=1: raise SystemExit(f"env authority anchor mismatch {c.count(old)}")
 c=c.replace(old,new,1)
 p.write_text(c)
 
@@ -66,9 +76,14 @@ helper="""    #[inline]
         }
         let xa = x as *const Value<'t> as usize;
         let ya = y as *const Value<'t> as usize;
-        let key = if xa < ya { (xa, ya) } else { (ya, xa) };
-        let slot = ((((key.0 as u64).wrapping_mul(0x9E3779B97F4A7C15))
-            ^ (key.1 as u64).wrapping_mul(0xD6E8FEB86659FD93))
+        let pair = if xa < ya { (xa, ya) } else { (ya, xa) };
+        let authority = self.env.authority_key()
+            ^ ((RIGID as u64) << 63)
+            ^ (u64::from(limit).wrapping_mul(0xA24BAED4963EE407));
+        let key = (pair.0, pair.1, authority);
+        let slot = ((((pair.0 as u64).wrapping_mul(0x9E3779B97F4A7C15))
+            ^ (pair.1 as u64).wrapping_mul(0xD6E8FEB86659FD93)
+            ^ authority.wrapping_mul(0x94D049BB133111EB))
             >> crate::util::SHORT_RIGID_CONV_DM_SHIFT) as usize;
         if self.tc_cache.short_rigid_conv_dm[slot] == key {
             return true;
