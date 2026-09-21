@@ -35,14 +35,124 @@ jobs:
           printf 'source\t%s\narena\t%s\nobjective\tshort_rigid_positive_conversion_reuse_safe\nfull_qualification\tfalse\nthreads\t2\n' \
             "$SOURCE" "$ARENA" >/tmp/provenance.tsv
 
-      - name: Baseline and candidate unit tests
+      - name: Baseline-candidate unit-test parity
         shell: bash
         run: |
           set -euxo pipefail
           for arm in base cand; do
             cd /tmp/$arm
-            RUSTFLAGS='-C target-cpu=x86-64-v3' cargo test --release --locked | tee /tmp/$arm-tests.txt
+            set +e
+            RUSTFLAGS='-C target-cpu=x86-64-v3' cargo test --release --locked 2>&1 | tee /tmp/$arm-tests.txt
+            rc=${PIPESTATUS[0]}
+            set -e
+            echo "$rc" >/tmp/$arm-tests.rc
+            grep -E '^test .* \.\.\. (ok|FAILED)
+      - name: Prepare pinned Arena checkout
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+
+      - uses: actions/cache/restore@v4
+        id: corpus
+        with:
+          path: /tmp/arena/_build/tests/mathlib.ndjson
+          key: qckn-mathlib-export-510fbfead6f02bed1a0179d01729a6ddf5bfd06d-v1
+
+      - uses: cachix/install-nix-action@v31
+        if: steps.corpus.outputs.cache-hit != 'true'
+
+      - name: Build only Mathlib on cache miss
+        if: steps.corpus.outputs.cache-hit != 'true'
+        timeout-minutes: 14
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test mathlib >/tmp/mathlib-build.log 2>&1
+          test -s _build/tests/mathlib.ndjson
+
+      - uses: actions/cache/save@v4
+        if: steps.corpus.outputs.cache-hit != 'true'
+        with:
+          path: /tmp/arena/_build/tests/mathlib.ndjson
+          key: qckn-mathlib-export-510fbfead6f02bed1a0179d01729a6ddf5bfd06d-v1
+
+      - name: Build matched native binaries
+        shell: bash
+        run: |
+          set -euxo pipefail
+          for arm in base cand; do
+            cd /tmp/$arm
+            RUSTFLAGS='-C target-cpu=x86-64-v3' cargo build --release --locked
+            cp target/release/sokonanoda /tmp/$arm.bin
           done
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2,"print_success_message":false}
+          EOF
+
+      - name: Two-replay Mathlib cheap gate
+        shell: bash
+        timeout-minutes: 14
+        run: |
+          set -euxo pipefail
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          test -s "$f"
+          : >/tmp/native.tsv
+          for rep in 1 2; do
+            if [ "$rep" -eq 1 ]; then order=(base cand); else order=(cand base); fi
+            for arm in "\${order[@]}"; do
+              /usr/bin/time -f '%e %U %S %M' -o /tmp/time \
+                timeout 240s /tmp/$arm.bin /tmp/config.json <"$f" >/tmp/$arm.$rep.out 2>/tmp/$arm.$rep.err
+              read -r wall user sys rss </tmp/time
+              echo "$arm $rep $wall $user $sys $rss" | tee -a /tmp/native.tsv
+            done
+          done
+          cmp /tmp/base.1.out /tmp/cand.1.out
+          cmp /tmp/base.2.out /tmp/cand.2.out
+          python3 - <<'PY' | tee /tmp/scorecard.txt
+          from collections import defaultdict
+          from statistics import median
+          d=defaultdict(list); cpu=defaultdict(list)
+          for line in open('/tmp/native.tsv'):
+              arm,rep,wall,user,sys,rss=line.split()
+              d[arm].append(float(wall))
+              cpu[arm].append(float(user)+float(sys))
+          bw=median(d['base']); cw=median(d['cand'])
+          bc=median(cpu['base']); cc=median(cpu['cand'])
+          print(f'BASE_MEDIAN_WALL_S={bw:.6f}')
+          print(f'CAND_MEDIAN_WALL_S={cw:.6f}')
+          print(f'WALL_MARGIN_PERCENT={(bw/cw-1)*100:.4f}')
+          print(f'BASE_MEDIAN_CPU_S={bc:.6f}')
+          print(f'CAND_MEDIAN_CPU_S={cc:.6f}')
+          print(f'CPU_REDUCTION_PERCENT={(1-cc/bc)*100:.4f}')
+          print('DECISION=' + ('PROMOTE_TO_INSTRUCTION_GATE' if (1-cc/bc) >= 0.05 else 'REJECT_OR_RETUNE'))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-short-rigid-conv-v2-safe
+          path: |
+            /tmp/provenance.tsv
+            /tmp/base-tests.txt
+            /tmp/cand-tests.txt
+            /tmp/base-test-status.tsv
+            /tmp/cand-test-status.tsv
+            /tmp/base-tests.rc
+            /tmp/cand-tests.rc
+            /tmp/native.tsv
+            /tmp/scorecard.txt
+          if-no-files-found: warn
+ /tmp/$arm-tests.txt \
+              | sed -E 's/^test //; s/ \.\.\. /\t/' \
+              | sort > /tmp/$arm-test-status.tsv
+          done
+          echo "BASE_TEST_RC=$(cat /tmp/base-tests.rc)"
+          echo "CAND_TEST_RC=$(cat /tmp/cand-tests.rc)"
+          diff -u /tmp/base-test-status.tsv /tmp/cand-test-status.tsv
+          echo "UNIT_TEST_OUTCOME_PARITY=PASS"
 
       - name: Prepare pinned Arena checkout
         shell: bash
