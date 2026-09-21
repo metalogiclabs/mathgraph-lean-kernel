@@ -1,0 +1,94 @@
+name: Universe cost census V1
+
+on:
+  push:
+    branches: [universe-cost-census-v1]
+    paths:
+      - src/level.rs
+      - src/tc.rs
+      - .github/workflows/universe-cost-census-v1.yml
+  workflow_dispatch:
+
+concurrency:
+  group: universe-cost-census-v1
+  cancel-in-progress: true
+
+jobs:
+  census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Unit-test outcome
+        shell: bash
+        run: |
+          set -euxo pipefail
+          set +e
+          RUSTFLAGS='-C target-cpu=x86-64-v3' cargo test --release --locked 2>&1 | tee /tmp/tests.txt
+          rc=${PIPESTATUS[0]}
+          set -e
+          echo "TEST_RC=$rc" | tee /tmp/test-status.txt
+
+      - name: Prepare current Arena Mathlib corpus
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 41f89e240bce29df974e8bc9aa1efbf265132500
+
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build current Mathlib export
+        shell: bash
+        timeout-minutes: 15
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test mathlib >/dev/null
+          test -s _build/tests/mathlib.ndjson
+
+      - name: Build instrumented checker
+        shell: bash
+        run: |
+          set -euxo pipefail
+          RUSTFLAGS='-C target-cpu=x86-64-v3' cargo build --release --locked
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2,"print_success_message":false}
+          EOF
+
+      - name: Run Mathlib universe census
+        shell: bash
+        timeout-minutes: 8
+        run: |
+          set -euxo pipefail
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          /usr/bin/time -f 'WALL_S=%e USER_S=%U SYS_S=%S RSS_KB=%M' -o /tmp/time.txt \
+            timeout 360s target/release/sokonanoda /tmp/config.json <"$f" >/tmp/out.txt 2>/tmp/err.txt
+          test ! -s /tmp/out.txt
+          grep 'UNIVERSE_STATS ' /tmp/err.txt | tail -n1 | tee /tmp/universe-stats.txt
+          cat /tmp/time.txt | tee -a /tmp/universe-stats.txt
+          python3 - <<'PY' | tee /tmp/analysis.txt
+          import json,re
+          s=open('/tmp/universe-stats.txt').read()
+          m=re.search(r'UNIVERSE_STATS (\{.*\})',s)
+          if not m: raise SystemExit('missing universe stats')
+          d=json.loads(m.group(1))
+          leq=max(d['leq_calls'],1)
+          print(json.dumps(d,indent=2,sort_keys=True))
+          print(f"LEQ_CORE_PER_LEQ={d['leq_core_calls']/leq:.6f}")
+          print(f"IMAX_CASES_PER_LEQ={d['imax_case_splits']/leq:.6f}")
+          print(f"SIMPLIFY_CACHE_HIT_RATE={d['simplify_cache_hits']/max(d['simplify_calls'],1):.6f}")
+          print(f"EQ_TO_LEQ_RATIO={d['eq_calls']/leq:.6f}")
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: universe-cost-census-v1
+          path: |
+            /tmp/universe-stats.txt
+            /tmp/analysis.txt
+            /tmp/test-status.txt
+            /tmp/err.txt
+          if-no-files-found: warn
