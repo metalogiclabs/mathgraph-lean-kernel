@@ -8,7 +8,7 @@ use InferFlag::*;
 
 const SESSION_BUDGET: usize = 16 * 1024 * 1024;
 
-const CHUNK_SIZE: usize = 64;
+const CHUNK_SIZE: usize = 128;
 
 /// An enum for type safety and convenience; used during nat literal reduction, and also for testing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
