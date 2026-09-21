@@ -127,10 +127,22 @@ repls=[
 """,
 """                return self.unify_short_rigid_spine_cached::<true>(depth, t, t2, sx, sy, sig, limit);
 """),
-("""            self.unify_spine::<false>(depth, sx, sy, sig, limit)
-""",
-"""            self.unify_short_rigid_spine_cached::<false>(depth, t, t2, sx, sy, sig, limit)
-"""),
+("""        } else if heads_match {
+            self.unify_spine::<false>(depth, sx, sy, sig, limit)
+        } else {
+            false
+        }
+    }
+
+    fn iota_or_self""",
+"""        } else if heads_match {
+            self.unify_short_rigid_spine_cached::<false>(depth, t, t2, sx, sy, sig, limit)
+        } else {
+            false
+        }
+    }
+
+    fn iota_or_self"""),
 ]
 for old,new in repls:
     if c.count(old)!=1:
