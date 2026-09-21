@@ -1035,6 +1035,7 @@ pub struct NameCache<'p> {
 
 pub(crate) const PRUNE_DM_LEN: usize = 1 << 10;
 pub(crate) const PRUNE_DM_SHIFT: u32 = 64 - 10;
+pub(crate) const TYPE_DM_LEN: usize = 1 << 10;
 
 pub struct TcCache<'a, 't> {
     pub(crate) unfold_const_cache: FxHashMap<(NamePtr<'t>, LevelsPtr<'t>), V<'a>>,
@@ -1064,6 +1065,7 @@ pub struct TcCache<'a, 't> {
     pub(crate) lam_hc: FxHashMap<(ExprPtr<'t>, usize, ExprPtr<'t>), V<'a>>,
     pub(crate) pi_hc: FxHashMap<(usize, usize, ExprPtr<'t>, usize), V<'a>>,
     pub(crate) type_cache: FxHashMap<(usize, ExprPtr<'t>), crate::infer::CachedType<'a>>,
+    pub(crate) type_dm: Box<[(usize, Option<ExprPtr<'t>>, Option<crate::infer::CachedType<'a>>); TYPE_DM_LEN]>,
     pub(crate) thunk_hc: FxHashMap<(usize, ExprPtr<'t>), V<'a>>,
     pub(crate) quote_cache: FxHashMap<(usize, u32), ExprPtr<'t>>,
     pub(crate) frames: hashbrown::HashTable<E<'a>>,
@@ -1120,6 +1122,7 @@ impl<'a, 't> TcCache<'a, 't> {
             lam_hc: session_small_fx_hash_map(),
             pi_hc: session_small_fx_hash_map(),
             type_cache: session_fx_hash_map(),
+            type_dm: Box::new([(0, None, None); TYPE_DM_LEN]),
             thunk_hc: session_fx_hash_map(),
             quote_cache: session_fx_hash_map(),
             frames: hashbrown::HashTable::with_capacity(SESSION_MAP_CAP),
@@ -1159,6 +1162,7 @@ impl<'a, 't> TcCache<'a, 't> {
         self.wide_fvars.clear();
         self.wide_prune.clear();
         self.type_cache.clear();
+        self.type_dm.fill((0, None, None));
         self.thunk_hc.clear();
         self.quote_cache.clear();
         self.open_eval_cache.clear();
@@ -1206,6 +1210,7 @@ impl<'a, 't> TcCache<'a, 't> {
         shrink_map(&mut self.wide_fvars);
         shrink_map(&mut self.wide_prune);
         shrink_map(&mut self.type_cache);
+        self.type_dm.fill((0, None, None));
         shrink_map(&mut self.thunk_hc);
         shrink_map(&mut self.quote_cache);
         shrink_map(&mut self.open_eval_cache);
