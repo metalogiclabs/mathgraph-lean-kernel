@@ -223,6 +223,7 @@ impl<'p> ExportFile<'p> {
         } else {
             self.check_all_declars_serial()
         }
+        eprintln!("UNIVERSE_STATS {}", crate::level::level_stats_json());
     }
 }
 
