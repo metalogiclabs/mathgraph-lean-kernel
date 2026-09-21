@@ -8,6 +8,31 @@ pub(crate) const IMAX_HASH: u64 = 1747;
 pub(crate) const PARAM_HASH: u64 = 947;
 use Level::*;
 
+use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
+
+static LEVEL_LEQ_CALLS: AtomicU64 = AtomicU64::new(0);
+static LEVEL_LEQ_CORE_CALLS: AtomicU64 = AtomicU64::new(0);
+static LEVEL_EQ_CALLS: AtomicU64 = AtomicU64::new(0);
+static LEVEL_EQ_MANY_CALLS: AtomicU64 = AtomicU64::new(0);
+static LEVEL_IMAX_CASE_SPLITS: AtomicU64 = AtomicU64::new(0);
+static LEVEL_SIMPLIFY_CALLS: AtomicU64 = AtomicU64::new(0);
+static LEVEL_SIMPLIFY_CACHE_HITS: AtomicU64 = AtomicU64::new(0);
+static LEVEL_SUBST_SIMP_CALLS: AtomicU64 = AtomicU64::new(0);
+
+pub(crate) fn level_stats_json() -> String {
+    format!(
+        r#"{{"leq_calls":{},"leq_core_calls":{},"eq_calls":{},"eq_many_calls":{},"imax_case_splits":{},"simplify_calls":{},"simplify_cache_hits":{},"subst_simp_calls":{}}}"#,
+        LEVEL_LEQ_CALLS.load(Relaxed),
+        LEVEL_LEQ_CORE_CALLS.load(Relaxed),
+        LEVEL_EQ_CALLS.load(Relaxed),
+        LEVEL_EQ_MANY_CALLS.load(Relaxed),
+        LEVEL_IMAX_CASE_SPLITS.load(Relaxed),
+        LEVEL_SIMPLIFY_CALLS.load(Relaxed),
+        LEVEL_SIMPLIFY_CACHE_HITS.load(Relaxed),
+        LEVEL_SUBST_SIMP_CALLS.load(Relaxed),
+    )
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Level<'a> {
     Zero,
@@ -58,11 +83,13 @@ impl<'t, 'p: 't> TcCtx<'t, 'p> {
     }
 
     pub fn simplify(&mut self, ptr: LevelPtr<'t>) -> LevelPtr<'t> {
+        LEVEL_SIMPLIFY_CALLS.fetch_add(1, Relaxed);
         match self.read_level(ptr) {
             Zero | Param(..) => return ptr,
             _ => {}
         }
         if let Some(cached) = self.expr_cache.simplify_cache.get(&ptr).copied() {
+            LEVEL_SIMPLIFY_CACHE_HITS.fetch_add(1, Relaxed);
             return cached;
         }
         let result = match self.read_level(ptr) {
@@ -165,6 +192,7 @@ impl<'t, 'p: 't> TcCtx<'t, 'p> {
     fn is_param(&self, level: LevelPtr<'t>) -> bool { matches!(self.read_level(level), Param(..)) }
 
     fn subst_simp(&mut self, level: LevelPtr<'t>, ks: LevelsPtr<'t>, vs: LevelsPtr<'t>) -> LevelPtr<'t> {
+        LEVEL_SUBST_SIMP_CALLS.fetch_add(1, Relaxed);
         let l = self.subst_level(level, ks, vs);
         self.simplify(l)
     }
@@ -172,6 +200,7 @@ impl<'t, 'p: 't> TcCtx<'t, 'p> {
     /// Test whether `lhs <= rhs` by checking whether it holds regardless of whether
     /// a parameter `p` is zero or non-zero.
     fn leq_imax_by_cases(&mut self, param: LevelPtr<'t>, lhs: LevelPtr<'t>, rhs: LevelPtr<'t>, diff: isize) -> bool {
+        LEVEL_IMAX_CASE_SPLITS.fetch_add(1, Relaxed);
         let zero = self.zero();
         let succ_param = self.succ(param);
         let zero_slice = self.alloc_levels_slice(&[zero]);
@@ -188,6 +217,7 @@ impl<'t, 'p: 't> TcCtx<'t, 'p> {
 
     // The more positive it is, the more have been applied to the right side compared to the left side.
     fn leq_core(&mut self, l_in: LevelPtr<'t>, r_in: LevelPtr<'t>, diff: isize) -> bool {
+        LEVEL_LEQ_CORE_CALLS.fetch_add(1, Relaxed);
         match self.read_level_pair(l_in, r_in) {
             (Zero, _) if diff >= 0 => true,
             (_, Zero) if diff < 0 => false,
@@ -241,6 +271,7 @@ impl<'t, 'p: 't> TcCtx<'t, 'p> {
     }
 
     pub fn leq(&mut self, l: LevelPtr<'t>, r: LevelPtr<'t>) -> bool {
+        LEVEL_LEQ_CALLS.fetch_add(1, Relaxed);
         if l == r {
             return true
         }
@@ -250,10 +281,12 @@ impl<'t, 'p: 't> TcCtx<'t, 'p> {
     }
 
     pub fn eq_antisymm(&mut self, l: LevelPtr<'t>, r: LevelPtr<'t>) -> bool {
+        LEVEL_EQ_CALLS.fetch_add(1, Relaxed);
         l == r || (self.leq(l, r) && self.leq(r, l))
     }
 
     pub fn eq_antisymm_many(&mut self, xs: LevelsPtr<'t>, ys: LevelsPtr<'t>) -> bool {
+        LEVEL_EQ_MANY_CALLS.fetch_add(1, Relaxed);
         if xs == ys {
             return true
         }
