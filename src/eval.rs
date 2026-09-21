@@ -1165,7 +1165,6 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 _ => break cur,
             }
         };
-        self.note_whnf(depth, v, result, steps);
         result
     }
 
@@ -1503,7 +1502,6 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 }
             }
         };
-        self.note_whnf(depth, v, result, steps);
         result
     }
 
