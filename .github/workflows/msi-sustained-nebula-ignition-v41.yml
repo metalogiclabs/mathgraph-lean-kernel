@@ -3,10 +3,12 @@ name: MSI sustained Nebula ignition v41
 on:
   push:
     branches: [msi-sustained-nebula-ignition-v41]
+    paths-ignore:
+      - 'evidence/sustained-nebula-v41/**'
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   sustained-nebula:
@@ -271,3 +273,46 @@ jobs:
             /tmp/pre-g2-probe.out
             /tmp/ko-g1.out
             /tmp/sham-g2-probe.out
+
+      - name: Persist run status to branch
+        if: always()
+        env:
+          V41_JOB_STATUS: ${{ job.status }}
+        run: |
+          set -u
+          mkdir -p evidence/sustained-nebula-v41
+          {
+            echo "run_id=$GITHUB_RUN_ID"
+            echo "source_sha=$GITHUB_SHA"
+            echo "job_status=$V41_JOB_STATUS"
+            echo "run_url=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            if [ -f /tmp/result.txt ]; then
+              echo "--- result ---"
+              cat /tmp/result.txt
+            fi
+            if [ -f /tmp/g1-selection.log ]; then
+              echo "--- g1 ---"
+              tail -20 /tmp/g1-selection.log
+            fi
+            if [ -f /tmp/g2-selection.log ]; then
+              echo "--- g2 ---"
+              tail -20 /tmp/g2-selection.log
+            fi
+            if [ -f /tmp/g3-selection.log ]; then
+              echo "--- g3 ---"
+              tail -20 /tmp/g3-selection.log
+            fi
+            if [ -f /tmp/g2-residual.txt ]; then
+              echo "--- rho2 ---"
+              cat /tmp/g2-residual.txt
+            fi
+            if [ -f /tmp/g3-residual.txt ]; then
+              echo "--- rho3 ---"
+              cat /tmp/g3-residual.txt
+            fi
+          } > evidence/sustained-nebula-v41/latest.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add evidence/sustained-nebula-v41/latest.txt
+          git commit -m "evidence(v41): persist sustained Nebula run $GITHUB_RUN_ID" || exit 0
+          git push origin HEAD:msi-sustained-nebula-ignition-v41
