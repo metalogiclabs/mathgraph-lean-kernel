@@ -109,7 +109,19 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
 
         let key = (self.key_env(env, e) as *const value::Env<'t> as usize, e);
         let scope = self.uparam_scope();
+        let type_slot = ((key.0 as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15)
+            ^ (e.as_ref() as *const Expr<'t> as usize as u64).wrapping_mul(0xD6E8_FEB8_6659_FD93)) as usize
+            & (crate::util::TYPE_DM_LEN - 1);
+        let ent = self.tc_cache.type_dm[type_slot];
+        if ent.0 == key.0 && ent.1 == Some(e) {
+            if let Some(cached) = ent.2 {
+                if flag == InferOnly || cached.checked_under == scope {
+                    return cached.result;
+                }
+            }
+        }
         if let Some(cached) = self.tc_cache.type_cache.get(&key).copied() {
+            self.tc_cache.type_dm[type_slot] = (key.0, Some(e), Some(cached));
             if flag == InferOnly || cached.checked_under == scope {
                 return cached.result;
             }
@@ -167,7 +179,9 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         };
 
         let checked_under = if flag == Check { scope } else { CheckScope::Unchecked };
-        self.tc_cache.type_cache.insert(key, CachedType { result: r, checked_under });
+        let cached = CachedType { result: r, checked_under };
+        self.tc_cache.type_cache.insert(key, cached);
+        self.tc_cache.type_dm[type_slot] = (key.0, Some(e), Some(cached));
         r
     }
 
