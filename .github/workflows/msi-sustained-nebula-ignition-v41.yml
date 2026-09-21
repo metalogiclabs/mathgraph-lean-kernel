@@ -139,11 +139,11 @@ jobs:
         run: |
           set -euxo pipefail
           python3 - <<'PY'
-          import json
+          import json,os
           def load(p): return json.load(open(p))
           lineage={
             'schema':'metatron.sustained-nebula.lineage.v41',
-            'frozen_head':'${GITHUB_SHA}',
+            'frozen_head':os.environ['GITHUB_SHA'],
             'g1':load('/tmp/g1.json'),
             'g2':load('/tmp/g2.json'),
             'g3':load('/tmp/g3.json'),
