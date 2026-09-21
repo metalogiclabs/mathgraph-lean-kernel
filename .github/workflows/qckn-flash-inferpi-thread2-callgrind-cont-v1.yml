@@ -1,0 +1,130 @@
+name: QCKN Flash infer-Pi thread2 Callgrind continuation V1
+
+on:
+  push:
+    branches:
+      - qckn-flash-rc1-inferpi-thread2-callgrind-v1
+    paths:
+      - .github/workflows/qckn-flash-inferpi-thread2-callgrind-cont-v1.yml
+  workflow_dispatch:
+
+concurrency:
+  group: qckn-flash-inferpi-thread2-callgrind-cont-v1
+  cancel-in-progress: true
+
+jobs:
+  candidate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 125
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Materialize exact compound candidate
+        shell: bash
+        run: |
+          set -euxo pipefail
+          SOURCE=a342c74f6eb913c25c6dae4138158023d1b9aa6a
+          ARENA=510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          BASE_IR=799576300513
+          git worktree add --detach /tmp/cand "$SOURCE"
+          cd /tmp/cand
+          python3 "$GITHUB_WORKSPACE/scripts/apply_qckn_rc1_infer_pi_transfer_v1.py"
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q "$ARENA"
+          printf 'source\t%s\narena\t%s\nbaseline_ir\t%s\ncandidate\tRC1_plus_infer_pi_threads2\n' \
+            "$SOURCE" "$ARENA" "$BASE_IR" >/tmp/provenance.tsv
+
+      - uses: actions/cache/restore@v4
+        id: corpus
+        with:
+          path: |
+            /tmp/arena/_build/tests/init-prelude.ndjson
+            /tmp/arena/_build/tests/mathlib.ndjson
+          key: qckn-compound-callgrind-corpus-510fbfead6f02bed1a0179d01729a6ddf5bfd06d-v1
+
+      - name: Build required Arena exports on cache miss
+        if: steps.corpus.outputs.cache-hit != 'true'
+        shell: bash
+        timeout-minutes: 20
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test init-prelude >/dev/null
+          nix develop -c ./lka.py build-test mathlib >/dev/null
+
+      - uses: actions/cache/save@v4
+        if: steps.corpus.outputs.cache-hit != 'true'
+        with:
+          path: |
+            /tmp/arena/_build/tests/init-prelude.ndjson
+            /tmp/arena/_build/tests/mathlib.ndjson
+          key: qckn-compound-callgrind-corpus-510fbfead6f02bed1a0179d01729a6ddf5bfd06d-v1
+
+      - name: Build identical deterministic-PGO candidate
+        shell: bash
+        timeout-minutes: 12
+        run: |
+          set -euxo pipefail
+          cat >/tmp/train.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+          LLVM_PROFDATA=$(nix shell nixpkgs#llvmPackages_21.llvm -c sh -c 'command -v llvm-profdata')
+          FLAGS='-C target-cpu=x86-64 -C target-feature=-avx,-avx2,-avx512f,-fma'
+          rm -rf /tmp/cand/target /tmp/cand/pgo
+          mkdir -p /tmp/cand/pgo
+          cd /tmp/cand
+          RUSTFLAGS="$FLAGS -Cprofile-generate=/tmp/cand/pgo" cargo build --release --locked
+          target/release/sokonanoda /tmp/train.json </tmp/arena/_build/tests/init-prelude.ndjson >/dev/null
+          "$LLVM_PROFDATA" merge -o /tmp/cand/pgo/merged.profdata /tmp/cand/pgo
+          rm -rf target
+          RUSTFLAGS="$FLAGS -Cprofile-use=/tmp/cand/pgo/merged.profdata" cargo build --release --locked
+          cp target/release/sokonanoda /tmp/cand.bin
+          sha256sum /tmp/cand.bin | tee /tmp/candidate.sha256
+          cat >/tmp/cand.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2,"print_success_message":false}
+          EOF
+
+      - name: Candidate-only full Mathlib Callgrind
+        shell: bash
+        timeout-minutes: 100
+        run: |
+          set -euxo pipefail
+          VALGRIND=$(nix shell nixpkgs#valgrind -c sh -c 'command -v valgrind')
+          f=/tmp/arena/_build/tests/mathlib.ndjson
+          out=/tmp/cand.callgrind
+          /usr/bin/time -f 'wall_s=%e\nuser_s=%U\nsys_s=%S\nmax_rss_kb=%M' -o /tmp/cand.time \
+            timeout 5700s "$VALGRIND" --tool=callgrind --quiet --collect-jumps=no \
+            --callgrind-out-file="$out" \
+            /tmp/cand.bin /tmp/cand.json <"$f" >/dev/null 2>/tmp/cand.cg.err
+          ir=$(awk '/^summary:/ {print $2; exit}' "$out")
+          test -n "$ir"
+          echo "$ir" >/tmp/candidate-ir.txt
+          python3 - "$ir" <<'PY' | tee /tmp/scorecard.txt
+          import sys
+          base=799_576_300_513
+          cand=int(sys.argv[1])
+          reduction=(1-cand/base)*100
+          print(f'BASE_IR={base}')
+          print(f'CAND_IR={cand}')
+          print(f'BASE_VIRTUAL_S={base/6_000_000_000:.6f}')
+          print(f'CAND_VIRTUAL_S={cand/6_000_000_000:.6f}')
+          print(f'IR_REDUCTION_PERCENT={reduction:.4f}')
+          print(f'COMPOUND_SPEEDUP={base/cand:.6f}')
+          print('DECISION=' + ('BANK_COMPOUND' if reduction >= 2.5 else 'UNDERPERFORMING_COMPOUND'))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qckn-flash-inferpi-thread2-callgrind-cont-v1
+          path: |
+            /tmp/provenance.tsv
+            /tmp/candidate.sha256
+            /tmp/candidate-ir.txt
+            /tmp/scorecard.txt
+            /tmp/cand.time
+            /tmp/cand.callgrind
+          if-no-files-found: warn
