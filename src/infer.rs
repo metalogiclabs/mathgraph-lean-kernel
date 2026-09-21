@@ -175,7 +175,14 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         let (fun, mut args) = self.ctx.unfold_apps_stack(self.arena, e);
         let mut fty = self.infer_value(flag, depth, env, ctx, fun);
         while let Some(arg) = args.pop() {
-            let fty_f = self.force_all(depth, fty);
+            let fty_f = if crate::flash::INFER_PI_DEMAND_BYPASS {
+                match fty {
+                    Value::Pi { .. } => fty,
+                    _ => self.force_all(depth, fty),
+                }
+            } else {
+                self.force_all(depth, fty)
+            };
             let (domain, body) = match fty_f {
                 Value::Pi { domain, body, .. } => (*domain, body),
                 _ => panic!("expected a pi type"),
