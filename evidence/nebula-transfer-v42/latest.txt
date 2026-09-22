@@ -1,0 +1,126 @@
+run_id=35683926864
+source_sha=d6b9b6a6b6ee400d1897d8a1b6a71ec1e337d574
+job_status=failure
+run_url=https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/35683926864
+--- result ---
+V42_MATHLIB_SEMANTICS=IDENTICAL
+V42_CEDAR_SEMANTICS=IDENTICAL
+V42_MATHLIB_METRICS={"cold": {"bvar_calls": 47053973, "dominant_calls": 6894714, "dominant_file": "src/infer.rs", "dominant_hits": 2506113, "dominant_line": 154, "dominant_new_share_pct": 26.034277, "dominant_news": 4388601, "force_calls": 259833384, "hits": 30196962, "news": 16857011, "sites": 24}, "sham123": {"bvar_calls": 47039041, "dominant_calls": 6894697, "dominant_file": "src/infer.rs", "dominant_hits": 2506098, "dominant_line": 187, "dominant_new_share_pct": 26.043861, "dominant_news": 4388599, "force_calls": 185532807, "hits": 30188241, "news": 16850800, "sites": 24}, "warm12": {"bvar_calls": 47053932, "dominant_calls": 6894792, "dominant_file": "src/infer.rs", "dominant_hits": 2506084, "dominant_line": 184, "dominant_new_share_pct": 26.036104, "dominant_news": 4388708, "force_calls": 185539795, "hits": 30197693, "news": 16856239, "sites": 24}, "warm123": {"bvar_calls": 47053708, "dominant_calls": 6894731, "dominant_file": "src/infer.rs", "dominant_hits": 2506153, "dominant_line": 187, "dominant_new_share_pct": 26.035014, "dominant_news": 4388578, "force_calls": 45130370, "hits": 30197262, "news": 16856446, "sites": 24}}
+V42_CEDAR_METRICS={"cold": {"bvar_calls": 10536176, "dominant_calls": 1902606, "dominant_file": "src/infer.rs", "dominant_hits": 808199, "dominant_line": 154, "dominant_new_share_pct": 33.098204, "dominant_news": 1094407, "force_calls": 39540578, "hits": 7229631, "news": 3306545, "sites": 24}, "sham123": {"bvar_calls": 10533108, "dominant_calls": 1902624, "dominant_file": "src/infer.rs", "dominant_hits": 808143, "dominant_line": 187, "dominant_new_share_pct": 33.10671, "dominant_news": 1094481, "force_calls": 24535775, "hits": 7227189, "news": 3305919, "sites": 24}, "warm12": {"bvar_calls": 10530808, "dominant_calls": 1902630, "dominant_file": "src/infer.rs", "dominant_hits": 808113, "dominant_line": 184, "dominant_new_share_pct": 33.110402, "dominant_news": 1094517, "force_calls": 24534371, "hits": 7225149, "news": 3305659, "sites": 24}, "warm123": {"bvar_calls": 10533719, "dominant_calls": 1902612, "dominant_file": "src/infer.rs", "dominant_hits": 808148, "dominant_line": 187, "dominant_new_share_pct": 33.10173, "dominant_news": 1094464, "force_calls": 4605019, "hits": 7227354, "news": 3306365, "sites": 24}}
+V42_INDEPENDENT_TARGET_WITNESS=FAIL
+V42_WARM123_STRICT_ACQUISITION_GAIN=PASS
+V42_INHERITED_CAUSAL_MARGINAL=PASS
+V42_K3_REAL_VS_SHAM=PASS
+V42_HELDOUT_NONREVERSAL=PASS
+NEBULA_TRANSFER_V42=NO_TRANSFER
+--- metrics ---
+{
+  "cedar": {
+    "cold": {
+      "bvar_calls": 10536176,
+      "dominant_calls": 1902606,
+      "dominant_file": "src/infer.rs",
+      "dominant_hits": 808199,
+      "dominant_line": 154,
+      "dominant_new_share_pct": 33.098204,
+      "dominant_news": 1094407,
+      "force_calls": 39540578,
+      "hits": 7229631,
+      "news": 3306545,
+      "sites": 24
+    },
+    "sham123": {
+      "bvar_calls": 10533108,
+      "dominant_calls": 1902624,
+      "dominant_file": "src/infer.rs",
+      "dominant_hits": 808143,
+      "dominant_line": 187,
+      "dominant_new_share_pct": 33.10671,
+      "dominant_news": 1094481,
+      "force_calls": 24535775,
+      "hits": 7227189,
+      "news": 3305919,
+      "sites": 24
+    },
+    "warm12": {
+      "bvar_calls": 10530808,
+      "dominant_calls": 1902630,
+      "dominant_file": "src/infer.rs",
+      "dominant_hits": 808113,
+      "dominant_line": 184,
+      "dominant_new_share_pct": 33.110402,
+      "dominant_news": 1094517,
+      "force_calls": 24534371,
+      "hits": 7225149,
+      "news": 3305659,
+      "sites": 24
+    },
+    "warm123": {
+      "bvar_calls": 10533719,
+      "dominant_calls": 1902612,
+      "dominant_file": "src/infer.rs",
+      "dominant_hits": 808148,
+      "dominant_line": 187,
+      "dominant_new_share_pct": 33.10173,
+      "dominant_news": 1094464,
+      "force_calls": 4605019,
+      "hits": 7227354,
+      "news": 3306365,
+      "sites": 24
+    }
+  },
+  "mathlib": {
+    "cold": {
+      "bvar_calls": 47053973,
+      "dominant_calls": 6894714,
+      "dominant_file": "src/infer.rs",
+      "dominant_hits": 2506113,
+      "dominant_line": 154,
+      "dominant_new_share_pct": 26.034277,
+      "dominant_news": 4388601,
+      "force_calls": 259833384,
+      "hits": 30196962,
+      "news": 16857011,
+      "sites": 24
+    },
+    "sham123": {
+      "bvar_calls": 47039041,
+      "dominant_calls": 6894697,
+      "dominant_file": "src/infer.rs",
+      "dominant_hits": 2506098,
+      "dominant_line": 187,
+      "dominant_new_share_pct": 26.043861,
+      "dominant_news": 4388599,
+      "force_calls": 185532807,
+      "hits": 30188241,
+      "news": 16850800,
+      "sites": 24
+    },
+    "warm12": {
+      "bvar_calls": 47053932,
+      "dominant_calls": 6894792,
+      "dominant_file": "src/infer.rs",
+      "dominant_hits": 2506084,
+      "dominant_line": 184,
+      "dominant_new_share_pct": 26.036104,
+      "dominant_news": 4388708,
+      "force_calls": 185539795,
+      "hits": 30197693,
+      "news": 16856239,
+      "sites": 24
+    },
+    "warm123": {
+      "bvar_calls": 47053708,
+      "dominant_calls": 6894731,
+      "dominant_file": "src/infer.rs",
+      "dominant_hits": 2506153,
+      "dominant_line": 187,
+      "dominant_new_share_pct": 26.035014,
+      "dominant_news": 4388578,
+      "force_calls": 45130370,
+      "hits": 30197262,
+      "news": 16856446,
+      "sites": 24
+    }
+  }
+}
