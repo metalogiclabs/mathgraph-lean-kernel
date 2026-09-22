@@ -1,0 +1,235 @@
+name: MSI Nebula Transfer V43
+
+on:
+  push:
+    branches: [msi-nebula-transfer-v43]
+    paths-ignore:
+      - 'evidence/nebula-transfer-v43/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nebula-transfer-v43
+  cancel-in-progress: true
+
+jobs:
+  transfer:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: cachix/install-nix-action@v31
+
+      - name: Freeze negative predecessor and inherited lineage
+        run: |
+          set -euxo pipefail
+          grep -q 'NEBULA_TRANSFER_V42=NO_TRANSFER' evidence/nebula-transfer-v42/latest.txt
+          grep -q 'source_sha=d6b9b6a6b6ee400d1897d8a1b6a71ec1e337d574' evidence/nebula-transfer-v42/latest.txt
+          grep -q 'SUSTAINED_NEBULA_IGNITION_V41R1=BOUNDED_POSITIVE' evidence/sustained-nebula-v41r1/latest.txt
+          cat >/tmp/g1.json <<'EOF'
+          {"winner_id":"c0","winner_materializer":"sort","selection_uses_heldout":false}
+          EOF
+          cat >/tmp/g2.json <<'EOF'
+          {"winner_id":"c1","winner_materializer":"pi","selection_uses_heldout":false}
+          EOF
+          cat >/tmp/g3.json <<'EOF'
+          {"winner_id":"c3","winner_materializer":"pi_continuation","selection_uses_heldout":false}
+          EOF
+          {
+            echo V43_EXPERIMENT_HEAD=$GITHUB_SHA
+            echo V43_V42_SOURCE=d6b9b6a6b6ee400d1897d8a1b6a71ec1e337d574
+            echo V43_V42_RUN=35683926864
+            echo V43_V42_ARTIFACT_SHA256=2ec38425e67c2d010ba72105735a69e96d0e013870781db53ddc7abad0b831ed
+            echo V43_V41R1_SOURCE=c9d2d6f868f449e35568d6014b8f45d3094e465a
+            echo V43_PINNED_BASE=08ddb26718c86213262943ca19ae8cf1b03fa922
+            sha256sum \
+              experiments/apply_blind_kernel_interface_v38.py \
+              experiments/apply_recursive_second_interface_v40.py \
+              experiments/apply_g3_realizer_v41.py \
+              experiments/apply_nebula_transfer_conv_root_census_v43.py \
+              /tmp/g1.json /tmp/g2.json /tmp/g3.json
+          } | tee /tmp/frozen-v43.txt
+          cp NEBULA_TRANSFER_V43.md /tmp/prereg.md
+
+      - name: Build independent acquisition and held-out corpora
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena
+          nix develop -c ./lka.py build-test mathlib
+          nix develop -c ./lka.py build-test cedar
+          sha256sum _build/tests/mathlib.ndjson _build/tests/cedar.ndjson | tee /tmp/v43-corpus-hashes.txt
+          cd ..
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+
+      - name: Materialize cold warm and sham arms from one exact substrate
+        run: |
+          set -euxo pipefail
+          BASE=08ddb26718c86213262943ca19ae8cf1b03fa922
+          git clone --no-checkout https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/v43-source
+          git -C /tmp/v43-source fetch --depth 1 origin "$BASE"
+          git -C /tmp/v43-source checkout --detach "$BASE"
+          test "$(git -C /tmp/v43-source rev-parse HEAD)" = "$BASE"
+
+          for arm in cold warm12 warm123 sham123; do
+            cp -a /tmp/v43-source /tmp/v43-$arm
+          done
+
+          for arm in warm12 warm123 sham123; do
+            (cd /tmp/v43-$arm && \
+              python3 "$GITHUB_WORKSPACE/experiments/apply_blind_kernel_interface_v38.py" /tmp/g1.json shared && \
+              python3 "$GITHUB_WORKSPACE/experiments/apply_recursive_second_interface_v40.py" /tmp/g2.json shared)
+          done
+          (cd /tmp/v43-warm123 && python3 "$GITHUB_WORKSPACE/experiments/apply_g3_realizer_v41.py" /tmp/g3.json shared)
+          (cd /tmp/v43-sham123 && python3 "$GITHUB_WORKSPACE/experiments/apply_g3_realizer_v41.py" /tmp/g3.json sham)
+
+          for arm in cold warm12 warm123 sham123; do
+            (cd /tmp/v43-$arm && python3 "$GITHUB_WORKSPACE/experiments/apply_nebula_transfer_conv_root_census_v43.py")
+          done
+
+          sha256sum /tmp/v43-*/src/relevance.rs /tmp/v43-*/src/eval.rs /tmp/v43-*/src/infer.rs /tmp/v43-*/src/conv.rs | tee /tmp/v43-arm-source-hashes.txt
+
+      - name: Build all four arms
+        run: |
+          set -euxo pipefail
+          cd arena
+          for arm in cold warm12 warm123 sham123; do
+            nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=/tmp/v43-$arm-target RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/v43-$arm/Cargo.toml --release --locked"
+          done
+
+      - name: Run Mathlib acquisition census
+        run: |
+          set -euxo pipefail
+          for arm in cold warm12 warm123 sham123; do
+            /tmp/v43-$arm-target/release/sokonanoda /tmp/checker.json < arena/_build/tests/mathlib.ndjson > /tmp/v43-mathlib-$arm.out 2> /tmp/v43-mathlib-$arm.err
+            grep '^V43_TRANSFER' /tmp/v43-mathlib-$arm.err | tee /tmp/v43-mathlib-$arm.census
+          done
+          for arm in warm12 warm123 sham123; do
+            cmp /tmp/v43-mathlib-cold.out /tmp/v43-mathlib-$arm.out
+          done
+          echo V43_MATHLIB_SEMANTICS=IDENTICAL | tee /tmp/result.txt
+
+      - name: Run Cedar held-out transfer census
+        run: |
+          set -euxo pipefail
+          for arm in cold warm12 warm123 sham123; do
+            /tmp/v43-$arm-target/release/sokonanoda /tmp/checker.json < arena/_build/tests/cedar.ndjson > /tmp/v43-cedar-$arm.out 2> /tmp/v43-cedar-$arm.err
+            grep '^V43_TRANSFER' /tmp/v43-cedar-$arm.err | tee /tmp/v43-cedar-$arm.census
+          done
+          for arm in warm12 warm123 sham123; do
+            cmp /tmp/v43-cedar-cold.out /tmp/v43-cedar-$arm.out
+          done
+          echo V43_CEDAR_SEMANTICS=IDENTICAL | tee -a /tmp/result.txt
+
+      - name: Decide bounded transfer
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY' | tee -a /tmp/result.txt
+          import json,re
+          from pathlib import Path
+
+          arms=('cold','warm12','warm123','sham123')
+          corpora=('mathlib','cedar')
+
+          def parse(corpus,arm):
+              text=Path(f'/tmp/v43-{corpus}-{arm}.census').read_text()
+              m=re.search(
+                  r'V43_TRANSFER force_calls=(\d+) conv_calls=(\d+) root_pairs=(\d+)',
+                  text,
+              )
+              d=re.search(
+                  r'V43_TRANSFER_DOMINANT lhs=(\S+) rhs=(\S+) calls=(\d+) call_share=([0-9.]+)%',
+                  text,
+              )
+              assert m and d,(corpus,arm,text)
+              return {
+                  'force_calls':int(m.group(1)),
+                  'conv_calls':int(m.group(2)),
+                  'root_pairs':int(m.group(3)),
+                  'dominant_lhs':d.group(1),
+                  'dominant_rhs':d.group(2),
+                  'dominant_calls':int(d.group(3)),
+                  'dominant_call_share_pct':float(d.group(4)),
+              }
+
+          data={c:{a:parse(c,a) for a in arms} for c in corpora}
+          Path('/tmp/v43-transfer-metrics.json').write_text(json.dumps(data,indent=2,sort_keys=True)+'\n')
+
+          for c in corpora:
+              print(f'V43_{c.upper()}_METRICS='+json.dumps(data[c],sort_keys=True))
+
+          math_witness={(data['mathlib'][a]['dominant_lhs'],data['mathlib'][a]['dominant_rhs']) for a in arms}
+          cedar_witness={(data['cedar'][a]['dominant_lhs'],data['cedar'][a]['dominant_rhs']) for a in arms}
+          same_witness=(len(math_witness)==1 and len(cedar_witness)==1)
+
+          cold=data['mathlib']['cold']['force_calls']
+          w12=data['mathlib']['warm12']['force_calls']
+          w123=data['mathlib']['warm123']['force_calls']
+          sham=data['mathlib']['sham123']['force_calls']
+          cedar_cold=data['cedar']['cold']['force_calls']
+          cedar_w123=data['cedar']['warm123']['force_calls']
+
+          total_gain=w123 < cold
+          causal_marginal=(w12 < cold) or (w123 < w12)
+          k3_semantic=w123 < sham
+          heldout=cedar_w123 <= cedar_cold
+
+          print('V43_INDEPENDENT_TARGET_WITNESS=' + ('PASS' if same_witness else 'FAIL'))
+          print('V43_WARM123_STRICT_ACQUISITION_GAIN=' + ('PASS' if total_gain else 'FAIL'))
+          print('V43_INHERITED_CAUSAL_MARGINAL=' + ('PASS' if causal_marginal else 'FAIL'))
+          print('V43_K3_REAL_VS_SHAM=' + ('PASS' if k3_semantic else 'FAIL'))
+          print('V43_HELDOUT_NONREVERSAL=' + ('PASS' if heldout else 'FAIL'))
+
+          positive=all((same_witness,total_gain,causal_marginal,k3_semantic,heldout))
+          print('NEBULA_TRANSFER_V43=' + ('BOUNDED_POSITIVE' if positive else 'NO_TRANSFER'))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: msi-nebula-transfer-v43
+          path: |
+            /tmp/result.txt
+            /tmp/prereg.md
+            /tmp/frozen-v43.txt
+            /tmp/v43-corpus-hashes.txt
+            /tmp/v43-arm-source-hashes.txt
+            /tmp/v43-transfer-metrics.json
+            /tmp/v43-*.census
+
+      - name: Persist transfer verdict
+        if: always()
+        env:
+          V43_JOB_STATUS: ${{ job.status }}
+        run: |
+          set -u
+          mkdir -p evidence/nebula-transfer-v43
+          {
+            echo "run_id=$GITHUB_RUN_ID"
+            echo "source_sha=$GITHUB_SHA"
+            echo "job_status=$V43_JOB_STATUS"
+            echo "run_url=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            if [ -f /tmp/result.txt ]; then
+              echo "--- result ---"
+              cat /tmp/result.txt
+            fi
+            if [ -f /tmp/v43-transfer-metrics.json ]; then
+              echo "--- metrics ---"
+              cat /tmp/v43-transfer-metrics.json
+            fi
+          } > evidence/nebula-transfer-v43/latest.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add evidence/nebula-transfer-v43/latest.txt
+          git commit -m "evidence(v43): persist Nebula transfer run $GITHUB_RUN_ID" || exit 0
+          git fetch origin msi-nebula-transfer-v43
+          git rebase origin/msi-nebula-transfer-v43 || {
+            git rebase --abort || true
+            exit 1
+          }
+          git push origin HEAD:msi-nebula-transfer-v43
