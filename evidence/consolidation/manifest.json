@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "generated_from_branch_count": 470,
+  "policy": {
+    "executable_base": "Newest fully qualified checker implementation; evidence-only additions on consolidation branch.",
+    "negative_results": "Preserved as provenance; never merged as runtime authority.",
+    "divergent_research_lines": "Indexed, not mechanically merged.",
+    "pending_candidates": "Not promoted until their preregistered/full qualification gate passes."
+  },
+  "executable_spine": {
+    "branch": "flash-2-inferpi-thread2-candidate-v1",
+    "commit": "78c7502bac8a5ba000057b3f083bc0595ac65750",
+    "qualification_run": 35596011019,
+    "qualification_artifact_id": 10638422729,
+    "qualification_artifact_digest": "sha256:e2a3937548d4eb4afaa3c4cf5311f8a61901de397a5d61f58bc4fce3f77b3949",
+    "semantic_parity": "409/409",
+    "predecessor_callgrind": {
+      "branch": "qckn-flash-rc1-inferpi-thread2-callgrind-v1",
+      "commit": "aa6048cf70e18636f1c54f402e73938dfabc9925",
+      "run_id": 35586978849,
+      "base_ir": 799576300513,
+      "candidate_ir": 774967898927,
+      "ir_reduction_percent": 3.0777,
+      "decision": "BANK_COMPOUND"
+    }
+  },
+  "developmental_transfer_spine": {
+    "v41r1": {
+      "branch": "msi-sustained-nebula-ignition-v41r1",
+      "source_commit": "c9d2d6f868f449e35568d6014b8f45d3094e465a",
+      "run_id": 35673648421,
+      "verdict": "BOUNDED_POSITIVE"
+    },
+    "v42": {
+      "branch": "msi-nebula-transfer-v42",
+      "source_commit": "d6b9b6a6b6ee400d1897d8a1b6a71ec1e337d574",
+      "run_id": 35683926864,
+      "verdict": "NO_TRANSFER",
+      "interpretation": "Preserved negative: preregistered source-line witness failed; thresholds not weakened."
+    },
+    "v43": {
+      "branch": "msi-nebula-transfer-v43",
+      "source_commit": "00af28fdd294ed184938c18d280f809e83db29c5",
+      "run_id": 35687193098,
+      "artifact_id": 10678336569,
+      "artifact_digest": "sha256:683024419d2a64c329f0a2a4c68ca790cc4fc14f5ff2c47fbe73394ff0c78e0f",
+      "verdict": "BOUNDED_POSITIVE",
+      "semantic_identity": {
+        "mathlib": "IDENTICAL",
+        "cedar": "IDENTICAL"
+      },
+      "witness": "Rigid/Rigid",
+      "force_all": {
+        "mathlib": {
+          "cold": 259834108,
+          "warm12": 185536895,
+          "warm123": 45131829,
+          "sham123": 185539308
+        },
+        "cedar": {
+          "cold": 39541239,
+          "warm12": 24536961,
+          "warm123": 4604446,
+          "sham123": 24535265
+        }
+      }
+    }
+  },
+  "current_pending_candidates": {
+    "app_obligation_dm2048": {
+      "branch": "app-obligation-promotion-v1",
+      "commit": "2d4a4690711b8a9510331ee614c05f055b18b5f6",
+      "run_id": 35610483527,
+      "artifact_id": 10645053598,
+      "artifact_digest": "sha256:370568933dfa3a91f1e78c0060423bb6c8dbd3436416b660db275d5c7675111d",
+      "base_cpu_s": 209.93,
+      "cpu_reduction_percent": 2.9248,
+      "wall_reduction_percent": 1.835,
+      "decision": "PROMOTE_TO_INSTRUCTION_PROXY",
+      "status": "PENDING_FULL_QUALIFICATION"
+    },
+    "universe_cost_census": {
+      "branch": "universe-cost-census-v1",
+      "commit": "265c48e1dcacd19baf3deb39a605451fc5d8ee15",
+      "run_id": 35611679446,
+      "status": "OBSERVATIONAL_CENSUS_ONLY"
+    }
+  },
+  "retained_research_families": {
+    "msikernel": "V0–V27 developmental/prospective calculus lineage; retain as research provenance, not executable authority.",
+    "r_series": "R1/R2/R3 diagnostic/optimization lineage; later Flash/QCKN work is the active performance spine; R3c terminal qualification run failed.",
+    "qckn_flash": "Flash 1/QCKN exploration feeds the retained Flash-2 executable spine; failed instruction/front-cache variants remain negative evidence.",
+    "experiment_high_v": "V117–V122 boundary/controller line retained as diagnostic provenance; V122 terminal workflow failed and is not merged.",
+    "docs_release_other": "Indexed in all-branches.tsv; not imported unless separately qualified."
+  }
+}
