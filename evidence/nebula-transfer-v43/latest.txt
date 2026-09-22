@@ -1,0 +1,94 @@
+run_id=35687193098
+source_sha=00af28fdd294ed184938c18d280f809e83db29c5
+job_status=success
+run_url=https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/35687193098
+--- result ---
+V43_MATHLIB_SEMANTICS=IDENTICAL
+V43_CEDAR_SEMANTICS=IDENTICAL
+V43_MATHLIB_METRICS={"cold": {"conv_calls": 189703670, "dominant_call_share_pct": 50.401607, "dominant_calls": 95613698, "dominant_lhs": "Rigid", "dominant_rhs": "Rigid", "force_calls": 259834108, "root_pairs": 11}, "sham123": {"conv_calls": 127852030, "dominant_call_share_pct": 74.786849, "dominant_calls": 95616504, "dominant_lhs": "Rigid", "dominant_rhs": "Rigid", "force_calls": 185539308, "root_pairs": 11}, "warm12": {"conv_calls": 127851112, "dominant_call_share_pct": 74.786657, "dominant_calls": 95615573, "dominant_lhs": "Rigid", "dominant_rhs": "Rigid", "force_calls": 185536895, "root_pairs": 11}, "warm123": {"conv_calls": 127850375, "dominant_call_share_pct": 74.786591, "dominant_calls": 95614937, "dominant_lhs": "Rigid", "dominant_rhs": "Rigid", "force_calls": 45131829, "root_pairs": 11}}
+V43_CEDAR_METRICS={"cold": {"conv_calls": 27734728, "dominant_call_share_pct": 52.943205, "dominant_calls": 14683654, "dominant_lhs": "Rigid", "dominant_rhs": "Rigid", "force_calls": 39541239, "root_pairs": 11}, "sham123": {"conv_calls": 19929884, "dominant_call_share_pct": 73.676099, "dominant_calls": 14683561, "dominant_lhs": "Rigid", "dominant_rhs": "Rigid", "force_calls": 24535265, "root_pairs": 11}, "warm12": {"conv_calls": 19930370, "dominant_call_share_pct": 73.676324, "dominant_calls": 14683964, "dominant_lhs": "Rigid", "dominant_rhs": "Rigid", "force_calls": 24536961, "root_pairs": 11}, "warm123": {"conv_calls": 19930020, "dominant_call_share_pct": 73.675897, "dominant_calls": 14683621, "dominant_lhs": "Rigid", "dominant_rhs": "Rigid", "force_calls": 4604446, "root_pairs": 11}}
+V43_INDEPENDENT_TARGET_WITNESS=PASS
+V43_WARM123_STRICT_ACQUISITION_GAIN=PASS
+V43_INHERITED_CAUSAL_MARGINAL=PASS
+V43_K3_REAL_VS_SHAM=PASS
+V43_HELDOUT_NONREVERSAL=PASS
+NEBULA_TRANSFER_V43=BOUNDED_POSITIVE
+--- metrics ---
+{
+  "cedar": {
+    "cold": {
+      "conv_calls": 27734728,
+      "dominant_call_share_pct": 52.943205,
+      "dominant_calls": 14683654,
+      "dominant_lhs": "Rigid",
+      "dominant_rhs": "Rigid",
+      "force_calls": 39541239,
+      "root_pairs": 11
+    },
+    "sham123": {
+      "conv_calls": 19929884,
+      "dominant_call_share_pct": 73.676099,
+      "dominant_calls": 14683561,
+      "dominant_lhs": "Rigid",
+      "dominant_rhs": "Rigid",
+      "force_calls": 24535265,
+      "root_pairs": 11
+    },
+    "warm12": {
+      "conv_calls": 19930370,
+      "dominant_call_share_pct": 73.676324,
+      "dominant_calls": 14683964,
+      "dominant_lhs": "Rigid",
+      "dominant_rhs": "Rigid",
+      "force_calls": 24536961,
+      "root_pairs": 11
+    },
+    "warm123": {
+      "conv_calls": 19930020,
+      "dominant_call_share_pct": 73.675897,
+      "dominant_calls": 14683621,
+      "dominant_lhs": "Rigid",
+      "dominant_rhs": "Rigid",
+      "force_calls": 4604446,
+      "root_pairs": 11
+    }
+  },
+  "mathlib": {
+    "cold": {
+      "conv_calls": 189703670,
+      "dominant_call_share_pct": 50.401607,
+      "dominant_calls": 95613698,
+      "dominant_lhs": "Rigid",
+      "dominant_rhs": "Rigid",
+      "force_calls": 259834108,
+      "root_pairs": 11
+    },
+    "sham123": {
+      "conv_calls": 127852030,
+      "dominant_call_share_pct": 74.786849,
+      "dominant_calls": 95616504,
+      "dominant_lhs": "Rigid",
+      "dominant_rhs": "Rigid",
+      "force_calls": 185539308,
+      "root_pairs": 11
+    },
+    "warm12": {
+      "conv_calls": 127851112,
+      "dominant_call_share_pct": 74.786657,
+      "dominant_calls": 95615573,
+      "dominant_lhs": "Rigid",
+      "dominant_rhs": "Rigid",
+      "force_calls": 185536895,
+      "root_pairs": 11
+    },
+    "warm123": {
+      "conv_calls": 127850375,
+      "dominant_call_share_pct": 74.786591,
+      "dominant_calls": 95614937,
+      "dominant_lhs": "Rigid",
+      "dominant_rhs": "Rigid",
+      "force_calls": 45131829,
+      "root_pairs": 11
+    }
+  }
+}
