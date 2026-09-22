@@ -1,0 +1,341 @@
+name: MSI sustained Nebula ignition v41r1
+
+on:
+  push:
+    branches: [msi-sustained-nebula-ignition-v41r1]
+    paths-ignore:
+      - 'evidence/sustained-nebula-v41r1/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sustained-nebula-v41r1
+  cancel-in-progress: true
+
+jobs:
+  sustained-nebula-v41r1:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: cachix/install-nix-action@v31
+
+      - name: Freeze F source and unchanged developmental law
+        run: |
+          set -euxo pipefail
+          BASE_SHA="$(git ls-remote https://github.com/metalogiclabs/mathgraph-lean-kernel.git refs/heads/mathgraph | awk '{print $1}')"
+          test -n "$BASE_SHA"
+          echo "$BASE_SHA" >/tmp/v41r1-base-sha.txt
+          cat >/tmp/checkout-v41r1-base.sh <<'EOF'
+          #!/usr/bin/env bash
+          set -euxo pipefail
+          dest="$1"
+          sha="$(cat /tmp/v41r1-base-sha.txt)"
+          git clone --no-checkout https://github.com/metalogiclabs/mathgraph-lean-kernel.git "$dest"
+          git -C "$dest" fetch --depth 1 origin "$sha"
+          git -C "$dest" checkout --detach "$sha"
+          test "$(git -C "$dest" rev-parse HEAD)" = "$sha"
+          EOF
+          chmod +x /tmp/checkout-v41r1-base.sh
+          {
+            echo "V41R1_EXPERIMENT_HEAD=$GITHUB_SHA"
+            echo "V41R1_V41_PARENT=2f670016a71dbc3bfe08216d0495817f66156b7b"
+            echo "V41R1_PINNED_MATHGRAPH_BASE=$BASE_SHA"
+            sha256sum               experiments/apply_msi_semantic_rediscovery_frontier_v36.py               experiments/select_blind_kernel_interface_v38.py               experiments/apply_blind_kernel_interface_v38.py               experiments/apply_msi_sort_interface_regenesis_v37.py               experiments/apply_post_g1_residual_probe_v41.py               experiments/select_g2_realizer_v41.py               experiments/apply_recursive_second_interface_v40.py               experiments/apply_post_g2_continuation_probe_v41.py               experiments/select_g3_realizer_v41.py               experiments/apply_g3_realizer_v41.py
+          } | tee /tmp/frozen-v41r1.txt
+          cp SUSTAINED_NEBULA_IGNITION_V41R1.md /tmp/prereg.md
+
+      - name: Build acquisition and sealed corpora
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena
+          nix develop -c ./lka.py build-test std
+          nix develop -c ./lka.py build-test cedar
+          head -n 2000000 _build/tests/std.ndjson >/tmp/acquire-std2m.ndjson
+          head -n 3000000 _build/tests/std.ndjson >/tmp/heldout-std3m.ndjson
+          head -n 1000000 _build/tests/cedar.ndjson >/tmp/heldout-cedar1m.ndjson
+          test "$(wc -l </tmp/acquire-std2m.ndjson)" -eq 2000000
+          test "$(wc -l </tmp/heldout-std3m.ndjson)" -eq 3000000
+          test "$(wc -l </tmp/heldout-cedar1m.ndjson)" -eq 1000000
+          sha256sum /tmp/acquire-std2m.ndjson /tmp/heldout-std3m.ndjson /tmp/heldout-cedar1m.ndjson | tee /tmp/corpus-hashes.txt
+          cd ..
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+
+      - name: G1 blind interface genesis from N0
+        run: |
+          set -euxo pipefail
+          /tmp/checkout-v41r1-base.sh /tmp/g1-acquire
+          (cd /tmp/g1-acquire && python3 "$GITHUB_WORKSPACE/experiments/apply_msi_semantic_rediscovery_frontier_v36.py")
+          cd arena
+          nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=/tmp/g1-target RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/g1-acquire/Cargo.toml --release --locked"
+          /tmp/g1-target/release/sokonanoda /tmp/checker.json </tmp/acquire-std2m.ndjson >/tmp/g1.out 2>/tmp/g1.err
+          cd ..
+          python3 experiments/select_blind_kernel_interface_v38.py /tmp/g1.err /tmp/g1.json | tee /tmp/g1-selection.log
+          python3 - <<'PY'
+          import json
+          x=json.load(open('/tmp/g1.json'))
+          assert x['selection_uses_heldout'] is False
+          assert x['winner_materializer'] == 'sort', x
+          print('V41_G1_REALIZER='+x['winner_id']+':'+x['winner_materializer'])
+          print('V41_G1=PASS')
+          PY
+
+      - name: Future withholding rho2 before G1
+        run: |
+          set -euxo pipefail
+          /tmp/checkout-v41r1-base.sh /tmp/pre-g1
+          set +e
+          (cd /tmp/pre-g1 && python3 "$GITHUB_WORKSPACE/experiments/apply_post_g1_residual_probe_v41.py") >/tmp/pre-g1-probe.out 2>&1
+          rc=$?
+          set -e
+          test "$rc" -ne 0
+          grep -q 'V41_RHO2_NOT_DERIVABLE_BEFORE_G1' /tmp/pre-g1-probe.out
+          echo V41_RHO2_FUTURE_WITHHOLDING=PASS | tee /tmp/result.txt
+
+      - name: G2 pressure arises only after N1 and selects K2
+        run: |
+          set -euxo pipefail
+          /tmp/checkout-v41r1-base.sh /tmp/g2-probe
+          (cd /tmp/g2-probe &&             python3 "$GITHUB_WORKSPACE/experiments/apply_blind_kernel_interface_v38.py" /tmp/g1.json shared &&             python3 "$GITHUB_WORKSPACE/experiments/apply_post_g1_residual_probe_v41.py")
+          cd arena
+          nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=/tmp/g2-probe-target RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/g2-probe/Cargo.toml --release --locked"
+          /tmp/g2-probe-target/release/sokonanoda /tmp/checker.json </tmp/acquire-std2m.ndjson >/tmp/g2.out 2>/tmp/g2.err
+          cd ..
+          grep 'MSI_V41_G2' /tmp/g2.err | tail -1 | tee /tmp/g2-residual.txt
+          python3 experiments/select_g2_realizer_v41.py /tmp/g2.err /tmp/g2.json | tee /tmp/g2-selection.log
+          python3 - <<'PY' | tee -a /tmp/result.txt
+          import json
+          x=json.load(open('/tmp/g2.json'))
+          assert x['selection_uses_heldout'] is False
+          print('V41_G2_REALIZER='+x['winner_id']+':'+x['winner_materializer'])
+          print('V41_G2=PASS')
+          PY
+
+      - name: Future withholding rho3 before G2
+        run: |
+          set -euxo pipefail
+          /tmp/checkout-v41r1-base.sh /tmp/pre-g2
+          (cd /tmp/pre-g2 && python3 "$GITHUB_WORKSPACE/experiments/apply_blind_kernel_interface_v38.py" /tmp/g1.json shared)
+          set +e
+          (cd /tmp/pre-g2 && python3 "$GITHUB_WORKSPACE/experiments/apply_post_g2_continuation_probe_v41.py" /tmp/g2.json) >/tmp/pre-g2-probe.out 2>&1
+          rc=$?
+          set -e
+          test "$rc" -ne 0
+          grep -q 'V41_RHO3_NOT_DERIVABLE_BEFORE_G2' /tmp/pre-g2-probe.out
+          echo V41_RHO3_FUTURE_WITHHOLDING=PASS | tee -a /tmp/result.txt
+
+      - name: Materialize canonical N2 and freeze pre-intervention G3 census
+        run: |
+          set -euxo pipefail
+          /tmp/checkout-v41r1-base.sh /tmp/n2-clean
+          (cd /tmp/n2-clean &&             python3 "$GITHUB_WORKSPACE/experiments/apply_blind_kernel_interface_v38.py" /tmp/g1.json shared &&             python3 "$GITHUB_WORKSPACE/experiments/apply_recursive_second_interface_v40.py" /tmp/g2.json shared)
+          cp -a /tmp/n2-clean /tmp/g3-probe
+          cmp /tmp/n2-clean/src/infer.rs /tmp/g3-probe/src/infer.rs
+          sha256sum /tmp/n2-clean/src/infer.rs | tee /tmp/n2-source-sha256.txt
+
+          (cd /tmp/g3-probe && python3 "$GITHUB_WORKSPACE/experiments/apply_post_g2_continuation_probe_v41.py" /tmp/g2.json)
+          cd arena
+          nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=/tmp/g3-probe-target RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/g3-probe/Cargo.toml --release --locked"
+          /tmp/g3-probe-target/release/sokonanoda /tmp/checker.json </tmp/acquire-std2m.ndjson >/tmp/g3.out 2>/tmp/g3.err
+          cd ..
+          grep 'MSI_V41_G3' /tmp/g3.err | tail -1 | tee /tmp/g3-residual.txt
+          python3 experiments/select_g3_realizer_v41.py /tmp/g3.err /tmp/g2.json /tmp/g3.json | tee /tmp/g3-selection.log
+          python3 - <<'PY' | tee -a /tmp/result.txt
+          import hashlib,json
+          from pathlib import Path
+          g3=json.load(open('/tmp/g3.json'))
+          assert g3['selection_uses_heldout'] is False
+          assert g3['new_direct_opportunities'] > 0
+          frozen={
+              'schema':'metatron.v41r1.frozen-g3-census.v1',
+              'pinned_base_sha':Path('/tmp/v41r1-base-sha.txt').read_text().strip(),
+              'n2_infer_sha256':hashlib.sha256(Path('/tmp/n2-clean/src/infer.rs').read_bytes()).hexdigest(),
+              'acquisition_corpus_sha256':hashlib.sha256(Path('/tmp/acquire-std2m.ndjson').read_bytes()).hexdigest(),
+              'g3_selection_sha256':hashlib.sha256(Path('/tmp/g3.json').read_bytes()).hexdigest(),
+              'winner_materializer':g3['winner_materializer'],
+              'frozen_preintervention_opportunities':g3['new_direct_opportunities'],
+          }
+          Path('/tmp/g3-frozen-census.json').write_text(json.dumps(frozen,sort_keys=True,indent=2)+'\n')
+          print('V41R1_G3_REALIZER='+g3['winner_id']+':'+g3['winner_materializer'])
+          print('V41R1_G3_FROZEN_PREINTERVENTION_OPPORTUNITIES='+str(g3['new_direct_opportunities']))
+          print('V41R1_G3_CENSUS_FROZEN=PASS')
+          PY
+
+      - name: Cold restart reconstructs canonical N2
+        run: |
+          set -euxo pipefail
+          /tmp/checkout-v41r1-base.sh /tmp/restart-n2
+          (cd /tmp/restart-n2 &&             python3 "$GITHUB_WORKSPACE/experiments/apply_blind_kernel_interface_v38.py" /tmp/g1.json shared &&             python3 "$GITHUB_WORKSPACE/experiments/apply_recursive_second_interface_v40.py" /tmp/g2.json shared)
+          cmp /tmp/n2-clean/src/infer.rs /tmp/restart-n2/src/infer.rs
+          echo V41_COLD_RESTART_RECONSTRUCTS_N2=PASS | tee -a /tmp/result.txt
+
+      - name: Causal knockout and semantic-sham controls
+        run: |
+          set -euxo pipefail
+          /tmp/checkout-v41r1-base.sh /tmp/ko-g1
+          set +e
+          (cd /tmp/ko-g1 && python3 "$GITHUB_WORKSPACE/experiments/apply_recursive_second_interface_v40.py" /tmp/g2.json shared) >/tmp/ko-g1.out 2>&1
+          rc1=$?
+          set -e
+          test "$rc1" -ne 0
+          echo V41_KNOCKOUT_G1_KILLS_G2=PASS | tee -a /tmp/result.txt
+
+          /tmp/checkout-v41r1-base.sh /tmp/sham-g2
+          (cd /tmp/sham-g2 &&             python3 "$GITHUB_WORKSPACE/experiments/apply_blind_kernel_interface_v38.py" /tmp/g1.json shared &&             python3 "$GITHUB_WORKSPACE/experiments/apply_recursive_second_interface_v40.py" /tmp/g2.json ablate)
+          set +e
+          (cd /tmp/sham-g2 && python3 "$GITHUB_WORKSPACE/experiments/apply_post_g2_continuation_probe_v41.py" /tmp/g2.json) >/tmp/sham-g2-probe.out 2>&1
+          rc2=$?
+          set -e
+          test "$rc2" -ne 0
+          grep -q 'V41_RHO3_NOT_DERIVABLE_BEFORE_G2' /tmp/sham-g2-probe.out
+          echo V41_SEMANTIC_SHAM_G2_KILLS_RHO3=PASS | tee -a /tmp/result.txt
+
+      - name: Derive matched N2 real and sham arms from one frozen N2
+        run: |
+          set -euxo pipefail
+          cp -a /tmp/n2-clean /tmp/n2
+          cp -a /tmp/n2-clean /tmp/n3
+          cp -a /tmp/n2-clean /tmp/sham
+          cmp /tmp/n2/src/infer.rs /tmp/n3/src/infer.rs
+          cmp /tmp/n2/src/infer.rs /tmp/sham/src/infer.rs
+          (cd /tmp/n3 && python3 "$GITHUB_WORKSPACE/experiments/apply_g3_realizer_v41.py" /tmp/g3.json shared)
+          (cd /tmp/sham && python3 "$GITHUB_WORKSPACE/experiments/apply_g3_realizer_v41.py" /tmp/g3.json sham)
+          cd arena
+          for arm in n2 n3 sham; do
+            nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=/tmp/$arm-target RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/$arm/Cargo.toml --release --locked"
+          done
+
+      - name: Verify frozen-census G3 consequence and sealed semantics
+        run: |
+          set -euxo pipefail
+          for arm in n2 n3 sham; do
+            /tmp/$arm-target/release/sokonanoda /tmp/checker.json </tmp/acquire-std2m.ndjson >/tmp/acquire-$arm.out 2>/tmp/acquire-$arm.err
+          done
+          cmp /tmp/acquire-n2.out /tmp/acquire-n3.out
+          cmp /tmp/acquire-n2.out /tmp/acquire-sham.out
+          grep 'MSI_V41_K3' /tmp/acquire-n3.err | tail -1 | tee /tmp/n3-k3.txt
+          grep 'MSI_V41_K3' /tmp/acquire-sham.err | tail -1 | tee /tmp/sham-k3.txt
+          python3 - <<'PY' | tee -a /tmp/result.txt
+          import json,re
+          frozen=json.load(open('/tmp/g3-frozen-census.json'))
+          assert frozen['frozen_preintervention_opportunities'] > 0
+          def read(path):
+              s=open(path).read()
+              m=re.search(r'opportunities=(\d+) bypasses=(\d+)',s)
+              assert m,path
+              return tuple(map(int,m.groups()))
+          real=read('/tmp/n3-k3.txt')
+          sham=read('/tmp/sham-k3.txt')
+          assert real[0] > 0
+          assert real[1] == real[0]
+          assert sham[0] > 0
+          assert sham[1] == 0
+          print('V41R1_G3_FROZEN_OPPORTUNITIES='+str(frozen['frozen_preintervention_opportunities']))
+          print('V41R1_G3_REAL_LOCAL_OPPORTUNITIES='+str(real[0]))
+          print('V41R1_G3_REAL_BYPASSES='+str(real[1]))
+          print('V41R1_G3_SHAM_LOCAL_OPPORTUNITIES='+str(sham[0]))
+          print('V41R1_G3_SHAM_BYPASSES='+str(sham[1]))
+          print('V41R1_G3_MATCHED_FROZEN_CENSUS=PASS')
+          print('V41R1_G3_SEMANTIC_SHAM_CONTROL=PASS')
+          PY
+
+          for corpus in heldout-std3m heldout-cedar1m; do
+            for arm in n2 n3 sham; do
+              /tmp/$arm-target/release/sokonanoda /tmp/checker.json </tmp/$corpus.ndjson >/tmp/$corpus-$arm.out 2>/tmp/$corpus-$arm.err
+            done
+            cmp /tmp/$corpus-n2.out /tmp/$corpus-n3.out
+            cmp /tmp/$corpus-n2.out /tmp/$corpus-sham.out
+            echo "V41R1_SEALED_SEMANTICS=IDENTICAL corpus=$corpus" | tee -a /tmp/result.txt
+          done
+
+      - name: Final amended recurrence gate
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY' | tee -a /tmp/result.txt
+          import json
+          g1=json.load(open('/tmp/g1.json'))
+          g2=json.load(open('/tmp/g2.json'))
+          g3=json.load(open('/tmp/g3.json'))
+          frozen=json.load(open('/tmp/g3-frozen-census.json'))
+          assert g1['selection_uses_heldout'] is False
+          assert g2['selection_uses_heldout'] is False
+          assert g3['selection_uses_heldout'] is False
+          assert frozen['frozen_preintervention_opportunities'] > 0
+          print('V41R1_FROZEN_F=PASS')
+          print('V41R1_FROZEN_DEVELOPMENTAL_LAW=PASS')
+          print('V41R1_PINNED_EXECUTION_SUBSTRATE=PASS')
+          print('V41R1_NO_POST_T0_SEMANTIC_ADDITIONS=PASS')
+          print('V41R1_THREE_CAUSALLY_DEPENDENT_GENERATIONS=PASS')
+          print('V41R1_RESTART=PASS')
+          print('V41R1_KNOCKOUT=PASS')
+          print('V41R1_SEMANTIC_SHAM=PASS')
+          print('V41R1_SEALED_SEMANTICS=IDENTICAL')
+          print('SUSTAINED_NEBULA_IGNITION_V41R1=BOUNDED_POSITIVE')
+          PY
+          cat /tmp/result.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: msi-sustained-nebula-ignition-v41r1
+          path: |
+            /tmp/result.txt
+            /tmp/prereg.md
+            /tmp/frozen-v41r1.txt
+            /tmp/v41r1-base-sha.txt
+            /tmp/n2-source-sha256.txt
+            /tmp/g3-frozen-census.json
+            /tmp/corpus-hashes.txt
+            /tmp/g1.json
+            /tmp/g2.json
+            /tmp/g3.json
+            /tmp/lineage-v41.json
+            /tmp/g1-selection.log
+            /tmp/g2-selection.log
+            /tmp/g3-selection.log
+            /tmp/g2-residual.txt
+            /tmp/g3-residual.txt
+            /tmp/n3-k3.txt
+            /tmp/sham-k3.txt
+            /tmp/pre-g1-probe.out
+            /tmp/pre-g2-probe.out
+            /tmp/ko-g1.out
+            /tmp/sham-g2-probe.out
+
+      - name: Persist run status to branch
+        if: always()
+        env:
+          V41R1_JOB_STATUS: ${{ job.status }}
+        run: |
+          set -u
+          mkdir -p evidence/sustained-nebula-v41r1
+          {
+            echo "run_id=$GITHUB_RUN_ID"
+            echo "source_sha=$GITHUB_SHA"
+            echo "job_status=$V41R1_JOB_STATUS"
+            echo "run_url=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            if [ -f /tmp/result.txt ]; then
+              echo "--- result ---"
+              cat /tmp/result.txt
+            fi
+            if [ -f /tmp/g3-frozen-census.json ]; then
+              echo "--- frozen-g3-census ---"
+              cat /tmp/g3-frozen-census.json
+            fi
+          } > evidence/sustained-nebula-v41r1/latest.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add evidence/sustained-nebula-v41r1/latest.txt
+          git commit -m "evidence(v41r1): persist sustained Nebula rerun $GITHUB_RUN_ID" || exit 0
+          git fetch origin msi-sustained-nebula-ignition-v41r1
+          git rebase origin/msi-sustained-nebula-ignition-v41r1 || {
+            git rebase --abort || true
+            exit 1
+          }
+          git push origin HEAD:msi-sustained-nebula-ignition-v41r1
