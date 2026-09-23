@@ -81,44 +81,10 @@ jobs:
           echo "llbc=${LLBC}" | tee -a evidence/manifest.txt
 
           echo "=== Strict target declaration check ==="
-          python - "${LLBC}" <<'PY' | tee evidence/target-declarations.txt
-import json, sys
-path = sys.argv[1]
-with open(path, "r", encoding="utf-8") as f:
-    data = json.load(f)
-t = data.get("translated", data)
-targets = {"arg_is_ignorable", "result_is_not_proof"}
-found = {}
-item_names = t.get("item_names", [])
-for entry in item_names:
-    key = entry.get("key", {})
-    if "Fun" not in key:
-        continue
-    parts = []
-    for p in entry.get("value", []):
-        ident = p.get("Ident") if isinstance(p, dict) else None
-        if ident:
-            parts.append(ident[0])
-    for target in targets:
-        if target in parts:
-            found[target] = key["Fun"]
-fun_decls = {d.get("def_id"): d for d in t.get("fun_decls", [])}
-print("fun_decl_count=" + str(len(fun_decls)))
-for target in sorted(targets):
-    if target not in found:
-        print(target + "=MISSING")
-        continue
-    decl = fun_decls.get(found[target], {})
-    body = decl.get("body")
-    status = "BODY" if body is not None else "OPAQUE"
-    print(f"{target}=FUN_ID:{found[target]}:{status}")
-missing = targets - set(found)
-if missing:
-    sys.exit(12)
-if any(fun_decls.get(found[x], {}).get("body") is None for x in targets):
-    sys.exit(13)
-PY
+          set +e
+          python experiments/check_aeneas_target_llbc.py "${LLBC}" | tee evidence/target-declarations.txt
           TARGET_STATUS=${PIPESTATUS[0]}
+          set -e
           if [ "${TARGET_STATUS}" -eq 12 ]; then
             echo "TARGET_NOT_REACHED" | tee evidence/verdict.txt
             exit 12
