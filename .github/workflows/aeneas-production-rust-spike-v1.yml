@@ -53,7 +53,7 @@ jobs:
             echo "head=$(git rev-parse HEAD)"
             echo "target=src/relevance.rs"
             echo "functions=Sig::arg_is_ignorable,Sig::result_is_not_proof"
-            echo "mode=charon-lib-start-from-inherent-wildcard-methods"
+            echo "mode=charon-lib-exclude-all-reinclude-sig-island"
             echo "rust_target_sha256=$(sha256sum src/relevance.rs | awk '{print $1}')"
           } > evidence/manifest.txt
 
