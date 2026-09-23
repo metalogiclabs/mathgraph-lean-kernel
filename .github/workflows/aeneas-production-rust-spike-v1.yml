@@ -32,7 +32,9 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/aeneas"
-          curl -fL --retry 3             https://github.com/cryspen/aeneas/releases/download/nightly-2026.09.23-183e4f0/aeneas-linux-x86_64.tar.gz             -o "$RUNNER_TEMP/aeneas.tar.gz"
+          curl -fL --retry 3 \
+            https://github.com/cryspen/aeneas/releases/download/nightly-2026.09.23-183e4f0/aeneas-linux-x86_64.tar.gz \
+            -o "$RUNNER_TEMP/aeneas.tar.gz"
           echo "77888e77f43fc4a1fa4760af184dc99825d600e75eb84921e79263066b51ab10  $RUNNER_TEMP/aeneas.tar.gz" | sha256sum -c -
           tar -xzf "$RUNNER_TEMP/aeneas.tar.gz" -C "$RUNNER_TEMP/aeneas"
           chmod +x "$RUNNER_TEMP/aeneas/aeneas" "$RUNNER_TEMP/aeneas/charon" "$RUNNER_TEMP/aeneas/charon-driver"
@@ -41,90 +43,78 @@ jobs:
           cp "$RUNNER_TEMP/aeneas/rust-toolchain" rust-toolchain
           rustup show
 
-      - name: Extract exact production methods and translate with Aeneas
-        id: spike
+      - name: Extract whole production LLBC, slice target closure, translate with Aeneas
         shell: bash
         run: |
           set -uo pipefail
-          mkdir -p evidence
+          mkdir -p evidence/full evidence/slice
 
           {
             echo "base=20a7a9fc4e3cea4f1b4cb8e04aecff4214533c27"
             echo "head=$(git rev-parse HEAD)"
             echo "target=src/relevance.rs"
             echo "functions=Sig::arg_is_ignorable,Sig::result_is_not_proof"
-            echo "mode=charon-lib-opaque-all-reinclude-sig-island"
+            echo "mode=whole-production-charon-then-dependency-closed-llbc-slice"
             echo "rust_target_sha256=$(sha256sum src/relevance.rs | awk '{print $1}')"
           } > evidence/manifest.txt
 
-          echo "=== Charon targeted extraction ===" | tee evidence/charon.log
+          echo "=== Whole unchanged production Rust -> Charon ===" | tee evidence/charon.log
           set +e
           "$RUNNER_TEMP/aeneas/charon" cargo --preset=aeneas \
-            --opaque 'crate::_' \
-            --include 'crate::relevance::Sig' \
-            --include 'crate::relevance::MAX_TRACKED' \
-            --include 'crate::relevance::_::ignorable' \
-            --include 'crate::relevance::_::arg_is_ignorable' \
-            --include 'crate::relevance::_::result_is_not_proof' \
-            --print-llbc --dest evidence -- --lib \
+            --dest evidence/full -- --lib \
             2>&1 | tee -a evidence/charon.log
-          CHARON_STATUS=${PIPESTATUS[0]}
+          CHARON_STATUS=\${PIPESTATUS[0]}
           set -e
-          echo "charon_status=${CHARON_STATUS}" | tee -a evidence/manifest.txt
-
-          if [ "${CHARON_STATUS}" -ne 0 ]; then
+          echo "charon_status=\${CHARON_STATUS}" | tee -a evidence/manifest.txt
+          if [ "\${CHARON_STATUS}" -ne 0 ]; then
             echo "CHARON_EXTRACTION_FAILED" | tee evidence/verdict.txt
             exit 11
           fi
 
-          LLBC=$(find evidence -maxdepth 1 -name '*.llbc' -print -quit)
-          if [ -z "${LLBC}" ]; then
+          FULL_LLBC=$(find evidence/full -maxdepth 1 -name '*.llbc' -print -quit)
+          if [ -z "\${FULL_LLBC}" ]; then
             echo "LLBC_MISSING_AFTER_CHARON" | tee evidence/verdict.txt
             exit 14
           fi
-          echo "llbc=${LLBC}" | tee -a evidence/manifest.txt
-          wc -c "${LLBC}" | tee evidence/llbc-size.txt
+          sha256sum "\${FULL_LLBC}" | tee evidence/full-llbc-sha256.txt
+          wc -c "\${FULL_LLBC}" | tee evidence/full-llbc-size.txt
 
-          echo "=== Strict target declaration/body check ==="
-          set +e
-          python experiments/check_aeneas_target_llbc.py "${LLBC}" | tee evidence/target-declarations.txt
-          TARGET_STATUS=${PIPESTATUS[0]}
-          set -e
-          echo "target_status=${TARGET_STATUS}" | tee -a evidence/manifest.txt
-          if [ "${TARGET_STATUS}" -eq 12 ]; then
-            echo "TARGET_NOT_REACHED" | tee evidence/verdict.txt
-            exit 12
-          elif [ "${TARGET_STATUS}" -eq 13 ]; then
-            echo "TARGET_BODY_OPAQUE" | tee evidence/verdict.txt
-            exit 16
-          elif [ "${TARGET_STATUS}" -ne 0 ]; then
-            echo "TARGET_CHECK_FAILED" | tee evidence/verdict.txt
-            exit 17
-          fi
+          echo "=== Verify target bodies in whole production LLBC ==="
+          python experiments/check_aeneas_target_llbc.py "\${FULL_LLBC}" \
+            | tee evidence/full-target-declarations.txt
 
-          echo "=== Aeneas Lean translation ===" | tee evidence/aeneas.log
-          pushd evidence >/dev/null
-          LLBC_BASE=$(basename "${LLBC}")
+          echo "=== Compute dependency-closed LLBC semantic island ==="
+          SLICE_LLBC=evidence/slice/sokonanoda-sig.llbc
+          python experiments/slice_aeneas_target_llbc.py \
+            "\${FULL_LLBC}" "\${SLICE_LLBC}" evidence/slice-manifest.json \
+            | tee evidence/slice.log
+          sha256sum "\${SLICE_LLBC}" | tee evidence/slice-llbc-sha256.txt
+          wc -c "\${SLICE_LLBC}" | tee evidence/slice-llbc-size.txt
+
+          echo "=== Verify original target bodies survived slice ==="
+          python experiments/check_aeneas_target_llbc.py "\${SLICE_LLBC}" \
+            | tee evidence/slice-target-declarations.txt
+
+          echo "=== Aeneas Lean translation of sliced production LLBC ===" | tee evidence/aeneas.log
+          pushd evidence/slice >/dev/null
           set +e
-          "$RUNNER_TEMP/aeneas/aeneas"             -backend lean -split-files "${LLBC_BASE}"             2>&1 | tee -a aeneas.log
-          AENEAS_STATUS=${PIPESTATUS[0]}
+          "$RUNNER_TEMP/aeneas/aeneas" \
+            -backend lean -split-files "$(basename "\${SLICE_LLBC}")" \
+            2>&1 | tee ../aeneas.log
+          AENEAS_STATUS=\${PIPESTATUS[0]}
           set -e
           popd >/dev/null
 
-          echo "aeneas_status=${AENEAS_STATUS}" | tee -a evidence/manifest.txt
-          find evidence -maxdepth 2 -type f -printf '%P\n' | sort > evidence/generated-files.txt
+          echo "aeneas_status=\${AENEAS_STATUS}" | tee -a evidence/manifest.txt
+          find evidence -maxdepth 3 -type f -printf '%P\n' | sort > evidence/generated-files.txt
 
-          if [ "${AENEAS_STATUS}" -ne 0 ]; then
-            echo "AENEAS_TRANSLATION_FAILED" | tee evidence/verdict.txt
+          if [ "\${AENEAS_STATUS}" -ne 0 ]; then
+            echo "AENEAS_SLICE_TRANSLATION_FAILED" | tee evidence/verdict.txt
             exit 13
           fi
 
-          if ! find evidence -type f -name '*.lean' -print -quit | grep -q .; then
-            echo "AENEAS_NO_LEAN_OUTPUT" | tee evidence/verdict.txt
-            exit 15
-          fi
-
-          grep -R -n -E 'arg_is_ignorable|result_is_not_proof' evidence --include='*.lean'             | tee evidence/lean-target-matches.txt || true
+          grep -R -n -E 'arg_is_ignorable|result_is_not_proof' evidence/slice --include='*.lean' \
+            | tee evidence/lean-target-matches.txt || true
           if [ ! -s evidence/lean-target-matches.txt ]; then
             echo "AENEAS_TRANSLATED_TARGET_MISSING" | tee evidence/verdict.txt
             exit 18
