@@ -1,0 +1,313 @@
+name: MSI Nebula Transfer V44
+
+on:
+  push:
+    branches: [msi-nebula-transfer-v44]
+    paths-ignore:
+      - 'evidence/nebula-transfer-v44/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nebula-transfer-v44
+  cancel-in-progress: true
+
+jobs:
+  transfer:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: cachix/install-nix-action@v31
+
+      - name: Freeze V43 and inherited lineage
+        run: |
+          set -euxo pipefail
+          grep -q 'NEBULA_TRANSFER_V43=BOUNDED_POSITIVE' evidence/nebula-transfer-v43/latest.txt
+          grep -q 'source_sha=00af28fdd294ed184938c18d280f809e83db29c5' evidence/nebula-transfer-v43/latest.txt
+          cat >/tmp/g1.json <<'EOF'
+          {"winner_id":"c0","winner_materializer":"sort","selection_uses_heldout":false}
+          EOF
+          cat >/tmp/g2.json <<'EOF'
+          {"winner_id":"c1","winner_materializer":"pi","selection_uses_heldout":false}
+          EOF
+          cat >/tmp/g3.json <<'EOF'
+          {"winner_id":"c3","winner_materializer":"pi_continuation","selection_uses_heldout":false}
+          EOF
+          {
+            echo V44_EXPERIMENT_HEAD=$GITHUB_SHA
+            echo V44_V43_SOURCE=00af28fdd294ed184938c18d280f809e83db29c5
+            echo V44_V43_RUN=35687193098
+            echo V44_V43_ARTIFACT=10678336569
+            echo V44_V43_ARTIFACT_SHA256=683024419d2a64c329f0a2a4c68ca790cc4fc14f5ff2c47fbe73394ff0c78e0f
+            echo V44_V41R1_SOURCE=c9d2d6f868f449e35568d6014b8f45d3094e465a
+            echo V44_PINNED_BASE=08ddb26718c86213262943ca19ae8cf1b03fa922
+            sha256sum               experiments/apply_blind_kernel_interface_v38.py               experiments/apply_recursive_second_interface_v40.py               experiments/apply_g3_realizer_v41.py               experiments/apply_nebula_transfer_blind_residual_census_v44.py               /tmp/g1.json /tmp/g2.json /tmp/g3.json
+          } | tee /tmp/frozen-v44.txt
+          cp NEBULA_TRANSFER_V44.md /tmp/prereg.md
+
+      - name: Build selector acquisition and held-out corpora
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena.git arena
+          cd arena
+          nix develop -c ./lka.py build-test init-prelude
+          nix develop -c ./lka.py build-test mathlib
+          nix develop -c ./lka.py build-test cedar
+          nix develop -c ./lka.py build-test std
+          sha256sum             _build/tests/init-prelude.ndjson             _build/tests/mathlib.ndjson             _build/tests/cedar.ndjson             _build/tests/std.ndjson | tee /tmp/v44-corpus-hashes.txt
+          cd ..
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+
+      - name: Materialize reference cold warm and sham arms
+        run: |
+          set -euxo pipefail
+          BASE=08ddb26718c86213262943ca19ae8cf1b03fa922
+          git clone --no-checkout https://github.com/metalogiclabs/mathgraph-lean-kernel.git /tmp/v44-source
+          git -C /tmp/v44-source fetch --depth 1 origin "$BASE"
+          git -C /tmp/v44-source checkout --detach "$BASE"
+          test "$(git -C /tmp/v44-source rev-parse HEAD)" = "$BASE"
+
+          for arm in reference cold warm12 warm123 sham123; do
+            cp -a /tmp/v44-source /tmp/v44-$arm
+          done
+
+          for arm in warm12 warm123 sham123; do
+            (cd /tmp/v44-$arm &&               python3 "$GITHUB_WORKSPACE/experiments/apply_blind_kernel_interface_v38.py" /tmp/g1.json shared &&               python3 "$GITHUB_WORKSPACE/experiments/apply_recursive_second_interface_v40.py" /tmp/g2.json shared)
+          done
+          (cd /tmp/v44-warm123 && python3 "$GITHUB_WORKSPACE/experiments/apply_g3_realizer_v41.py" /tmp/g3.json shared)
+          (cd /tmp/v44-sham123 && python3 "$GITHUB_WORKSPACE/experiments/apply_g3_realizer_v41.py" /tmp/g3.json sham)
+
+          for arm in cold warm12 warm123 sham123; do
+            (cd /tmp/v44-$arm && python3 "$GITHUB_WORKSPACE/experiments/apply_nebula_transfer_blind_residual_census_v44.py")
+          done
+
+          sha256sum /tmp/v44-*/src/eval.rs /tmp/v44-*/src/tc.rs | tee /tmp/v44-arm-source-hashes.txt
+
+      - name: Build reference and four decision arms
+        run: |
+          set -euxo pipefail
+          cd arena
+          for arm in reference cold warm12 warm123 sham123; do
+            nix develop -c bash -euxo pipefail -c "CARGO_TARGET_DIR=/tmp/v44-$arm-target RUSTFLAGS='-C target-cpu=x86-64' cargo build --manifest-path /tmp/v44-$arm/Cargo.toml --release --locked"
+          done
+
+      - name: Blind cold-only selector on Init Prelude
+        run: |
+          set -euxo pipefail
+          /tmp/v44-reference-target/release/sokonanoda /tmp/checker.json < arena/_build/tests/init-prelude.ndjson > /tmp/v44-selector-reference.out 2> /tmp/v44-selector-reference.err
+          /tmp/v44-cold-target/release/sokonanoda /tmp/checker.json < arena/_build/tests/init-prelude.ndjson > /tmp/v44-selector-cold.out 2> /tmp/v44-selector-cold.err
+          cmp /tmp/v44-selector-reference.out /tmp/v44-selector-cold.out
+          grep '^V44_' /tmp/v44-selector-cold.err | tee /tmp/v44-selector.census
+          python3 - <<'PY'
+          import json,re
+          from pathlib import Path
+
+          order=["whnf","apply","projection","unfold","iota"]
+          priority={name:i for i,name in enumerate(order)}
+          rows=[]
+          pat=re.compile(r'V44_FAMILY family=(\S+) total=(\d+) dominant=(\S+) dominant_calls=(\d+) counts=([0-9,]+)')
+          for line in Path('/tmp/v44-selector.census').read_text().splitlines():
+              m=pat.fullmatch(line)
+              if not m:
+                  continue
+              counts=[int(x) for x in m.group(5).split(',')]
+              total=int(m.group(2))
+              dominant_calls=int(m.group(4))
+              rows.append({
+                  "family":m.group(1),
+                  "total":total,
+                  "dominant":m.group(3),
+                  "dominant_calls":dominant_calls,
+                  "counts":counts,
+                  "minority_mass":total-dominant_calls,
+              })
+          assert {r["family"] for r in rows} == set(order), rows
+          eligible=[r for r in rows if r["total"] > 0]
+          assert eligible, rows
+          best=max(eligible,key=lambda r:(r["minority_mass"],r["total"],-priority[r["family"]]))
+          record={
+              "rule":"max minority_mass; tie by total then fixed family order",
+              "selector_corpus":"init-prelude",
+              "candidate_order":order,
+              "selected":best,
+              "all_families":rows,
+          }
+          Path('/tmp/v44-selected-family.json').write_text(json.dumps(record,indent=2,sort_keys=True)+'\n')
+          print('V44_SELECTED_FAMILY='+best["family"])
+          print('V44_SELECTED_DOMINANT='+best["dominant"])
+          print('V44_SELECTED_TOTAL='+str(best["total"]))
+          print('V44_SELECTED_MINORITY_MASS='+str(best["minority_mass"]))
+          PY
+          sha256sum /tmp/v44-selected-family.json | tee /tmp/v44-selector-sha256.txt
+
+      - name: Run Mathlib acquisition
+        run: |
+          set -euxo pipefail
+          for arm in reference cold warm12 warm123 sham123; do
+            /tmp/v44-$arm-target/release/sokonanoda /tmp/checker.json < arena/_build/tests/mathlib.ndjson > /tmp/v44-mathlib-$arm.out 2> /tmp/v44-mathlib-$arm.err
+            if [ "$arm" != reference ]; then
+              grep '^V44_' /tmp/v44-mathlib-$arm.err | tee /tmp/v44-mathlib-$arm.census
+            fi
+          done
+          for arm in cold warm12 warm123 sham123; do
+            cmp /tmp/v44-mathlib-reference.out /tmp/v44-mathlib-$arm.out
+          done
+          echo V44_MATHLIB_SEMANTICS=IDENTICAL | tee /tmp/result.txt
+
+      - name: Run Cedar held-out
+        run: |
+          set -euxo pipefail
+          for arm in reference cold warm12 warm123 sham123; do
+            /tmp/v44-$arm-target/release/sokonanoda /tmp/checker.json < arena/_build/tests/cedar.ndjson > /tmp/v44-cedar-$arm.out 2> /tmp/v44-cedar-$arm.err
+            if [ "$arm" != reference ]; then
+              grep '^V44_' /tmp/v44-cedar-$arm.err | tee /tmp/v44-cedar-$arm.census
+            fi
+          done
+          for arm in cold warm12 warm123 sham123; do
+            cmp /tmp/v44-cedar-reference.out /tmp/v44-cedar-$arm.out
+          done
+          echo V44_CEDAR_SEMANTICS=IDENTICAL | tee -a /tmp/result.txt
+
+      - name: Run Std second held-out
+        run: |
+          set -euxo pipefail
+          for arm in reference cold warm12 warm123 sham123; do
+            /tmp/v44-$arm-target/release/sokonanoda /tmp/checker.json < arena/_build/tests/std.ndjson > /tmp/v44-std-$arm.out 2> /tmp/v44-std-$arm.err
+            if [ "$arm" != reference ]; then
+              grep '^V44_' /tmp/v44-std-$arm.err | tee /tmp/v44-std-$arm.census
+            fi
+          done
+          for arm in cold warm12 warm123 sham123; do
+            cmp /tmp/v44-std-reference.out /tmp/v44-std-$arm.out
+          done
+          echo V44_STD_SEMANTICS=IDENTICAL | tee -a /tmp/result.txt
+
+      - name: Decide portable transfer
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY' | tee -a /tmp/result.txt
+          import json,re
+          from pathlib import Path
+
+          selected=json.loads(Path('/tmp/v44-selected-family.json').read_text())["selected"]["family"]
+          arms=("cold","warm12","warm123","sham123")
+          corpora=("mathlib","cedar","std")
+          fam_pat=re.compile(r'V44_FAMILY family=(\S+) total=(\d+) dominant=(\S+) dominant_calls=(\d+) counts=([0-9,]+)')
+          force_pat=re.compile(r'V44_FORCE force_calls=(\d+)')
+
+          def parse(corpus,arm):
+              text=Path(f'/tmp/v44-{corpus}-{arm}.census').read_text()
+              family=None
+              force=None
+              for line in text.splitlines():
+                  m=fam_pat.fullmatch(line)
+                  if m and m.group(1)==selected:
+                      family={
+                          "family":m.group(1),
+                          "total":int(m.group(2)),
+                          "dominant":m.group(3),
+                          "dominant_calls":int(m.group(4)),
+                          "counts":[int(x) for x in m.group(5).split(',')],
+                      }
+                  f=force_pat.fullmatch(line)
+                  if f:
+                      force=int(f.group(1))
+              assert family is not None and force is not None,(corpus,arm,text)
+              family["force_calls"]=force
+              return family
+
+          data={c:{a:parse(c,a) for a in arms} for c in corpora}
+          Path('/tmp/v44-transfer-metrics.json').write_text(json.dumps({
+              "selected_family":selected,
+              "metrics":data,
+          },indent=2,sort_keys=True)+'\n')
+
+          for c in corpora:
+              print(f'V44_{c.upper()}_METRICS='+json.dumps(data[c],sort_keys=True))
+
+          occurs=all(data[c][a]["total"]>0 for c in corpora for a in arms)
+          stable_dominant=all(len({data[c][a]["dominant"] for a in arms})==1 for c in corpora)
+
+          cold=data["mathlib"]["cold"]["force_calls"]
+          w12=data["mathlib"]["warm12"]["force_calls"]
+          w123=data["mathlib"]["warm123"]["force_calls"]
+          sham=data["mathlib"]["sham123"]["force_calls"]
+          total_gain=w123 < cold
+          causal_marginal=(w12 < cold) or (w123 < w12)
+          k3_real_vs_sham=w123 < sham
+          cedar_nonreversal=data["cedar"]["warm123"]["force_calls"] <= data["cedar"]["cold"]["force_calls"]
+          std_nonreversal=data["std"]["warm123"]["force_calls"] <= data["std"]["cold"]["force_calls"]
+
+          print('V44_SELECTED_FAMILY='+selected)
+          print('V44_SELECTED_FAMILY_OCCURS=' + ('PASS' if occurs else 'FAIL'))
+          print('V44_DOMINANT_SEMANTICS_STABLE=' + ('PASS' if stable_dominant else 'FAIL'))
+          print('V44_WARM123_STRICT_ACQUISITION_GAIN=' + ('PASS' if total_gain else 'FAIL'))
+          print('V44_INHERITED_CAUSAL_MARGINAL=' + ('PASS' if causal_marginal else 'FAIL'))
+          print('V44_K3_REAL_VS_SHAM=' + ('PASS' if k3_real_vs_sham else 'FAIL'))
+          print('V44_CEDAR_NONREVERSAL=' + ('PASS' if cedar_nonreversal else 'FAIL'))
+          print('V44_STD_NONREVERSAL=' + ('PASS' if std_nonreversal else 'FAIL'))
+
+          positive=all((
+              occurs,stable_dominant,total_gain,causal_marginal,
+              k3_real_vs_sham,cedar_nonreversal,std_nonreversal,
+          ))
+          print('NEBULA_TRANSFER_V44=' + ('BOUNDED_PORTABLE_POSITIVE' if positive else 'NO_PORTABLE_TRANSFER'))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: msi-nebula-transfer-v44
+          path: |
+            /tmp/result.txt
+            /tmp/prereg.md
+            /tmp/frozen-v44.txt
+            /tmp/v44-corpus-hashes.txt
+            /tmp/v44-arm-source-hashes.txt
+            /tmp/v44-selector.census
+            /tmp/v44-selected-family.json
+            /tmp/v44-selector-sha256.txt
+            /tmp/v44-transfer-metrics.json
+            /tmp/v44-*.census
+
+      - name: Persist transfer verdict
+        if: always()
+        env:
+          V44_JOB_STATUS: ${{ job.status }}
+        run: |
+          set -u
+          mkdir -p evidence/nebula-transfer-v44
+          {
+            echo "run_id=$GITHUB_RUN_ID"
+            echo "source_sha=$GITHUB_SHA"
+            echo "job_status=$V44_JOB_STATUS"
+            echo "run_url=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            if [ -f /tmp/v44-selected-family.json ]; then
+              echo "--- selector ---"
+              cat /tmp/v44-selected-family.json
+            fi
+            if [ -f /tmp/result.txt ]; then
+              echo "--- result ---"
+              cat /tmp/result.txt
+            fi
+            if [ -f /tmp/v44-transfer-metrics.json ]; then
+              echo "--- metrics ---"
+              cat /tmp/v44-transfer-metrics.json
+            fi
+          } > evidence/nebula-transfer-v44/latest.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add evidence/nebula-transfer-v44/latest.txt
+          git commit -m "evidence(v44): persist portable transfer run $GITHUB_RUN_ID" || exit 0
+          git fetch origin msi-nebula-transfer-v44
+          git rebase origin/msi-nebula-transfer-v44 || {
+            git rebase --abort || true
+            exit 1
+          }
+          git push origin HEAD:msi-nebula-transfer-v44
