@@ -1,0 +1,119 @@
+name: Aeneas production Rust spike v1
+
+on:
+  push:
+    branches:
+      - experiment/aeneas-production-rust-spike-v1
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  extract-production-rust:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout exact branch
+        uses: actions/checkout@v6
+
+      - name: Confirm frozen ancestry and unchanged production target
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor 20a7a9fc4e3cea4f1b4cb8e04aecff4214533c27 HEAD
+          git diff --exit-code 20a7a9fc4e3cea4f1b4cb8e04aecff4214533c27 -- src/relevance.rs
+          sha256sum src/relevance.rs Cargo.toml Cargo.lock
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+
+      - name: Extract production crate with Charon and translate with Aeneas
+        id: spike
+        shell: bash
+        env:
+          NIX_CONFIG: |
+            extra-experimental-features = nix-command flakes
+            access-tokens = github.com=${{ github.token }}
+        run: |
+          set -uo pipefail
+          mkdir -p evidence
+
+          {
+            echo "base=20a7a9fc4e3cea4f1b4cb8e04aecff4214533c27"
+            echo "head=$(git rev-parse HEAD)"
+            echo "target=src/relevance.rs"
+            echo "functions=Sig::arg_is_ignorable,Sig::result_is_not_proof"
+            echo "rust_target_sha256=$(sha256sum src/relevance.rs | awk '{print $1}')"
+          } > evidence/manifest.txt
+
+          echo "=== Charon extraction ===" | tee evidence/charon.log
+          set +e
+          nix run github:AeneasVerif/aeneas#charon -L -- \
+            cargo --preset=aeneas --print-llbc --dest evidence \
+            2>&1 | tee -a evidence/charon.log
+          CHARON_STATUS=${PIPESTATUS[0]}
+          set -e
+          echo "charon_status=${CHARON_STATUS}" | tee -a evidence/manifest.txt
+
+          if [ "${CHARON_STATUS}" -ne 0 ]; then
+            echo "CHARON_EXTRACTION_FAILED" | tee evidence/verdict.txt
+            exit 11
+          fi
+
+          echo "=== Locate production target in LLBC/log ==="
+          grep -nE "arg_is_ignorable|result_is_not_proof" evidence/charon.log \
+            | tee evidence/target-name-matches.txt || true
+
+          if ! grep -Eq "arg_is_ignorable|result_is_not_proof" evidence/charon.log; then
+            if compgen -G "evidence/*.llbc" > /dev/null; then
+              grep -nE "arg_is_ignorable|result_is_not_proof" evidence/*.llbc \
+                | tee evidence/target-name-matches.txt || true
+            fi
+          fi
+
+          if [ ! -s evidence/target-name-matches.txt ]; then
+            echo "TARGET_NOT_REACHED" | tee evidence/verdict.txt
+            exit 12
+          fi
+
+          LLBC=$(find evidence -maxdepth 1 -name '*.llbc' -print -quit)
+          if [ -z "${LLBC}" ]; then
+            echo "LLBC_MISSING_AFTER_CHARON" | tee evidence/verdict.txt
+            exit 14
+          fi
+          echo "llbc=${LLBC}" | tee -a evidence/manifest.txt
+
+          echo "=== Aeneas Lean translation ===" | tee evidence/aeneas.log
+          pushd evidence >/dev/null
+          LLBC_BASE=$(basename "${LLBC}")
+          set +e
+          nix run github:AeneasVerif/aeneas -L -- \
+            -backend lean -split-files "${LLBC_BASE}" \
+            2>&1 | tee -a aeneas.log
+          AENEAS_STATUS=${PIPESTATUS[0]}
+          set -e
+          popd >/dev/null
+
+          echo "aeneas_status=${AENEAS_STATUS}" | tee -a evidence/manifest.txt
+          find evidence -maxdepth 2 -type f -printf '%P\n' | sort > evidence/generated-files.txt
+
+          if [ "${AENEAS_STATUS}" -ne 0 ]; then
+            echo "AENEAS_TRANSLATION_FAILED" | tee evidence/verdict.txt
+            exit 13
+          fi
+
+          if ! find evidence -type f -name '*.lean' -print -quit | grep -q .; then
+            echo "AENEAS_NO_LEAN_OUTPUT" | tee evidence/verdict.txt
+            exit 15
+          fi
+
+          echo "AENEAS_TRANSLATED" | tee evidence/verdict.txt
+
+      - name: Upload extraction evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aeneas-production-rust-spike-v1
+          path: evidence/
+          if-no-files-found: warn
