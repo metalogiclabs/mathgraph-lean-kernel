@@ -32,9 +32,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/aeneas"
-          curl -fL --retry 3 \
-            https://github.com/cryspen/aeneas/releases/download/nightly-2026.09.23-183e4f0/aeneas-linux-x86_64.tar.gz \
-            -o "$RUNNER_TEMP/aeneas.tar.gz"
+          curl -fL --retry 3             https://github.com/cryspen/aeneas/releases/download/nightly-2026.09.23-183e4f0/aeneas-linux-x86_64.tar.gz             -o "$RUNNER_TEMP/aeneas.tar.gz"
           echo "77888e77f43fc4a1fa4760af184dc99825d600e75eb84921e79263066b51ab10  $RUNNER_TEMP/aeneas.tar.gz" | sha256sum -c -
           tar -xzf "$RUNNER_TEMP/aeneas.tar.gz" -C "$RUNNER_TEMP/aeneas"
           chmod +x "$RUNNER_TEMP/aeneas/aeneas" "$RUNNER_TEMP/aeneas/charon" "$RUNNER_TEMP/aeneas/charon-driver"
@@ -43,7 +41,7 @@ jobs:
           cp "$RUNNER_TEMP/aeneas/rust-toolchain" rust-toolchain
           rustup show
 
-      - name: Extract production crate with Charon and translate with Aeneas
+      - name: Extract exact production methods and translate with Aeneas
         id: spike
         shell: bash
         run: |
@@ -55,15 +53,13 @@ jobs:
             echo "head=$(git rev-parse HEAD)"
             echo "target=src/relevance.rs"
             echo "functions=Sig::arg_is_ignorable,Sig::result_is_not_proof"
-            echo "mode=charon-whole-production-library-strict-target-check"
+            echo "mode=charon-lib-start-from-exact-pretty-names"
             echo "rust_target_sha256=$(sha256sum src/relevance.rs | awk '{print $1}')"
           } > evidence/manifest.txt
 
-          echo "=== Charon extraction ===" | tee evidence/charon.log
+          echo "=== Charon targeted extraction ===" | tee evidence/charon.log
           set +e
-          "$RUNNER_TEMP/aeneas/charon" cargo --preset=aeneas \
-            --print-llbc --dest evidence -- --lib \
-            2>&1 | tee -a evidence/charon.log
+          "$RUNNER_TEMP/aeneas/charon" cargo --preset=aeneas             --start-from 'crate::relevance::{Sig}::arg_is_ignorable'             --start-from 'crate::relevance::{Sig}::result_is_not_proof'             --print-llbc --dest evidence -- --lib             2>&1 | tee -a evidence/charon.log
           CHARON_STATUS=${PIPESTATUS[0]}
           set -e
           echo "charon_status=${CHARON_STATUS}" | tee -a evidence/manifest.txt
@@ -79,12 +75,14 @@ jobs:
             exit 14
           fi
           echo "llbc=${LLBC}" | tee -a evidence/manifest.txt
+          wc -c "${LLBC}" | tee evidence/llbc-size.txt
 
-          echo "=== Strict target declaration check ==="
+          echo "=== Strict target declaration/body check ==="
           set +e
           python experiments/check_aeneas_target_llbc.py "${LLBC}" | tee evidence/target-declarations.txt
           TARGET_STATUS=${PIPESTATUS[0]}
           set -e
+          echo "target_status=${TARGET_STATUS}" | tee -a evidence/manifest.txt
           if [ "${TARGET_STATUS}" -eq 12 ]; then
             echo "TARGET_NOT_REACHED" | tee evidence/verdict.txt
             exit 12
@@ -100,9 +98,7 @@ jobs:
           pushd evidence >/dev/null
           LLBC_BASE=$(basename "${LLBC}")
           set +e
-          "$RUNNER_TEMP/aeneas/aeneas" \
-            -backend lean -split-files "${LLBC_BASE}" \
-            2>&1 | tee -a aeneas.log
+          "$RUNNER_TEMP/aeneas/aeneas"             -backend lean -split-files "${LLBC_BASE}"             2>&1 | tee -a aeneas.log
           AENEAS_STATUS=${PIPESTATUS[0]}
           set -e
           popd >/dev/null
@@ -120,7 +116,13 @@ jobs:
             exit 15
           fi
 
-          echo "AENEAS_TRANSLATED" | tee evidence/verdict.txt
+          grep -R -n -E 'arg_is_ignorable|result_is_not_proof' evidence --include='*.lean'             | tee evidence/lean-target-matches.txt || true
+          if [ ! -s evidence/lean-target-matches.txt ]; then
+            echo "AENEAS_TRANSLATED_TARGET_MISSING" | tee evidence/verdict.txt
+            exit 18
+          fi
+
+          echo "AENEAS_TRANSLATED_TARGETS" | tee evidence/verdict.txt
 
       - name: Upload extraction evidence
         if: always()
