@@ -55,7 +55,7 @@ jobs:
             echo "head=$(git rev-parse HEAD)"
             echo "target=src/relevance.rs"
             echo "functions=Sig::arg_is_ignorable,Sig::result_is_not_proof"
-            echo "mode=charon-start-from-exact-production-methods"
+            echo "mode=charon-start-from-production-relevance-module"
             echo "rust_target_sha256=$(sha256sum src/relevance.rs | awk '{print $1}')"
           } > evidence/manifest.txt
 
