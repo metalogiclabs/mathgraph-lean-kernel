@@ -168,6 +168,16 @@ impl<'a> RecursorData<'a> {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum FutureAuthority<'a> {
+    Reducible { uparams: LevelsPtr<'a>, val: ExprPtr<'a> },
+    Opaque,
+    Constructor,
+    Recursor,
+    Quot,
+    Inductive,
+}
+
 impl<'a> Declar<'a> {
     pub fn info(&self) -> &DeclarInfo<'a> {
         use Declar::*;
@@ -180,6 +190,24 @@ impl<'a> Declar<'a> {
             | Constructor(ConstructorData { info, .. })
             | Recursor(RecursorData { info, .. })
             | Opaque { info, .. } => info,
+        }
+    }
+
+    /// The declaration's live meaning for all future kernel reduction.
+    ///
+    /// Admission may inspect richer source data (for example a theorem proof
+    /// body), but once admitted only definitions retain reducible bodies.
+    /// This is the future quotient boundary: keep exactly the authority that
+    /// can change lawful downstream kernel consequences.
+    pub(crate) fn future_authority(&self) -> FutureAuthority<'a> {
+        match self {
+            Declar::Definition { info, val, .. } =>
+                FutureAuthority::Reducible { uparams: info.uparams, val: *val },
+            Declar::Constructor(_) => FutureAuthority::Constructor,
+            Declar::Recursor(_) => FutureAuthority::Recursor,
+            Declar::Quot { .. } => FutureAuthority::Quot,
+            Declar::Inductive(_) => FutureAuthority::Inductive,
+            Declar::Axiom { .. } | Declar::Theorem { .. } | Declar::Opaque { .. } => FutureAuthority::Opaque,
         }
     }
 }
@@ -319,11 +347,21 @@ impl<'x, 'a: 'x> Env<'x, 'a> {
         }
     }
 
-    /// Get the value of a declaration, if that declaration has an associated value (only
-    /// definitions and theorems have values). Also returns the declaration's universe parameters.
-    pub fn get_declar_val(&self, n: &NamePtr<'a>) -> Option<(LevelsPtr<'a>, ExprPtr<'a>)> {
-        match self.get_declar(n)? {
-            Declar::Definition { info, val, .. } | Declar::Theorem { info, val, .. } => Some((info.uparams, *val)),
+    /// Return the declaration's compiled future authority.
+    ///
+    /// This deliberately forgets admission-only structure such as theorem
+    /// proof bodies. Unknown names have no authority.
+    #[inline]
+    pub(crate) fn future_authority(&self, n: &NamePtr<'a>) -> Option<FutureAuthority<'a>> {
+        self.get_declar(n).map(Declar::future_authority)
+    }
+
+    /// Return a body only when downstream reduction is lawfully allowed to
+    /// inspect it. In Lean's kernel semantics, that means definitions only.
+    #[inline]
+    pub(crate) fn get_reducible_value(&self, n: &NamePtr<'a>) -> Option<(LevelsPtr<'a>, ExprPtr<'a>)> {
+        match self.future_authority(n)? {
+            FutureAuthority::Reducible { uparams, val } => Some((uparams, val)),
             _ => None,
         }
     }
