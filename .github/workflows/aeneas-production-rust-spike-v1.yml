@@ -63,52 +63,52 @@ jobs:
           "$RUNNER_TEMP/aeneas/charon" cargo --preset=aeneas \
             --dest evidence/full -- --lib \
             2>&1 | tee -a evidence/charon.log
-          CHARON_STATUS=\${PIPESTATUS[0]}
+          CHARON_STATUS=${PIPESTATUS[0]}
           set -e
-          echo "charon_status=\${CHARON_STATUS}" | tee -a evidence/manifest.txt
-          if [ "\${CHARON_STATUS}" -ne 0 ]; then
+          echo "charon_status=${CHARON_STATUS}" | tee -a evidence/manifest.txt
+          if [ "${CHARON_STATUS}" -ne 0 ]; then
             echo "CHARON_EXTRACTION_FAILED" | tee evidence/verdict.txt
             exit 11
           fi
 
           FULL_LLBC=$(find evidence/full -maxdepth 1 -name '*.llbc' -print -quit)
-          if [ -z "\${FULL_LLBC}" ]; then
+          if [ -z "${FULL_LLBC}" ]; then
             echo "LLBC_MISSING_AFTER_CHARON" | tee evidence/verdict.txt
             exit 14
           fi
-          sha256sum "\${FULL_LLBC}" | tee evidence/full-llbc-sha256.txt
-          wc -c "\${FULL_LLBC}" | tee evidence/full-llbc-size.txt
+          sha256sum "${FULL_LLBC}" | tee evidence/full-llbc-sha256.txt
+          wc -c "${FULL_LLBC}" | tee evidence/full-llbc-size.txt
 
           echo "=== Verify target bodies in whole production LLBC ==="
-          python experiments/check_aeneas_target_llbc.py "\${FULL_LLBC}" \
+          python experiments/check_aeneas_target_llbc.py "${FULL_LLBC}" \
             | tee evidence/full-target-declarations.txt
 
           echo "=== Compute dependency-closed LLBC semantic island ==="
           SLICE_LLBC=evidence/slice/sokonanoda-sig.llbc
           python experiments/slice_aeneas_target_llbc.py \
-            "\${FULL_LLBC}" "\${SLICE_LLBC}" evidence/slice-manifest.json \
+            "${FULL_LLBC}" "${SLICE_LLBC}" evidence/slice-manifest.json \
             | tee evidence/slice.log
-          sha256sum "\${SLICE_LLBC}" | tee evidence/slice-llbc-sha256.txt
-          wc -c "\${SLICE_LLBC}" | tee evidence/slice-llbc-size.txt
+          sha256sum "${SLICE_LLBC}" | tee evidence/slice-llbc-sha256.txt
+          wc -c "${SLICE_LLBC}" | tee evidence/slice-llbc-size.txt
 
           echo "=== Verify original target bodies survived slice ==="
-          python experiments/check_aeneas_target_llbc.py "\${SLICE_LLBC}" \
+          python experiments/check_aeneas_target_llbc.py "${SLICE_LLBC}" \
             | tee evidence/slice-target-declarations.txt
 
           echo "=== Aeneas Lean translation of sliced production LLBC ===" | tee evidence/aeneas.log
           pushd evidence/slice >/dev/null
           set +e
           "$RUNNER_TEMP/aeneas/aeneas" \
-            -backend lean -split-files "$(basename "\${SLICE_LLBC}")" \
+            -backend lean -split-files "$(basename "${SLICE_LLBC}")" \
             2>&1 | tee ../aeneas.log
-          AENEAS_STATUS=\${PIPESTATUS[0]}
+          AENEAS_STATUS=${PIPESTATUS[0]}
           set -e
           popd >/dev/null
 
-          echo "aeneas_status=\${AENEAS_STATUS}" | tee -a evidence/manifest.txt
+          echo "aeneas_status=${AENEAS_STATUS}" | tee -a evidence/manifest.txt
           find evidence -maxdepth 3 -type f -printf '%P\n' | sort > evidence/generated-files.txt
 
-          if [ "\${AENEAS_STATUS}" -ne 0 ]; then
+          if [ "${AENEAS_STATUS}" -ne 0 ]; then
             echo "AENEAS_SLICE_TRANSLATION_FAILED" | tee evidence/verdict.txt
             exit 13
           fi
