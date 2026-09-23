@@ -796,7 +796,9 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
 
     fn const_kind(&mut self, name: NamePtr<'t>) -> ConstKind {
         match self.env.get_declar(&name) {
-            Some(Declar::Definition { .. }) | Some(Declar::Theorem { .. }) => ConstKind::Unfoldable,
+            Some(Declar::Definition { .. }) => ConstKind::Unfoldable,
+            Some(Declar::Theorem { .. }) if crate::flash::THEOREM_AUTHORITY_NODES => ConstKind::Axiom,
+            Some(Declar::Theorem { .. }) => ConstKind::Unfoldable,
             Some(Declar::Constructor(_)) => ConstKind::Ctor,
             Some(Declar::Recursor(_)) => ConstKind::Recursor,
             Some(Declar::Quot { .. }) => ConstKind::Quot,
