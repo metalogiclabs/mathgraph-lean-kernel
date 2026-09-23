@@ -1,0 +1,352 @@
+run_id=35807827399
+source_sha=d408d64dae3367dac69dd3dc7c64d9068e0d01e7
+job_status=success
+run_url=https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/35807827399
+--- selector ---
+{
+  "all_families": [
+    {
+      "counts": [
+        1422,
+        525,
+        0,
+        0,
+        0,
+        117,
+        0,
+        0
+      ],
+      "dominant": "Rigid",
+      "dominant_calls": 1422,
+      "family": "whnf",
+      "minority_mass": 642,
+      "total": 2064
+    },
+    {
+      "counts": [
+        61402,
+        27840,
+        5009,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "dominant": "Rigid",
+      "dominant_calls": 61402,
+      "family": "apply",
+      "minority_mass": 32849,
+      "total": 94251
+    },
+    {
+      "counts": [
+        690,
+        346,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "dominant": "Rigid",
+      "dominant_calls": 690,
+      "family": "projection",
+      "minority_mass": 346,
+      "total": 1036
+    },
+    {
+      "counts": [
+        0,
+        4746,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "dominant": "Unfold",
+      "dominant_calls": 4746,
+      "family": "unfold",
+      "minority_mass": 0,
+      "total": 4746
+    },
+    {
+      "counts": [
+        1425,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "dominant": "Rigid",
+      "dominant_calls": 1425,
+      "family": "iota",
+      "minority_mass": 0,
+      "total": 1425
+    }
+  ],
+  "candidate_order": [
+    "whnf",
+    "apply",
+    "projection",
+    "unfold",
+    "iota"
+  ],
+  "rule": "max minority_mass; tie by total then fixed family order",
+  "selected": {
+    "counts": [
+      61402,
+      27840,
+      5009,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "dominant": "Rigid",
+    "dominant_calls": 61402,
+    "family": "apply",
+    "minority_mass": 32849,
+    "total": 94251
+  },
+  "selector_corpus": "init-prelude"
+}
+--- result ---
+V44_MATHLIB_SEMANTICS=IDENTICAL
+V44_CEDAR_SEMANTICS=IDENTICAL
+V44_STD_SEMANTICS=IDENTICAL
+V44_MATHLIB_METRICS={"cold": {"counts": [179744703, 532313483, 12106639, 0, 0, 0, 0, 0], "dominant": "Unfold", "dominant_calls": 532313483, "family": "apply", "force_calls": 259832340, "total": 724164825}, "sham123": {"counts": [179759265, 532356994, 12106754, 0, 0, 0, 0, 0], "dominant": "Unfold", "dominant_calls": 532356994, "family": "apply", "force_calls": 185540250, "total": 724223013}, "warm12": {"counts": [179759330, 532347503, 12106972, 0, 0, 0, 0, 0], "dominant": "Unfold", "dominant_calls": 532347503, "family": "apply", "force_calls": 185539536, "total": 724213805}, "warm123": {"counts": [179755635, 532349898, 12104071, 0, 0, 0, 0, 0], "dominant": "Unfold", "dominant_calls": 532349898, "family": "apply", "force_calls": 45128907, "total": 724209604}}
+V44_CEDAR_METRICS={"cold": {"counts": [49200285, 71520821, 10029890, 0, 0, 0, 0, 0], "dominant": "Unfold", "dominant_calls": 71520821, "family": "apply", "force_calls": 39540998, "total": 130750996}, "sham123": {"counts": [49196750, 71524028, 10030986, 0, 0, 0, 0, 0], "dominant": "Unfold", "dominant_calls": 71524028, "family": "apply", "force_calls": 24536386, "total": 130751764}, "warm12": {"counts": [49199768, 71527177, 10031011, 0, 0, 0, 0, 0], "dominant": "Unfold", "dominant_calls": 71527177, "family": "apply", "force_calls": 24536750, "total": 130757956}, "warm123": {"counts": [49198364, 71541534, 10029005, 0, 0, 0, 0, 0], "dominant": "Unfold", "dominant_calls": 71541534, "family": "apply", "force_calls": 4604290, "total": 130768903}}
+V44_STD_METRICS={"cold": {"counts": [21272630, 30583965, 2166959, 0, 0, 0, 0, 0], "dominant": "Unfold", "dominant_calls": 30583965, "family": "apply", "force_calls": 25922878, "total": 54023554}, "sham123": {"counts": [21268146, 30577169, 2168079, 0, 0, 0, 0, 0], "dominant": "Unfold", "dominant_calls": 30577169, "family": "apply", "force_calls": 17553702, "total": 54013394}, "warm12": {"counts": [21273557, 30580129, 2170101, 0, 0, 0, 0, 0], "dominant": "Unfold", "dominant_calls": 30580129, "family": "apply", "force_calls": 17555167, "total": 54023787}, "warm123": {"counts": [21269654, 30579016, 2168892, 0, 0, 0, 0, 0], "dominant": "Unfold", "dominant_calls": 30579016, "family": "apply", "force_calls": 3486261, "total": 54017562}}
+V44_SELECTED_FAMILY=apply
+V44_SELECTED_FAMILY_OCCURS=PASS
+V44_DOMINANT_SEMANTICS_STABLE=PASS
+V44_WARM123_STRICT_ACQUISITION_GAIN=PASS
+V44_INHERITED_CAUSAL_MARGINAL=PASS
+V44_K3_REAL_VS_SHAM=PASS
+V44_CEDAR_NONREVERSAL=PASS
+V44_STD_NONREVERSAL=PASS
+NEBULA_TRANSFER_V44=BOUNDED_PORTABLE_POSITIVE
+--- metrics ---
+{
+  "metrics": {
+    "cedar": {
+      "cold": {
+        "counts": [
+          49200285,
+          71520821,
+          10029890,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dominant": "Unfold",
+        "dominant_calls": 71520821,
+        "family": "apply",
+        "force_calls": 39540998,
+        "total": 130750996
+      },
+      "sham123": {
+        "counts": [
+          49196750,
+          71524028,
+          10030986,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dominant": "Unfold",
+        "dominant_calls": 71524028,
+        "family": "apply",
+        "force_calls": 24536386,
+        "total": 130751764
+      },
+      "warm12": {
+        "counts": [
+          49199768,
+          71527177,
+          10031011,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dominant": "Unfold",
+        "dominant_calls": 71527177,
+        "family": "apply",
+        "force_calls": 24536750,
+        "total": 130757956
+      },
+      "warm123": {
+        "counts": [
+          49198364,
+          71541534,
+          10029005,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dominant": "Unfold",
+        "dominant_calls": 71541534,
+        "family": "apply",
+        "force_calls": 4604290,
+        "total": 130768903
+      }
+    },
+    "mathlib": {
+      "cold": {
+        "counts": [
+          179744703,
+          532313483,
+          12106639,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dominant": "Unfold",
+        "dominant_calls": 532313483,
+        "family": "apply",
+        "force_calls": 259832340,
+        "total": 724164825
+      },
+      "sham123": {
+        "counts": [
+          179759265,
+          532356994,
+          12106754,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dominant": "Unfold",
+        "dominant_calls": 532356994,
+        "family": "apply",
+        "force_calls": 185540250,
+        "total": 724223013
+      },
+      "warm12": {
+        "counts": [
+          179759330,
+          532347503,
+          12106972,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dominant": "Unfold",
+        "dominant_calls": 532347503,
+        "family": "apply",
+        "force_calls": 185539536,
+        "total": 724213805
+      },
+      "warm123": {
+        "counts": [
+          179755635,
+          532349898,
+          12104071,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dominant": "Unfold",
+        "dominant_calls": 532349898,
+        "family": "apply",
+        "force_calls": 45128907,
+        "total": 724209604
+      }
+    },
+    "std": {
+      "cold": {
+        "counts": [
+          21272630,
+          30583965,
+          2166959,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dominant": "Unfold",
+        "dominant_calls": 30583965,
+        "family": "apply",
+        "force_calls": 25922878,
+        "total": 54023554
+      },
+      "sham123": {
+        "counts": [
+          21268146,
+          30577169,
+          2168079,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dominant": "Unfold",
+        "dominant_calls": 30577169,
+        "family": "apply",
+        "force_calls": 17553702,
+        "total": 54013394
+      },
+      "warm12": {
+        "counts": [
+          21273557,
+          30580129,
+          2170101,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dominant": "Unfold",
+        "dominant_calls": 30580129,
+        "family": "apply",
+        "force_calls": 17555167,
+        "total": 54023787
+      },
+      "warm123": {
+        "counts": [
+          21269654,
+          30579016,
+          2168892,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dominant": "Unfold",
+        "dominant_calls": 30579016,
+        "family": "apply",
+        "force_calls": 3486261,
+        "total": 54017562
+      }
+    }
+  },
+  "selected_family": "apply"
+}
