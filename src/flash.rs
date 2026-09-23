@@ -8,9 +8,16 @@ pub(crate) const INFER_PI_DEMAND_BYPASS: bool = true;
 pub(crate) const RIGID_INDUCTIVE_NEUTRAL: bool = true;
 pub(crate) const APP_HC_PREALLOC: bool = true;
 
+// Graph-native Nucleus V0: once a theorem declaration has been checked,
+// compile it to an opaque certified authority node.  Its proof body remains
+// available for the declaration's own admission check, but subsequent uses
+// do not re-enter that proof syntax during evaluation.
+pub(crate) const THEOREM_AUTHORITY_NODES: bool = true;
+
 pub(crate) const PROMOTED_CAPABILITY_IDS: &[&str] = &[
     "direct_framed_prune",
     "direct_var_eval",
     "rigid_inductive_neutral",
     "app_hc_prealloc",
+    "theorem_authority_nodes",
 ];
