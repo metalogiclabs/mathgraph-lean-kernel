@@ -62,8 +62,7 @@ jobs:
           echo "=== Charon extraction ===" | tee evidence/charon.log
           set +e
           "$RUNNER_TEMP/aeneas/charon" cargo --preset=aeneas \
-            --start-from 'crate::relevance::{impl crate::relevance::Sig}::arg_is_ignorable' \
-            --start-from 'crate::relevance::{impl crate::relevance::Sig}::result_is_not_proof' \
+            --start-from 'crate::relevance::_' \
             --print-llbc --dest evidence \
             2>&1 | tee -a evidence/charon.log
           CHARON_STATUS=${PIPESTATUS[0]}
