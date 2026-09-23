@@ -1,0 +1,139 @@
+name: Nucleus Graph-Native V0 Fast Gate
+
+on:
+  push:
+    branches: [nucleus-graph-native-v0-fast-gate]
+    paths:
+      - .github/workflows/nucleus-graph-native-v0-fast-gate.yml
+  workflow_dispatch:
+
+jobs:
+  fast:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Build frozen V0 and base
+        shell: bash
+        run: |
+          set -euxo pipefail
+          BASE=78c7502bac8a5ba000057b3f083bc0595ac65750
+          V0=a9a614f51742de111c9f3c913855e70ff5501a81
+          git worktree add --detach /tmp/base "$BASE"
+          git worktree add --detach /tmp/v0 "$V0"
+          for arm in base v0; do
+            (cd /tmp/$arm && RUSTFLAGS='-C target-cpu=native' cargo build --release --locked)
+            cp /tmp/$arm/target/release/sokonanoda /tmp/$arm.bin
+          done
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2,"print_success_message":false}
+          EOF
+      - name: Build Mathlib and semantic separators
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 95496f5376b089dfd5889d88c73e390a9d98653d
+          cd /tmp/arena
+          tests=(
+            mathlib
+            bugs/k-rec-conv
+            corner-cases/alg-conv-trans-acc-left
+            corner-cases/alg-conv-trans-acc-right
+            corner-cases/alg-conv-trans-acc
+            corner-cases/alg-conv-trans-quot-left-def
+            corner-cases/alg-conv-trans-quot-left
+            corner-cases/alg-conv-trans-quot-right
+            corner-cases/alg-conv-trans-quot
+            corner-cases/proof-param-ok
+            corner-cases/proof-param-swap
+            corner-cases/subject-reduction-redex
+            corner-cases/subject-reduction-reduct
+            perf/args-before-unfold
+            perf/irrelevance-before-evaluation
+          )
+          : >/tmp/exports.txt
+          for t in "${tests[@]}"; do
+            nix develop -c ./lka.py build-test "$t" >/dev/null
+            find _build/tests -type f -name '*.ndjson' -newer /tmp/exports.txt -print >>/tmp/exports.txt || true
+          done
+          find _build/tests -type f -name '*.ndjson' | sort -u >/tmp/exports-all.txt
+          test -s _build/tests/mathlib.ndjson
+      - name: Separator parity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          : >/tmp/mismatches.tsv
+          : >/tmp/matches.tsv
+          while IFS= read -r f; do
+            case "$f" in
+              *mathlib.ndjson|*k-rec-conv*|*alg-conv-trans*|*proof-param*|*subject-reduction*|*args-before-unfold*|*irrelevance-before-evaluation*) ;;
+              *) continue ;;
+            esac
+            set +e
+            /tmp/base.bin /tmp/config.json <"$f" >/tmp/b.out 2>/tmp/b.err; b=$?
+            /tmp/v0.bin /tmp/config.json <"$f" >/tmp/v.out 2>/tmp/v.err; v=$?
+            set -e
+            if [ "$b" -ne "$v" ] || ! cmp -s /tmp/b.out /tmp/v.out; then
+              printf 'MISMATCH\t%s\tbase=%s\tv0=%s\n' "$f" "$b" "$v" | tee -a /tmp/mismatches.tsv
+            else
+              printf 'MATCH\t%s\t%s\n' "$v" "$f" >>/tmp/matches.tsv
+            fi
+          done </tmp/exports-all.txt
+          m=$(grep -c '^MISMATCH' /tmp/mismatches.tsv || true)
+          n=$(grep -c '^MATCH' /tmp/matches.tsv || true)
+          printf 'matches=%s mismatches=%s\n' "$n" "$m" | tee /tmp/parity.txt
+          test "$m" -eq 0
+      - name: Mathlib A/B
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          f=_build/tests/mathlib.ndjson
+          sudo sysctl -w kernel.perf_event_paranoid=-1 >/dev/null 2>&1 || true
+          for arm in base v0; do
+            set +e
+            perf stat -j -o /tmp/$arm.perf -e instructions:u --               /usr/bin/time -f 'real_seconds=%e\nuser_seconds=%U\nsys_seconds=%S\nmax_rss_kb=%M' -o /tmp/$arm.time               /tmp/$arm.bin /tmp/config.json <"$f" >/tmp/$arm.out 2>/tmp/$arm.err
+            rc=$?
+            set -e
+            test "$rc" -eq 0
+          done
+          python3 - <<'PY' | tee /tmp/result.json
+          import json
+          from pathlib import Path
+          def read(arm):
+              ins=0
+              for line in Path(f"/tmp/{arm}.perf").read_text(errors="replace").splitlines():
+                  try: d=json.loads(line)
+                  except: continue
+                  if str(d.get("event","")).split(":")[0]=="instructions":
+                      try: ins=int(float(str(d.get("counter-value","0")).replace(",","")))
+                      except: pass
+              t={}
+              for line in Path(f"/tmp/{arm}.time").read_text().splitlines():
+                  if "=" in line:
+                      k,v=line.split("=",1); t[k]=float(v)
+              return {"instructions":ins,**t}
+          b=read("base"); v=read("v0")
+          out={"base":b,"v0":v,"wall_ratio":v["real_seconds"]/b["real_seconds"],
+               "instruction_ratio":(v["instructions"]/b["instructions"]) if b["instructions"] and v["instructions"] else None}
+          print(json.dumps(out,indent=2,sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nucleus-graph-native-v0-fast-gate
+          path: |
+            /tmp/matches.tsv
+            /tmp/mismatches.tsv
+            /tmp/parity.txt
+            /tmp/result.json
+            /tmp/base.time
+            /tmp/v0.time
+            /tmp/base.perf
+            /tmp/v0.perf
+          if-no-files-found: warn
