@@ -59,7 +59,15 @@ jobs:
 
           echo "=== Charon targeted extraction ===" | tee evidence/charon.log
           set +e
-          "$RUNNER_TEMP/aeneas/charon" cargo --preset=aeneas             --start-from 'crate::relevance::{Sig}::arg_is_ignorable'             --start-from 'crate::relevance::{Sig}::result_is_not_proof'             --print-llbc --dest evidence -- --lib             2>&1 | tee -a evidence/charon.log
+          "$RUNNER_TEMP/aeneas/charon" cargo --preset=aeneas \
+            --exclude 'crate::_' \
+            --include 'crate::relevance::Sig' \
+            --include 'crate::relevance::MAX_TRACKED' \
+            --include 'crate::relevance::_::ignorable' \
+            --include 'crate::relevance::_::arg_is_ignorable' \
+            --include 'crate::relevance::_::result_is_not_proof' \
+            --print-llbc --dest evidence -- --lib \
+            2>&1 | tee -a evidence/charon.log
           CHARON_STATUS=${PIPESTATUS[0]}
           set -e
           echo "charon_status=${CHARON_STATUS}" | tee -a evidence/manifest.txt
