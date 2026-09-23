@@ -55,17 +55,14 @@ jobs:
             echo "head=$(git rev-parse HEAD)"
             echo "target=src/relevance.rs"
             echo "functions=Sig::arg_is_ignorable,Sig::result_is_not_proof"
-            echo "mode=charon-lib-opaque-by-default-reopen-sig"
+            echo "mode=charon-lib-start-from-sig-type-all-methods"
             echo "rust_target_sha256=$(sha256sum src/relevance.rs | awk '{print $1}')"
           } > evidence/manifest.txt
 
           echo "=== Charon extraction ===" | tee evidence/charon.log
           set +e
           "$RUNNER_TEMP/aeneas/charon" cargo --preset=aeneas \
-            --opaque 'crate::_' \
-            --include 'crate::relevance::Sig' \
-            --include 'crate::relevance::MAX_TRACKED' \
-            --include 'crate::relevance::{impl crate::relevance::Sig}::_' \
+            --start-from 'crate::relevance::Sig' \
             --translate-all-methods \
             --print-llbc --dest evidence -- --lib \
             2>&1 | tee -a evidence/charon.log
