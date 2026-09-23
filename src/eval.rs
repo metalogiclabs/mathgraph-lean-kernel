@@ -1,4 +1,4 @@
-use crate::env::{Declar, RecursorData};
+use crate::env::{Declar, FutureAuthority, RecursorData};
 use crate::expr::Expr;
 use crate::tc::{NatBinOp, TypeChecker};
 use crate::util::{
@@ -29,16 +29,6 @@ fn rigid_head_key<'a>(head: &RigidHead<'a>) -> (u8, u64, u64) {
 fn elim_key<'a>(elim: &Elim<'a>) -> u64 {
     const _: () = assert!(std::mem::align_of::<Value<'static>>() >= 8);
     elim.raw()
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum ConstKind {
-    Unfoldable,
-    Ctor,
-    Recursor,
-    Quot,
-    Inductive,
-    Axiom,
 }
 
 enum ForceStep<'a> {
@@ -794,40 +784,27 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         }
     }
 
-    fn const_kind(&mut self, name: NamePtr<'t>) -> ConstKind {
-        match self.env.get_declar(&name) {
-            Some(Declar::Definition { .. }) => ConstKind::Unfoldable,
-            Some(Declar::Theorem { .. }) if crate::flash::THEOREM_AUTHORITY_NODES => ConstKind::Axiom,
-            Some(Declar::Theorem { .. }) => ConstKind::Unfoldable,
-            Some(Declar::Constructor(_)) => ConstKind::Ctor,
-            Some(Declar::Recursor(_)) => ConstKind::Recursor,
-            Some(Declar::Quot { .. }) => ConstKind::Quot,
-            Some(Declar::Inductive(_)) => ConstKind::Inductive,
-            Some(Declar::Axiom { .. }) | Some(Declar::Opaque { .. }) | None => ConstKind::Axiom,
-        }
-    }
-
-    fn declar_val(&mut self, name: NamePtr<'t>) -> Option<(LevelsPtr<'t>, ExprPtr<'t>)> {
-        self.env.get_declar_val(&name)
-    }
-
     pub(crate) fn eval_const(&mut self, name: NamePtr<'t>, levels: LevelsPtr<'t>) -> V<'t> {
         if let Some(cached) = self.tc_cache.const_head_value_cache.get(&(name, levels)) {
             return cached;
         }
         let empty = self.empty_spine();
-        let v = match self.const_kind(name) {
-            ConstKind::Unfoldable => {
+        let authority = self.env.future_authority(&name).unwrap_or(FutureAuthority::Opaque);
+        let v = match authority {
+            FutureAuthority::Reducible { .. } => {
                 let cell = &*self.arena.alloc(OnceCell::new());
                 value::mk_unfold_head_with_empty(self.arena, name, levels, cell, empty)
             }
-            ConstKind::Ctor => value::mk_rigid_head_with_empty(self.arena, RigidHead::Ctor(name, levels), empty),
-            ConstKind::Recursor =>
+            FutureAuthority::Constructor =>
+                value::mk_rigid_head_with_empty(self.arena, RigidHead::Ctor(name, levels), empty),
+            FutureAuthority::Recursor =>
                 value::mk_rigid_head_with_empty(self.arena, RigidHead::Recursor(name, levels), empty),
-            ConstKind::Quot => value::mk_rigid_head_with_empty(self.arena, RigidHead::QuotConst(name, levels), empty),
-            ConstKind::Inductive =>
+            FutureAuthority::Quot =>
+                value::mk_rigid_head_with_empty(self.arena, RigidHead::QuotConst(name, levels), empty),
+            FutureAuthority::Inductive =>
                 value::mk_rigid_head_with_empty(self.arena, RigidHead::Inductive(name, levels), empty),
-            ConstKind::Axiom => value::mk_rigid_head_with_empty(self.arena, RigidHead::Axiom(name, levels), empty),
+            FutureAuthority::Opaque =>
+                value::mk_rigid_head_with_empty(self.arena, RigidHead::Axiom(name, levels), empty),
         };
         v.mark_canonical();
         self.tc_cache.const_head_value_cache.insert((name, levels), v);
@@ -1727,7 +1704,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         if let Some(cached) = self.tc_cache.unfold_const_cache.get(&(name, levels)) {
             return Some(*cached);
         }
-        let (def_uparams, def_value) = self.declar_val(name)?;
+        let (def_uparams, def_value) = self.env.get_reducible_value(&name)?;
         if self.ctx.read_levels(levels).len() != self.ctx.read_levels(def_uparams).len() {
             return None;
         }
