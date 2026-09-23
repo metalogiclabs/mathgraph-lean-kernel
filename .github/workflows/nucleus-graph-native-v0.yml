@@ -42,7 +42,7 @@ jobs:
           sha256sum /tmp/base.bin /tmp/candidate.bin | tee /tmp/binaries.sha256
           printf 'base_source\t%s\ncandidate_source\t%s\narena_source\t%s\nthreads\t2\narchitecture\tchecked theorem -> certified opaque authority node\n'             "$BASE" "$CAND" "95496f5376b089dfd5889d88c73e390a9d98653d" | tee /tmp/provenance.tsv
 
-      - name: Build current Arena corpus
+      - name: Build current official Arena corpus
         shell: bash
         timeout-minutes: 90
         run: |
@@ -50,40 +50,155 @@ jobs:
           git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
           git -C /tmp/arena checkout -q 95496f5376b089dfd5889d88c73e390a9d98653d
           cd /tmp/arena
+          : >/tmp/official-tests.tsv
           while IFS= read -r y; do
             t=${y#tests/}
             t=${t%.yaml}
             nix develop -c ./lka.py build-test "$t" >/dev/null
+            outcome=$(awk '/^outcome:/ {print $2; exit}' "$y")
+            test -n "$outcome"
+            f="_build/tests/$t.ndjson"
+            test -s "$f"
+            printf '%s\t%s\t%s\n' "$t" "$outcome" "$f" >>/tmp/official-tests.tsv
           done < <(find tests -type f -name '*.yaml' | sort)
-          find _build/tests -type f -name '*.ndjson' | sort >/tmp/exports.txt
-          test -s /tmp/exports.txt
-          printf 'exports\t%s\n' "$(wc -l </tmp/exports.txt)" | tee /tmp/corpus.tsv
+          printf 'official_exports\t%s\n' "$(wc -l </tmp/official-tests.tsv)" | tee /tmp/corpus.tsv
           test -s _build/tests/mathlib.ndjson
 
-      - name: Exact semantic parity against complete base
+      - name: Arena correctness with explicit either boundary
         shell: bash
         timeout-minutes: 55
         run: |
           set -euxo pipefail
           cd /tmp/arena
           : >/tmp/matches.tsv
+          : >/tmp/allowed-deltas.tsv
           : >/tmp/mismatches.tsv
-          while IFS= read -r f; do
+          while IFS=
+      - name: Same-machine Mathlib instruction duel
+        shell: bash
+        timeout-minutes: 45
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          f=_build/tests/mathlib.ndjson
+          sudo sysctl -w kernel.perf_event_paranoid=-1 >/tmp/perf-sysctl.txt 2>&1 || true
+          run_one () {
+            arm=$1
+            rep=$2
+            perf="/tmp/${arm}-${rep}.perf"
+            tim="/tmp/${arm}-${rep}.time"
+            set +e
+            perf stat -j -o "$perf" -e instructions:u --               /usr/bin/time -f 'real_seconds=%e\nuser_seconds=%U\nsys_seconds=%S\nmax_rss_kb=%M' -o "$tim"               "/tmp/${arm}.bin" /tmp/config.json <"$f" >/tmp/${arm}-${rep}.out 2>/tmp/${arm}-${rep}.err
+            rc=$?
+            set -e
+            test "$rc" -eq 0
+          }
+          run_one base 1
+          run_one candidate 1
+          run_one candidate 2
+          run_one base 2
+          python3 - <<'PY' | tee /tmp/mathlib-duel.json
+          import json, re, statistics
+          from pathlib import Path
+
+          def read(arm, rep):
+              p=Path(f"/tmp/{arm}-{rep}.perf")
+              instructions=0
+              if p.exists():
+                  for line in p.read_text(errors="replace").splitlines():
+                      try:
+                          d=json.loads(line)
+                      except Exception:
+                          continue
+                      if str(d.get("event","")).split(":")[0]=="instructions":
+                          try:
+                              instructions=int(float(str(d.get("counter-value","0")).replace(",","")))
+                          except Exception:
+                              pass
+              t={}
+              for line in Path(f"/tmp/{arm}-{rep}.time").read_text().splitlines():
+                  if "=" in line:
+                      k,v=line.split("=",1)
+                      t[k]=float(v)
+              return {"instructions": instructions, **t}
+
+          data={a:[read(a,1),read(a,2)] for a in ("base","candidate")}
+          for a in data:
+              data[a+"_median_wall"]=statistics.median(x["real_seconds"] for x in data[a])
+              nz=[x["instructions"] for x in data[a] if x["instructions"]>0]
+              data[a+"_median_instructions"]=statistics.median(nz) if nz else 0
+          bi=data["base_median_instructions"]; ci=data["candidate_median_instructions"]
+          bw=data["base_median_wall"]; cw=data["candidate_median_wall"]
+          data["candidate_over_base_instructions"]=(ci/bi) if bi and ci else None
+          data["candidate_over_base_wall"]=cw/bw
+          print(json.dumps(data,indent=2,sort_keys=True))
+          PY
+
+      - name: Summarize qualification
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY' | tee /tmp/summary.txt
+          import json
+          from pathlib import Path
+          d=json.loads(Path('/tmp/mathlib-duel.json').read_text())
+          p=dict(line.split('\t',1) for line in Path('/tmp/parity.tsv').read_text().splitlines())
+          print('NUCLEUS_GRAPH_NATIVE_V0=QUALIFIED_ARENA_CORRECTNESS')
+          print(f"matches={p['matches']} allowed_deltas={p['allowed_deltas']} hard_mismatches={p['hard_mismatches']}")
+          print(f"mathlib_candidate_over_base_wall={d['candidate_over_base_wall']:.6f}")
+          r=d['candidate_over_base_instructions']
+          if r is None:
+              print('mathlib_candidate_over_base_instructions=UNAVAILABLE')
+          else:
+              print(f'mathlib_candidate_over_base_instructions={r:.6f}')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nucleus-graph-native-v0
+          path: |
+            /tmp/provenance.tsv
+            /tmp/binaries.sha256
+            /tmp/corpus.tsv
+            /tmp/official-tests.tsv
+            /tmp/matches.tsv
+            /tmp/allowed-deltas.tsv
+            /tmp/mismatches.tsv
+            /tmp/parity.tsv
+            /tmp/mathlib-duel.json
+            /tmp/summary.txt
+            /tmp/perf-sysctl.txt
+            /tmp/base-1.perf
+            /tmp/base-2.perf
+            /tmp/candidate-1.perf
+            /tmp/candidate-2.perf
+            /tmp/base-1.time
+            /tmp/base-2.time
+            /tmp/candidate-1.time
+            /tmp/candidate-2.time
+          if-no-files-found: warn
+\t' read -r t outcome f; do
             set +e
             /tmp/base.bin /tmp/config.json <"$f" >/tmp/b.out 2>/tmp/b.err; b=$?
-            /tmp/candidate.bin /tmp/config.json <"$f" >/tmp/c.out 2>/tmp/c.err; c=$?
+            /tmp/candidate.bin /tmp/config.json <"$f" >/tmp/c.out 2>/tmp/c.err; cand=$?
             set -e
-            if [ "$b" -ne "$c" ] || ! cmp -s /tmp/b.out /tmp/c.out; then
-              printf 'MISMATCH\t%s\tbase=%s\tcandidate=%s\n' "$f" "$b" "$c" | tee -a /tmp/mismatches.tsv
+            same=1
+            if [ "$b" -ne "$cand" ] || ! cmp -s /tmp/b.out /tmp/c.out; then same=0; fi
+            if [ "$same" -eq 1 ]; then
+              printf 'MATCH\t%s\t%s\t%s\n' "$cand" "$outcome" "$t" >>/tmp/matches.tsv
+            elif [ "$outcome" = "either" ]; then
+              printf 'ALLOWED_DELTA\t%s\tbase=%s\tcandidate=%s\t%s\n' "$t" "$b" "$cand" "$outcome" | tee -a /tmp/allowed-deltas.tsv
             else
-              printf 'MATCH\t%s\t%s\n' "$c" "$f" >>/tmp/matches.tsv
+              printf 'HARD_MISMATCH\t%s\tbase=%s\tcandidate=%s\t%s\n' "$t" "$b" "$cand" "$outcome" | tee -a /tmp/mismatches.tsv
             fi
-          done </tmp/exports.txt
-          mismatches=$(grep -c '^MISMATCH' /tmp/mismatches.tsv || true)
+          done </tmp/official-tests.tsv
+          hard=$(grep -c '^HARD_MISMATCH' /tmp/mismatches.tsv || true)
+          allowed=$(grep -c '^ALLOWED_DELTA' /tmp/allowed-deltas.tsv || true)
           matches=$(grep -c '^MATCH' /tmp/matches.tsv || true)
-          printf 'matches\t%s\nmismatches\t%s\n' "$matches" "$mismatches" | tee /tmp/parity.tsv
-          test "$mismatches" -eq 0
-          echo NUCLEUS_GRAPH_NATIVE_V0_PARITY_PASS
+          printf 'matches\t%s\nallowed_deltas\t%s\nhard_mismatches\t%s\n' "$matches" "$allowed" "$hard" | tee /tmp/parity.tsv
+          test "$hard" -eq 0
+          echo NUCLEUS_GRAPH_NATIVE_V0_ARENA_CORRECTNESS_PASS
 
       - name: Same-machine Mathlib instruction duel
         shell: bash
