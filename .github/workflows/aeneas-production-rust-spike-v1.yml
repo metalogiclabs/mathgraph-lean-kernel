@@ -16,6 +16,8 @@ jobs:
     steps:
       - name: Checkout exact branch
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Confirm frozen ancestry and unchanged production target
         shell: bash
