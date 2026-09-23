@@ -4,6 +4,7 @@
 This does not rewrite Rust or synthesize semantics. It retains original Charon
 objects/IDs and nulls unrelated declarations while preserving sparse indices.
 """
+import copy
 import json
 import sys
 
@@ -152,9 +153,63 @@ def assert_required(t, keep):
         found[namespace] = sorted(actual)
     return found
 
+def collect_hash_defs(value, defs):
+    if isinstance(value, dict):
+        if set(value) == {"HashConsedValue"}:
+            payload = value["HashConsedValue"]
+            if isinstance(payload, list) and len(payload) == 2 and isinstance(payload[0], int):
+                defs.setdefault(payload[0], payload[1])
+        for child in value.values():
+            collect_hash_defs(child, defs)
+    elif isinstance(value, list):
+        for child in value:
+            collect_hash_defs(child, defs)
+
+def demote_hash_values(value):
+    if isinstance(value, dict):
+        if set(value) == {"HashConsedValue"}:
+            payload = value["HashConsedValue"]
+            if isinstance(payload, list) and len(payload) == 2 and isinstance(payload[0], int):
+                value.clear()
+                value["Deduplicated"] = payload[0]
+                return
+        for child in list(value.values()):
+            demote_hash_values(child)
+    elif isinstance(value, list):
+        for child in value:
+            demote_hash_values(child)
+
+def rehydrate_hash_values(value, defs, defined, used):
+    if isinstance(value, dict):
+        if set(value) == {"Deduplicated"} and isinstance(value["Deduplicated"], int):
+            idx = value["Deduplicated"]
+            used.add(idx)
+            if idx not in defined:
+                if idx not in defs:
+                    raise SystemExit(f"missing hash-cons definition {idx}")
+                raw = copy.deepcopy(defs[idx])
+                value.clear()
+                value["HashConsedValue"] = [idx, raw]
+                defined.add(idx)
+                rehydrate_hash_values(raw, defs, defined, used)
+            return
+        if set(value) == {"HashConsedValue"}:
+            idx, raw = value["HashConsedValue"]
+            used.add(idx)
+            defined.add(idx)
+            rehydrate_hash_values(raw, defs, defined, used)
+            return
+        for child in value.values():
+            rehydrate_hash_values(child, defs, defined, used)
+    elif isinstance(value, list):
+        for child in value:
+            rehydrate_hash_values(child, defs, defined, used)
+
 def main(src, dst, manifest_path):
     with open(src, "r", encoding="utf-8") as handle:
         data = json.load(handle)
+    hash_defs = {}
+    collect_hash_defs(data, hash_defs)
     translated = data["translated"]
 
     keep = close_dependencies(translated, discover(translated))
@@ -170,6 +225,15 @@ def main(src, dst, manifest_path):
     translated["short_names"] = filter_names(translated["short_names"], keep)
     translated["assoc_item_names"] = [None for _ in translated.get("assoc_item_names", [])]
 
+    # Charon serializes hash-consed values by defining a key at its first
+    # occurrence and using Deduplicated references thereafter. Pruning can
+    # remove that first occurrence. Normalize then rehydrate only the keys
+    # transitively required by this sliced semantic island.
+    demote_hash_values(data)
+    defined = set()
+    used_hashcons = set()
+    rehydrate_hash_values(data, hash_defs, defined, used_hashcons)
+
     with open(dst, "w", encoding="utf-8") as handle:
         json.dump(data, handle, separators=(",", ":"))
 
@@ -178,6 +242,8 @@ def main(src, dst, manifest_path):
         "required_names": found,
         "source": src,
         "output": dst,
+        "hashcons_ids": sorted(used_hashcons),
+        "hashcons_count": len(used_hashcons),
     }
     with open(manifest_path, "w", encoding="utf-8") as handle:
         json.dump(manifest, handle, indent=2, sort_keys=True)
