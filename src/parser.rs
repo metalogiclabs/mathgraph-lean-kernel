@@ -837,6 +837,7 @@ impl<'a, R: BufRead> Parser<'a, R> {
         // the source declaration table so admission data remains available
         // without remaining part of runtime semantic state.
         let future_authorities = self.declars.values().map(Declar::future_authority).collect();
+        let declar_infos = self.declars.values().map(|d| *d.info()).collect();
         let export_file = crate::util::ExportFile {
             dag: self.dag,
             anon: self.anon,
@@ -844,6 +845,7 @@ impl<'a, R: BufRead> Parser<'a, R> {
             declars: self.declars,
             admission_values: self.admission_values,
             future_authorities,
+            declar_infos,
             notations: self.notations,
             name_cache,
             config: self.config,
