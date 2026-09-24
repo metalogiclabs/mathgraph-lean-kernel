@@ -1,0 +1,173 @@
+name: Flash WHNF no-store final promotion v1
+
+on:
+  push:
+    branches:
+      - flash2-whnf-nostore-final-promotion-v1
+    paths:
+      - src/**
+      - Cargo.toml
+      - Cargo.lock
+      - .github/workflows/flash2-whnf-nostore-final-promotion-v1.yml
+  workflow_dispatch:
+
+concurrency:
+  group: flash2-whnf-nostore-final-promotion-v1
+  cancel-in-progress: true
+
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: cachix/install-nix-action@v31
+
+      - name: Freeze exact source lineage
+        shell: bash
+        run: |
+          set -euxo pipefail
+          BASE=78c7502bac8a5ba000057b3f083bc0595ac65750
+          SOURCE_CAND=208311ff8f2e0feda2d31030090c4d404b13308c
+          ARENA=95496f5376b089dfd5889d88c73e390a9d98653d
+          git diff --quiet "$SOURCE_CAND" "$GITHUB_SHA" -- src Cargo.toml Cargo.lock
+          git worktree add --detach /tmp/base "$BASE"
+          git worktree add --detach /tmp/cand "$GITHUB_SHA"
+          printf 'baseline\t%s\nsource_candidate\t%s\nworkflow_head\t%s\narena\t%s\n'             "$BASE" "$SOURCE_CAND" "$GITHUB_SHA" "$ARENA" | tee /tmp/provenance.tsv
+
+      - name: Build exact current Arena exports
+        shell: bash
+        timeout-minutes: 80
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 95496f5376b089dfd5889d88c73e390a9d98653d
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test
+          find _build/tests -type f -name '*.ndjson' | sort > /tmp/built-exports.txt
+          test -s /tmp/built-exports.txt
+          printf 'exports=%s\n' "$(wc -l </tmp/built-exports.txt)" | tee /tmp/export-summary.txt
+          test -s _build/tests/mathlib.ndjson
+          test -s _build/tests/init-prelude.ndjson
+
+      - name: Build matched exact-PGO binaries
+        shell: bash
+        timeout-minutes: 45
+        run: |
+          set -euxo pipefail
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}
+          EOF
+          LLVM_PROFDATA=$(nix shell nixpkgs#llvmPackages_21.llvm -c sh -c 'command -v llvm-profdata')
+          for arm in base cand; do
+            rm -rf /tmp/$arm/target /tmp/$arm/pgo
+            mkdir -p /tmp/$arm/pgo
+            (
+              cd /tmp/$arm
+              RUSTFLAGS="-C target-cpu=native -Cprofile-generate=/tmp/$arm/pgo" cargo build --release --locked
+              target/release/sokonanoda /tmp/config.json </tmp/arena/_build/tests/init-prelude.ndjson >/dev/null
+              "$LLVM_PROFDATA" merge -o /tmp/$arm/pgo/merged.profdata /tmp/$arm/pgo
+              test -s /tmp/$arm/pgo/merged.profdata
+              rm -rf target
+              RUSTFLAGS="-C target-cpu=native -Cprofile-use=/tmp/$arm/pgo/merged.profdata" cargo build --release --locked
+              cp target/release/sokonanoda /tmp/$arm.bin
+            )
+          done
+          sha256sum /tmp/base.bin /tmp/cand.bin | tee /tmp/binaries.sha256
+
+      - name: Full current-Arena semantic parity
+        shell: bash
+        timeout-minutes: 35
+        run: |
+          set -euxo pipefail
+          : >/tmp/semantic.tsv
+          : >/tmp/mismatches.tsv
+          while IFS= read -r f; do
+            set +e
+            /tmp/base.bin /tmp/config.json <"$f" >/tmp/base.out 2>/tmp/base.err; b=$?
+            /tmp/cand.bin /tmp/config.json <"$f" >/tmp/cand.out 2>/tmp/cand.err; c=$?
+            set -e
+            if [ "$b" -ne "$c" ] || ! cmp -s /tmp/base.out /tmp/cand.out; then
+              printf 'MISMATCH\t%s\tbase=%s\tcand=%s\n' "$f" "$b" "$c" | tee -a /tmp/mismatches.tsv /tmp/semantic.tsv
+            else
+              printf 'MATCH\t%s\t%s\n' "$c" "$f" >> /tmp/semantic.tsv
+            fi
+          done </tmp/built-exports.txt
+          exports=$(wc -l </tmp/built-exports.txt)
+          mismatches=$(grep -c '^MISMATCH' /tmp/mismatches.tsv || true)
+          printf 'exports=%s semantic_mismatches=%s\n' "$exports" "$mismatches" | tee /tmp/semantic-summary.txt
+          test "$mismatches" -eq 0
+          echo FULL_CURRENT_ARENA_PARITY=PASS
+
+      - name: Matched Mathlib retired-instruction gate
+        shell: bash
+        timeout-minutes: 25
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          PERF=$(nix develop -c sh -c 'command -v perf')
+          "$PERF" --version | tee /tmp/perf-version.txt
+          export LC_ALL=C
+          f="_build/tests/mathlib.ndjson"
+          : >/tmp/instructions.tsv
+
+          for rep in 1 2 3; do
+            if [ $((rep%2)) -eq 1 ]; then order="base cand"; else order="cand base"; fi
+            for arm in $order; do
+              "$PERF" stat -x $'\t' -e instructions -o /tmp/perf.txt --                 /tmp/$arm.bin /tmp/config.json <"$f" >/dev/null 2>/dev/null
+              python3 - "$arm" "$rep" /tmp/perf.txt <<'PY' >>/tmp/instructions.tsv
+          import sys
+          arm,rep,path=sys.argv[1:]
+          value=None
+          for line in open(path):
+              parts=line.rstrip("\n").split("\t")
+              if len(parts)>=3 and parts[2].strip().startswith("instructions"):
+                  raw=parts[0].strip().replace(",","")
+                  if raw and raw not in ("<not counted>","<not supported>"):
+                      value=int(float(raw))
+                      break
+          if value is None:
+              raise SystemExit("instructions counter unavailable")
+          print(f"{arm}\t{rep}\t{value}")
+          PY
+            done
+          done
+
+          python3 - <<'PY' | tee /tmp/scorecard.txt
+          from collections import defaultdict
+          from statistics import median
+          rows=defaultdict(list)
+          for line in open('/tmp/instructions.tsv'):
+              arm,rep,n=line.rstrip().split('\t')
+              rows[arm].append(int(n))
+          base=median(rows['base']); cand=median(rows['cand'])
+          gap=(cand/base-1)*100
+          print('base_runs='+repr(rows['base']))
+          print('cand_runs='+repr(rows['cand']))
+          print(f'BASE_MEDIAN_INSTRUCTIONS={int(base)}')
+          print(f'CAND_MEDIAN_INSTRUCTIONS={int(cand)}')
+          print(f'CAND_VS_BASE_INSTRUCTION_GAP_PERCENT={gap:.4f}')
+          print('DECISION=' + ('PROMOTE' if cand < base else 'REJECT'))
+          if not cand < base:
+              raise SystemExit('candidate does not beat baseline by retired instructions')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash2-whnf-nostore-final-promotion-v1
+          path: |
+            /tmp/provenance.tsv
+            /tmp/export-summary.txt
+            /tmp/built-exports.txt
+            /tmp/semantic.tsv
+            /tmp/mismatches.tsv
+            /tmp/semantic-summary.txt
+            /tmp/instructions.tsv
+            /tmp/scorecard.txt
+            /tmp/binaries.sha256
+            /tmp/perf-version.txt
+          if-no-files-found: warn
