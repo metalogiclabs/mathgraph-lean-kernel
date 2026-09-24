@@ -1,4 +1,4 @@
-use crate::env::{Declar, ReducibilityHint};
+use crate::env::{FutureAuthority, ReducibilityHint};
 use crate::relevance::{app_prefix_len, Sig, MAX_TRACKED};
 use crate::tc::TypeChecker;
 use crate::util::{ExprPtr, LevelPtr, LevelsPtr, NamePtr};
@@ -480,8 +480,8 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
     fn iota_or_self(&mut self, depth: u32, v: V<'t>) -> V<'t> { self.iota_value(depth, v).unwrap_or(v) }
 
     fn unfold_hint(&mut self, name: NamePtr<'t>) -> ReducibilityHint {
-        match self.env.get_declar(&name) {
-            Some(Declar::Definition { hint, .. }) => *hint,
+        match self.env.future_authority(&name) {
+            Some(FutureAuthority::Reducible { hint, .. }) => hint,
             _ => ReducibilityHint::Opaque,
         }
     }
