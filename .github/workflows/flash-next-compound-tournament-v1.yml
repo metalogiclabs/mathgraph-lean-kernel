@@ -1,0 +1,209 @@
+name: Flash next compound tournament v1
+
+on:
+  push:
+    branches: [flash-next-compound-tournament-v1]
+    paths:
+      - .github/workflows/flash-next-compound-tournament-v1.yml
+  workflow_dispatch:
+
+concurrency:
+  group: flash-next-compound-tournament-v1
+  cancel-in-progress: true
+
+env:
+  ARENA_SHA: 95496f5376b089dfd5889d88c73e390a9d98653d
+  BASE_SHA: 78c7502bac8a5ba000057b3f083bc0595ac65750
+
+jobs:
+  corpus:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: cachix/install-nix-action@v31
+      - name: Build shared current-Arena screen corpus
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q "$ARENA_SHA"
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test mathlib
+          mkdir -p /tmp/corpus/corner-cases
+          cp _build/tests/mathlib.ndjson /tmp/corpus/mathlib.ndjson
+          : >/tmp/corpus/corners.tsv
+          while IFS= read -r y; do
+            t=${y#tests/}; t=${t%.yaml}
+            nix develop -c ./lka.py build-test "$t" >/dev/null
+            outcome=$(awk '/^outcome:/ {print $2; exit}' "$y")
+            mkdir -p "/tmp/corpus/$(dirname "$t")"
+            cp "_build/tests/$t.ndjson" "/tmp/corpus/$t.ndjson"
+            printf '%s\t%s\t%s\n' "$t" "$outcome" "$t.ndjson" >>/tmp/corpus/corners.tsv
+          done < <(find tests/corner-cases -type f -name '*.yaml' | sort)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flash-next-corpus
+          path: /tmp/corpus
+
+  arm:
+    needs: [corpus]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {name: base, whnf0: false, nostore: false, scheduler128: false}
+          - {name: whnf0, whnf0: true, nostore: false, scheduler128: false}
+          - {name: nostore, whnf0: false, nostore: true, scheduler128: false}
+          - {name: scheduler128, whnf0: false, nostore: false, scheduler128: true}
+          - {name: whnf0-nostore, whnf0: true, nostore: true, scheduler128: false}
+          - {name: whnf0-scheduler128, whnf0: true, nostore: false, scheduler128: true}
+          - {name: scheduler128-nostore, whnf0: false, nostore: true, scheduler128: true}
+          - {name: whnf0-scheduler128-nostore, whnf0: true, nostore: true, scheduler128: true}
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/download-artifact@v4
+        with:
+          name: flash-next-corpus
+          path: /tmp/corpus
+      - name: Materialize exact Flash arm
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git worktree add --detach /tmp/src "$BASE_SHA"
+          python3 - <<'PY'
+          from pathlib import Path
+          whnf0 = "${{ matrix.whnf0 }}" == "true"
+          nostore = "${{ matrix.nostore }}" == "true"
+          scheduler128 = "${{ matrix.scheduler128 }}" == "true"
+
+          ep=Path("/tmp/src/src/eval.rs")
+          es=ep.read_text()
+          if whnf0:
+              old="const WHNF_ADMIT_THRESHOLD: u8 = 2;"
+              assert es.count(old)==1
+              es=es.replace(old,"const WHNF_ADMIT_THRESHOLD: u8 = 0;",1)
+          if nostore:
+              old="        self.note_whnf(depth, v, result, steps);\n"
+              assert es.count(old)==2, es.count(old)
+              es=es.replace(old,"")
+          ep.write_text(es)
+
+          tp=Path("/tmp/src/src/tc.rs")
+          ts=tp.read_text()
+          if scheduler128:
+              old="const CHUNK_SIZE: usize = 64;"
+              assert ts.count(old)==1
+              ts=ts.replace(old,"const CHUNK_SIZE: usize = 128;",1)
+          tp.write_text(ts)
+          PY
+
+          cd /tmp/src
+          RUSTFLAGS='-C target-cpu=native' cargo build --release --locked
+          cp target/release/sokonanoda /tmp/candidate.bin
+          sha256sum /tmp/candidate.bin | tee /tmp/binary.sha256
+          stat -c '%s' /tmp/candidate.bin >/tmp/binary.bytes
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2,"print_success_message":false}
+          EOF
+
+      - name: Protected corner-case separator
+        shell: bash
+        run: |
+          set -euxo pipefail
+          wrong=0; decline=0; total=0
+          while IFS=$'\t' read -r test outcome rel; do
+            total=$((total+1))
+            set +e
+            /tmp/candidate.bin /tmp/config.json <"/tmp/corpus/$rel" >/tmp/out 2>/tmp/err
+            rc=$?
+            set -e
+            case "$outcome:$rc" in
+              accept:0|reject:1|either:0|either:1) ;;
+              *:2) decline=$((decline+1)) ;;
+              *) wrong=$((wrong+1)) ;;
+            esac
+          done </tmp/corpus/corners.tsv
+          printf 'total=%s wrong=%s decline=%s\n' "$total" "$wrong" "$decline" | tee /tmp/corner-summary.txt
+          test "$wrong" -eq 0
+          test "$decline" -eq 0
+
+      - name: Three-replay Mathlib wall CPU screen
+        shell: bash
+        run: |
+          set -euxo pipefail
+          : >/tmp/runs.tsv
+          for rep in 1 2 3; do
+            /usr/bin/time -f '%e\t%U\t%S\t%M' -o /tmp/time \
+              /tmp/candidate.bin /tmp/config.json </tmp/corpus/mathlib.ndjson \
+              >/tmp/mathlib.out 2>/tmp/mathlib.err
+            read -r wall user sys rss </tmp/time
+            printf '%s\t%s\t%s\t%s\t%s\n' "$rep" "$wall" "$user" "$sys" "$rss" | tee -a /tmp/runs.tsv
+          done
+          python3 - <<'PY' | tee /tmp/result.json
+          import json,statistics
+          from pathlib import Path
+          rows=[]
+          for line in Path("/tmp/runs.tsv").read_text().splitlines():
+              rep,w,u,s,r=line.split("\t")
+              rows.append(dict(rep=int(rep),wall=float(w),cpu=float(u)+float(s),rss=int(r)))
+          print(json.dumps({
+            "name":"${{ matrix.name }}",
+            "whnf0":${{ matrix.whnf0 }},
+            "nostore":${{ matrix.nostore }},
+            "scheduler128":${{ matrix.scheduler128 }},
+            "wall_seconds":statistics.median(x["wall"] for x in rows),
+            "cpu_seconds":statistics.median(x["cpu"] for x in rows),
+            "max_rss_kb":statistics.median(x["rss"] for x in rows),
+            "binary_bytes":int(Path("/tmp/binary.bytes").read_text()),
+            "runs":rows
+          },indent=2,sort_keys=True))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-next-${{ matrix.name }}
+          path: |
+            /tmp/result.json
+            /tmp/corner-summary.txt
+            /tmp/binary.sha256
+            /tmp/runs.tsv
+          if-no-files-found: warn
+
+  rank:
+    needs: [arm]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: flash-next-*
+          path: /tmp/results
+      - name: Rank compatible compositions
+        shell: bash
+        run: |
+          python3 - <<'PY' | tee /tmp/summary.txt
+          import json
+          from pathlib import Path
+          rows=[json.loads(p.read_text()) for p in Path("/tmp/results").rglob("result.json")]
+          rows.sort(key=lambda r:(r["wall_seconds"],r["cpu_seconds"]))
+          base=next(r for r in rows if r["name"]=="base")
+          print("FLASH_NEXT_COMPOUND_TOURNAMENT_V1=WALL_FALLBACK")
+          for i,r in enumerate(rows,1):
+              wall_gain=(1-r["wall_seconds"]/base["wall_seconds"])*100
+              cpu_gain=(1-r["cpu_seconds"]/base["cpu_seconds"])*100
+              print(f'{i}. {r["name"]} wall={r["wall_seconds"]:.3f}s cpu={r["cpu_seconds"]:.3f}s wall_gain={wall_gain:.3f}% cpu_gain={cpu_gain:.3f}%')
+          winner=rows[0]
+          print("WINNER="+winner["name"])
+          print("WINNER_JSON="+json.dumps(winner,sort_keys=True))
+          Path("/tmp/ranking.json").write_text(json.dumps(rows,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flash-next-compound-tournament-v1
+          path: |
+            /tmp/summary.txt
+            /tmp/ranking.json
