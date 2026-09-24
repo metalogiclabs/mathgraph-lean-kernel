@@ -607,6 +607,9 @@ pub struct ExportFile<'p> {
     pub(crate) anon: NamePtr<'p>,
     pub(crate) zero: LevelPtr<'p>,
     pub declars: DeclarMap<'p>,
+    /// Admission-only bodies, aligned with `declars`. Runtime environments
+    /// never receive this table.
+    pub(crate) admission_values: Vec<Option<ExprPtr<'p>>>,
     pub(crate) future_authorities: Vec<FutureAuthority<'p>>,
     pub notations: NotationMap<'p>,
     pub name_cache: NameCache<'p>,
@@ -615,6 +618,12 @@ pub struct ExportFile<'p> {
 }
 
 impl<'p> ExportFile<'p> {
+    #[inline]
+    pub(crate) fn admission_value(&self, name: NamePtr<'p>) -> Option<ExprPtr<'p>> {
+        let idx = name.as_ref().decl_idx() as usize;
+        self.admission_values.get(idx).copied().flatten()
+    }
+
     pub fn new_env(&self, env_limit: EnvLimit<'p>) -> Env<'_, '_> {
         Env::new(&self.declars, &self.future_authorities, &self.notations, env_limit)
     }
