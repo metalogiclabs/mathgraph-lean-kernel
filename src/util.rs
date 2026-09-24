@@ -1,4 +1,4 @@
-use crate::env::{DeclarInfo, DeclarMap, Env, EnvLimit, FutureAuthority, NotationMap};
+use crate::env::{Declar, DeclarInfo, DeclarMap, Env, EnvLimit, FutureAuthority, NotationMap};
 use crate::expr::{
     Expr, APP_HASH, CONST_HASH, LAMBDA_HASH, LET_HASH, NAT_LIT_HASH, PI_HASH, PROJ_HASH, SORT_HASH, STRING_LIT_HASH,
     VAR_HASH,
@@ -602,6 +602,36 @@ impl<'t> ExprCache<'t> {
     }
 }
 
+fn mark_expr_reachable<'a>(root: ExprPtr<'a>, seen: &mut FxHashSet<ExprPtr<'a>>) {
+    let mut stack = vec![root];
+    while let Some(e) = stack.pop() {
+        if !seen.insert(e) {
+            continue;
+        }
+        match e.as_ref() {
+            Expr::App { fun, arg, .. } => {
+                stack.push(*fun);
+                stack.push(*arg);
+            }
+            Expr::Pi { binder_type, body, .. } | Expr::Lambda { binder_type, body, .. } => {
+                stack.push(*binder_type);
+                stack.push(*body);
+            }
+            Expr::Let { data, .. } => {
+                stack.push(data.binder_type);
+                stack.push(data.val);
+                stack.push(data.body);
+            }
+            Expr::Proj { structure, .. } => stack.push(*structure),
+            Expr::Var { .. }
+            | Expr::Sort { .. }
+            | Expr::Const { .. }
+            | Expr::StringLit { .. }
+            | Expr::NatLit { .. } => {}
+        }
+    }
+}
+
 pub struct ExportFile<'p> {
     pub(crate) dag: Dag<'p>,
     pub(crate) anon: NamePtr<'p>,
@@ -619,6 +649,96 @@ pub struct ExportFile<'p> {
 }
 
 impl<'p> ExportFile<'p> {
+    /// Exact reachability census over parsed expression nodes.
+    ///
+    /// Runtime roots are all declaration types, reducible definition bodies,
+    /// and recursor rule bodies. Admission roots are theorem/opaque bodies.
+    /// The difference `admission - runtime` is syntax that cannot affect any
+    /// future runtime kernel consequence after admission succeeds.
+    pub fn proof_liveness_census(&self) -> String {
+        let mut runtime = FxHashSet::default();
+        let mut admission = FxHashSet::default();
+        let mut theorem_admission = FxHashSet::default();
+        let mut opaque_admission = FxHashSet::default();
+        let mut theorem_roots = 0usize;
+        let mut opaque_roots = 0usize;
+
+        for (idx, d) in self.declars.values().enumerate() {
+            mark_expr_reachable(d.info().ty, &mut runtime);
+            match d {
+                Declar::Definition { val, .. } => mark_expr_reachable(*val, &mut runtime),
+                Declar::Recursor(r) => {
+                    for rule in r.rec_rules.iter() {
+                        mark_expr_reachable(rule.val, &mut runtime);
+                    }
+                }
+                _ => {}
+            }
+
+            if let Some(root) = self.admission_values.get(idx).copied().flatten() {
+                mark_expr_reachable(root, &mut admission);
+                match d {
+                    Declar::Theorem { .. } => {
+                        theorem_roots += 1;
+                        mark_expr_reachable(root, &mut theorem_admission);
+                    }
+                    Declar::Opaque { .. } => {
+                        opaque_roots += 1;
+                        mark_expr_reachable(root, &mut opaque_admission);
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        let admission_only: Vec<_> = admission.iter().copied().filter(|e| !runtime.contains(e)).collect();
+        let shared = admission.len() - admission_only.len();
+        let union = runtime.len() + admission_only.len();
+        let theorem_only = theorem_admission.iter().filter(|e| !runtime.contains(e)).count();
+        let opaque_only = opaque_admission.iter().filter(|e| !runtime.contains(e)).count();
+
+        let expr_bytes = std::mem::size_of::<Expr<'p>>();
+        let let_bytes = std::mem::size_of::<crate::expr::LetData<'p>>();
+        let admission_only_let = admission_only
+            .iter()
+            .filter(|e| matches!(e.as_ref(), Expr::Let { .. }))
+            .count();
+        let admission_only_lower_bound_bytes =
+            admission_only.len() * expr_bytes + admission_only_let * let_bytes;
+        let pct = if union == 0 {
+            0.0
+        } else {
+            100.0 * admission_only.len() as f64 / union as f64
+        };
+
+        format!(
+            concat!(
+                "NUCLEUS_PROOF_LIVENESS_CENSUS ",
+                "declarations={} theorem_roots={} opaque_roots={} ",
+                "runtime_nodes={} admission_nodes={} shared_nodes={} ",
+                "admission_only_nodes={} theorem_only_nodes={} opaque_only_nodes={} ",
+                "union_nodes={} admission_only_pct={:.6} ",
+                "expr_size={} letdata_size={} admission_only_let_nodes={} ",
+                "admission_only_lower_bound_bytes={}"
+            ),
+            self.declars.len(),
+            theorem_roots,
+            opaque_roots,
+            runtime.len(),
+            admission.len(),
+            shared,
+            admission_only.len(),
+            theorem_only,
+            opaque_only,
+            union,
+            pct,
+            expr_bytes,
+            let_bytes,
+            admission_only_let,
+            admission_only_lower_bound_bytes,
+        )
+    }
+
     #[inline]
     pub(crate) fn admission_value(&self, name: NamePtr<'p>) -> Option<ExprPtr<'p>> {
         let idx = name.as_ref().decl_idx() as usize;
