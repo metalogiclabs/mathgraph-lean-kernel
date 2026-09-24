@@ -1,0 +1,178 @@
+name: Nucleus Compound Fast Screen V2
+
+on:
+  push:
+    branches: [nucleus-whnf0-zipper-v8]
+    paths:
+      - src/eval.rs
+      - src/infer.rs
+      - .github/workflows/nucleus-compound-fast-screen-v2.yml
+  workflow_dispatch:
+
+concurrency:
+  group: nucleus-compound-fast-screen-v2
+  cancel-in-progress: true
+
+env:
+  ARENA_SHA: 95496f5376b089dfd5889d88c73e390a9d98653d
+  V6_SHA: 3dfd4937a61531b83ad60f9c6b2abb3fc57cd5df
+  V8_SHA: 873ce54e3e3c87fd5dacb1cbe1542b04cd8517f4
+
+jobs:
+  corpus:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: cachix/install-nix-action@v31
+      - name: Build shared corpus
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q "$ARENA_SHA"
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test mathlib
+          mkdir -p /tmp/corpus/corner-cases
+          cp _build/tests/mathlib.ndjson /tmp/corpus/mathlib.ndjson
+          : >/tmp/corpus/corners.tsv
+          while IFS= read -r y; do
+            t=${y#tests/}; t=${t%.yaml}
+            nix develop -c ./lka.py build-test "$t" >/dev/null
+            outcome=$(awk '/^outcome:/ {print $2; exit}' "$y")
+            cp "_build/tests/$t.ndjson" "/tmp/corpus/$t.ndjson"
+            printf '%s\t%s\t%s\n' "$t" "$outcome" "$t.ndjson" >>/tmp/corpus/corners.tsv
+          done < <(find tests/corner-cases -type f -name '*.yaml' | sort)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: compound-corpus
+          path: /tmp/corpus
+
+  arm:
+    needs: [corpus]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {name: whnf0-v6-t2, ref: 3dfd4937a61531b83ad60f9c6b2abb3fc57cd5df, threads: 2, patch_whnf0: true}
+          - {name: v8-t1, ref: 873ce54e3e3c87fd5dacb1cbe1542b04cd8517f4, threads: 1, patch_whnf0: false}
+          - {name: v8-t2, ref: 873ce54e3e3c87fd5dacb1cbe1542b04cd8517f4, threads: 2, patch_whnf0: false}
+          - {name: v8-t4, ref: 873ce54e3e3c87fd5dacb1cbe1542b04cd8517f4, threads: 4, patch_whnf0: false}
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/download-artifact@v4
+        with:
+          name: compound-corpus
+          path: /tmp/corpus
+      - name: Build and run same runner
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git worktree add --detach /tmp/src "${{ matrix.ref }}"
+          if [ "${{ matrix.patch_whnf0 }}" = "true" ]; then
+            sed -i 's/const WHNF_ADMIT_THRESHOLD: u8 = 2;/const WHNF_ADMIT_THRESHOLD: u8 = 0;/' /tmp/src/src/eval.rs
+          fi
+          cd /tmp/src
+          RUSTFLAGS='-C target-cpu=native' cargo build --release --locked
+          cp target/release/sokonanoda /tmp/candidate.bin
+          stat -c '%s' /tmp/candidate.bin >/tmp/binary.bytes
+          cat >/tmp/config.json <<EOF
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":${{ matrix.threads }},"print_success_message":false}
+          EOF
+
+          wrong=0; decline=0; total=0
+          while IFS=$'\t' read -r test outcome rel; do
+            total=$((total+1))
+            set +e
+            /tmp/candidate.bin /tmp/config.json <"/tmp/corpus/$rel" >/tmp/out 2>/tmp/err
+            rc=$?
+            set -e
+            case "$outcome:$rc" in
+              accept:0|reject:1|either:0|either:1) ;;
+              *:2) decline=$((decline+1)) ;;
+              *) wrong=$((wrong+1)) ;;
+            esac
+          done </tmp/corpus/corners.tsv
+          test "$wrong" -eq 0
+          test "$decline" -eq 0
+
+          sudo sysctl -w kernel.perf_event_paranoid=-1 >/tmp/perf-sysctl.txt 2>&1 || true
+          for rep in 1 2; do
+            set +e
+            perf stat -j -o "/tmp/rep${rep}.perf" -e instructions:u -e task-clock --               /usr/bin/time -f 'real_seconds=%e\nuser_seconds=%U\nsys_seconds=%S\nmax_rss_kb=%M'               -o "/tmp/rep${rep}.time"               /tmp/candidate.bin /tmp/config.json </tmp/corpus/mathlib.ndjson               >/tmp/rep${rep}.out 2>/tmp/rep${rep}.err
+            rc=$?
+            set -e
+            test "$rc" -eq 0
+          done
+
+          python3 - <<'PY' | tee /tmp/result.json
+          import json,statistics
+          from pathlib import Path
+          def rd(rep):
+              ins=0; task=0.0; t={}
+              for line in Path(f"/tmp/rep{rep}.perf").read_text(errors="replace").splitlines():
+                  try:d=json.loads(line)
+                  except:continue
+                  ev=str(d.get("event","")).split(":")[0]
+                  try:v=float(str(d.get("counter-value","0")).replace(",",""))
+                  except:v=0
+                  if ev=="instructions":ins=int(v)
+                  elif ev=="task-clock":task=v
+              for line in Path(f"/tmp/rep{rep}.time").read_text().splitlines():
+                  if "=" in line:
+                      k,v=line.split("=",1); t[k]=float(v)
+              return {"instructions":ins,"task_ms":task,**t}
+          runs=[rd(1),rd(2)]
+          def med(k):
+              xs=[r.get(k,0) for r in runs if r.get(k,0)>0]
+              return statistics.median(xs) if xs else 0
+          ins=med("instructions")
+          cpu=med("task_ms")/1000 if med("task_ms") else med("user_seconds")+med("sys_seconds")
+          print(json.dumps({
+            "name":"${{ matrix.name }}",
+            "threads":${{ matrix.threads }},
+            "instructions":int(ins),
+            "pmu_available":bool(ins),
+            "wall_seconds":med("real_seconds"),
+            "cpu_seconds":cpu,
+            "max_rss_kb":med("max_rss_kb"),
+            "binary_bytes":int(Path("/tmp/binary.bytes").read_text()),
+            "runs":runs
+          },indent=2,sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: compound-${{ matrix.name }}
+          path: /tmp/result.json
+
+  rank:
+    needs: [arm]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: compound-*
+          path: /tmp/results
+      - name: Rank
+        shell: bash
+        run: |
+          python3 - <<'PY' | tee /tmp/summary.txt
+          import json
+          from pathlib import Path
+          rows=[json.loads(p.read_text()) for p in Path("/tmp/results").rglob("result.json")]
+          exact=rows and all(r["pmu_available"] for r in rows)
+          rows.sort(key=(lambda r:(r["instructions"],r["wall_seconds"])) if exact else (lambda r:(r["wall_seconds"],r["cpu_seconds"])))
+          print("NUCLEUS_COMPOUND_FAST_SCREEN_V2="+("PMU" if exact else "WALL_FALLBACK"))
+          for i,r in enumerate(rows,1):
+              print(f'{i}. {r["name"]} instr={r["instructions"]} wall={r["wall_seconds"]:.3f}s cpu={r["cpu_seconds"]:.3f}s rss={r["max_rss_kb"]:.0f}KB bytes={r["binary_bytes"]}')
+          Path("/tmp/ranking.json").write_text(json.dumps(rows,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nucleus-compound-fast-screen-v2
+          path: |
+            /tmp/summary.txt
+            /tmp/ranking.json
