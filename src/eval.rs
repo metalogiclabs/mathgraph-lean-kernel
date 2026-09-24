@@ -584,7 +584,7 @@ fn select_ranks(sub: u64, sup: u64) -> u64 {
 #[inline]
 fn mix(a: u128, b: u128) -> u128 { (a ^ b).wrapping_mul(0x9E37_79B9_7F4A_7C15_BF58_476D_1CE4_E5B9).rotate_left(47) }
 
-const WHNF_ADMIT_THRESHOLD: u8 = 2;
+const WHNF_ADMIT_THRESHOLD: u8 = 0;
 
 const FAIL_CLOSURE: u8 = 1;
 const FAIL_DEPTH: u8 = 7;
