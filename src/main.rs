@@ -43,6 +43,9 @@ fn use_config(config_path: &Path) -> Result<Option<String>, Box<dyn Error>> {
     let cfg = Config::try_from(config_path)?;
     let global_arena = Arena::new();
     let (export_file, skipped_axioms) = cfg.to_export_file(global_arena.as_arena_ref())?;
+    if std::env::var_os("NUCLEUS_PROOF_LIVENESS_CENSUS").is_some() {
+        eprintln!("{}", export_file.proof_liveness_census());
+    }
     if export_file.config.parse_only {
         return Ok(Some(format!("Parsed {} declarations", export_file.declars.len())));
     }
