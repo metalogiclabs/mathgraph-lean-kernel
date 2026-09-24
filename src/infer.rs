@@ -260,6 +260,40 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         }
     }
 
+    /// Check only the semantic distinctions demanded by an expected type.
+    ///
+    /// The lambda/Pi rule is equivalent to the existing infer-Pi-then-convert
+    /// path, but avoids materializing the intermediate inferred Pi tower.
+    /// Every other shape falls back to the complete existing checker.
+    fn check_against_v(&mut self, depth: u32, env: E<'t>, ctx: C<'t>, e: ExprPtr<'t>, expected: V<'t>) {
+        if let Lambda { binder_type, body, .. } = self.ctx.read_expr(e) {
+            let expected_f = match expected {
+                Value::Pi { .. } => expected,
+                _ => self.force_all(depth, expected),
+            };
+            if let Value::Pi { domain, body: expected_body, .. } = expected_f {
+                // Preserve all declaration-scope and well-formedness checks on
+                // the explicit binder annotation.
+                self.infer_sort_of_v(Check, depth, env, ctx, binder_type);
+                let dom = self.arg_value(depth, env, binder_type);
+                assert!(self.conv_types_at(depth, dom, domain), "lambda binder def_eq failed");
+
+                // This mirrors Pi conversion: once domains are convertible,
+                // compare/check both codomains under the same fresh variable.
+                let fresh = self.mk_bvar_hc(depth, dom);
+                let env2 = self.env_extend(env, fresh);
+                let ctx2 = value::ctx_extend(self.arena, ctx, dom);
+                let expected_body_ty =
+                    self.apply_closure(depth + 1, expected_body, fresh, Some(dom));
+                self.check_against_v(depth + 1, env2, ctx2, body, expected_body_ty);
+                return;
+            }
+        }
+
+        let actual = self.infer_value(Check, depth, env, ctx, e);
+        assert!(self.def_eq_at(depth, actual, expected), "expected-type def_eq failed");
+    }
+
     pub(crate) fn check_declar_info_v(&mut self, d: &Declar<'t>) {
         let info = d.info();
         assert!(self.ctx.no_dupes_all_params(info.uparams), "duplicate universe parameters in declaration");
@@ -276,8 +310,14 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         self.check_declar_info_v(d);
         let empty_env = self.empty_env();
         let empty_ctx = self.empty_ctx();
-        let val_ty = self.infer_value(Check, 0, empty_env, empty_ctx, val);
         let declared = self.eval(0, empty_env, d.info().ty);
+
+        if matches!(d, Declar::Theorem { .. }) {
+            self.check_against_v(0, empty_env, empty_ctx, val, declared);
+            return;
+        }
+
+        let val_ty = self.infer_value(Check, 0, empty_env, empty_ctx, val);
         assert!(self.def_eq_at(0, val_ty, declared), "def_eq failed");
     }
 }
