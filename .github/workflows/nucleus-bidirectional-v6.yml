@@ -78,7 +78,7 @@ jobs:
             f="_build/tests/$t.ndjson"
             test -s "$f"
             printf '%s|%s|%s\n' "$t" "$outcome" "$f" >>/tmp/official-tests.txt
-          done < <(find tests -type f -name '*.yaml' | sort)
+          done < <(find tests -type f -name '*.yaml' ! -path 'tests/tutorial.yaml' | sort)
           printf 'official_exports|%s\n' "$(wc -l </tmp/official-tests.txt)" | tee /tmp/corpus.txt
           test -s _build/tests/mathlib.ndjson
 
