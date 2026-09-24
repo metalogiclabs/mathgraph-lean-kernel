@@ -840,10 +840,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         if let Some(cached) = self.tc_cache.const_head_type_cache.get(&(name, levels)) {
             return cached;
         }
-        let info = match self.env.get_declar(&name) {
-            Some(d) => *d.info(),
-            None => panic!("const_head_type: unknown const {:?}", name),
-        };
+        let info = self.env.get_info(&name).unwrap_or_else(|| panic!("const_head_type: unknown const {:?}", name));
         let v = self.eval_inst(info.ty, info.uparams, levels);
         self.tc_cache.const_head_type_cache.insert((name, levels), v);
         v
