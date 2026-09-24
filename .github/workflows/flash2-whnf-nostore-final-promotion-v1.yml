@@ -83,6 +83,7 @@ jobs:
         timeout-minutes: 35
         run: |
           set -euxo pipefail
+          cd /tmp/arena
           : >/tmp/semantic.tsv
           : >/tmp/mismatches.tsv
           while IFS= read -r f; do
