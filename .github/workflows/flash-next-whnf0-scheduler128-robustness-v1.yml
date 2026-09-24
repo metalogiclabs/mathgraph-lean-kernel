@@ -1,0 +1,200 @@
+name: Flash WHNF0 scheduler128 fresh-runner robustness v1
+
+on:
+  push:
+    branches:
+      - flash-next-whnf0-scheduler128-v1
+    paths:
+      - .github/workflows/flash-next-whnf0-scheduler128-robustness-v1.yml
+  workflow_dispatch:
+
+concurrency:
+  group: flash-next-whnf0-scheduler128-robustness-v1
+  cancel-in-progress: true
+
+env:
+  BASE_SHA: 78c7502bac8a5ba000057b3f083bc0595ac65750
+  CAND_SHA: da95f98194a28c3fd3b89965cb4279af57832487
+  ARENA_SHA: 95496f5376b089dfd5889d88c73e390a9d98653d
+
+jobs:
+  fresh-runner:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        runner_id: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Freeze exact lineage
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git diff --quiet "$CAND_SHA" "$GITHUB_SHA" -- src Cargo.toml Cargo.lock
+          git worktree add --detach /tmp/base "$BASE_SHA"
+          git worktree add --detach /tmp/cand "$CAND_SHA"
+          printf 'runner_id\t%s\nbaseline\t%s\ncandidate\t%s\narena\t%s\nworkflow_head\t%s\n' \
+            "${{ matrix.runner_id }}" "$BASE_SHA" "$CAND_SHA" "$ARENA_SHA" "$GITHUB_SHA" \
+            | tee /tmp/provenance.tsv
+
+      - name: Build selected current-Arena workloads
+        shell: bash
+        timeout-minutes: 90
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q "$ARENA_SHA"
+          cd /tmp/arena
+          for t in init-prelude mathlib cedar cslib init perf/grind-ring-5; do
+            nix develop -c ./lka.py build-test "$t"
+            test -s "_build/tests/$t.ndjson"
+          done
+
+      - name: Build matched exact-PGO binaries
+        shell: bash
+        timeout-minutes: 50
+        run: |
+          set -euxo pipefail
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2,"print_success_message":false}
+          EOF
+          LLVM_PROFDATA=$(nix shell nixpkgs#llvmPackages_21.llvm -c sh -c 'command -v llvm-profdata')
+          for arm in base cand; do
+            rm -rf /tmp/$arm/target /tmp/$arm/pgo
+            mkdir -p /tmp/$arm/pgo
+            (
+              cd /tmp/$arm
+              RUSTFLAGS="-C target-cpu=native -Cprofile-generate=/tmp/$arm/pgo" cargo build --release --locked
+              target/release/sokonanoda /tmp/config.json </tmp/arena/_build/tests/init-prelude.ndjson >/dev/null
+              "$LLVM_PROFDATA" merge -o /tmp/$arm/pgo/merged.profdata /tmp/$arm/pgo
+              test -s /tmp/$arm/pgo/merged.profdata
+              rm -rf target
+              RUSTFLAGS="-C target-cpu=native -Cprofile-use=/tmp/$arm/pgo/merged.profdata" cargo build --release --locked
+              cp target/release/sokonanoda /tmp/$arm.bin
+            )
+          done
+          sha256sum /tmp/base.bin /tmp/cand.bin | tee /tmp/binaries.sha256
+
+      - name: Exact selected-workload parity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          : >/tmp/parity.tsv
+          mismatches=0
+          for t in mathlib cedar cslib init perf/grind-ring-5; do
+            f="_build/tests/$t.ndjson"
+            set +e
+            /tmp/base.bin /tmp/config.json <"$f" >/tmp/base.out 2>/tmp/base.err; b=$?
+            /tmp/cand.bin /tmp/config.json <"$f" >/tmp/cand.out 2>/tmp/cand.err; c=$?
+            set -e
+            if [ "$b" -ne "$c" ] || ! cmp -s /tmp/base.out /tmp/cand.out; then
+              printf 'MISMATCH\t%s\tbase=%s\tcand=%s\n' "$t" "$b" "$c" | tee -a /tmp/parity.tsv
+              mismatches=$((mismatches+1))
+            else
+              printf 'MATCH\t%s\t%s\n' "$t" "$c" | tee -a /tmp/parity.tsv
+            fi
+          done
+          printf 'mismatches=%s\n' "$mismatches" | tee /tmp/parity-summary.txt
+          test "$mismatches" -eq 0
+
+      - name: Paired alternating performance
+        shell: bash
+        timeout-minutes: 50
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          : >/tmp/perf.tsv
+          for t in mathlib cedar cslib init perf/grind-ring-5; do
+            reps=2
+            [ "$t" = mathlib ] && reps=3
+            for rep in $(seq 1 "$reps"); do
+              if [ $((rep%2)) -eq 1 ]; then order="base cand"; else order="cand base"; fi
+              for arm in $order; do
+                /usr/bin/time -f '%e\t%U\t%S\t%M' -o /tmp/time \
+                  /tmp/$arm.bin /tmp/config.json <"_build/tests/$t.ndjson" \
+                  >/tmp/$arm.out 2>/tmp/$arm.err
+                read -r wall user sys rss </tmp/time
+                printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+                  "$t" "$arm" "$rep" "$wall" "$user" "$sys" "$rss" | tee -a /tmp/perf.tsv
+              done
+            done
+          done
+
+          python3 - <<'PY' | tee /tmp/scorecard.txt
+          from collections import defaultdict
+          from statistics import median
+
+          rows=defaultdict(lambda: defaultdict(list))
+          for line in open('/tmp/perf.tsv'):
+              t,arm,rep,w,u,s,r=line.rstrip().split('\t')
+              rows[t][arm].append((float(w),float(u)+float(s),int(r)))
+
+          print("FLASH_FRESH_RUNNER_ROBUSTNESS_V1")
+          fatal=False
+          for t in ("mathlib","cedar","cslib","init","perf/grind-ring-5"):
+              bw=median(x[0] for x in rows[t]["base"])
+              cw=median(x[0] for x in rows[t]["cand"])
+              bc=median(x[1] for x in rows[t]["base"])
+              cc=median(x[1] for x in rows[t]["cand"])
+              wall_ratio=cw/bw
+              cpu_ratio=cc/bc
+              print(f"{t}\tbase_wall={bw:.6f}\tcand_wall={cw:.6f}\twall_ratio={wall_ratio:.6f}\tbase_cpu={bc:.6f}\tcand_cpu={cc:.6f}\tcpu_ratio={cpu_ratio:.6f}")
+              if t=="mathlib":
+                  if not (cw < bw and cc < bc):
+                      fatal=True
+                      print("MATHLIB_PAIRED_WIN=NO")
+                  else:
+                      print("MATHLIB_PAIRED_WIN=YES")
+              elif wall_ratio > (1/0.90):
+                  fatal=True
+                  print(f"CATASTROPHIC_SECONDARY={t}")
+
+          print("ROBUSTNESS_DECISION=" + ("PASS" if not fatal else "FAIL"))
+          raise SystemExit(1 if fatal else 0)
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-whnf0-scheduler128-robustness-runner-${{ matrix.runner_id }}
+          path: |
+            /tmp/provenance.tsv
+            /tmp/binaries.sha256
+            /tmp/parity.tsv
+            /tmp/parity-summary.txt
+            /tmp/perf.tsv
+            /tmp/scorecard.txt
+          if-no-files-found: warn
+
+  aggregate:
+    needs: [fresh-runner]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: flash-whnf0-scheduler128-robustness-runner-*
+          path: /tmp/results
+      - name: Aggregate fresh-runner verdict
+        shell: bash
+        run: |
+          set -euxo pipefail
+          find /tmp/results -name scorecard.txt -print -exec cat {} \; | tee /tmp/aggregate.txt
+          count=$(find /tmp/results -name scorecard.txt | wc -l)
+          pass=$(grep -Rhc '^ROBUSTNESS_DECISION=PASS$' /tmp/results/*/scorecard.txt | awk '{s+=$1} END{print s+0}')
+          printf 'fresh_runners=%s\npasses=%s\n' "$count" "$pass" | tee -a /tmp/aggregate.txt
+          test "$count" -eq 3
+          test "$pass" -eq 3
+          echo FRESH_RUNNER_ROBUSTNESS=PASS | tee -a /tmp/aggregate.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-whnf0-scheduler128-robustness-v1
+          path: /tmp/aggregate.txt
+          if-no-files-found: warn
