@@ -1,0 +1,157 @@
+name: Flash WHNF0 scheduler128 full qualification v1
+
+on:
+  push:
+    branches:
+      - flash-next-whnf0-scheduler128-v1
+    paths:
+      - src/**
+      - Cargo.toml
+      - Cargo.lock
+      - .github/workflows/flash-next-whnf0-scheduler128-v1.yml
+  workflow_dispatch:
+
+concurrency:
+  group: flash-next-whnf0-scheduler128-v1
+  cancel-in-progress: true
+
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Freeze exact source lineage
+        shell: bash
+        run: |
+          set -euxo pipefail
+          BASE=78c7502bac8a5ba000057b3f083bc0595ac65750
+          SOURCE_CAND=da95f98194a28c3fd3b89965cb4279af57832487
+          ARENA=95496f5376b089dfd5889d88c73e390a9d98653d
+          git diff --quiet "$SOURCE_CAND" "$GITHUB_SHA" -- src Cargo.toml Cargo.lock
+          git worktree add --detach /tmp/base "$BASE"
+          git worktree add --detach /tmp/cand "$SOURCE_CAND"
+          printf 'baseline\t%s\nsource_candidate\t%s\nworkflow_head\t%s\narena\t%s\n' \
+            "$BASE" "$SOURCE_CAND" "$GITHUB_SHA" "$ARENA" | tee /tmp/provenance.tsv
+
+      - name: Build exact current Arena exports
+        shell: bash
+        timeout-minutes: 90
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 95496f5376b089dfd5889d88c73e390a9d98653d
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test
+          find _build/tests -type f -name '*.ndjson' | sort > /tmp/built-exports.txt
+          test -s /tmp/built-exports.txt
+          printf 'exports=%s\n' "$(wc -l </tmp/built-exports.txt)" | tee /tmp/export-summary.txt
+          test -s _build/tests/mathlib.ndjson
+          test -s _build/tests/init-prelude.ndjson
+
+      - name: Build matched exact-PGO binaries
+        shell: bash
+        timeout-minutes: 50
+        run: |
+          set -euxo pipefail
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2,"print_success_message":false}
+          EOF
+          LLVM_PROFDATA=$(nix shell nixpkgs#llvmPackages_21.llvm -c sh -c 'command -v llvm-profdata')
+          for arm in base cand; do
+            rm -rf /tmp/$arm/target /tmp/$arm/pgo
+            mkdir -p /tmp/$arm/pgo
+            (
+              cd /tmp/$arm
+              RUSTFLAGS="-C target-cpu=native -Cprofile-generate=/tmp/$arm/pgo" cargo build --release --locked
+              target/release/sokonanoda /tmp/config.json </tmp/arena/_build/tests/init-prelude.ndjson >/dev/null
+              "$LLVM_PROFDATA" merge -o /tmp/$arm/pgo/merged.profdata /tmp/$arm/pgo
+              test -s /tmp/$arm/pgo/merged.profdata
+              rm -rf target
+              RUSTFLAGS="-C target-cpu=native -Cprofile-use=/tmp/$arm/pgo/merged.profdata" cargo build --release --locked
+              cp target/release/sokonanoda /tmp/$arm.bin
+            )
+          done
+          sha256sum /tmp/base.bin /tmp/cand.bin | tee /tmp/binaries.sha256
+
+      - name: Full current-Arena semantic parity
+        shell: bash
+        timeout-minutes: 45
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          : >/tmp/semantic.tsv
+          : >/tmp/mismatches.tsv
+          while IFS= read -r f; do
+            set +e
+            /tmp/base.bin /tmp/config.json <"$f" >/tmp/base.out 2>/tmp/base.err; b=$?
+            /tmp/cand.bin /tmp/config.json <"$f" >/tmp/cand.out 2>/tmp/cand.err; c=$?
+            set -e
+            if [ "$b" -ne "$c" ] || ! cmp -s /tmp/base.out /tmp/cand.out; then
+              printf 'MISMATCH\t%s\tbase=%s\tcand=%s\n' "$f" "$b" "$c" | tee -a /tmp/mismatches.tsv /tmp/semantic.tsv
+            else
+              printf 'MATCH\t%s\t%s\n' "$c" "$f" >> /tmp/semantic.tsv
+            fi
+          done </tmp/built-exports.txt
+          exports=$(wc -l </tmp/built-exports.txt)
+          mismatches=$(grep -c '^MISMATCH' /tmp/mismatches.tsv || true)
+          printf 'exports=%s semantic_mismatches=%s\n' "$exports" "$mismatches" | tee /tmp/semantic-summary.txt
+          test "$mismatches" -eq 0
+          echo FULL_CURRENT_ARENA_PARITY=PASS
+
+      - name: Matched Mathlib wall CPU confirmation
+        shell: bash
+        timeout-minutes: 35
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          : >/tmp/perf.tsv
+          for rep in 1 2 3; do
+            if [ $((rep%2)) -eq 1 ]; then order="base cand"; else order="cand base"; fi
+            for arm in $order; do
+              /usr/bin/time -f '%e\t%U\t%S\t%M' -o /tmp/time \
+                /tmp/$arm.bin /tmp/config.json <_build/tests/mathlib.ndjson \
+                >/tmp/$arm.out 2>/tmp/$arm.err
+              read -r wall user sys rss </tmp/time
+              printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$arm" "$rep" "$wall" "$user" "$sys" "$rss" | tee -a /tmp/perf.tsv
+            done
+          done
+          python3 - <<'PY' | tee /tmp/scorecard.txt
+          from collections import defaultdict
+          from statistics import median
+          rows=defaultdict(list)
+          for line in open('/tmp/perf.tsv'):
+              arm,rep,w,u,s,r=line.rstrip().split('\t')
+              rows[arm].append((float(w),float(u)+float(s),int(r)))
+          bw=median(x[0] for x in rows['base']); cw=median(x[0] for x in rows['cand'])
+          bc=median(x[1] for x in rows['base']); cc=median(x[1] for x in rows['cand'])
+          print(f'BASE_MEDIAN_WALL_S={bw:.6f}')
+          print(f'CAND_MEDIAN_WALL_S={cw:.6f}')
+          print(f'WALL_REDUCTION_PERCENT={(1-cw/bw)*100:.4f}')
+          print(f'BASE_MEDIAN_CPU_S={bc:.6f}')
+          print(f'CAND_MEDIAN_CPU_S={cc:.6f}')
+          print(f'CPU_REDUCTION_PERCENT={(1-cc/bc)*100:.4f}')
+          print('DECISION=' + ('PROMOTE_PR_CANDIDATE' if cw < bw and cc < bc else 'HOLD'))
+          if not (cw < bw and cc < bc):
+              raise SystemExit('candidate failed matched wall/CPU confirmation')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-next-whnf0-scheduler128-v1
+          path: |
+            /tmp/provenance.tsv
+            /tmp/export-summary.txt
+            /tmp/built-exports.txt
+            /tmp/semantic.tsv
+            /tmp/mismatches.tsv
+            /tmp/semantic-summary.txt
+            /tmp/perf.tsv
+            /tmp/scorecard.txt
+            /tmp/binaries.sha256
+          if-no-files-found: warn
