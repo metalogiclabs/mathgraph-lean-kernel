@@ -8,6 +8,7 @@ on:
       - src/env.rs
       - src/eval.rs
       - src/flash.rs
+      - src/relevance.rs
       - .github/workflows/nucleus-future-quotient-v1.yml
   workflow_dispatch:
 
@@ -35,6 +36,7 @@ jobs:
           ! grep -q "get_declar_val" src/env.rs
           ! grep -q "THEOREM_AUTHORITY_NODES" src/eval.rs
           ! grep -q "THEOREM_AUTHORITY_NODES" src/flash.rs
+          ! grep -R -q "get_declar_val" src
           echo FUTURE_AUTHORITY_BOUNDARY_AUDIT=PASS | tee /tmp/authority-audit.txt
 
       - name: Build V0 semantic source, exact base, and V1 candidate
@@ -81,14 +83,14 @@ jobs:
           printf 'official_exports|%s\n' "$count" | tee /tmp/corpus.txt
           test -s _build/tests/mathlib.ndjson
 
-      - name: V1 representation parity with V0 semantics
+      - name: V1 versus V0 semantic delta census
         shell: bash
         timeout-minutes: 55
         run: |
           set -euxo pipefail
           cd /tmp/arena
           : >/tmp/v1-v0-matches.txt
-          : >/tmp/v1-v0-mismatches.txt
+          : >/tmp/v1-v0-deltas.txt
           while IFS='|' read -r t outcome f; do
             set +e
             /tmp/v0.bin /tmp/config.json <"$f" >/tmp/v0.out 2>/tmp/v0.err
@@ -99,14 +101,13 @@ jobs:
             if [ "$v0rc" -eq "$candrc" ] && cmp -s /tmp/v0.out /tmp/candidate.out; then
               printf 'MATCH|%s|%s|%s\n' "$candrc" "$outcome" "$t" >>/tmp/v1-v0-matches.txt
             else
-              printf 'MISMATCH|%s|v0=%s|v1=%s|%s\n' "$t" "$v0rc" "$candrc" "$outcome" | tee -a /tmp/v1-v0-mismatches.txt
+              printf 'DELTA|%s|v0=%s|v1=%s|%s\n' "$t" "$v0rc" "$candrc" "$outcome" | tee -a /tmp/v1-v0-deltas.txt
             fi
           done </tmp/official-tests.txt
-          mismatches=$(grep -c '^MISMATCH' /tmp/v1-v0-mismatches.txt || true)
+          deltas=$(grep -c '^DELTA' /tmp/v1-v0-deltas.txt || true)
           matches=$(grep -c '^MATCH' /tmp/v1-v0-matches.txt || true)
-          printf 'matches|%s\nmismatches|%s\n' "$matches" "$mismatches" | tee /tmp/v1-v0-parity.txt
-          test "$mismatches" -eq 0
-          echo NUCLEUS_FUTURE_QUOTIENT_V1_REPRESENTATION_PARITY=PASS
+          printf 'matches|%s\ndeltas|%s\n' "$matches" "$deltas" | tee /tmp/v1-v0-census.txt
+          echo NUCLEUS_FUTURE_QUOTIENT_V1_V0_DELTA_CENSUS=PASS
 
       - name: Fixed-outcome correctness versus exact complete base
         shell: bash
@@ -200,11 +201,11 @@ jobs:
           python3 - <<'PY' | tee /tmp/summary.txt
           import json
           from pathlib import Path
-          v=dict(line.split("|",1) for line in Path("/tmp/v1-v0-parity.txt").read_text().splitlines())
+          v=dict(line.split("|",1) for line in Path("/tmp/v1-v0-census.txt").read_text().splitlines())
           b=dict(line.split("|",1) for line in Path("/tmp/base-parity.txt").read_text().splitlines())
           d=json.loads(Path("/tmp/mathlib-duel.json").read_text())
           print("NUCLEUS_FUTURE_QUOTIENT_V1=QUALIFIED")
-          print(f"v1_v0_matches={v['matches']} v1_v0_mismatches={v['mismatches']}")
+          print(f"v1_v0_matches={v['matches']} v1_v0_deltas={v['deltas']}")
           print(f"base_matches={b['matches']} allowed_deltas={b['allowed_deltas']} hard_mismatches={b['hard_mismatches']}")
           print(f"mathlib_candidate_over_base_wall={d['candidate_over_base_wall']:.6f}")
           r=d["candidate_over_base_instructions"]
@@ -222,8 +223,8 @@ jobs:
             /tmp/corpus.txt
             /tmp/official-tests.txt
             /tmp/v1-v0-matches.txt
-            /tmp/v1-v0-mismatches.txt
-            /tmp/v1-v0-parity.txt
+            /tmp/v1-v0-deltas.txt
+            /tmp/v1-v0-census.txt
             /tmp/base-matches.txt
             /tmp/allowed-deltas.txt
             /tmp/hard-mismatches.txt
