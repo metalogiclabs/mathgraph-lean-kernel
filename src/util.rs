@@ -1,4 +1,4 @@
-use crate::env::{DeclarMap, Env, EnvLimit, FutureAuthority, NotationMap};
+use crate::env::{DeclarInfo, DeclarMap, Env, EnvLimit, FutureAuthority, NotationMap};
 use crate::expr::{
     Expr, APP_HASH, CONST_HASH, LAMBDA_HASH, LET_HASH, NAT_LIT_HASH, PI_HASH, PROJ_HASH, SORT_HASH, STRING_LIT_HASH,
     VAR_HASH,
@@ -611,6 +611,7 @@ pub struct ExportFile<'p> {
     /// never receive this table.
     pub(crate) admission_values: Vec<Option<ExprPtr<'p>>>,
     pub(crate) future_authorities: Vec<FutureAuthority<'p>>,
+    pub(crate) declar_infos: Vec<DeclarInfo<'p>>,
     pub notations: NotationMap<'p>,
     pub name_cache: NameCache<'p>,
     pub config: Config,
@@ -625,7 +626,13 @@ impl<'p> ExportFile<'p> {
     }
 
     pub fn new_env(&self, env_limit: EnvLimit<'p>) -> Env<'_, '_> {
-        Env::new(&self.declars, &self.future_authorities, &self.notations, env_limit)
+        Env::new(
+            &self.declars,
+            &self.future_authorities,
+            &self.declar_infos,
+            &self.notations,
+            env_limit,
+        )
     }
 
     pub fn with_ctx<F, A>(&self, f: F) -> A
@@ -701,6 +708,7 @@ impl<'t, 'p: 't> TcCtx<'t, 'p> {
             &self.export_file.declars,
             Some(env_ext),
             &self.export_file.future_authorities,
+            &self.export_file.declar_infos,
             &self.export_file.notations,
             env_limit,
         );
