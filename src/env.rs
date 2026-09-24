@@ -54,9 +54,9 @@ pub struct RecRule<'a> {
 pub enum Declar<'a> {
     Axiom { info: DeclarInfo<'a> },
     Quot { info: DeclarInfo<'a> },
-    Theorem { info: DeclarInfo<'a>, val: ExprPtr<'a> },
+    Theorem { info: DeclarInfo<'a> },
     Definition { info: DeclarInfo<'a>, val: ExprPtr<'a>, hint: ReducibilityHint },
-    Opaque { info: DeclarInfo<'a>, val: ExprPtr<'a> },
+    Opaque { info: DeclarInfo<'a> },
     Inductive(InductiveData<'a>),
     Constructor(ConstructorData<'a>),
     Recursor(RecursorData<'a>),
