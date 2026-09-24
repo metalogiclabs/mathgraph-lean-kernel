@@ -131,8 +131,8 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
 
     fn absent_args(&mut self, name: NamePtr<'t>) -> u64 {
         let Some((_, val)) = self.env.get_reducible_value(&name) else { return 0 };
-        let Some(decl) = self.env.get_declar(&name) else { return 0 };
-        let ty = decl.info().ty;
+        let Some(info) = self.env.get_info(&name) else { return 0 };
+        let ty = info.ty;
         let mut body = val;
         let mut arity = 0u32;
         while let crate::expr::Expr::Lambda { body: inner, .. } = self.ctx.read_expr(body) {
