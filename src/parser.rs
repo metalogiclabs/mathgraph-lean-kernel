@@ -46,6 +46,10 @@ pub struct Parser<'a, R: BufRead> {
     levels_by_idx: Vec<Option<LevelPtr<'a>>>,
     exprs_by_idx: Vec<ExprEntry<'a>>,
     declars: FxIndexMap<NamePtr<'a>, Declar<'a>>,
+    /// Admission-only bodies for theorem/opaque declarations, aligned with
+    /// `declars`. These are consumed exactly once by declaration checking
+    /// and are not part of the runtime semantic environment.
+    admission_values: Vec<Option<ExprPtr<'a>>>,
     notations: FxHashMap<NamePtr<'a>, Notation<'a>>,
     config: Config,
     skipped: Vec<String>,
@@ -674,6 +678,7 @@ impl<'a, R: BufRead> Parser<'a, R> {
             levels_by_idx,
             exprs_by_idx: Vec::with_capacity(input_len / 48),
             declars: new_fx_index_map(),
+            admission_values: Vec::new(),
             notations: new_fx_hash_map(),
             config,
             skipped: Vec::new(),
@@ -837,6 +842,7 @@ impl<'a, R: BufRead> Parser<'a, R> {
             anon: self.anon,
             zero: self.zero,
             declars: self.declars,
+            admission_values: self.admission_values,
             future_authorities,
             notations: self.notations,
             name_cache,
@@ -1251,7 +1257,14 @@ impl<'a, R: BufRead> Parser<'a, R> {
         let idx = u32::try_from(self.declars.len()).expect("declaration count exceeds u32");
         assert!(idx != crate::name::NO_DECL, "declaration count exceeds u32");
         assert!(self.declars.insert(name, d).is_none());
+        self.admission_values.push(None);
+        debug_assert_eq!(self.declars.len(), self.admission_values.len());
         name.as_ref().set_decl_idx(idx);
+    }
+
+    fn add_declar_with_admission(&mut self, name: NamePtr<'a>, d: Declar<'a>, val: ExprPtr<'a>) {
+        self.add_declar(name, d);
+        *self.admission_values.last_mut().expect("missing admission slot") = Some(val);
     }
 
     #[inline]
@@ -1272,8 +1285,8 @@ impl<'a, R: BufRead> Parser<'a, R> {
         let val = self.get_expr_ptr(value);
         let uparams = self.get_uparams_ptr(uparams);
         let info = DeclarInfo { name, ty, uparams };
-        let theorem = Declar::Theorem { info, val };
-        self.add_declar(name, theorem);
+        let theorem = Declar::Theorem { info };
+        self.add_declar_with_admission(name, theorem, val);
     }
 
     fn go1_general(&mut self, line: &str) -> Result<(), Box<dyn Error>> {
@@ -1336,8 +1349,8 @@ impl<'a, R: BufRead> Parser<'a, R> {
                 let val = self.get_expr_ptr(value);
                 let uparams = self.get_uparams_ptr(&uparams);
                 let info = DeclarInfo { name, ty, uparams };
-                let definition = Declar::Opaque { info, val };
-                self.add_declar(name, definition);
+                let opaque = Declar::Opaque { info };
+                self.add_declar_with_admission(name, opaque, val);
             }
             Quot { name, ty, uparams, .. } => {
                 let name = self.get_name_ptr(name);
