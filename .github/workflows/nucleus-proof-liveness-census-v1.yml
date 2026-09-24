@@ -1,0 +1,128 @@
+name: Nucleus Proof Liveness Census V1
+
+on:
+  push:
+    branches:
+      - nucleus-proof-liveness-census-v1
+    paths:
+      - src/util.rs
+      - src/main.rs
+      - .github/workflows/nucleus-proof-liveness-census-v1.yml
+  workflow_dispatch:
+
+concurrency:
+  group: nucleus-proof-liveness-census-v1
+  cancel-in-progress: true
+
+jobs:
+  census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Audit liveness census boundary
+        shell: bash
+        run: |
+          set -euxo pipefail
+          grep -q "pub fn proof_liveness_census" src/util.rs
+          grep -q "admission_only_nodes" src/util.rs
+          grep -q "NUCLEUS_PROOF_LIVENESS_CENSUS" src/main.rs
+          echo PROOF_LIVENESS_CENSUS_AUDIT=PASS | tee /tmp/audit.txt
+
+      - name: Build census checker
+        shell: bash
+        run: |
+          set -euxo pipefail
+          RUSTFLAGS='-C target-cpu=native' cargo build --release --locked
+          cp target/release/sokonanoda /tmp/census.bin
+          sha256sum /tmp/census.bin | tee /tmp/binary.sha256
+
+      - name: Build pinned Mathlib and Init Prelude
+        shell: bash
+        timeout-minutes: 95
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 95496f5376b089dfd5889d88c73e390a9d98653d
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test init-prelude >/dev/null
+          nix develop -c ./lka.py build-test mathlib >/dev/null
+          test -s _build/tests/init-prelude.ndjson
+          test -s _build/tests/mathlib.ndjson
+          printf 'arena_source\t%s\n' 95496f5376b089dfd5889d88c73e390a9d98653d | tee /tmp/provenance.tsv
+
+      - name: Exact proof-liveness census
+        shell: bash
+        timeout-minutes: 20
+        run: |
+          set -euxo pipefail
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"parse_only":true,"print_success_message":false}
+          EOF
+          cd /tmp/arena
+          : >/tmp/census-results.txt
+          for corpus in init-prelude mathlib; do
+            NUCLEUS_PROOF_LIVENESS_CENSUS=1               /usr/bin/time -f "CENSUS_RESOURCE corpus=$corpus real_seconds=%e max_rss_kb=%M"               /tmp/census.bin /tmp/config.json               <"_build/tests/$corpus.ndjson"               >/tmp/$corpus.stdout 2>/tmp/$corpus.stderr
+            grep '^NUCLEUS_PROOF_LIVENESS_CENSUS ' /tmp/$corpus.stderr | sed "s/^/corpus=$corpus /" | tee -a /tmp/census-results.txt
+            grep '^CENSUS_RESOURCE ' /tmp/$corpus.stderr | tee -a /tmp/census-results.txt
+          done
+          test "$(grep -c '^corpus=' /tmp/census-results.txt)" -eq 2
+
+      - name: Interpret bounded memory opportunity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY' | tee /tmp/summary.txt
+          import re
+          from pathlib import Path
+
+          rows={}
+          for line in Path('/tmp/census-results.txt').read_text().splitlines():
+              if not line.startswith('corpus='):
+                  continue
+              corpus=line.split()[0].split('=',1)[1]
+              vals=dict(re.findall(r'(\w+)=([^\s]+)', line))
+              rows[corpus]=vals
+
+          print('NUCLEUS_PROOF_LIVENESS_CENSUS_V1=SEALED')
+          for corpus in ('init-prelude','mathlib'):
+              d=rows[corpus]
+              for k in (
+                  'declarations','theorem_roots','opaque_roots',
+                  'runtime_nodes','admission_nodes','shared_nodes',
+                  'admission_only_nodes','theorem_only_nodes','opaque_only_nodes',
+                  'union_nodes','admission_only_pct',
+                  'admission_only_lower_bound_bytes'
+              ):
+                  print(f'{corpus}_{k}={d[k]}')
+          m=rows['mathlib']
+          only=int(m['admission_only_nodes'])
+          union=int(m['union_nodes'])
+          lower=int(m['admission_only_lower_bound_bytes'])
+          pct=float(m['admission_only_pct'])
+          print(f'mathlib_admission_only_fraction={only/union if union else 0:.9f}')
+          print(f'mathlib_admission_only_lower_bound_mib={lower/(1024*1024):.3f}')
+          if only == 0:
+              print('INTERPRETATION=NO_PHYSICAL_PROOF_RESIDUAL')
+          else:
+              print('INTERPRETATION=PHYSICAL_PROOF_RESIDUAL_PRESENT')
+              print('NOTE=This is a lower bound over Expr+LetData nodes only; interner/hash-table/arena/literal overhead is excluded.')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nucleus-proof-liveness-census-v1
+          path: |
+            /tmp/audit.txt
+            /tmp/binary.sha256
+            /tmp/provenance.tsv
+            /tmp/census-results.txt
+            /tmp/summary.txt
+            /tmp/init-prelude.stderr
+            /tmp/mathlib.stderr
+          if-no-files-found: warn
