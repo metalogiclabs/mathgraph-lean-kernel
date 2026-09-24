@@ -827,11 +827,17 @@ impl<'a, R: BufRead> Parser<'a, R> {
 
     fn finish(self) -> Result<(crate::util::ExportFile<'a>, Vec<String>), Box<dyn Error>> {
         let name_cache = self.dag.mk_name_cache(self.anon);
+        // Compile source declarations once into the only authority future
+        // reduction is allowed to observe. This is deliberately parallel to
+        // the source declaration table so admission data remains available
+        // without remaining part of runtime semantic state.
+        let future_authorities = self.declars.values().map(Declar::future_authority).collect();
         let export_file = crate::util::ExportFile {
             dag: self.dag,
             anon: self.anon,
             zero: self.zero,
             declars: self.declars,
+            future_authorities,
             notations: self.notations,
             name_cache,
             config: self.config,
