@@ -1,0 +1,252 @@
+name: Nucleus Demand-Driven Check V4 Qualification
+
+on:
+  push:
+    branches:
+      - nucleus-demand-check-v4
+    paths:
+      - src/infer.rs
+      - src/env.rs
+      - src/parser.rs
+      - src/util.rs
+      - src/tc.rs
+      - src/relevance.rs
+      - .github/workflows/nucleus-demand-check-v4.yml
+  workflow_dispatch:
+
+concurrency:
+  group: nucleus-demand-check-v4
+  cancel-in-progress: true
+
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Audit demand-driven theorem admission
+        shell: bash
+        run: |
+          set -euxo pipefail
+          grep -q "fn check_against_v" src/infer.rs
+          grep -q "if matches!(d, Declar::Theorem" src/infer.rs
+          grep -q "lambda binder def_eq failed" src/infer.rs
+          grep -q "let actual = self.infer_value(Check" src/infer.rs
+          grep -q "expected-type def_eq failed" src/infer.rs
+          echo DEMAND_DRIVEN_THEOREM_CHECK_AUDIT=PASS | tee /tmp/demand-audit.txt
+
+      - name: Build exact base, V3, and V4
+        shell: bash
+        run: |
+          set -euxo pipefail
+          BASE=78c7502bac8a5ba000057b3f083bc0595ac65750
+          V3=399b62b4a452f53a4ee5b0e51efde079ff2fdccc
+          CAND="$GITHUB_SHA"
+          git worktree add --detach /tmp/base "$BASE"
+          git worktree add --detach /tmp/v3 "$V3"
+          git worktree add --detach /tmp/candidate "$CAND"
+          for arm in base v3 candidate; do
+            (cd /tmp/$arm && RUSTFLAGS='-C target-cpu=native' cargo build --release --locked)
+            cp /tmp/$arm/target/release/sokonanoda /tmp/$arm.bin
+          done
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2,"print_success_message":false}
+          EOF
+          sha256sum /tmp/base.bin /tmp/v3.bin /tmp/candidate.bin | tee /tmp/binaries.sha256
+          printf 'base_source|%s\nv3_source|%s\ncandidate_source|%s\narena_source|%s\nthreads|2\narchitecture|theorem admission checks only demanded lambda/Pi distinctions before exact fallback\n' \
+            "$BASE" "$V3" "$CAND" "95496f5376b089dfd5889d88c73e390a9d98653d" | tee /tmp/provenance.txt
+
+      - name: Build current official Arena corpus
+        shell: bash
+        timeout-minutes: 90
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 95496f5376b089dfd5889d88c73e390a9d98653d
+          cd /tmp/arena
+          : >/tmp/official-tests.txt
+          while IFS= read -r y; do
+            t=${y#tests/}
+            t=${t%.yaml}
+            nix develop -c ./lka.py build-test "$t" >/dev/null
+            outcome=$(awk '/^outcome:/ {print $2; exit}' "$y")
+            test -n "$outcome"
+            f="_build/tests/$t.ndjson"
+            test -s "$f"
+            printf '%s|%s|%s\n' "$t" "$outcome" "$f" >>/tmp/official-tests.txt
+          done < <(find tests -type f -name '*.yaml' | sort)
+          printf 'official_exports|%s\n' "$(wc -l </tmp/official-tests.txt)" | tee /tmp/corpus.txt
+          test -s _build/tests/mathlib.ndjson
+
+      - name: V4 exact semantic parity with V3
+        shell: bash
+        timeout-minutes: 55
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          : >/tmp/v4-v3-matches.txt
+          : >/tmp/v4-v3-mismatches.txt
+          while IFS='|' read -r t outcome f; do
+            set +e
+            /tmp/v3.bin /tmp/config.json <"$f" >/tmp/v3.out 2>/tmp/v3.err
+            v3rc=$?
+            /tmp/candidate.bin /tmp/config.json <"$f" >/tmp/candidate.out 2>/tmp/candidate.err
+            candrc=$?
+            set -e
+            if [ "$v3rc" -eq "$candrc" ] && cmp -s /tmp/v3.out /tmp/candidate.out; then
+              printf 'MATCH|%s|%s|%s\n' "$candrc" "$outcome" "$t" >>/tmp/v4-v3-matches.txt
+            else
+              printf 'MISMATCH|%s|v3=%s|v4=%s|%s\n' "$t" "$v3rc" "$candrc" "$outcome" | tee -a /tmp/v4-v3-mismatches.txt
+            fi
+          done </tmp/official-tests.txt
+          mismatches=$(grep -c '^MISMATCH' /tmp/v4-v3-mismatches.txt || true)
+          matches=$(grep -c '^MATCH' /tmp/v4-v3-matches.txt || true)
+          printf 'matches|%s\nmismatches|%s\n' "$matches" "$mismatches" | tee /tmp/v4-v3-parity.txt
+          test "$mismatches" -eq 0
+          echo NUCLEUS_V4_SEMANTIC_PARITY=PASS
+
+      - name: Fixed-outcome correctness versus exact complete base
+        shell: bash
+        timeout-minutes: 55
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          : >/tmp/base-matches.txt
+          : >/tmp/allowed-deltas.txt
+          : >/tmp/hard-mismatches.txt
+          while IFS='|' read -r t outcome f; do
+            set +e
+            /tmp/base.bin /tmp/config.json <"$f" >/tmp/base.out 2>/tmp/base.err
+            b=$?
+            /tmp/candidate.bin /tmp/config.json <"$f" >/tmp/candidate.out 2>/tmp/candidate.err
+            cand=$?
+            set -e
+            if [ "$b" -eq "$cand" ] && cmp -s /tmp/base.out /tmp/candidate.out; then
+              printf 'MATCH|%s|%s|%s\n' "$cand" "$outcome" "$t" >>/tmp/base-matches.txt
+            elif [ "$outcome" = "either" ]; then
+              printf 'ALLOWED_DELTA|%s|base=%s|candidate=%s|%s\n' "$t" "$b" "$cand" "$outcome" | tee -a /tmp/allowed-deltas.txt
+            else
+              printf 'HARD_MISMATCH|%s|base=%s|candidate=%s|%s\n' "$t" "$b" "$cand" "$outcome" | tee -a /tmp/hard-mismatches.txt
+            fi
+          done </tmp/official-tests.txt
+          hard=$(grep -c '^HARD_MISMATCH' /tmp/hard-mismatches.txt || true)
+          allowed=$(grep -c '^ALLOWED_DELTA' /tmp/allowed-deltas.txt || true)
+          matches=$(grep -c '^MATCH' /tmp/base-matches.txt || true)
+          printf 'matches|%s\nallowed_deltas|%s\nhard_mismatches|%s\n' "$matches" "$allowed" "$hard" | tee /tmp/base-parity.txt
+          test "$hard" -eq 0
+          echo NUCLEUS_V4_ARENA_CORRECTNESS=PASS
+
+      - name: Same-machine Mathlib demand triangle
+        shell: bash
+        timeout-minutes: 60
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          f=_build/tests/mathlib.ndjson
+          sudo sysctl -w kernel.perf_event_paranoid=-1 >/tmp/perf-sysctl.txt 2>&1 || true
+          run_one () {
+            arm=$1
+            rep=$2
+            perf_file="/tmp/${arm}-${rep}.perf"
+            time_file="/tmp/${arm}-${rep}.time"
+            set +e
+            perf stat -j -o "$perf_file" -e instructions:u -- \
+              /usr/bin/time -f 'real_seconds=%e\nuser_seconds=%U\nsys_seconds=%S\nmax_rss_kb=%M' -o "$time_file" \
+              "/tmp/${arm}.bin" /tmp/config.json <"$f" >/tmp/${arm}-${rep}.out 2>/tmp/${arm}-${rep}.err
+            rc=$?
+            set -e
+            test "$rc" -eq 0
+          }
+          run_one base 1
+          run_one v3 1
+          run_one candidate 1
+          run_one candidate 2
+          run_one v3 2
+          run_one base 2
+          python3 - <<'PY' | tee /tmp/mathlib-demand.json
+          import json, statistics
+          from pathlib import Path
+          def read(arm,rep):
+              instructions=0
+              p=Path(f"/tmp/{arm}-{rep}.perf")
+              if p.exists():
+                  for line in p.read_text(errors="replace").splitlines():
+                      try: d=json.loads(line)
+                      except Exception: continue
+                      if str(d.get("event","")).split(":")[0]=="instructions":
+                          try: instructions=int(float(str(d.get("counter-value","0")).replace(",","")))
+                          except Exception: pass
+              t={}
+              for line in Path(f"/tmp/{arm}-{rep}.time").read_text().splitlines():
+                  if "=" in line:
+                      k,v=line.split("=",1); t[k]=float(v)
+              return {"instructions":instructions,**t}
+          data={a:[read(a,1),read(a,2)] for a in ("base","v3","candidate")}
+          for a in ("base","v3","candidate"):
+              for field in ("real_seconds","max_rss_kb"):
+                  data[f"{a}_median_{field}"]=statistics.median(x[field] for x in data[a])
+              nz=[x["instructions"] for x in data[a] if x["instructions"]>0]
+              data[a+"_median_instructions"]=statistics.median(nz) if nz else 0
+          def ratio(n,d): return (n/d) if n and d else None
+          for metric,key in (("wall","real_seconds"),("rss","max_rss_kb"),("instructions","instructions")):
+              suffix="median_"+key
+              data[f"v4_over_base_{metric}"]=ratio(data[f"candidate_{suffix}"],data[f"base_{suffix}"])
+              data[f"v4_over_v3_{metric}"]=ratio(data[f"candidate_{suffix}"],data[f"v3_{suffix}"])
+          print(json.dumps(data,indent=2,sort_keys=True))
+          PY
+
+      - name: Summarize
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY' | tee /tmp/summary.txt
+          import json
+          from pathlib import Path
+          p=dict(line.split("|",1) for line in Path("/tmp/v4-v3-parity.txt").read_text().splitlines())
+          b=dict(line.split("|",1) for line in Path("/tmp/base-parity.txt").read_text().splitlines())
+          d=json.loads(Path("/tmp/mathlib-demand.json").read_text())
+          print("NUCLEUS_DEMAND_CHECK_V4=QUALIFIED")
+          print(f"v4_v3_matches={p['matches']} v4_v3_mismatches={p['mismatches']}")
+          print(f"base_matches={b['matches']} allowed_deltas={b['allowed_deltas']} hard_mismatches={b['hard_mismatches']}")
+          for k in ("v4_over_base_wall","v4_over_v3_wall","v4_over_base_rss","v4_over_v3_rss","v4_over_base_instructions","v4_over_v3_instructions"):
+              v=d[k]
+              print(f"{k}=UNAVAILABLE" if v is None else f"{k}={v:.6f}")
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nucleus-demand-check-v4
+          path: |
+            /tmp/demand-audit.txt
+            /tmp/provenance.txt
+            /tmp/binaries.sha256
+            /tmp/corpus.txt
+            /tmp/official-tests.txt
+            /tmp/v4-v3-matches.txt
+            /tmp/v4-v3-mismatches.txt
+            /tmp/v4-v3-parity.txt
+            /tmp/base-matches.txt
+            /tmp/allowed-deltas.txt
+            /tmp/hard-mismatches.txt
+            /tmp/base-parity.txt
+            /tmp/mathlib-demand.json
+            /tmp/summary.txt
+            /tmp/perf-sysctl.txt
+            /tmp/base-1.perf
+            /tmp/base-2.perf
+            /tmp/v3-1.perf
+            /tmp/v3-2.perf
+            /tmp/candidate-1.perf
+            /tmp/candidate-2.perf
+            /tmp/base-1.time
+            /tmp/base-2.time
+            /tmp/v3-1.time
+            /tmp/v3-2.time
+            /tmp/candidate-1.time
+            /tmp/candidate-2.time
+          if-no-files-found: warn
