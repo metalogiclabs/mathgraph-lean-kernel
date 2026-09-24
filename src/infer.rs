@@ -154,8 +154,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 let dom = self.arg_value(depth, env, binder_type);
                 if flag == Check {
                     self.infer_sort_of_v(flag, depth, env, ctx, binder_type);
-                    let val_ty = self.infer_value(flag, depth, env, ctx, val);
-                    assert!(self.conv_types_at(depth, dom, val_ty), "let def_eq failed");
+                    self.check_against_v(depth, env, ctx, val, dom);
                 }
                 let slot = self.arg_value(depth, env, val);
                 let env2 = self.env_extend(env, slot);
@@ -188,8 +187,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 _ => panic!("expected a pi type"),
             };
             if flag == Check {
-                let arg_ty = self.infer_value(flag, depth, env, ctx, arg);
-                assert!(self.conv_types_at(depth, domain, arg_ty), "app arg def_eq failed");
+                self.check_against_v(depth, env, ctx, arg, domain);
             }
             if body.ctx.is_none() && self.ctx.num_loose_bvars(body.body) == 0 {
                 fty = self.eval(depth, body.env, body.body);
