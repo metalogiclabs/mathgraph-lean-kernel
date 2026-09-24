@@ -1,4 +1,4 @@
-use crate::env::{DeclarMap, Env, EnvLimit, NotationMap};
+use crate::env::{DeclarMap, Env, EnvLimit, FutureAuthority, NotationMap};
 use crate::expr::{
     Expr, APP_HASH, CONST_HASH, LAMBDA_HASH, LET_HASH, NAT_LIT_HASH, PI_HASH, PROJ_HASH, SORT_HASH, STRING_LIT_HASH,
     VAR_HASH,
@@ -607,6 +607,7 @@ pub struct ExportFile<'p> {
     pub(crate) anon: NamePtr<'p>,
     pub(crate) zero: LevelPtr<'p>,
     pub declars: DeclarMap<'p>,
+    pub(crate) future_authorities: Vec<FutureAuthority<'p>>,
     pub notations: NotationMap<'p>,
     pub name_cache: NameCache<'p>,
     pub config: Config,
@@ -615,7 +616,7 @@ pub struct ExportFile<'p> {
 
 impl<'p> ExportFile<'p> {
     pub fn new_env(&self, env_limit: EnvLimit<'p>) -> Env<'_, '_> {
-        Env::new(&self.declars, &self.notations, env_limit)
+        Env::new(&self.declars, &self.future_authorities, &self.notations, env_limit)
     }
 
     pub fn with_ctx<F, A>(&self, f: F) -> A
@@ -687,7 +688,13 @@ impl<'t, 'p: 't> TcCtx<'t, 'p> {
     ) -> A
     where
         F: FnOnce(&mut TypeChecker<'_, 't, 'p>) -> A, {
-        let env = Env::new_w_temp_ext(&self.export_file.declars, Some(env_ext), &self.export_file.notations, env_limit);
+        let env = Env::new_w_temp_ext(
+            &self.export_file.declars,
+            Some(env_ext),
+            &self.export_file.future_authorities,
+            &self.export_file.notations,
+            env_limit,
+        );
         let mut tc = TypeChecker::new(self, &env, arena, None, cache);
         f(&mut tc)
     }
