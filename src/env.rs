@@ -248,6 +248,10 @@ pub enum EnvLimit<'a> {
 /// extension first if there is one, then fall back to the persistent map.
 pub struct Env<'x, 'a: 'x> {
     declars: &'a FxIndexMap<NamePtr<'a>, Declar<'a>>,
+    /// The precompiled future meaning of each persistent declaration, indexed
+    /// exactly like `declars`. Runtime reduction reads this table instead of
+    /// reinterpreting source declaration syntax.
+    future_authorities: &'a [FutureAuthority<'a>],
     /// Used for checking nested inductives.
     temp_declars: Option<&'x FxIndexMap<NamePtr<'a>, Declar<'a>>>,
     #[allow(dead_code)]
@@ -263,8 +267,13 @@ pub(crate) type NotationMap<'a> = FxHashMap<NamePtr<'a>, Notation<'a>>;
 
 impl<'x, 'a: 'x> Env<'x, 'a> {
     /// Create a new environment (without any temporary extension)
-    pub fn new(declars: &'a DeclarMap<'a>, notation: &'a NotationMap<'a>, limit: EnvLimit<'a>) -> Self {
-        Self::new_w_temp_ext(declars, None, notation, limit)
+    pub fn new(
+        declars: &'a DeclarMap<'a>,
+        future_authorities: &'a [FutureAuthority<'a>],
+        notation: &'a NotationMap<'a>,
+        limit: EnvLimit<'a>,
+    ) -> Self {
+        Self::new_w_temp_ext(declars, None, future_authorities, notation, limit)
     }
 
     /// Create a new environment that includes some temporary extension; the temporary
@@ -272,6 +281,7 @@ impl<'x, 'a: 'x> Env<'x, 'a> {
     pub fn new_w_temp_ext(
         declars: &'a DeclarMap<'a>,
         temp_declars: Option<&'x DeclarMap<'a>>,
+        future_authorities: &'a [FutureAuthority<'a>],
         notation: &'a NotationMap<'a>,
         limit: EnvLimit<'a>,
     ) -> Self {
@@ -283,7 +293,8 @@ impl<'x, 'a: 'x> Env<'x, 'a> {
                 idx => idx as usize,
             },
         };
-        Self { declars, cutoff, temp_declars, notation }
+        debug_assert_eq!(declars.len(), future_authorities.len());
+        Self { declars, future_authorities, cutoff, temp_declars, notation }
     }
 
     /// Retrieve a declaration by first checking the contents of any temporary extension,
@@ -353,7 +364,17 @@ impl<'x, 'a: 'x> Env<'x, 'a> {
     /// proof bodies. Unknown names have no authority.
     #[inline]
     pub(crate) fn future_authority(&self, n: &NamePtr<'a>) -> Option<FutureAuthority<'a>> {
-        self.get_declar(n).map(Declar::future_authority)
+        if let Some(d) = self.temp_declars.as_ref().and_then(|ext| ext.get(n)) {
+            // Temporary nested-inductive declarations are deliberately local
+            // and are therefore compiled on demand.
+            return Some(d.future_authority());
+        }
+        let idx = n.as_ref().decl_idx() as usize;
+        if idx < self.cutoff {
+            self.future_authorities.get(idx).copied()
+        } else {
+            None
+        }
     }
 
     /// Return a body only when downstream reduction is lawfully allowed to
