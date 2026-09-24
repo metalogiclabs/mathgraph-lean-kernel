@@ -1,144 +1,263 @@
-name: Flash 2 WHNF no-store fast gate
+name: Flash 2 WHNF no-store final promotion gate
 
 on:
   push:
     branches:
       - flash2-whnf-nostore-fast-v1
     paths:
-      - src/**
       - .github/workflows/flash2-whnf-nostore-fast-v1.yml
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
-  group: flash2-whnf-nostore-fast-v1
+  group: flash2-whnf-nostore-final-promotion-v1
   cancel-in-progress: true
 
 jobs:
-  gate:
+  final-gate:
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 170
+    env:
+      ARENA_SHA: 95496f5376b089dfd5889d88c73e390a9d98653d
+      BASE_SHA: 78c7502bac8a5ba000057b3f083bc0595ac65750
+      CAND_SHA: 208311ff8f2e0feda2d31030090c4d404b13308c
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Materialize Flash 2 baseline and candidate
+      - uses: cachix/install-nix-action@v31
+
+      - name: Freeze exact control and candidate
         shell: bash
         run: |
           set -euxo pipefail
-          BASE=78c7502bac8a5ba000057b3f083bc0595ac65750
-          CAND="$GITHUB_SHA"
-          git worktree add --detach /tmp/base "$BASE"
-          git worktree add --detach /tmp/cand "$CAND"
-          printf 'baseline\t%s\ncandidate\t%s\nthreads\t2\n' "$BASE" "$CAND" >/tmp/provenance.tsv
+          git worktree add --detach /tmp/base "$BASE_SHA"
+          git worktree add --detach /tmp/cand "$CAND_SHA"
+          printf 'arena_sha\t%s\nbaseline\t%s\ncandidate\t%s\nthreads\t2\n'             "$ARENA_SHA" "$BASE_SHA" "$CAND_SHA" | tee /tmp/provenance.tsv
+          git diff --exit-code "$BASE_SHA" "$CAND_SHA" -- src/eval.rs || true
 
-      - name: Unit-test outcome parity
-        shell: bash
-        run: |
-          set -euxo pipefail
-          for arm in base cand; do
-            cd /tmp/$arm
-            set +e
-            RUSTFLAGS='-C target-cpu=x86-64-v3' cargo test --release --locked 2>&1 | tee /tmp/$arm-tests.txt
-            rc=${PIPESTATUS[0]}
-            set -e
-            echo "$rc" >/tmp/$arm-tests.rc
-            grep -E '^test .* \.\.\. (ok|FAILED)$' /tmp/$arm-tests.txt \
-              | sed -E 's/^test //; s/ \.\.\. /\t/' \
-              | sort > /tmp/$arm-test-status.tsv
-          done
-          cmp /tmp/base-tests.rc /tmp/cand-tests.rc
-          diff -u /tmp/base-test-status.tsv /tmp/cand-test-status.tsv
-          echo UNIT_TEST_OUTCOME_PARITY=PASS
-
-      - name: Prepare pinned Mathlib corpus
+      - name: Build exact current Arena corpus
+        timeout-minutes: 120
         shell: bash
         run: |
           set -euxo pipefail
           git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
-          git -C /tmp/arena checkout -q 510fbfead6f02bed1a0179d01729a6ddf5bfd06d
+          git -C /tmp/arena checkout -q "$ARENA_SHA"
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test
+          test -s _build/tests/mathlib.ndjson
+          test -s _build/tests/init-prelude.ndjson
 
-      - uses: actions/cache/restore@v4
-        id: corpus
-        with:
-          path: /tmp/arena/_build/tests/mathlib.ndjson
-          key: qckn-mathlib-export-510fbfead6f02bed1a0179d01729a6ddf5bfd06d-v1
-
-      - uses: cachix/install-nix-action@v31
-        if: steps.corpus.outputs.cache-hit != 'true'
-
-      - name: Build Mathlib on cache miss
-        if: steps.corpus.outputs.cache-hit != 'true'
+      - name: Build matched official-style PGO binaries
+        timeout-minutes: 25
         shell: bash
-        timeout-minutes: 15
+        run: |
+          set -euxo pipefail
+          cat >/tmp/config.json <<'EOF'
+          {
+            "use_stdin": true,
+            "nat_extension": true,
+            "string_extension": true,
+            "unpermitted_axiom_hard_error": false,
+            "unsafe_permit_all_axioms": true,
+            "num_threads": 2,
+            "print_success_message": false
+          }
+          EOF
+          LLVM_PROFDATA=$(nix shell nixpkgs#llvmPackages_21.llvm -c sh -c 'command -v llvm-profdata')
+          for arm in base cand; do
+            rm -rf /tmp/$arm/target /tmp/$arm/pgo
+            mkdir -p /tmp/$arm/pgo
+            (
+              cd /tmp/$arm
+              RUSTFLAGS="-C target-cpu=native -Cprofile-generate=/tmp/$arm/pgo" cargo build --release --locked
+              target/release/sokonanoda /tmp/config.json </tmp/arena/_build/tests/init-prelude.ndjson >/dev/null
+              "$LLVM_PROFDATA" merge -o /tmp/$arm/pgo/merged.profdata /tmp/$arm/pgo
+              test -s /tmp/$arm/pgo/merged.profdata
+              rm -rf target
+              RUSTFLAGS="-C target-cpu=native -Cprofile-use=/tmp/$arm/pgo/merged.profdata" cargo build --release --locked
+              cp target/release/sokonanoda /tmp/$arm.bin
+            )
+          done
+          sha256sum /tmp/base.bin /tmp/cand.bin | tee /tmp/binaries.sha256
+
+      - name: Full current-Arena semantic qualification
+        timeout-minutes: 30
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY' | tee /tmp/arena-summary.txt
+          import json, pathlib, subprocess, os
+
+          root = pathlib.Path('/tmp/arena/_build/tests')
+          bins = {'base': pathlib.Path('/tmp/base.bin'), 'cand': pathlib.Path('/tmp/cand.bin')}
+          all_out = {}
+
+          for arm, binary in bins.items():
+              rows = []
+              for stats in sorted(root.rglob('*.stats.json')):
+                  data = json.loads(stats.read_text())
+                  ndjson = stats.parent / stats.name.replace('.stats.json', '.ndjson')
+                  if not ndjson.exists():
+                      rows.append({
+                          'test': data.get('name'),
+                          'outcome': data.get('outcome'),
+                          'status': 'missing',
+                          'correctness': 'error'
+                      })
+                      continue
+                  with ndjson.open('rb') as f:
+                      p = subprocess.run(
+                          [str(binary), '/tmp/config.json'],
+                          stdin=f,
+                          stdout=subprocess.DEVNULL,
+                          stderr=subprocess.PIPE
+                      )
+                  rc = p.returncode
+                  status = {0:'accepted', 1:'rejected', 2:'declined'}.get(rc, 'error')
+                  expected = data.get('outcome')
+                  if status == 'declined':
+                      correctness = 'declined'
+                  elif status == 'error':
+                      correctness = 'error'
+                  elif expected == 'either':
+                      correctness = 'either'
+                  elif expected == 'accept' and status == 'accepted':
+                      correctness = 'correct'
+                  elif expected == 'reject' and status == 'rejected':
+                      correctness = 'correct'
+                  else:
+                      correctness = 'incorrect'
+                  rows.append({
+                      'test': data.get('name'),
+                      'outcome': expected,
+                      'status': status,
+                      'correctness': correctness,
+                      'exit_code': rc,
+                      'stderr_tail': p.stderr.decode(errors='replace')[-500:] if status == 'error' else ''
+                  })
+
+              counts = {}
+              statuses = {}
+              for r in rows:
+                  counts[r['correctness']] = counts.get(r['correctness'], 0) + 1
+                  statuses[r['status']] = statuses.get(r['status'], 0) + 1
+              bad = [r for r in rows if r['correctness'] in ('incorrect','error','declined')]
+              all_out[arm] = {
+                  'total': len(rows),
+                  'correctness_counts': counts,
+                  'status_counts': statuses,
+                  'bad': bad,
+                  'rows': rows,
+              }
+              print(arm.upper(), json.dumps({
+                  'total': len(rows),
+                  'correctness_counts': counts,
+                  'status_counts': statuses,
+                  'bad_count': len(bad),
+              }, sort_keys=True))
+              if bad:
+                  print(arm.upper() + '_BAD', json.dumps(bad[:30], sort_keys=True))
+
+          pathlib.Path('/tmp/full-arena.json').write_text(json.dumps({
+              'schema':'flash2-whnf-nostore-final-promotion-v1',
+              'arena_sha':os.environ['ARENA_SHA'],
+              'baseline_sha':os.environ['BASE_SHA'],
+              'candidate_sha':os.environ['CAND_SHA'],
+              'arms':all_out,
+          }, indent=2, sort_keys=True) + '\n')
+
+          assert not all_out['base']['bad'], all_out['base']['bad']
+          assert not all_out['cand']['bad'], all_out['cand']['bad']
+
+          base_sig=[(r['test'],r['outcome'],r['status'],r['correctness']) for r in all_out['base']['rows']]
+          cand_sig=[(r['test'],r['outcome'],r['status'],r['correctness']) for r in all_out['cand']['rows']]
+          assert base_sig == cand_sig, 'candidate differs from baseline on current Arena'
+          print('FULL_CURRENT_ARENA_PARITY=PASS')
+          PY
+
+      - name: Matched Mathlib hardware-instruction duel
+        timeout-minutes: 20
+        shell: bash
         run: |
           set -euxo pipefail
           cd /tmp/arena
-          nix develop -c ./lka.py build-test mathlib >/dev/null
-          test -s _build/tests/mathlib.ndjson
+          PERF=$(nix develop -c sh -c 'command -v perf')
+          "$PERF" --version | tee /tmp/perf-version.txt
+          export LC_ALL=C
+          f="_build/tests/mathlib.ndjson"
+          : >/tmp/instructions.tsv
 
-      - name: Build matched binaries
-        shell: bash
-        run: |
-          set -euxo pipefail
-          for arm in base cand; do
-            cd /tmp/$arm
-            RUSTFLAGS='-C target-cpu=x86-64-v3' cargo build --release --locked
-            cp target/release/sokonanoda /tmp/$arm.bin
-          done
-          cat >/tmp/config.json <<'EOF'
-          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2,"print_success_message":false}
-          EOF
-
-      - name: Two-replay Mathlib native gate
-        shell: bash
-        timeout-minutes: 16
-        run: |
-          set -euxo pipefail
-          f=/tmp/arena/_build/tests/mathlib.ndjson
-          test -s "$f"
-          : >/tmp/native.tsv
-          orders=("base cand" "cand base")
-          rep=0
-          for order in "${orders[@]}"; do
-            rep=$((rep+1))
+          for rep in 1 2 3; do
+            if [ $((rep%2)) -eq 1 ]; then order="base cand"; else order="cand base"; fi
             for arm in $order; do
-              /usr/bin/time -f '%e %U %S %M' -o /tmp/time \
-                timeout 240s /tmp/$arm.bin /tmp/config.json <"$f" >/tmp/$arm.$rep.out 2>/tmp/$arm.$rep.err
-              read -r wall user sys rss </tmp/time
-              echo "$arm $rep $wall $user $sys $rss" | tee -a /tmp/native.tsv
+              "$PERF" stat -x $'\t' -e instructions -o /tmp/perf.txt --                 /tmp/$arm.bin /tmp/config.json <"$f" >/dev/null 2>/dev/null
+              python3 - "$arm" "$rep" /tmp/perf.txt <<'PY' >>/tmp/instructions.tsv
+          import sys
+          arm,rep,path=sys.argv[1:]
+          value=None
+          for line in open(path):
+              parts=line.rstrip("\n").split("\t")
+              if len(parts)>=3 and parts[2].strip().startswith("instructions"):
+                  raw=parts[0].strip().replace(",","")
+                  if raw and raw not in ("<not counted>","<not supported>"):
+                      value=int(float(raw))
+                      break
+          if value is None:
+              raise SystemExit("instructions counter unavailable")
+          print(f"{arm}\t{rep}\t{value}")
+          PY
             done
           done
-          for rep in 1 2; do cmp /tmp/base.$rep.out /tmp/cand.$rep.out; done
+
+          cat /tmp/instructions.tsv
+
           python3 - <<'PY' | tee /tmp/scorecard.txt
           from collections import defaultdict
           from statistics import median
-          wall=defaultdict(list); cpu=defaultdict(list)
-          for line in open('/tmp/native.tsv'):
-              arm,rep,w,u,s,rss=line.split()
-              wall[arm].append(float(w))
-              cpu[arm].append(float(u)+float(s))
-          bw=median(wall['base']); cw=median(wall['cand'])
-          bc=median(cpu['base']); cc=median(cpu['cand'])
-          print(f'BASE_MEDIAN_WALL_S={bw:.6f}')
-          print(f'CAND_MEDIAN_WALL_S={cw:.6f}')
-          print(f'WALL_REDUCTION_PERCENT={(1-cw/bw)*100:.4f}')
-          print(f'BASE_MEDIAN_CPU_S={bc:.6f}')
-          print(f'CAND_MEDIAN_CPU_S={cc:.6f}')
-          print(f'CPU_REDUCTION_PERCENT={(1-cc/bc)*100:.4f}')
-          print('DECISION=' + ('PROMOTE_TO_INSTRUCTION_PROXY' if (1-cc/bc) >= 0.01 else 'REJECT'))
+          rows=defaultdict(list)
+          for line in open('/tmp/instructions.tsv'):
+              arm,rep,n=line.rstrip().split('\t')
+              rows[arm].append(int(n))
+          base=median(rows['base'])
+          cand=median(rows['cand'])
+          print('base_runs='+repr(rows['base']))
+          print('candidate_runs='+repr(rows['cand']))
+          print(f'BASE_MEDIAN_INSTRUCTIONS={int(base)}')
+          print(f'CAND_MEDIAN_INSTRUCTIONS={int(cand)}')
+          print(f'CAND_VS_BASE_RATIO={cand/base:.9f}')
+          print(f'CAND_INSTRUCTION_REDUCTION_PERCENT={(1-cand/base)*100:.4f}')
+          if cand < base:
+              print('DECISION=PROMOTE_WHNF_NOSTORE')
+          else:
+              print('DECISION=RETAIN_FLASH_78C7502')
           PY
+
+      - name: Enforce promotion criterion
+        shell: bash
+        run: |
+          set -euxo pipefail
+          grep -q '^FULL_CURRENT_ARENA_PARITY=PASS$' /tmp/arena-summary.txt
+          if grep -q '^DECISION=PROMOTE_WHNF_NOSTORE$' /tmp/scorecard.txt; then
+            echo FLASH_FINAL_PROMOTION_GATE=PASS | tee /tmp/final-decision.txt
+          else
+            echo FLASH_FINAL_PROMOTION_GATE=NO_PROMOTION | tee /tmp/final-decision.txt
+          fi
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: flash2-whnf-nostore-fast-v1
+          name: flash2-whnf-nostore-final-promotion-v1
           path: |
             /tmp/provenance.tsv
-            /tmp/base-tests.txt
-            /tmp/cand-tests.txt
-            /tmp/base-test-status.tsv
-            /tmp/cand-test-status.tsv
-            /tmp/native.tsv
+            /tmp/binaries.sha256
+            /tmp/full-arena.json
+            /tmp/arena-summary.txt
+            /tmp/instructions.tsv
             /tmp/scorecard.txt
+            /tmp/final-decision.txt
+            /tmp/perf-version.txt
           if-no-files-found: warn
