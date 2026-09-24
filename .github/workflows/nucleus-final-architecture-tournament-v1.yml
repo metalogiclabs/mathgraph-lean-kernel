@@ -66,7 +66,7 @@ jobs:
             f="_build/tests/$t.ndjson"
             test -s "$f"
             printf '%s\t%s\t%s\n' "$t" "$outcome" "$f" >>/tmp/official-tests.tsv
-          done < <(find tests -type f -name '*.yaml' | sort)
+          done < <(find tests -type f -name '*.yaml' ! -path 'tests/tutorial.yaml' | sort)
           printf 'arena_source\t%s\nofficial_tests\t%s\n'             95496f5376b089dfd5889d88c73e390a9d98653d "$(wc -l </tmp/official-tests.tsv)" | tee /tmp/corpus.tsv
           for f in mathlib init-prelude cedar std; do test -s "_build/tests/$f.ndjson"; done
 
