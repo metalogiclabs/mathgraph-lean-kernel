@@ -8,6 +8,7 @@ on:
       - src/env.rs
       - src/util.rs
       - src/parser.rs
+      - src/relevance.rs
       - .github/workflows/nucleus-future-quotient-v2.yml
   workflow_dispatch:
 
@@ -33,6 +34,7 @@ jobs:
           grep -q "self.declars.values().map(Declar::future_authority).collect()" src/parser.rs
           grep -q "future_authorities: &'a \[FutureAuthority" src/env.rs
           grep -q "self.future_authorities.get(idx).copied()" src/env.rs
+          ! grep -R -q "get_declar_val" src
           echo FUTURE_AUTHORITY_COMPILED_ONCE_AUDIT=PASS | tee /tmp/authority-audit.txt
 
       - name: Build exact base, V1, and V2
@@ -40,7 +42,7 @@ jobs:
         run: |
           set -euxo pipefail
           BASE=78c7502bac8a5ba000057b3f083bc0595ac65750
-          V1=90aa2a8cb28c4abfe30ebe25d8f51fffda439483
+          V1=21f35a5445423834c8fa8c615c8e0bb474685a0a
           CAND="$GITHUB_SHA"
           git worktree add --detach /tmp/base "$BASE"
           git worktree add --detach /tmp/v1 "$V1"
