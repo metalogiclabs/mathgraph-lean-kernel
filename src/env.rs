@@ -170,7 +170,7 @@ impl<'a> RecursorData<'a> {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum FutureAuthority<'a> {
-    Reducible { uparams: LevelsPtr<'a>, val: ExprPtr<'a> },
+    Reducible { uparams: LevelsPtr<'a>, val: ExprPtr<'a>, hint: ReducibilityHint },
     Opaque,
     Constructor,
     Recursor,
@@ -201,8 +201,8 @@ impl<'a> Declar<'a> {
     /// can change lawful downstream kernel consequences.
     pub(crate) fn future_authority(&self) -> FutureAuthority<'a> {
         match self {
-            Declar::Definition { info, val, .. } =>
-                FutureAuthority::Reducible { uparams: info.uparams, val: *val },
+            Declar::Definition { info, val, hint } =>
+                FutureAuthority::Reducible { uparams: info.uparams, val: *val, hint: *hint },
             Declar::Constructor(_) => FutureAuthority::Constructor,
             Declar::Recursor(_) => FutureAuthority::Recursor,
             Declar::Quot { .. } => FutureAuthority::Quot,
@@ -252,6 +252,8 @@ pub struct Env<'x, 'a: 'x> {
     /// exactly like `declars`. Runtime reduction reads this table instead of
     /// reinterpreting source declaration syntax.
     future_authorities: &'a [FutureAuthority<'a>],
+    /// Compact runtime headers, indexed exactly like `declars`.
+    declar_infos: &'a [DeclarInfo<'a>],
     /// Used for checking nested inductives.
     temp_declars: Option<&'x FxIndexMap<NamePtr<'a>, Declar<'a>>>,
     #[allow(dead_code)]
@@ -270,10 +272,11 @@ impl<'x, 'a: 'x> Env<'x, 'a> {
     pub fn new(
         declars: &'a DeclarMap<'a>,
         future_authorities: &'a [FutureAuthority<'a>],
+        declar_infos: &'a [DeclarInfo<'a>],
         notation: &'a NotationMap<'a>,
         limit: EnvLimit<'a>,
     ) -> Self {
-        Self::new_w_temp_ext(declars, None, future_authorities, notation, limit)
+        Self::new_w_temp_ext(declars, None, future_authorities, declar_infos, notation, limit)
     }
 
     /// Create a new environment that includes some temporary extension; the temporary
@@ -282,6 +285,7 @@ impl<'x, 'a: 'x> Env<'x, 'a> {
         declars: &'a DeclarMap<'a>,
         temp_declars: Option<&'x DeclarMap<'a>>,
         future_authorities: &'a [FutureAuthority<'a>],
+        declar_infos: &'a [DeclarInfo<'a>],
         notation: &'a NotationMap<'a>,
         limit: EnvLimit<'a>,
     ) -> Self {
@@ -294,7 +298,8 @@ impl<'x, 'a: 'x> Env<'x, 'a> {
             },
         };
         debug_assert_eq!(declars.len(), future_authorities.len());
-        Self { declars, future_authorities, cutoff, temp_declars, notation }
+        debug_assert_eq!(declars.len(), declar_infos.len());
+        Self { declars, future_authorities, declar_infos, cutoff, temp_declars, notation }
     }
 
     /// Retrieve a declaration by first checking the contents of any temporary extension,
@@ -363,6 +368,19 @@ impl<'x, 'a: 'x> Env<'x, 'a> {
     /// This deliberately forgets admission-only structure such as theorem
     /// proof bodies. Unknown names have no authority.
     #[inline]
+    pub(crate) fn get_info(&self, n: &NamePtr<'a>) -> Option<DeclarInfo<'a>> {
+        if let Some(d) = self.temp_declars.as_ref().and_then(|ext| ext.get(n)) {
+            return Some(*d.info());
+        }
+        let idx = n.as_ref().decl_idx() as usize;
+        if idx < self.cutoff {
+            self.declar_infos.get(idx).copied()
+        } else {
+            None
+        }
+    }
+
+    #[inline]
     pub(crate) fn future_authority(&self, n: &NamePtr<'a>) -> Option<FutureAuthority<'a>> {
         if let Some(d) = self.temp_declars.as_ref().and_then(|ext| ext.get(n)) {
             // Temporary nested-inductive declarations are deliberately local
@@ -382,7 +400,7 @@ impl<'x, 'a: 'x> Env<'x, 'a> {
     #[inline]
     pub(crate) fn get_reducible_value(&self, n: &NamePtr<'a>) -> Option<(LevelsPtr<'a>, ExprPtr<'a>)> {
         match self.future_authority(n)? {
-            FutureAuthority::Reducible { uparams, val } => Some((uparams, val)),
+            FutureAuthority::Reducible { uparams, val, .. } => Some((uparams, val)),
             _ => None,
         }
     }
