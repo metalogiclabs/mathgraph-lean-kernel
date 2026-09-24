@@ -263,33 +263,44 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
     /// The lambda/Pi rule is equivalent to the existing infer-Pi-then-convert
     /// path, but avoids materializing the intermediate inferred Pi tower.
     /// Every other shape falls back to the complete existing checker.
-    fn check_against_v(&mut self, depth: u32, env: E<'t>, ctx: C<'t>, e: ExprPtr<'t>, expected: V<'t>) {
-        if let Lambda { binder_type, body, .. } = self.ctx.read_expr(e) {
+    fn check_against_v(
+        &mut self,
+        mut depth: u32,
+        mut env: E<'t>,
+        mut ctx: C<'t>,
+        mut e: ExprPtr<'t>,
+        mut expected: V<'t>,
+    ) {
+        loop {
+            let Lambda { binder_type, body, .. } = self.ctx.read_expr(e) else {
+                let actual = self.infer_value(Check, depth, env, ctx, e);
+                assert!(self.def_eq_at(depth, actual, expected), "expected-type def_eq failed");
+                return;
+            };
+
             let expected_f = match expected {
                 Value::Pi { .. } => expected,
                 _ => self.force_all(depth, expected),
             };
-            if let Value::Pi { domain, body: expected_body, .. } = expected_f {
-                // Preserve all declaration-scope and well-formedness checks on
-                // the explicit binder annotation.
-                self.infer_sort_of_v(Check, depth, env, ctx, binder_type);
-                let dom = self.arg_value(depth, env, binder_type);
-                assert!(self.conv_types_at(depth, dom, domain), "lambda binder def_eq failed");
-
-                // This mirrors Pi conversion: once domains are convertible,
-                // compare/check both codomains under the same fresh variable.
-                let fresh = self.mk_bvar_hc(depth, dom);
-                let env2 = self.env_extend(env, fresh);
-                let ctx2 = value::ctx_extend(self.arena, ctx, dom);
-                let expected_body_ty =
-                    self.apply_closure(depth + 1, expected_body, fresh, Some(dom));
-                self.check_against_v(depth + 1, env2, ctx2, body, expected_body_ty);
+            let Value::Pi { domain, body: expected_body, .. } = expected_f else {
+                let actual = self.infer_value(Check, depth, env, ctx, e);
+                assert!(self.def_eq_at(depth, actual, expected_f), "expected-type def_eq failed");
                 return;
-            }
-        }
+            };
 
-        let actual = self.infer_value(Check, depth, env, ctx, e);
-        assert!(self.def_eq_at(depth, actual, expected), "expected-type def_eq failed");
+            // Tight lambda/Pi zipper: consume the whole telescope iteratively,
+            // constructing no recursive checker frames and no inferred Pi tower.
+            self.infer_sort_of_v(Check, depth, env, ctx, binder_type);
+            let dom = self.arg_value(depth, env, binder_type);
+            assert!(self.conv_types_at(depth, dom, domain), "lambda binder def_eq failed");
+
+            let fresh = self.mk_bvar_hc(depth, dom);
+            env = self.env_extend(env, fresh);
+            ctx = value::ctx_extend(self.arena, ctx, dom);
+            expected = self.apply_closure(depth + 1, expected_body, fresh, Some(dom));
+            e = body;
+            depth += 1;
+        }
     }
 
     pub(crate) fn check_declar_info_v(&mut self, d: &Declar<'t>) {
