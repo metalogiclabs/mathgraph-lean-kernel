@@ -23,6 +23,7 @@ jobs:
       - name: Probe hosted-runner PMU authority
         shell: bash
         run: |
+          set +e
           set -uo pipefail
           cd "$GITHUB_WORKSPACE"
           PERF=$(nix shell nixpkgs#linuxPackages_latest.perf -c sh -c 'command -v perf')
