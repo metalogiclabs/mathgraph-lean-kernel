@@ -1,0 +1,243 @@
+name: Nucleus Final Architecture Tournament V1
+
+on:
+  push:
+    branches:
+      - nucleus-final-architecture-tournament-v1
+    paths:
+      - .github/workflows/nucleus-final-architecture-tournament-v1.yml
+  workflow_dispatch:
+
+concurrency:
+  group: nucleus-final-architecture-tournament-v1
+  cancel-in-progress: true
+
+jobs:
+  tournament:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 210
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build frozen architecture lineage
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cat >/tmp/lineage.tsv <<'EOF'
+          base	78c7502bac8a5ba000057b3f083bc0595ac65750
+          v0	a9a614f51742de111c9f3c913855e70ff5501a81
+          v1	078687e5fd8143b25b9ece0a52a13a2d82c6268b
+          v2	07b383661e4ebafec0d6ab929a9cac136c5d0995
+          v3	399b62b4a452f53a4ee5b0e51efde079ff2fdccc
+          v4	366b6d1378a591493190ed7bd90c3cb905d94694
+          v5	c7477f622f41f34d2735a53dde284d20c0377849
+          EOF
+          : >/tmp/binaries.tsv
+          while IFS=$'\t' read -r arm sha; do
+            git worktree add --detach "/tmp/src-$arm" "$sha"
+            (cd "/tmp/src-$arm" && RUSTFLAGS='-C target-cpu=native' cargo build --release --locked)
+            cp "/tmp/src-$arm/target/release/sokonanoda" "/tmp/$arm.bin"
+            bytes=$(stat -c%s "/tmp/$arm.bin")
+            digest=$(sha256sum "/tmp/$arm.bin" | awk '{print $1}')
+            printf '%s\t%s\t%s\t%s\n' "$arm" "$sha" "$bytes" "$digest" >>/tmp/binaries.tsv
+          done </tmp/lineage.tsv
+          cat >/tmp/config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2,"print_success_message":false}
+          EOF
+
+      - name: Build one current official Arena corpus
+        shell: bash
+        timeout-minutes: 90
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 95496f5376b089dfd5889d88c73e390a9d98653d
+          cd /tmp/arena
+          : >/tmp/official-tests.tsv
+          while IFS= read -r y; do
+            t=${y#tests/}
+            t=${t%.yaml}
+            nix develop -c ./lka.py build-test "$t" >/dev/null
+            outcome=$(awk '/^outcome:/ {print $2; exit}' "$y")
+            case "$outcome" in accept|reject|either) ;; *) echo "unknown outcome $outcome in $y"; exit 1 ;; esac
+            f="_build/tests/$t.ndjson"
+            test -s "$f"
+            printf '%s\t%s\t%s\n' "$t" "$outcome" "$f" >>/tmp/official-tests.tsv
+          done < <(find tests -type f -name '*.yaml' | sort)
+          printf 'arena_source\t%s\nofficial_tests\t%s\n'             95496f5376b089dfd5889d88c73e390a9d98653d "$(wc -l </tmp/official-tests.tsv)" | tee /tmp/corpus.tsv
+          for f in mathlib init-prelude cedar std; do test -s "_build/tests/$f.ndjson"; done
+
+      - name: Direct official correctness tournament
+        shell: bash
+        timeout-minutes: 75
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          : >/tmp/verdicts.tsv
+          : >/tmp/correctness.tsv
+          for arm in base v0 v1 v2 v3 v4 v5; do
+            correct=0; wrong=0; either=0; decline=0
+            while IFS=$'\t' read -r t outcome f; do
+              set +e
+              timeout 600s "/tmp/$arm.bin" /tmp/config.json <"$f" >/tmp/out.txt 2>/tmp/err.txt
+              rc=$?
+              set -e
+              status=WRONG
+              case "$outcome:$rc" in
+                accept:0|reject:1) status=CORRECT; correct=$((correct+1)) ;;
+                either:0|either:1) status=EITHER; either=$((either+1)) ;;
+                *:2|*:124) status=DECLINE; decline=$((decline+1)) ;;
+                *) wrong=$((wrong+1)) ;;
+              esac
+              printf '%s\t%s\t%s\t%s\t%s\n' "$arm" "$t" "$outcome" "$rc" "$status" >>/tmp/verdicts.tsv
+            done </tmp/official-tests.tsv
+            printf '%s\tcorrect=%s\teither=%s\twrong=%s\tdecline=%s\n' "$arm" "$correct" "$either" "$wrong" "$decline" | tee -a /tmp/correctness.tsv
+          done
+          python3 - <<'PY'
+          from pathlib import Path
+          rows={}
+          for line in Path('/tmp/correctness.tsv').read_text().splitlines():
+              p=line.split('\t'); arm=p[0]; d=dict(x.split('=',1) for x in p[1:])
+              rows[arm]={k:int(v) for k,v in d.items()}
+          assert rows['base']['wrong']==0 and rows['base']['decline']==0
+          for arm,r in rows.items():
+              if r['wrong'] or r['decline']:
+                  print(f'UNQUALIFIED {arm} wrong={r["wrong"]} decline={r["decline"]}')
+              else:
+                  print(f'QUALIFIED {arm}')
+          PY
+
+      - name: Same-machine major-corpus cost tournament
+        shell: bash
+        timeout-minutes: 80
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          sudo sysctl -w kernel.perf_event_paranoid=-1 >/tmp/perf-sysctl.txt 2>&1 || true
+          : >/tmp/perf-index.tsv
+          run_one () {
+            arm=$1; corpus=$2; rep=$3
+            f="_build/tests/$corpus.ndjson"
+            perf_file="/tmp/${arm}-${corpus}-${rep}.perf"
+            time_file="/tmp/${arm}-${corpus}-${rep}.time"
+            set +e
+            perf stat -j -o "$perf_file" -e instructions:u --               /usr/bin/time -f 'real_seconds=%e\nuser_seconds=%U\nsys_seconds=%S\nmax_rss_kb=%M' -o "$time_file"               "/tmp/$arm.bin" /tmp/config.json <"$f" >/tmp/run.out 2>/tmp/run.err
+            rc=$?
+            set -e
+            printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$arm" "$corpus" "$rep" "$rc" "$perf_file" "$time_file" >>/tmp/perf-index.tsv
+          }
+          for arm in base v0 v1 v2 v3 v4 v5; do
+            for corpus in mathlib init-prelude cedar std; do
+              run_one "$arm" "$corpus" 1
+            done
+          done
+          for arm in base v0 v1 v2 v3 v4 v5; do run_one "$arm" mathlib 2; done
+
+          python3 - <<'PY' | tee /tmp/performance.json
+          import json, statistics
+          from pathlib import Path
+
+          corr={}
+          for line in Path('/tmp/correctness.tsv').read_text().splitlines():
+              p=line.split('\t'); arm=p[0]; d=dict(x.split('=',1) for x in p[1:])
+              corr[arm]={k:int(v) for k,v in d.items()}
+
+          bins={}
+          for line in Path('/tmp/binaries.tsv').read_text().splitlines():
+              arm,sha,bytes_,digest=line.split('\t')
+              bins[arm]={'sha':sha,'binary_bytes':int(bytes_),'sha256':digest}
+
+          def parse_perf(path):
+              n=0
+              p=Path(path)
+              if p.exists():
+                  for line in p.read_text(errors='replace').splitlines():
+                      try: d=json.loads(line)
+                      except Exception: continue
+                      if str(d.get('event','')).split(':')[0]=='instructions':
+                          try: n=int(float(str(d.get('counter-value','0')).replace(',','')))
+                          except Exception: pass
+              return n
+
+          def parse_time(path):
+              d={}
+              p=Path(path)
+              if p.exists():
+                  for line in p.read_text().splitlines():
+                      if '=' in line:
+                          k,v=line.split('=',1)
+                          try: d[k]=float(v)
+                          except ValueError: pass
+              return d
+
+          data={a:{'correctness':corr[a],**bins[a],'corpora':{}} for a in corr}
+          raw={}
+          for line in Path('/tmp/perf-index.tsv').read_text().splitlines():
+              arm,corpus,rep,rc,pf,tf=line.split('\t')
+              rec={'rc':int(rc),'instructions':parse_perf(pf),**parse_time(tf)}
+              raw.setdefault((arm,corpus),[]).append(rec)
+          for (arm,corpus),recs in raw.items():
+              vals={}
+              for field in ('instructions','real_seconds','user_seconds','sys_seconds','max_rss_kb'):
+                  xs=[r.get(field,0) for r in recs if r.get(field,0)>0]
+                  vals['median_'+field]=statistics.median(xs) if xs else 0
+              vals['runs']=recs
+              data[arm]['corpora'][corpus]=vals
+
+          qualified=[a for a,d in data.items() if d['correctness']['wrong']==0 and d['correctness']['decline']==0]
+          def score(a):
+              m=data[a]['corpora']['mathlib']
+              return (m['median_instructions'] if m['median_instructions'] else float('inf'),
+                      m['median_real_seconds'],
+                      m['median_max_rss_kb'],
+                      data[a]['binary_bytes'])
+          ranked=sorted(qualified,key=score)
+          out={'qualified':qualified,'ranked_by_mathlib_instruction_then_wall_rss_size':ranked,'arms':data}
+          print(json.dumps(out,indent=2,sort_keys=True))
+          PY
+
+      - name: Seal architecture tournament
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY' | tee /tmp/summary.txt
+          import json
+          from pathlib import Path
+          d=json.loads(Path('/tmp/performance.json').read_text())
+          print('NUCLEUS_FINAL_ARCHITECTURE_TOURNAMENT_V1=SEALED')
+          print('qualified='+','.join(d['qualified']))
+          ranking=d['ranked_by_mathlib_instruction_then_wall_rss_size']
+          print('ranking='+','.join(ranking))
+          if ranking:
+              champ=ranking[0]
+              a=d['arms'][champ]
+              m=a['corpora']['mathlib']
+              print('champion='+champ)
+              print('champion_sha='+a['sha'])
+              print('champion_mathlib_instructions='+str(m['median_instructions']))
+              print('champion_mathlib_wall='+str(m['median_real_seconds']))
+              print('champion_mathlib_max_rss_kb='+str(m['median_max_rss_kb']))
+              print('champion_binary_bytes='+str(a['binary_bytes']))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nucleus-final-architecture-tournament-v1
+          path: |
+            /tmp/lineage.tsv
+            /tmp/binaries.tsv
+            /tmp/corpus.tsv
+            /tmp/official-tests.tsv
+            /tmp/verdicts.tsv
+            /tmp/correctness.tsv
+            /tmp/perf-index.tsv
+            /tmp/performance.json
+            /tmp/summary.txt
+            /tmp/perf-sysctl.txt
+            /tmp/*.perf
+            /tmp/*.time
+          if-no-files-found: warn
