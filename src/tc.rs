@@ -94,10 +94,18 @@ impl<'p> ExportFile<'p> {
         d: &Declar<'t>,
     ) {
         use Declar::*;
+        let admission_val = match d {
+            Theorem { .. } | Opaque { .. } => Some(
+                self.admission_value(d.info().name)
+                    .expect("missing admission-only body for theorem/opaque declaration"),
+            ),
+            _ => None,
+        };
         let env = self.new_env(EnvLimit::ByName(d.info().name));
         let mut tc = TypeChecker::new(ctx, &env, bump, Some(*d.info()), cache);
         match d {
-            Definition { val, .. } | Theorem { val, .. } | Opaque { val, .. } => tc.check_def_like_v(d, *val),
+            Definition { val, .. } => tc.check_def_like_v(d, *val),
+            Theorem { .. } | Opaque { .. } => tc.check_def_like_v(d, admission_val.unwrap()),
             Axiom { .. } | Constructor(..) | Recursor(..) => tc.check_declar_info_v(d),
             Inductive(..) | Quot { .. } => unreachable!(),
         }
