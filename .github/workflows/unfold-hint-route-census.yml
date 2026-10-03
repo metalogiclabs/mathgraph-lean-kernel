@@ -1,0 +1,27 @@
+name: Unfold hint route census
+on:
+  pull_request:
+    paths:
+      - 'scripts/run_unfold_hint_route_census.sh'
+      - '.github/workflows/unfold-hint-route-census.yml'
+  workflow_dispatch:
+
+jobs:
+  census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+        with:
+          enable_kvm: true
+          set_as_trusted_user: true
+      - name: Run full-Mathlib unequal-hint routing census
+        run: bash scripts/run_unfold_hint_route_census.sh
+      - name: Upload census
+        uses: actions/upload-artifact@v4
+        with:
+          name: unfold-hint-route-census
+          path: unfold-hint-route-census.txt
