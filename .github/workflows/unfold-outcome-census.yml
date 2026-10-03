@@ -1,0 +1,23 @@
+name: Unfold outcome census
+on:
+  pull_request:
+    branches: [mathgraph]
+  workflow_dispatch:
+jobs:
+  census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Run full-Mathlib unfold outcome census
+        run: bash scripts/run_unfold_outcome_census.sh
+      - name: Upload census
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unfold-outcome-census
+          path: unfold-outcome-census.txt
+          if-no-files-found: warn
