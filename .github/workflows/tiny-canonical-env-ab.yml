@@ -1,0 +1,146 @@
+name: Tiny canonical projected-env A/B
+
+on:
+  pull_request:
+    branches: [mathgraph]
+  workflow_dispatch:
+
+jobs:
+  ab:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 210
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build exact-V2 arms and compile gate
+        run: |
+          set -euxo pipefail
+          ROOT="$GITHUB_WORKSPACE"
+          V2=3d7585c21242f29fdaa48ae9a16e16c6afe42238
+          for arm in base tiny1 tiny12; do
+            git -C "$ROOT" worktree add "/tmp/v2-$arm" "$V2"
+            if [ "$arm" != base ]; then
+              python3 "$ROOT/scripts/apply_tiny_canonical_env.py" "/tmp/v2-$arm" "$arm"
+            fi
+            cd "/tmp/v2-$arm"
+            cargo test --release --locked
+          done
+
+      - name: Build Arena workloads
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena-tiny
+          cd /tmp/arena-tiny
+          for t in init-prelude init std mathlib; do nix develop -c ./lka.py build-test "$t"; done
+          nix shell nixpkgs#llvmPackages_21.llvm -c llvm-profdata --version
+          nix shell nixpkgs#valgrind -c valgrind --version
+
+      - name: Arena-style PGO builds
+        run: |
+          set -euxo pipefail
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
+          EOF
+          for arm in base tiny1 tiny12; do
+            cd "/tmp/v2-$arm"
+            rm -rf pgo target
+            RUSTFLAGS="-C target-cpu=native -Cprofile-generate=$PWD/pgo" cargo build --release --locked
+            target/release/sokonanoda /tmp/checker.json < /tmp/arena-tiny/_build/tests/init-prelude.ndjson >/dev/null
+            nix shell nixpkgs#llvmPackages_21.llvm -c llvm-profdata merge -o "$PWD/pgo/merged.profdata" "$PWD/pgo"
+            test -s "$PWD/pgo/merged.profdata"
+            RUSTFLAGS="-C target-cpu=native -Cprofile-use=$PWD/pgo/merged.profdata" cargo build --release --locked
+            cp target/release/sokonanoda "/tmp/$arm-checker"
+            CARGO_TARGET_DIR="/tmp/$arm-cg" RUSTFLAGS='-C target-cpu=x86-64' cargo build --release --locked
+            cp "/tmp/$arm-cg/release/sokonanoda" "/tmp/$arm-cg-checker"
+          done
+
+      - name: Semantic equality on real workloads
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena-tiny
+          for t in init std mathlib; do
+            f="_build/tests/$t.ndjson"
+            timeout 1200 /tmp/base-checker /tmp/checker.json < "$f" >/tmp/base-$t.out 2>/tmp/base-$t.err
+            for arm in tiny1 tiny12; do
+              timeout 1200 "/tmp/$arm-checker" /tmp/checker.json < "$f" >"/tmp/$arm-$t.out" 2>"/tmp/$arm-$t.err"
+              cmp "/tmp/base-$t.out" "/tmp/$arm-$t.out"
+            done
+          done
+
+      - name: Deterministic instruction counts
+        run: |
+          set -euxo pipefail
+          printf 'test,arm,instructions\n' >/tmp/tiny-callgrind.csv
+          cd /tmp/arena-tiny
+          for t in init std; do
+            f="_build/tests/$t.ndjson"
+            for arm in base tiny1 tiny12; do
+              cf="/tmp/cg-$t-$arm.out"
+              timeout 1500 nix shell nixpkgs#valgrind -c valgrind --tool=callgrind --callgrind-out-file="$cf" "/tmp/$arm-cg-checker" /tmp/checker.json < "$f" >/dev/null 2>"/tmp/cg-$t-$arm.err"
+              ir=$(awk '/^summary:/ {print $2; exit}' "$cf")
+              test -n "$ir"
+              printf '%s,%s,%s\n' "$t" "$arm" "$ir" >>/tmp/tiny-callgrind.csv
+            done
+          done
+
+      - name: Paired Mathlib wall
+        run: |
+          set -euxo pipefail
+          printf 'rep,arm,seconds\n' >/tmp/tiny-wall.csv
+          cd /tmp/arena-tiny
+          f=_build/tests/mathlib.ndjson
+          for rep in 1 2 3; do
+            case "$rep" in
+              1) arms='base tiny1 tiny12' ;;
+              2) arms='tiny12 tiny1 base' ;;
+              3) arms='tiny1 base tiny12' ;;
+            esac
+            for arm in $arms; do
+              tf="/tmp/time-$rep-$arm.txt"
+              timeout 1200 /usr/bin/time -f '%e' -o "$tf" "/tmp/$arm-checker" /tmp/checker.json < "$f" >/dev/null 2>"/tmp/wall-$rep-$arm.err"
+              printf '%s,%s,%s\n' "$rep" "$arm" "$(cat "$tf")" >>/tmp/tiny-wall.csv
+            done
+          done
+
+      - name: Decide prospective prediction
+        run: |
+          python3 - <<'PY' | tee /tmp/tiny-summary.txt
+          import csv, statistics
+          ir=list(csv.DictReader(open('/tmp/tiny-callgrind.csv')))
+          wall=list(csv.DictReader(open('/tmp/tiny-wall.csv')))
+          def I(t,a): return int(next(r['instructions'] for r in ir if r['test']==t and r['arm']==a))
+          def W(a): return statistics.median(float(r['seconds']) for r in wall if r['arm']==a)
+          print('PROSPECTIVE_PREDICTION=intrinsically canonical tiny projected closures should outperform exact V2 if the residual-constraint closure identified the missing operator family')
+          for arm in ['tiny1','tiny12']:
+              print('\nARM',arm)
+              wins=True
+              for t in ['init','std']:
+                  b=I(t,'base'); x=I(t,arm); q=x/b
+                  print('IR',t,b,x,f'ratio={q:.6f}',f'delta={(q-1)*100:+.3f}%')
+                  wins &= q < 1.0
+              b=W('base'); x=W(arm); q=x/b
+              print('WALL mathlib',b,x,f'ratio={q:.6f}',f'delta={(q-1)*100:+.3f}%')
+              wins &= q < 1.0
+              std_gain=1-I('std',arm)/I('std','base')
+              if wins and std_gain >= .10: verdict='PHASE_CHANGE__PREDICTION_STRONGLY_SUPPORTED__FULL_ARENA_GATE'
+              elif wins and std_gain >= .05: verdict='MAJOR_GAIN__PREDICTION_SUPPORTED__FULL_ARENA_GATE'
+              elif wins and std_gain >= .02: verdict='MATERIAL_GAIN__PREDICTION_SUPPORTED__EXPAND_GATE'
+              elif wins: verdict='SMALL_GAIN__DIRECTIONAL_ONLY'
+              else: verdict='PREDICTION_NOT_SUPPORTED__TYPE_NEW_RESIDUAL'
+              print('VERDICT',verdict)
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tiny-canonical-env-ab
+          path: |
+            /tmp/tiny-callgrind.csv
+            /tmp/tiny-wall.csv
+            /tmp/tiny-summary.txt
+            /tmp/*-init.err
+            /tmp/*-std.err
+            /tmp/*-mathlib.err
