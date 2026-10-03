@@ -277,6 +277,31 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                         }
                         self.unify::<true>(depth, f1, t2)
                     } else {
+                        let lx = sx.len();
+                        let ly = sy.len();
+                        let a = lx.min(ly);
+                        let b = lx.max(ly);
+                        if a == 1 && (b == 3 || b == 4 || b == 6) {
+                            if lx < ly {
+                                let v1 = self.unfold_value(depth, t);
+                                if !std::ptr::eq(v1, t) {
+                                    return self.unify::<true>(depth, v1, t2);
+                                }
+                                let v2 = self.unfold_value(depth, t2);
+                                if !std::ptr::eq(v2, t2) {
+                                    return self.unify::<true>(depth, t, v2);
+                                }
+                            } else if ly < lx {
+                                let v2 = self.unfold_value(depth, t2);
+                                if !std::ptr::eq(v2, t2) {
+                                    return self.unify::<true>(depth, t, v2);
+                                }
+                                let v1 = self.unfold_value(depth, t);
+                                if !std::ptr::eq(v1, t) {
+                                    return self.unify::<true>(depth, v1, t2);
+                                }
+                            }
+                        }
                         self.unfold_pair(depth, t, t2)
                     }
                 } else if heads_match {

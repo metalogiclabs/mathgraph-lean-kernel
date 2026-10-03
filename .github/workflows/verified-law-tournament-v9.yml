@@ -1,0 +1,215 @@
+name: Verified force_all law tournament v9
+
+on:
+  push:
+    branches: [experiment/verified-law-tournament-v9]
+  workflow_dispatch:
+
+jobs:
+  tournament:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Build baseline and generate candidates
+        shell: bash
+        run: |
+          set -euxo pipefail
+          BASE=2de1895a52d21ad266b77002defe3e6bc69bbcfd
+          git worktree add /tmp/law-base "$BASE"
+          cp -a /tmp/law-base /tmp/law-work
+          cd /tmp/law-base
+          cargo test --locked
+          CARGO_TARGET_DIR=/tmp/law-base-target RUSTFLAGS='-C target-cpu=x86-64' cargo build --release --locked
+          cp /tmp/law-base-target/release/sokonanoda /tmp/law-base-bin
+          python3 - <<'PY'
+          from pathlib import Path
+          import itertools, json
+          atoms = {
+            'pi': 'Value::Pi { .. }',
+            'lam': 'Value::Lam { .. }',
+            'sort': 'Value::Sort { .. }',
+            'nat': 'Value::NatLit { .. }',
+            'str': 'Value::StrLit { .. }',
+          }
+          candidates=[]
+          keys=list(atoms)
+          # all non-empty combinations of the five obvious terminal value forms
+          for r in range(1, len(keys)+1):
+            for combo in itertools.combinations(keys, r):
+              name='term_'+'_'.join(combo)
+              pattern=' | '.join(atoms[k] for k in combo)
+              candidates.append((name, pattern))
+          rigid = {
+            'rigid_bvar': 'Value::Rigid { head: RigidHead::BVar(..), .. }',
+            'rigid_axiom': 'Value::Rigid { head: RigidHead::Axiom(..), .. }',
+            'rigid_ctor': 'Value::Rigid { head: RigidHead::Ctor(..), .. }',
+            'rigid_inductive': 'Value::Rigid { head: RigidHead::Inductive(..), .. }',
+            'rigid_recursor': 'Value::Rigid { head: RigidHead::Recursor(..), .. }',
+            'rigid_quot': 'Value::Rigid { head: RigidHead::QuotConst(..), .. }',
+          }
+          for name, pat in rigid.items(): candidates.append((name, pat))
+          safe_rigid=' | '.join(rigid[k] for k in ['rigid_bvar','rigid_axiom','rigid_ctor','rigid_inductive'])
+          terminal5=' | '.join(atoms.values())
+          candidates += [
+            ('rigid_safe4', safe_rigid),
+            ('terminal5_plus_rigid_safe4', terminal5+' | '+safe_rigid),
+            ('terminal5_plus_rigid_safe4_recursor', terminal5+' | '+safe_rigid+' | '+rigid['rigid_recursor']),
+            ('terminal5_plus_rigid_safe4_quot', terminal5+' | '+safe_rigid+' | '+rigid['rigid_quot']),
+            ('terminal5_plus_all_rigid', terminal5+' | '+' | '.join(rigid.values())),
+            ('thunk_unsafe_probe', 'Value::Thunk { .. }'),
+            ('unfold_unsafe_probe', 'Value::Unfold { .. }'),
+            ('terminal5_plus_thunk_probe', terminal5+' | Value::Thunk { .. }'),
+            ('terminal5_plus_unfold_probe', terminal5+' | Value::Unfold { .. }'),
+          ]
+          # 46 candidates total: 31 terminal subsets + 6 rigid singles + 9 structural/composition probes
+          assert len(candidates)==46, len(candidates)
+          Path('/tmp/law-candidates.json').write_text(json.dumps(candidates))
+          print('CANDIDATE_COUNT', len(candidates))
+          PY
+          printf '%s\n' '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}' >/tmp/checker.json
+
+      - name: Build frozen Arena workloads
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone https://github.com/leanprover/lean-kernel-arena /tmp/law-arena
+          cd /tmp/law-arena
+          git checkout f0fe3b379dbce91537417b529140d0ca250f271c
+          for T in perf/app-lam perf/beta-ladder perf/let-ladder perf/grind-ring-5; do
+            nix develop -c ./lka.py build-test "$T"
+          done
+
+      - name: Compile and semantic-eliminate 46 candidates
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import json, subprocess, shutil, os
+          src0=Path('/tmp/law-work/src/eval.rs').read_text()
+          anchor="""    pub(crate) fn force_all(&mut self, depth: u32, v: V<'t>) -> V<'t> {\n        if let Some(r) = self.store_lookup(depth, v) {"""
+          assert anchor in src0, 'force_all anchor changed'
+          candidates=json.loads(Path('/tmp/law-candidates.json').read_text())
+          survivors=[]; rejected=[]; build_fail=[]
+          arena=Path('/tmp/law-arena')
+          tests=['app-lam','beta-ladder','let-ladder','grind-ring-5']
+          # baseline outputs once
+          for t in tests:
+            f=arena/f'_build/tests/perf/{t}.ndjson'
+            out=Path(f'/tmp/base-{t}.out')
+            with f.open('rb') as inp, out.open('wb') as o:
+              subprocess.run(['/tmp/law-base-bin','/tmp/checker.json'],stdin=inp,stdout=o,stderr=subprocess.DEVNULL,check=True)
+          for idx,(name,pattern) in enumerate(candidates,1):
+            patch=f"""    pub(crate) fn force_all(&mut self, depth: u32, v: V<'t>) -> V<'t> {{\n        if matches!(v, {pattern}) {{ return v; }}\n        if let Some(r) = self.store_lookup(depth, v) {{"""
+            Path('/tmp/law-work/src/eval.rs').write_text(src0.replace(anchor,patch,1))
+            env=os.environ.copy(); env['CARGO_TARGET_DIR']='/tmp/law-work-target'; env['RUSTFLAGS']='-C target-cpu=x86-64'
+            p=subprocess.run(['cargo','build','--release','--locked'],cwd='/tmp/law-work',env=env,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
+            if p.returncode:
+              build_fail.append((name,p.stderr.decode(errors='replace')[-1200:])); continue
+            binp=Path(f'/tmp/law-bin-{idx:02d}')
+            shutil.copy('/tmp/law-work-target/release/sokonanoda',binp)
+            ok=True
+            for t in tests:
+              f=arena/f'_build/tests/perf/{t}.ndjson'
+              out=Path(f'/tmp/cand-{idx:02d}-{t}.out')
+              with f.open('rb') as inp, out.open('wb') as o:
+                r=subprocess.run([str(binp),'/tmp/checker.json'],stdin=inp,stdout=o,stderr=subprocess.DEVNULL)
+              if r.returncode or out.read_bytes()!=Path(f'/tmp/base-{t}.out').read_bytes():
+                ok=False; break
+            (survivors if ok else rejected).append((idx,name,pattern))
+            print(f'{idx:02d} {name}:', 'SURVIVE' if ok else 'REJECT')
+          Path('/tmp/law-survivors.json').write_text(json.dumps(survivors))
+          Path('/tmp/law-rejected.json').write_text(json.dumps(rejected))
+          Path('/tmp/law-build-fail.json').write_text(json.dumps(build_fail))
+          print('SEMANTIC_SUMMARY survivors=',len(survivors),'rejected=',len(rejected),'build_fail=',len(build_fail))
+          PY
+
+      - name: Deterministic survivor tournament
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd /tmp/law-arena
+          nix shell github:NixOS/nixpkgs/0ad6f47ea4fe188f4bc8f0380f93ae8523337c6c#valgrind -c bash -lc 'valgrind --version'
+          python3 - <<'PY'
+          from pathlib import Path
+          import json, subprocess, csv
+          survivors=json.loads(Path('/tmp/law-survivors.json').read_text())
+          arena=Path('/tmp/law-arena')
+          tests=['beta-ladder','app-lam']
+          rows=[]
+          def ir(binpath,t,tag):
+            f=arena/f'_build/tests/perf/{t}.ndjson'; cg=Path(f'/tmp/{tag}-{t}.cg')
+            cmd=['nix','shell','github:NixOS/nixpkgs/0ad6f47ea4fe188f4bc8f0380f93ae8523337c6c#valgrind','-c','valgrind','--tool=callgrind',f'--callgrind-out-file={cg}',binpath,'/tmp/checker.json']
+            with f.open('rb') as inp:
+              subprocess.run(cmd,stdin=inp,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True)
+            for line in cg.read_text().splitlines():
+              if line.startswith('summary:'): return int(line.split()[1])
+            raise RuntimeError('missing callgrind summary')
+          base={t:ir('/tmp/law-base-bin',t,'base') for t in tests}
+          for idx,name,pattern in survivors:
+            vals={t:ir(f'/tmp/law-bin-{idx:02d}',t,f'c{idx:02d}') for t in tests}
+            deltas={t:(vals[t]/base[t]-1)*100 for t in tests}
+            mean=sum(deltas.values())/len(tests)
+            worst=max(deltas.values())
+            rows.append({'idx':idx,'name':name,'pattern':pattern,'beta':vals['beta-ladder'],'app':vals['app-lam'],'beta_delta':deltas['beta-ladder'],'app_delta':deltas['app-lam'],'mean_delta':mean,'worst_delta':worst})
+          rows.sort(key=lambda r:(r['mean_delta'],r['worst_delta']))
+          with open('/tmp/law-ranking.csv','w',newline='') as f:
+            w=csv.DictWriter(f,fieldnames=rows[0].keys() if rows else ['idx','name']); w.writeheader(); w.writerows(rows)
+          print('BASE',base)
+          print('TOP_SURVIVORS')
+          for r in rows[:15]:
+            print(f"#{r['idx']:02d} {r['name']} beta={r['beta_delta']:+.4f}% app={r['app_delta']:+.4f}% mean={r['mean_delta']:+.4f}% worst={r['worst_delta']:+.4f}%")
+          winners=[r for r in rows if r['mean_delta'] < -0.10 and r['worst_delta'] <= 0.20]
+          Path('/tmp/law-winners.json').write_text(json.dumps(winners,indent=2))
+          if rows:
+            b=rows[0]
+            print('CHAMPION='+b['name'])
+            print(f"CHAMPION_MEAN_DELTA={b['mean_delta']:+.4f}%")
+            print(f"CHAMPION_BETA_DELTA={b['beta_delta']:+.4f}%")
+            print(f"CHAMPION_APP_DELTA={b['app_delta']:+.4f}%")
+          print('PROMOTABLE_COUNT='+str(len(winners)))
+          PY
+
+      - name: Lawbook decision and artifact
+        shell: bash
+        run: |
+          python3 - <<'PY' | tee /tmp/law-decision.txt
+          from pathlib import Path
+          import json,csv
+          surv=json.loads(Path('/tmp/law-survivors.json').read_text())
+          rej=json.loads(Path('/tmp/law-rejected.json').read_text())
+          fail=json.loads(Path('/tmp/law-build-fail.json').read_text())
+          rows=list(csv.DictReader(open('/tmp/law-ranking.csv'))) if Path('/tmp/law-ranking.csv').exists() else []
+          print(f'CANDIDATES=46 SURVIVORS={len(surv)} REJECTED={len(rej)} BUILD_FAIL={len(fail)}')
+          if not rows:
+            print('DECISION=NO_SURVIVORS__REPROFILE')
+          else:
+            b=rows[0]; mean=float(b['mean_delta']); worst=float(b['worst_delta'])
+            print('CHAMPION='+b['name'])
+            print('CHAMPION_PATTERN='+b['pattern'])
+            print('CHAMPION_MEAN_DELTA='+b['mean_delta']+'%')
+            print('CHAMPION_WORST_DELTA='+b['worst_delta']+'%')
+            if mean <= -5 and worst <= 0.2:
+              print('DECISION=PROMOTE__TOURNAMENT_BIG_BASIN_COLLAPSE')
+            elif mean <= -1 and worst <= 0.2:
+              print('DECISION=PROMOTE__TOURNAMENT_MATERIAL_COLLAPSE')
+            elif mean < -0.1 and worst <= 0.2:
+              print('DECISION=KEEP__WEAK_LAWS_AND_SEARCH_DEEPER')
+            else:
+              print('DECISION=NO_MATERIAL_NEW_COLLAPSE__SEARCH_NEXT_BASIN')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-law-tournament-v9
+          path: |
+            /tmp/law-candidates.json
+            /tmp/law-survivors.json
+            /tmp/law-rejected.json
+            /tmp/law-build-fail.json
+            /tmp/law-ranking.csv
+            /tmp/law-winners.json
+            /tmp/law-decision.txt

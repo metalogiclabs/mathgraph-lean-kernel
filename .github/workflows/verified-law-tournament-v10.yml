@@ -1,0 +1,31 @@
+name: recursor fire subfamily atlas v13
+
+on:
+  push:
+    branches: [experiment/recursor-fire-subfamily-atlas-v13]
+    paths:
+      - '.github/workflows/verified-law-tournament-v10.yml'
+      - 'experiments/run_recursor_fire_subfamily_atlas_v13.sh'
+      - 'experiments/recursor-fire-subfamily-atlas-v13.trigger'
+  workflow_dispatch:
+
+jobs:
+  atlas:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: cachix/install-nix-action@v31
+      - name: Execute recursor fire subfamily atlas
+        shell: bash
+        run: bash experiments/run_recursor_fire_subfamily_atlas_v13.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: recursor-fire-subfamily-atlas-v13
+          path: |
+            /tmp/v13-atlas.json
+            /tmp/v13-ranking.csv
+            /tmp/v13-residual.json
+            /tmp/v13-decision.txt
