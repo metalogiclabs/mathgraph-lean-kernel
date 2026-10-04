@@ -130,7 +130,7 @@ jobs:
               rows=[json.loads(x) for x in open('/tmp/lra-space/benchmark_data_warmup.jsonl') if x.strip()]
               row=next(r for r in rows if r['name']==structural['name'])
               open('/tmp/strata-retained-candidate.jsonl','w').write(
-                  json.dumps({'name':row['name'],'proof':row['src']},ensure_ascii=False)+'\\n')
+                  json.dumps({'name':row['name'],'proof':row['src']},ensure_ascii=False)+'\n')
               source='reference_fallback'
           out={
               'schema':'mathgraph.lean-refactor-arena.residual-selection.v1',
