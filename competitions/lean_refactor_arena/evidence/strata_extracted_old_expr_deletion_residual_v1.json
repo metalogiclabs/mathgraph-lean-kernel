@@ -1,0 +1,28 @@
+{
+  "schema": "mathgraph.lean-refactor-arena.certified-residual.v1",
+  "status": "WARRANTED_BOUNDED",
+  "claim": "bounded contiguous-line deletion search found no verified contraction",
+  "target": "CallElimCorrect.extractedOldExprInVars",
+  "source": "strata",
+  "benchmark_reference_tokens": 222,
+  "workspace_commit": "451e5f047bafa010d178856db76c00029bfa4d7f",
+  "lean_version": "v4.26.0",
+  "search": {
+    "method": "project_line_reduce.py contiguous-line ddmin",
+    "max_checks_requested": 24,
+    "verifier_checks_total": 25,
+    "initial_body_lines": 77,
+    "final_body_lines": 77,
+    "changed": false,
+    "line_reduction_fraction": 0
+  },
+  "authority": {
+    "github_actions_run_id": 34885150332,
+    "job_id": 104113849355,
+    "artifact_id": 10364901478,
+    "artifact_name": "lean-refactor-arena-real-strata",
+    "artifact_sha256": "450b79aea07c0e362129774d0ec5d1646e05d6e650484ef982a8faab322aadb5"
+  },
+  "residual": "Deletion-only grammar is insufficient on this target under the bounded search; the next experiment must change proof structure rather than pay for the same deletion search again.",
+  "promotion_boundary": "This does not prove no deletion exists universally; it warrants only the recorded bounded residual."
+}
