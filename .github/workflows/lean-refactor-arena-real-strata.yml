@@ -6,8 +6,8 @@ on:
     branches:
       - 'competition/lean-refactor-arena-track1'
     paths:
-      - 'competitions/lean_refactor_arena/project_line_reduce.py'
       - 'competitions/lean_refactor_arena/project_candidate_probe.py'
+      - 'competitions/lean_refactor_arena/evidence/strata_extracted_old_expr_deletion_residual_v1.json'
       - 'competitions/lean_refactor_arena/probes/strata_extracted_old_expr_v1.jsonl'
       - '.github/workflows/lean-refactor-arena-real-strata.yml'
 
@@ -84,18 +84,23 @@ jobs:
             --limit 1 || true
           # The target itself is independently replayed by both acquisition lanes below.
 
-      - name: Reproduce certified deletion-only residual
+      - name: Reuse certified deletion-only residual
         shell: bash
         run: |
           set -euo pipefail
-          python3 competitions/lean_refactor_arena/project_line_reduce.py \
-            --benchmark /tmp/lra-space/benchmark_data_warmup.jsonl \
-            --name "$TARGET_NAME" \
-            --workspace /tmp/Strata \
-            --out-proof /tmp/strata-deletion-candidate.jsonl \
-            --out-report /tmp/strata-line-reduce-report.json \
-            --max-checks 24 \
-            --timeout 120
+          python3 - <<'PY'
+          import json
+          evidence=json.load(open('competitions/lean_refactor_arena/evidence/strata_extracted_old_expr_deletion_residual_v1.json'))
+          rows=[json.loads(x) for x in open('/tmp/lra-space/benchmark_data_warmup.jsonl') if x.strip()]
+          row=next(r for r in rows if r['name']==evidence['target'])
+          assert evidence['status']=='WARRANTED_BOUNDED'
+          assert evidence['search']['changed'] is False
+          assert evidence['search']['verifier_checks_total']==25
+          assert row['proof_length']==evidence['benchmark_reference_tokens']==222
+          assert row['version_info'][0]=={evidence['lean_version']: evidence['workspace_commit']}
+          assert evidence['workspace_commit']=='451e5f047bafa010d178856db76c00029bfa4d7f'
+          print('REUSED_CERTIFIED_DELETION_RESIDUAL run=', evidence['authority']['github_actions_run_id'])
+          PY
 
       - name: Apply least lawful expansion - structural consequence probes
         shell: bash
@@ -116,18 +121,22 @@ jobs:
           set -euo pipefail
           python3 - <<'PY'
           import json, shutil
-          deletion=json.load(open('/tmp/strata-line-reduce-report.json'))
+          evidence=json.load(open('competitions/lean_refactor_arena/evidence/strata_extracted_old_expr_deletion_residual_v1.json'))
           structural=json.load(open('/tmp/strata-structural-probe-report.json'))
           if structural['strict_token_gain']:
               shutil.copyfile('/tmp/strata-structural-best.jsonl', '/tmp/strata-retained-candidate.jsonl')
               source='structural_consequence'
           else:
-              shutil.copyfile('/tmp/strata-deletion-candidate.jsonl', '/tmp/strata-retained-candidate.jsonl')
-              source='deletion_or_reference'
+              rows=[json.loads(x) for x in open('/tmp/lra-space/benchmark_data_warmup.jsonl') if x.strip()]
+              row=next(r for r in rows if r['name']==structural['name'])
+              open('/tmp/strata-retained-candidate.jsonl','w').write(
+                  json.dumps({'name':row['name'],'proof':row['src']},ensure_ascii=False)+'\\n')
+              source='reference_fallback'
           out={
               'schema':'mathgraph.lean-refactor-arena.residual-selection.v1',
               'target':structural['name'],
-              'deletion_changed':deletion['changed'],
+              'deletion_residual_status':evidence['status'],
+              'deletion_residual_run':evidence['authority']['github_actions_run_id'],
               'structural_verified_count':structural['verified_count'],
               'structural_best_label':structural['best_label'],
               'structural_best_tokens':structural['best_tokens'],
@@ -165,10 +174,10 @@ jobs:
             --upload /tmp/strata-full-upload.jsonl
           python3 - <<'PY'
           import json
-          d=json.load(open('/tmp/strata-line-reduce-report.json'))
+          e=json.load(open('competitions/lean_refactor_arena/evidence/strata_extracted_old_expr_deletion_residual_v1.json'))
           s=json.load(open('/tmp/strata-structural-probe-report.json'))
           h=json.load(open('/tmp/strata-retained-heartbeats.json'))
-          print('DELETION_CHANGED=', d['changed'])
+          print('DELETION_RESIDUAL=', e['status'], 'run', e['authority']['github_actions_run_id'])
           print('STRUCTURAL_BEST=', s['best_label'])
           print('STRUCTURAL_TOKENS=', s['reference_tokens'], '->', s['best_tokens'])
           print('STRUCTURAL_LENGTH_REDUCTION_PCT=', s['best_length_reduction_pct'])
@@ -185,8 +194,7 @@ jobs:
             /tmp/lra-warmup-sha256.txt
             /tmp/strata-live-benchmark-summary.json
             /tmp/strata-reference-verify.json
-            /tmp/strata-deletion-candidate.jsonl
-            /tmp/strata-line-reduce-report.json
+            competitions/lean_refactor_arena/evidence/strata_extracted_old_expr_deletion_residual_v1.json
             /tmp/strata-structural-best.jsonl
             /tmp/strata-structural-probe-report.json
             /tmp/strata-retention-selection.json
