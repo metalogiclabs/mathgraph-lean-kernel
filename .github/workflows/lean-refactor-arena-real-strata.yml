@@ -7,6 +7,8 @@ on:
       - 'competition/lean-refactor-arena-track1'
     paths:
       - 'competitions/lean_refactor_arena/project_line_reduce.py'
+      - 'competitions/lean_refactor_arena/project_candidate_probe.py'
+      - 'competitions/lean_refactor_arena/probes/strata_extracted_old_expr_v1.jsonl'
       - '.github/workflows/lean-refactor-arena-real-strata.yml'
 
 concurrency:
@@ -38,9 +40,13 @@ jobs:
           set -euo pipefail
           rm -rf /tmp/lra-space
           git clone --depth=1 https://huggingface.co/spaces/delta-lab-ai/lean-refactor-arena /tmp/lra-space
+          git -C /tmp/lra-space rev-parse HEAD | tee /tmp/lra-space-head.txt
+          sha256sum /tmp/lra-space/benchmark_data_warmup.jsonl | tee /tmp/lra-warmup-sha256.txt
           python3 competitions/lean_refactor_arena/official_jsonl.py \
             /tmp/lra-space/benchmark_data_warmup.jsonl \
             --summary-out /tmp/strata-live-benchmark-summary.json
+          python3 competitions/lean_refactor_arena/arena_metrics.py regression \
+            --benchmark /tmp/lra-space/benchmark_data_warmup.jsonl
 
       - name: Checkout exact Strata competition commit
         shell: bash
@@ -76,10 +82,9 @@ jobs:
             --submission /tmp/full-control.jsonl \
             --out /tmp/strata-reference-verify.json \
             --limit 1 || true
-          # The generic verifier's first benchmark row is the adjacent Strata theorem;
-          # verify our target directly through the reducer's mandatory baseline replay.
+          # The target itself is independently replayed by both acquisition lanes below.
 
-      - name: Run bounded deletion-only acquisition on real theorem
+      - name: Reproduce certified deletion-only residual
         shell: bash
         run: |
           set -euo pipefail
@@ -87,10 +92,64 @@ jobs:
             --benchmark /tmp/lra-space/benchmark_data_warmup.jsonl \
             --name "$TARGET_NAME" \
             --workspace /tmp/Strata \
-            --out-proof /tmp/strata-candidate.jsonl \
+            --out-proof /tmp/strata-deletion-candidate.jsonl \
             --out-report /tmp/strata-line-reduce-report.json \
             --max-checks 24 \
             --timeout 120
+
+      - name: Apply least lawful expansion - structural consequence probes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 competitions/lean_refactor_arena/project_candidate_probe.py \
+            --benchmark /tmp/lra-space/benchmark_data_warmup.jsonl \
+            --name "$TARGET_NAME" \
+            --workspace /tmp/Strata \
+            --candidates competitions/lean_refactor_arena/probes/strata_extracted_old_expr_v1.jsonl \
+            --out-best /tmp/strata-structural-best.jsonl \
+            --out-report /tmp/strata-structural-probe-report.json \
+            --timeout 120
+
+      - name: Select retained candidate without weakening the reference
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, shutil
+          deletion=json.load(open('/tmp/strata-line-reduce-report.json'))
+          structural=json.load(open('/tmp/strata-structural-probe-report.json'))
+          if structural['strict_token_gain']:
+              shutil.copyfile('/tmp/strata-structural-best.jsonl', '/tmp/strata-retained-candidate.jsonl')
+              source='structural_consequence'
+          else:
+              shutil.copyfile('/tmp/strata-deletion-candidate.jsonl', '/tmp/strata-retained-candidate.jsonl')
+              source='deletion_or_reference'
+          out={
+              'schema':'mathgraph.lean-refactor-arena.residual-selection.v1',
+              'target':structural['name'],
+              'deletion_changed':deletion['changed'],
+              'structural_verified_count':structural['verified_count'],
+              'structural_best_label':structural['best_label'],
+              'structural_best_tokens':structural['best_tokens'],
+              'structural_strict_token_gain':structural['strict_token_gain'],
+              'retained_source':source,
+          }
+          open('/tmp/strata-retention-selection.json','w').write(json.dumps(out,indent=2)+'\n')
+          print(json.dumps(out,indent=2))
+          PY
+
+      - name: Measure retained candidate heartbeats
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 competitions/lean_refactor_arena/project_heartbeat.py \
+            --benchmark /tmp/lra-space/benchmark_data_warmup.jsonl \
+            --heartbeats /tmp/lra-space/benchmark_heartbeats.jsonl \
+            --name "$TARGET_NAME" \
+            --workspace /tmp/Strata \
+            --candidate /tmp/strata-retained-candidate.jsonl \
+            --out /tmp/strata-retained-heartbeats.json \
+            --timeout 180
 
       - name: Build full 15-problem upload with retained Strata candidate
         shell: bash
@@ -98,17 +157,23 @@ jobs:
           set -euo pipefail
           python3 competitions/lean_refactor_arena/arena_upload.py build \
             --benchmark /tmp/lra-space/benchmark_data_warmup.jsonl \
-            --candidates /tmp/strata-candidate.jsonl \
+            --candidates /tmp/strata-retained-candidate.jsonl \
             --out /tmp/strata-full-upload.jsonl \
             --report /tmp/strata-full-upload-report.json
+          python3 competitions/lean_refactor_arena/arena_upload.py validate \
+            --benchmark /tmp/lra-space/benchmark_data_warmup.jsonl \
+            --upload /tmp/strata-full-upload.jsonl
           python3 - <<'PY'
           import json
-          r=json.load(open('/tmp/strata-line-reduce-report.json'))
-          print('REAL_STRATA_CHANGED=', r['changed'])
-          print('REAL_STRATA_LINES=', r['initial_body_lines'], '->', r['final_body_lines'])
-          print('REAL_STRATA_CHECKS=', r['verifier_checks'])
-          print('REAL_STRATA_BASELINE_WALL=', r['baseline_wall_seconds'])
-          print('REAL_STRATA_FINAL_WALL=', r['final_wall_seconds'])
+          d=json.load(open('/tmp/strata-line-reduce-report.json'))
+          s=json.load(open('/tmp/strata-structural-probe-report.json'))
+          h=json.load(open('/tmp/strata-retained-heartbeats.json'))
+          print('DELETION_CHANGED=', d['changed'])
+          print('STRUCTURAL_BEST=', s['best_label'])
+          print('STRUCTURAL_TOKENS=', s['reference_tokens'], '->', s['best_tokens'])
+          print('STRUCTURAL_LENGTH_REDUCTION_PCT=', s['best_length_reduction_pct'])
+          print('RETAINED_HEARTBEATS=', h['reference_heartbeat_published'], '->', h['measured_heartbeat'])
+          print('RETAINED_HEARTBEAT_RATIO=', h['ratio_to_published'])
           PY
 
       - uses: actions/upload-artifact@v4
@@ -116,9 +181,16 @@ jobs:
         with:
           name: lean-refactor-arena-real-strata
           path: |
+            /tmp/lra-space-head.txt
+            /tmp/lra-warmup-sha256.txt
             /tmp/strata-live-benchmark-summary.json
             /tmp/strata-reference-verify.json
-            /tmp/strata-candidate.jsonl
+            /tmp/strata-deletion-candidate.jsonl
             /tmp/strata-line-reduce-report.json
+            /tmp/strata-structural-best.jsonl
+            /tmp/strata-structural-probe-report.json
+            /tmp/strata-retention-selection.json
+            /tmp/strata-retained-candidate.jsonl
+            /tmp/strata-retained-heartbeats.json
             /tmp/strata-full-upload.jsonl
             /tmp/strata-full-upload-report.json
