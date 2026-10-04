@@ -53,7 +53,12 @@ def read_candidates(path: Path, name: str) -> list[dict]:
         proof = str(row.get("proof") or "")
         if not proof.strip():
             raise SystemExit(f"{path}:{line_no}: empty proof for {label}")
-        rows.append({"label": label, "proof": proof})
+        rows.append({
+            "label": label,
+            "proof": proof,
+            "eligible_for_retention": bool(row.get("eligible_for_retention", True)),
+            "provenance": str(row.get("provenance") or "local"),
+        })
     if not rows:
         raise SystemExit(f"{path}: no candidates for {name!r}")
     return rows
@@ -144,6 +149,8 @@ def main() -> int:
         proof = cand["proof"]
         result = {
             "label": cand["label"],
+            "eligible_for_retention": cand["eligible_for_retention"],
+            "provenance": cand["provenance"],
             "statement_bound": False,
             "forbidden": None,
             "proof_tokens": None,
@@ -183,7 +190,9 @@ def main() -> int:
 
     verified = [r for r in results if r.get("ok")]
     verified.sort(key=lambda r: (int(r["proof_tokens"]), float(r["wall_seconds"]), r["label"]))
-    best = verified[0] if verified else None
+    eligible_verified = [r for r in verified if r.get("eligible_for_retention")]
+    best = eligible_verified[0] if eligible_verified else None
+    external_verified = [r for r in verified if not r.get("eligible_for_retention")]
     best_spec = None
     if best is not None:
         best_spec = next(
@@ -208,6 +217,10 @@ def main() -> int:
         "reference_wall_seconds": baseline["wall_seconds"],
         "candidate_count": len(results),
         "verified_count": len(verified),
+        "eligible_verified_count": len(eligible_verified),
+        "external_verified_count": len(external_verified),
+        "external_best_tokens": None if not external_verified else external_verified[0]["proof_tokens"],
+        "external_best_label": None if not external_verified else external_verified[0]["label"],
         "best_label": None if best is None else best["label"],
         "best_tokens": None if best is None else best["proof_tokens"],
         "best_length_reduction_pct": None if best is None else best["length_reduction_pct"],
