@@ -1,0 +1,61 @@
+name: Lean Refactor Arena subst score probe
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'competition/lean-refactor-arena-track1'
+    paths:
+      - 'competitions/lean_refactor_arena/probes/strata_subst_old_post_v1.jsonl'
+      - 'competitions/lean_refactor_arena/public_harness_bridge.py'
+      - '.github/workflows/lean-refactor-arena-subst-score.yml'
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Materialize public Arena v4.26
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.elan/bin:$PATH"
+          rm -rf /tmp/lean-refactor
+          git clone --depth=1 --filter=blob:none --sparse https://github.com/aurasoph/lean-refactor.git /tmp/lean-refactor
+          git -C /tmp/lean-refactor sparse-checkout set competition
+          cd /tmp/lean-refactor/competition
+          ./build-all.sh v4.26
+      - name: Score verified local candidates
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > /tmp/subst-scores.jsonl
+          for label in prospective_codomain_app_residual_v2 pointwise_future_join_v2; do
+            python3 competitions/lean_refactor_arena/public_harness_bridge.py \
+              --competition /tmp/lean-refactor/competition --project v4.26 \
+              --name "CallElimCorrect.substOldPostSubset" \
+              --candidate competitions/lean_refactor_arena/probes/strata_subst_old_post_v1.jsonl \
+              --label "$label"
+            cd /tmp/lean-refactor/competition
+            python3 arena.py check --name "CallElimCorrect.substOldPostSubset" > "/tmp/$label.json"
+            cd "$GITHUB_WORKSPACE"
+            jq -c --arg label "$label" '. + {candidate_label:$label}' "/tmp/$label.json" >> /tmp/subst-scores.jsonl
+          done
+          cat /tmp/subst-scores.jsonl
+          python3 - <<'PY'
+          import json
+          rows=[json.loads(x) for x in open('/tmp/subst-scores.jsonl') if x.strip()]
+          good=[r for r in rows if r.get('compiled') and r.get('statement_ok') and float(r.get('survival_pct') or 0)==100]
+          best=max(good,key=lambda r:r.get('objective_sum_pct') or -1e9) if good else None
+          if not best: raise SystemExit('NO_VERIFIED_SUBST_SCORE')
+          print('BEST_SUBST=',json.dumps({k:best.get(k) for k in
+            ('candidate_label','length','heartbeats','objective_sum_pct','combined_pct')},indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-subst-score
+          path: /tmp/subst-scores.jsonl
