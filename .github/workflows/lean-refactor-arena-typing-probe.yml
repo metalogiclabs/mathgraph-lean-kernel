@@ -32,7 +32,7 @@ jobs:
         run: |
           set -euo pipefail
           : > /tmp/typing-scores.jsonl
-          for label in grind_derivation_v1 grind_derivation_v2 public_informed_derivation_339; do
+          for label in grind_except_app_v1 grind_except_app_case_v1 public_informed_derivation_339; do
             python3 competitions/lean_refactor_arena/public_harness_bridge.py \
               --competition /tmp/lean-refactor/competition \
               --project v4.33 \
