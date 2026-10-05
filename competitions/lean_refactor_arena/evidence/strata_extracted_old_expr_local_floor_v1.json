@@ -1,0 +1,50 @@
+{
+  "schema": "mathgraph.lean-refactor-arena.local-floor.v1",
+  "status": "WARRANTED_BOUNDED",
+  "target": "CallElimCorrect.extractedOldExprInVars",
+  "source_commit": "451e5f047bafa010d178856db76c00029bfa4d7f",
+  "lean_version": "v4.26.0",
+  "incumbent": {
+    "label": "witness_induction_refine_membership",
+    "proof_tokens": 44,
+    "measured_heartbeats": 644,
+    "published_reference_tokens": 222,
+    "published_reference_heartbeats": 2696,
+    "required_survival": "1/1"
+  },
+  "tested_below_incumbent": [
+    {
+      "label": "witness_repeat_refine_simpbase",
+      "tokens": 39,
+      "result": "REJECTED"
+    },
+    {
+      "label": "witness_repeat_list_empty",
+      "tokens": 40,
+      "result": "REJECTED"
+    },
+    {
+      "label": "witness_repeat_dot_empty",
+      "tokens": 40,
+      "result": "REJECTED"
+    },
+    {
+      "label": "witness_repeat_simp",
+      "tokens": 39,
+      "result": "REJECTED"
+    }
+  ],
+  "nearby_verified": [
+    {
+      "label": "witness_repeat_refine_shortempty",
+      "tokens": 45,
+      "result": "WARRANTED"
+    }
+  ],
+  "authority": {
+    "github_actions_run_id": 37253439736,
+    "job_id": 111585561864
+  },
+  "conclusion": "44 tokens is the smallest verified candidate in the explicitly tested witness-relative terminal-contraction neighborhood. This is not a universal lower bound.",
+  "routing": "Stop paying for this local contraction neighborhood. Transfer the representation law to another theorem unless a new separator or stronger transformation becomes available."
+}
