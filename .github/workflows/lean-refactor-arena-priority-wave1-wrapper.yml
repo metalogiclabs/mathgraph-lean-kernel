@@ -21,14 +21,17 @@ jobs:
           - id: core-inits
             name: Core.InitsUpdatesComm
             project: v4.29.1
+            problem_file: strata__Core.InitsUpdatesComm.lean
             candidates: competitions/lean_refactor_arena/probes/core_inits_updates_comm_v1.jsonl
           - id: ccs-choice
             name: Cslib.CCS.bisimilarity_congr_choice
             project: v4.33
+            problem_file: cslib__Cslib.CCS.bisimilarity_congr_choice.lean
             candidates: competitions/lean_refactor_arena/probes/ccs_bisim_choice_v1.jsonl
           - id: ski-diamond
             name: Cslib.SKI.parallelReduction_diamond
             project: v4.33
+            problem_file: cslib__Cslib.SKI.parallelReduction_diamond.lean
             candidates: competitions/lean_refactor_arena/probes/ski_diamond_v1.jsonl
     runs-on: ubuntu-24.04
     timeout-minutes: 75
@@ -49,6 +52,8 @@ jobs:
             | sh -s -- -y
           echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
           (cd /tmp/project && "$HOME/.elan/bin/lake" update)
+          curl -fsSL "https://raw.githubusercontent.com/aurasoph/lean-refactor/main/competition/projects/${{ matrix.project }}/problems/${{ matrix.problem_file }}" \
+            -o /tmp/project/target.lean
           echo VERIFIED_ARENA_WRAPPER_MATERIALIZED
 
       - name: Freeze public warm-up payload
@@ -71,6 +76,7 @@ jobs:
             --benchmark /tmp/lra-space/benchmark_data_warmup.jsonl \
             --name "${{ matrix.name }}" \
             --workspace /tmp/project \
+            --source-file /tmp/project/target.lean \
             --candidates "${{ matrix.candidates }}" \
             --out-best /tmp/best.jsonl \
             --out-report /tmp/report.json \
