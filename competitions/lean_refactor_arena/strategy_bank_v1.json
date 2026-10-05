@@ -1,0 +1,116 @@
+{
+  "schema": "mathgraph.lean-refactor-arena.strategy-bank.v1",
+  "status": "CANDIDATE_REUSABLE",
+  "purpose": "Generic representation moves for hidden Lean Refactor Arena tasks. Warm-up examples justify the moves but theorem-specific solutions are not embedded.",
+  "strategies": [
+    {
+      "id": "WITNESS_FIRST",
+      "law": "If a proof-bearing witness already certifies the distinctions relevant to the conclusion, recurse over the witness rather than the richer object it classifies.",
+      "signals": [
+        "inductive predicate premise",
+        "proof currently inducts over underlying syntax",
+        "constructor-local conclusion"
+      ],
+      "protected_future": [
+        "same theorem statement",
+        "Lean acceptance",
+        "required toolchain survival"
+      ],
+      "experiment": "Induct/cases on the witness; expose only the exceptional constructor branches that affect the conclusion."
+    },
+    {
+      "id": "PROSPECTIVE_CODOMAIN",
+      "law": "Strengthen a recursive subset/support goal to an arbitrary future-closed codomain S so recursive composition becomes local.",
+      "signals": [
+        "Subset/⊆ goal",
+        "RHS built by append/union with a small fixed support",
+        "repeated subset transitivity"
+      ],
+      "protected_future": [
+        "membership consequence",
+        "statement identity"
+      ],
+      "experiment": "Prove ∀ S, source-support ⊆ S → fixed-support ⊆ S → transformed-support ⊆ S, then instantiate S with the original RHS."
+    },
+    {
+      "id": "POINTWISE_FUTURE",
+      "law": "When subset structure remains expensive, quotient it to the protected pointwise membership consequence.",
+      "signals": [
+        "Subset/Set inclusion",
+        "recursive append/union structure",
+        "propositional membership transport"
+      ],
+      "protected_future": [
+        "for every output member, membership in allowed future support"
+      ],
+      "experiment": "Introduce one arbitrary member and prove it comes from an original branch or the fixed newly admitted support."
+    },
+    {
+      "id": "SEMANTIC_RECONSTRUCTION",
+      "law": "Replace procedural induction with an existing semantic commuting/reconstruction law when the theorem already describes a canonical result.",
+      "signals": [
+        "long operational induction",
+        "nearby lemmas state update/commutation/normalization properties",
+        "existential canonical witness"
+      ],
+      "protected_future": [
+        "same output state/relation"
+      ],
+      "experiment": "Construct the canonical witness directly, then discharge side conditions with previously verified semantic lemmas."
+    },
+    {
+      "id": "DERIVATION_INDUCTION",
+      "law": "For relational closure, progress, confluence or simulation statements, recurse on the derivation that controls legal futures rather than raw terms.",
+      "signals": [
+        "Diamond/progress/simulation/bisimulation",
+        "relation-valued premise",
+        "large syntax case split"
+      ],
+      "protected_future": [
+        "reachable reductions/transitions"
+      ],
+      "experiment": "Induct on the derivation; use irreducibility/canonical-form witnesses to collapse impossible branches."
+    },
+    {
+      "id": "BASIS_QUOTIENT",
+      "law": "If a linear/span proof is invariant under algebraic closure, prove the consequential statement on basis generators and transport through closure.",
+      "signals": [
+        "Submodule.span",
+        "Basis.mem_span",
+        "linearity",
+        "repeated add/smul cases"
+      ],
+      "protected_future": [
+        "linear map equality"
+      ],
+      "experiment": "Use one/two-variable span induction and isolate the generator case; let closure constructors be generic."
+    },
+    {
+      "id": "MINIMAL_STATE_INVARIANT",
+      "law": "For recurrence/finite-state mathematics, identify the smallest state that deterministically controls the future and prove transport from a repeated state.",
+      "signals": [
+        "bounded sequence",
+        "recurrence",
+        "eventual periodicity",
+        "finite range"
+      ],
+      "protected_future": [
+        "future values of the recurrence"
+      ],
+      "experiment": "Package the minimal recurrence window as a finite state, find a repeated state, and propagate equality by strong induction."
+    },
+    {
+      "id": "LOCAL_ALGEBRAIC_FACTOR",
+      "law": "For long equality chains, name the few semantic intermediate quantities that expose a final ring/field identity and avoid replaying expansions.",
+      "signals": [
+        "large calc/rw chain",
+        "ring/field_simp",
+        "repeated derivative/evaluation expressions"
+      ],
+      "protected_future": [
+        "final equality"
+      ],
+      "experiment": "Factor repeated semantic equalities into local haves, rewrite once, then close the algebraic residual with the cheapest normalizer."
+    }
+  ]
+}
