@@ -76,8 +76,8 @@ class IsolatedWorkspace:
         started = time.perf_counter()
         try:
             proc = subprocess.run(
-                ["lake", "env", "lean", str(tmp.relative_to(self.workspace))],
-                cwd=self.workspace,
+                ["lake", "env", "lean", str(tmp.relative_to(self.run_cwd))],
+                cwd=self.run_cwd,
                 text=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
@@ -119,6 +119,14 @@ class ExactWorkspace:
         if not self.source.is_file():
             tried = "\n".join(str(p) for p in candidates)
             raise SystemExit(f"source file not found; tried:\n{tried}")
+        self.run_cwd = self.workspace
+        self.package_root = None
+        if package_root.is_dir():
+            for pkg in package_root.iterdir():
+                if pkg.is_dir() and self.source.is_relative_to(pkg.resolve()):
+                    self.run_cwd = pkg.resolve()
+                    self.package_root = self.run_cwd
+                    break
         self.original = self.source.read_text(encoding="utf-8")
         count = self.original.count(frozen_src)
         if count != 1:
