@@ -1,0 +1,63 @@
+{
+  "schema": "mathgraph.lean-refactor-arena.residual-history.v1",
+  "status": "WARRANTED_NEGATIVE_EVIDENCE",
+  "target": "CallElimCorrect.substOldPostSubset",
+  "source_commit": "451e5f047bafa010d178856db76c00029bfa4d7f",
+  "lean_version": "v4.26.0",
+  "rejected": [
+    {
+      "label": "prospective_codomain_simp",
+      "tokens": 52,
+      "run": 37252961716
+    },
+    {
+      "label": "prospective_codomain_split_simp",
+      "tokens": 59,
+      "run": 37252961716
+    },
+    {
+      "label": "prospective_codomain_membership",
+      "tokens": 108,
+      "run": 37252961716
+    },
+    {
+      "label": "pointwise_future_simp",
+      "tokens": 18,
+      "run": 37253318657
+    },
+    {
+      "label": "pointwise_future_repeat_split",
+      "tokens": 21,
+      "run": 37253318657
+    },
+    {
+      "label": "pointwise_future_app_explicit",
+      "tokens": 31,
+      "run": 37253318657
+    },
+    {
+      "label": "pointwise_future_grind",
+      "tokens": 23,
+      "run": 37253318657
+    },
+    {
+      "label": "pointwise_future_explicit_residual",
+      "tokens": 75,
+      "run": 37253708217
+    },
+    {
+      "label": "pointwise_future_explicit_aesop",
+      "tokens": 75,
+      "run": 37253708217
+    }
+  ],
+  "external_control": {
+    "label": "external_public_incumbent_188",
+    "tokens": 188,
+    "result": "PASS",
+    "role": "non-retainable comparator"
+  },
+  "residual": "The stronger prospective and pointwise representations remain plausible, but implicit recursive union transport and the exceptional substOld app match are not closed by the tested automation. Compile recursive union transport into one reusable local join and isolate only the exceptional app branch.",
+  "next_candidate": "pointwise_future_join",
+  "rule": "Do not rerun rejected candidates unless the verifier/environment boundary changes."
+}
