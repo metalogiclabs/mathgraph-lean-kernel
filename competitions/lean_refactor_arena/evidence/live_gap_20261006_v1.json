@@ -1,0 +1,93 @@
+{
+  "schema": "mathgraph.lean-refactor-arena.live-gap.v1",
+  "status": "WARRANTED_SNAPSHOT",
+  "observed_at": "2026-10-06T11:14:00+13:00",
+  "live_closed_track": [
+    {
+      "rank": 1,
+      "user": "LARA-EPFL",
+      "combined_pct": 87.36
+    },
+    {
+      "rank": 2,
+      "user": "Sebastien Larivee",
+      "combined_pct": 85.89
+    },
+    {
+      "rank": 3,
+      "user": "RMA (Claude Sonnet 5)",
+      "combined_pct": 83.65
+    },
+    {
+      "rank": 4,
+      "user": "grandecoming-gpt-6",
+      "combined_pct": 82.73
+    },
+    {
+      "rank": 5,
+      "user": "egubegu",
+      "combined_pct": 80.56
+    }
+  ],
+  "authority": {
+    "source": "live public Hugging Face Arena leaderboard API",
+    "github_actions_run_id": 37261902300,
+    "rerun_job_id": 112004117607
+  },
+  "current_composed_portfolio": {
+    "combined_pct_if_full_survival": 81.7396,
+    "objective_sum_mean": 145.2187,
+    "status": "CANDIDATE_COMPOSED_NOT_OFFICIAL",
+    "implied_rank_against_snapshot": 5,
+    "gap_to_rank_1_pct": 5.6204,
+    "gap_to_rank_4_pct": 0.9904,
+    "objective_mean_required_for_rank_1_at_100_survival": 162.08,
+    "objective_mean_gap_to_rank_1": 16.8613,
+    "objective_sum_total_gap_over_15": 252.9195
+  },
+  "priority_residuals": [
+    {
+      "name": "FieldSpecification.WickAlgebra.ι_timeOrderF_superCommuteF_eq_time",
+      "current_objective": 97.88
+    },
+    {
+      "name": "Cslib.SKI.parallelReduction_diamond",
+      "current_objective": 100.94
+    },
+    {
+      "name": "CallElimCorrect.substOldPostSubset",
+      "current_objective": 112.37
+    },
+    {
+      "name": "Cslib.LambdaCalculus.LocallyNameless.Fsub.Typing.progress",
+      "current_objective": 113.26
+    },
+    {
+      "name": "Electromagnetism.ElectromagneticPotential.time_deriv_time_deriv_electricField_of_isExtrema",
+      "current_objective": 120.75
+    },
+    {
+      "name": "Binius.BinaryBasefold.fiberwise_dist_lt_imp_dist_lt_unique_decoding_radius",
+      "current_objective": 129.55
+    }
+  ],
+  "new_local_results": {
+    "core_inits": {
+      "name": "Core.InitsUpdatesComm",
+      "objective_sum_pct": 154.77,
+      "combined_pct": 84.92,
+      "survival_pct": 100,
+      "status": "WARRANTED_ALL_VERSION",
+      "authority_run": 37261566510
+    },
+    "strata_subst": {
+      "name": "CallElimCorrect.substOldPostSubset",
+      "candidate": "prospective_codomain_app_residual_v2",
+      "tokens": "313->96",
+      "heartbeats": "5175->7262",
+      "status": "VERIFIED_BUT_NOT_PARETO_COMPETITIVE",
+      "conclusion": "Do not promote: token gain is overwhelmed by heartbeat regression."
+    }
+  },
+  "next_action": "Beat the weak-six objective frontier. First repair low-heartbeat explicit Strata candidate and the public high-objective near-misses for Wick/Typing/EM/Fiber; retain only verified Pareto improvements."
+}
