@@ -1,0 +1,140 @@
+name: Lean Refactor Arena Strata prospective invariant
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'competition/lean-refactor-arena-track1'
+    paths:
+      - 'competitions/lean_refactor_arena/probes/strata_subst_old_post_v1.jsonl'
+      - 'competitions/lean_refactor_arena/project_candidate_probe.py'
+      - '.github/workflows/lean-refactor-arena-strata-subst.yml'
+
+concurrency:
+  group: lean-refactor-arena-strata-subst
+  cancel-in-progress: true
+
+jobs:
+  strata-subst-old-post:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      STRATA_COMMIT: 451e5f047bafa010d178856db76c00029bfa4d7f
+      TARGET_NAME: CallElimCorrect.substOldPostSubset
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install exact Lean
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \
+            | sh -s -- -y --default-toolchain leanprover/lean4:v4.26.0
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          "$HOME/.elan/bin/lean" --version
+
+      - name: Freeze public warm-up authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/lra-space
+          git clone --depth=1 https://huggingface.co/spaces/delta-lab-ai/lean-refactor-arena /tmp/lra-space
+          git -C /tmp/lra-space rev-parse HEAD | tee /tmp/lra-space-head.txt
+          sha256sum /tmp/lra-space/benchmark_data_warmup.jsonl | tee /tmp/lra-warmup-sha256.txt
+          python3 competitions/lean_refactor_arena/official_jsonl.py \
+            /tmp/lra-space/benchmark_data_warmup.jsonl \
+            --summary-out /tmp/live-benchmark-summary.json
+          python3 competitions/lean_refactor_arena/arena_metrics.py regression \
+            --benchmark /tmp/lra-space/benchmark_data_warmup.jsonl
+
+      - name: Materialize exact Strata workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/Strata
+          git init /tmp/Strata
+          git -C /tmp/Strata remote add origin https://github.com/strata-org/Strata.git
+          git -C /tmp/Strata fetch --depth=1 origin "$STRATA_COMMIT"
+          git -C /tmp/Strata checkout --detach FETCH_HEAD
+          test "$(git -C /tmp/Strata rev-parse HEAD)" = "$STRATA_COMMIT"
+          test "$(cat /tmp/Strata/lean-toolchain)" = "leanprover/lean4:v4.26.0"
+          (
+            cd /tmp/Strata
+            "$HOME/.elan/bin/lake" update
+            "$HOME/.elan/bin/lake" build Strata.Transform.CallElimCorrect
+          )
+
+      - name: Probe prospective-codomain representation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 competitions/lean_refactor_arena/project_candidate_probe.py \
+            --benchmark /tmp/lra-space/benchmark_data_warmup.jsonl \
+            --name "$TARGET_NAME" \
+            --workspace /tmp/Strata \
+            --candidates competitions/lean_refactor_arena/probes/strata_subst_old_post_v1.jsonl \
+            --out-best /tmp/subst-best.jsonl \
+            --out-report /tmp/subst-probe-report.json \
+            --timeout 120
+
+      - name: Retain only a verified strict contraction
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          r=json.load(open('/tmp/subst-probe-report.json'))
+          print(json.dumps({
+            'verified_count':r['verified_count'],
+            'eligible_verified_count':r['eligible_verified_count'],
+            'external_verified_count':r['external_verified_count'],
+            'external_best_label':r['external_best_label'],
+            'external_best_tokens':r['external_best_tokens'],
+            'best_label':r['best_label'],
+            'best_tokens':r['best_tokens'],
+            'best_length_reduction_pct':r['best_length_reduction_pct'],
+            'strict_token_gain':r['strict_token_gain'],
+          },indent=2))
+          if not r['strict_token_gain']:
+              raise SystemExit('NO_RETAINABLE_PROSPECTIVE_INVARIANT_GAIN')
+          PY
+
+      - name: Measure retained candidate heartbeats
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 competitions/lean_refactor_arena/project_heartbeat.py \
+            --benchmark /tmp/lra-space/benchmark_data_warmup.jsonl \
+            --heartbeats /tmp/lra-space/benchmark_heartbeats.jsonl \
+            --name "$TARGET_NAME" \
+            --workspace /tmp/Strata \
+            --candidate /tmp/subst-best.jsonl \
+            --out /tmp/subst-heartbeats.json \
+            --timeout 180
+
+      - name: Summarize candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          p=json.load(open('/tmp/subst-probe-report.json'))
+          h=json.load(open('/tmp/subst-heartbeats.json'))
+          print('BEST=',p['best_label'])
+          print('TOKENS=',p['reference_tokens'],'->',p['best_tokens'])
+          print('LENGTH_REDUCTION_PCT=',p['best_length_reduction_pct'])
+          print('HEARTBEATS=',h['reference_heartbeat_published'],'->',h['measured_heartbeat'])
+          print('HEARTBEAT_RATIO=',h['ratio_to_published'])
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lean-refactor-arena-strata-subst
+          path: |
+            /tmp/lra-space-head.txt
+            /tmp/lra-warmup-sha256.txt
+            /tmp/live-benchmark-summary.json
+            /tmp/subst-best.jsonl
+            /tmp/subst-probe-report.json
+            /tmp/subst-heartbeats.json
