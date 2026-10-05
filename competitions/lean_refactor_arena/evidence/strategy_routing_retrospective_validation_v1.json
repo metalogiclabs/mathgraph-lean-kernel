@@ -1,0 +1,72 @@
+{
+  "schema": "mathgraph.lean-refactor-arena.strategy-routing-validation.v1",
+  "status": "CANDIDATE_REUSABLE",
+  "date": "2026-10-05",
+  "qualification_run": 37254394412,
+  "qualification_result": "VERIFIED_GENERIC_STRATEGY_ROUTING",
+  "boundary": "The router is deterministic and theorem-name agnostic. Alignment below is retrospective against public warm-up competitor proofs and therefore validates routing plausibility, not independent discovery.",
+  "alignments": [
+    {
+      "target": "CallElimCorrect.extractedOldExprInVars",
+      "router": "WITNESS_FIRST",
+      "public_best_shape": "induction on NormalizedOldExpr witness",
+      "alignment": "DIRECT"
+    },
+    {
+      "target": "Core.InitsUpdatesComm",
+      "router": "SEMANTIC_RECONSTRUCTION",
+      "public_best_shape": "construct canonical updatedStates witness and use commutation/update lemmas",
+      "alignment": "DIRECT"
+    },
+    {
+      "target": "fundamental_theorem_of_variational_calculus'",
+      "router": "SEPARATING_WITNESS",
+      "public_best_shape": "assume nonzero, choose point, build localized bump/test, derive positive integral contradiction",
+      "alignment": "DIRECT"
+    },
+    {
+      "target": "FieldSpecification.WickAlgebra.ι_timeOrderF_superCommuteF_eq_time",
+      "router": "BASIS_QUOTIENT",
+      "public_best_shape": "span induction to basis generators, then algebraic transport",
+      "alignment": "DIRECT"
+    },
+    {
+      "target": "Cslib.LambdaCalculus.LocallyNameless.Fsub.Typing.progress",
+      "router": "DERIVATION_INDUCTION",
+      "public_best_shape": "induction on typing derivation with canonical forms",
+      "alignment": "DIRECT"
+    },
+    {
+      "target": "Cslib.SKI.parallelReduction_diamond",
+      "router": "DERIVATION_INDUCTION",
+      "public_best_shape": "induction on reduction derivation with irreducibility separators",
+      "alignment": "DIRECT"
+    },
+    {
+      "target": "Cslib.CCS.bisimilarity_congr_choice",
+      "router": "DERIVATION_INDUCTION",
+      "public_best_shape": "simulation/bisimulation witness decomposition",
+      "alignment": "DIRECT"
+    },
+    {
+      "target": "putnam_1964_a4",
+      "router": "MINIMAL_STATE_INVARIANT",
+      "public_best_shape": "finite 4-term state, repeated state, strong-induction propagation",
+      "alignment": "DIRECT"
+    },
+    {
+      "target": "Binius.BinaryBasefold.fold_advances_evaluation_poly",
+      "router": "LOCAL_ALGEBRAIC_FACTOR",
+      "public_best_shape": "few semantic local factors followed by a small algebraic closure",
+      "alignment": "DIRECT"
+    },
+    {
+      "target": "Electromagnetism.ElectromagneticPotential.time_deriv_time_deriv_electricField_of_isExtrema",
+      "router": "LOCAL_ALGEBRAIC_FACTOR",
+      "public_best_shape": "factor derivative identities, rewrite once, close field/ring residual",
+      "alignment": "DIRECT"
+    }
+  ],
+  "conclusion": "The reusable unit is not a theorem-specific proof template but a representation move selected from the protected future and current residual. Promote the router as a candidate hidden-task front end; keep theorem-specific warm-up proofs outside the strategy bank.",
+  "next_residual": "Need prospective validation on unseen/held-out Lean proofs where routing is chosen before inspecting an optimized proof."
+}
