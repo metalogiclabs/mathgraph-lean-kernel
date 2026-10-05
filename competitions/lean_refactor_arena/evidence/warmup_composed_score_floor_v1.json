@@ -1,0 +1,54 @@
+{
+  "schema": "mathgraph.lean-refactor-arena.composed-warmup-score.v1",
+  "status": "CANDIDATE_SCORE_FLOOR_PENDING_FULL_CROSS_VERSION_CLOSE",
+  "date": "2026-10-05",
+  "portfolio_path": "competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl",
+  "portfolio_preflight": {
+    "run_id": 37261171082,
+    "covered": 15,
+    "missing": 0,
+    "result": "VERIFIED_15_TARGET_PORTFOLIO_PREFLIGHT"
+  },
+  "evidence_composition": {
+    "exact_public_best_matches": 13,
+    "exact_match_objective_sum_total": 1831.2,
+    "exact_match_source": "aurasoph/lean-refactor public trial rows with compiled=true and survival_pct=100",
+    "locally_public_harness_scored_differences": [
+      {
+        "name": "Core.InitsUpdatesComm",
+        "public_harness_run_id": 37260419356,
+        "objective_sum_pct": 154.77,
+        "combined_pct": 84.92,
+        "length": 86,
+        "heartbeats": 311,
+        "newest_toolchain_compiled": true,
+        "full_cross_version_status": "PENDING"
+      },
+      {
+        "name": "putnam_1964_b2",
+        "public_harness_run_id": 37260419356,
+        "objective_sum_pct": 192.31,
+        "combined_pct": 97.44,
+        "length": 119,
+        "heartbeats": 1230,
+        "newest_toolchain_compiled": true,
+        "full_cross_version_status": "PENDING"
+      }
+    ]
+  },
+  "composed_metrics": {
+    "objective_sum_total": 2178.28,
+    "objective_sum_mean": 145.2187,
+    "combined_mean_if_all_15_full_survival": 81.7396
+  },
+  "cross_version_close": {
+    "workflow_run_id": 37261566510,
+    "targets": [
+      "Core.InitsUpdatesComm",
+      "putnam_1964_b2"
+    ],
+    "status": "RUNNING"
+  },
+  "authority_boundary": "81.7396 is a composed warm-up score estimate: 13 rows inherit measurements only because the portfolio proof is byte-identical to a public all-survival comparator; Core.InitsUpdatesComm and putnam_1964_b2 are independently scored by the public harness on their primary toolchains. It is not an official leaderboard score and is not promoted to WARRANTED full-portfolio score until the differing candidates close all protected toolchains or the official Arena scores the upload.",
+  "next_residual": "Close the two differing candidates across all listed Lean versions, finish independent scoring of the remaining heavy project batches, then compare/upload to the live Arena."
+}
