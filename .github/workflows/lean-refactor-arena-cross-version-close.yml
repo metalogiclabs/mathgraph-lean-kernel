@@ -1,0 +1,102 @@
+name: Lean Refactor Arena cross-version close
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'competition/lean-refactor-arena-track1'
+    paths:
+      - 'competitions/lean_refactor_arena/probes/core_inits_updates_comm_v1.jsonl'
+      - 'competitions/lean_refactor_arena/probes/putnam_1964_b2_v1.jsonl'
+      - 'competitions/lean_refactor_arena/public_harness_bridge.py'
+      - '.github/workflows/lean-refactor-arena-cross-version-close.yml'
+
+jobs:
+  qualify:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: core-inits
+            name: Core.InitsUpdatesComm
+            primary: v4.29.1
+            versions: '["v4.29.1","v4.27","v4.26"]'
+            candidate: competitions/lean_refactor_arena/probes/core_inits_updates_comm_v1.jsonl
+          - id: putnam-b2
+            name: putnam_1964_b2
+            primary: v4.26
+            versions: '["v4.26","v4.25"]'
+            candidate: competitions/lean_refactor_arena/probes/putnam_1964_b2_v1.jsonl
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install elan
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+
+      - name: Clone public Arena harness
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/lean-refactor
+          git clone --depth=1 --filter=blob:none --sparse https://github.com/aurasoph/lean-refactor.git /tmp/lean-refactor
+          git -C /tmp/lean-refactor sparse-checkout set competition
+          git -C /tmp/lean-refactor rev-parse HEAD | tee /tmp/public-harness-head.txt
+
+      - name: Build every protected toolchain
+        shell: bash
+        env:
+          VERSIONS_JSON: ${{ matrix.versions }}
+        run: |
+          set -euo pipefail
+          cd /tmp/lean-refactor/competition
+          echo "$VERSIONS_JSON" | jq -r '.[]' | while read -r v; do
+            echo "BUILD_VERSION=$v"
+            ./build-all.sh "$v"
+          done
+          echo VERIFIED_ALL_REQUIRED_PROJECTS_MATERIALIZED
+
+      - name: Inject candidate and check all versions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 competitions/lean_refactor_arena/public_harness_bridge.py \
+            --competition /tmp/lean-refactor/competition \
+            --project "${{ matrix.primary }}" \
+            --name "${{ matrix.name }}" \
+            --candidate "${{ matrix.candidate }}"
+          cd /tmp/lean-refactor/competition
+          python3 arena.py check --name "${{ matrix.name }}" --all-versions --timeout 1800 \
+            | tee /tmp/all-versions.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/all-versions.json'))
+          assert d.get('compiled') is True, d
+          assert d.get('statement_ok') is True, d
+          assert float(d.get('survival_pct') or 0) == 100.0, d
+          compat=d.get('compat') or {}
+          assert compat and all(bool(v) for v in compat.values()), d
+          print(json.dumps({
+            'name':d['name'],
+            'length':d.get('length'),
+            'heartbeats':d.get('heartbeats'),
+            'objective_sum_pct':d.get('objective_sum_pct'),
+            'combined_pct':d.get('combined_pct'),
+            'survival_pct':d.get('survival_pct'),
+            'compat':compat,
+          },indent=2))
+          print('VERIFIED_ALL_VERSION_CANDIDATE')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-cross-version-${{ matrix.id }}
+          path: |
+            /tmp/public-harness-head.txt
+            /tmp/all-versions.json
