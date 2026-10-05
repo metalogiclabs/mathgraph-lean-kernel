@@ -111,6 +111,19 @@
         "final equality"
       ],
       "experiment": "Factor repeated semantic equalities into local haves, rewrite once, then close the algebraic residual with the cheapest normalizer."
+    },
+    {
+      "id": "SEPARATING_WITNESS",
+      "law": "When a universal testing hypothesis forces an object to vanish, construct the cheapest admissible test that separates any assumed nonzero point.",
+      "signals": [
+        "conclusion is equality to zero",
+        "hypothesis quantifies over test functions/probes",
+        "continuity/localization makes a separating probe available"
+      ],
+      "protected_future": [
+        "one verifier-authorized observable that distinguishes the nonzero world"
+      ],
+      "experiment": "Assume nonzero, choose a point/witness, construct a localized admissible test, and derive a positive observable contradicting the universal zero test."
     }
   ]
 }
