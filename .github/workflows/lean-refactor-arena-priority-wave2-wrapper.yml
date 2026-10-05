@@ -29,6 +29,7 @@ jobs:
           - id: variational
             name: fundamental_theorem_of_variational_calculus'
             project: v4.32
+            problem_file: "physlib__fundamental_theorem_of_variational_calculus'.lean"
             candidates: competitions/lean_refactor_arena/probes/fundamental_variational_v1.jsonl
     runs-on: ubuntu-24.04
     timeout-minutes: 90
@@ -50,6 +51,14 @@ jobs:
           (cd /tmp/project && "$HOME/.elan/bin/lake" update)
           echo VERIFIED_ARENA_WRAPPER_MATERIALIZED
 
+      - name: Materialize organizer-prepared source when applicable
+        if: matrix.id == 'variational'
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL "https://raw.githubusercontent.com/aurasoph/lean-refactor/main/competition/projects/${{ matrix.project }}/problems/${{ matrix.problem_file }}" \
+            -o /tmp/project/target.lean
+
       - name: Freeze public warm-up payload
         shell: bash
         run: |
@@ -66,10 +75,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          extra=()
+          if [ "${{ matrix.id }}" = "variational" ]; then
+            extra+=(--source-file /tmp/project/target.lean)
+          fi
           python3 competitions/lean_refactor_arena/project_candidate_probe.py \
             --benchmark /tmp/lra-space/benchmark_data_warmup.jsonl \
             --name "${{ matrix.name }}" \
             --workspace /tmp/project \
+            "${extra[@]}" \
             --candidates "${{ matrix.candidates }}" \
             --out-best /tmp/best.jsonl \
             --out-report /tmp/report.json \
