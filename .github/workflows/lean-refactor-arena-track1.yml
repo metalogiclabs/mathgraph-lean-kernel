@@ -79,6 +79,16 @@ jobs:
           python3 competitions/lean_refactor_arena/arena_metrics.py regression \
             --benchmark /tmp/public-arena-payload/benchmark_data_warmup.jsonl
 
+      - name: Route warm-up by generic representation hints
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 competitions/lean_refactor_arena/strategy_hints.py \
+            --benchmark /tmp/public-arena-payload/benchmark_data_warmup.jsonl \
+            | tee /tmp/arena-strategy-hints.jsonl
+          test "$(wc -l < /tmp/arena-strategy-hints.jsonl)" -eq 15
+          echo VERIFIED_GENERIC_STRATEGY_ROUTING
+
       - name: Build exact full-coverage Arena upload floor
         shell: bash
         run: |
@@ -245,6 +255,7 @@ jobs:
             /tmp/public-arena-payload/
             /tmp/arena-space-code/
             /tmp/live-warmup-summary.json
+            /tmp/arena-strategy-hints.jsonl
             /tmp/live-zero-change.jsonl
             /tmp/live-arena-upload-floor.jsonl
             /tmp/live-arena-upload-floor-report.json
