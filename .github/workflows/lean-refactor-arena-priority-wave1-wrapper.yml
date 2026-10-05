@@ -1,0 +1,101 @@
+name: Lean Refactor Arena priority wave 1 wrapper
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'competition/lean-refactor-arena-track1'
+    paths:
+      - 'competitions/lean_refactor_arena/probes/core_inits_updates_comm_v1.jsonl'
+      - 'competitions/lean_refactor_arena/probes/ccs_bisim_choice_v1.jsonl'
+      - 'competitions/lean_refactor_arena/probes/ski_diamond_v1.jsonl'
+      - 'competitions/lean_refactor_arena/project_candidate_probe.py'
+      - '.github/workflows/lean-refactor-arena-priority-wave1-wrapper.yml'
+
+jobs:
+  probe:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: core-inits
+            name: Core.InitsUpdatesComm
+            project: v4.29.1
+            candidates: competitions/lean_refactor_arena/probes/core_inits_updates_comm_v1.jsonl
+          - id: ccs-choice
+            name: Cslib.CCS.bisimilarity_congr_choice
+            project: v4.33
+            candidates: competitions/lean_refactor_arena/probes/ccs_bisim_choice_v1.jsonl
+          - id: ski-diamond
+            name: Cslib.SKI.parallelReduction_diamond
+            project: v4.33
+            candidates: competitions/lean_refactor_arena/probes/ski_diamond_v1.jsonl
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Materialize organizer-compatible wrapper
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/project
+          base="https://raw.githubusercontent.com/aurasoph/lean-refactor/main/competition/projects/${{ matrix.project }}"
+          curl -fsSL "$base/lakefile.toml" -o /tmp/project/lakefile.toml
+          curl -fsSL "$base/lake-manifest.json" -o /tmp/project/lake-manifest.json
+          curl -fsSL "$base/lean-toolchain" -o /tmp/project/lean-toolchain
+          cat /tmp/project/lean-toolchain
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \
+            | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          (cd /tmp/project && "$HOME/.elan/bin/lake" update)
+          echo VERIFIED_ARENA_WRAPPER_MATERIALIZED
+
+      - name: Freeze public warm-up payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/lra-space
+          git clone --depth=1 https://huggingface.co/spaces/delta-lab-ai/lean-refactor-arena /tmp/lra-space
+          python3 competitions/lean_refactor_arena/official_jsonl.py \
+            /tmp/lra-space/benchmark_data_warmup.jsonl \
+            --summary-out /tmp/live-summary.json
+          python3 competitions/lean_refactor_arena/arena_metrics.py regression \
+            --benchmark /tmp/lra-space/benchmark_data_warmup.jsonl
+
+      - name: Probe routed candidate in wrapper
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 competitions/lean_refactor_arena/project_candidate_probe.py \
+            --benchmark /tmp/lra-space/benchmark_data_warmup.jsonl \
+            --name "${{ matrix.name }}" \
+            --workspace /tmp/project \
+            --candidates "${{ matrix.candidates }}" \
+            --out-best /tmp/best.jsonl \
+            --out-report /tmp/report.json \
+            --timeout 300
+          python3 - <<'PY'
+          import json
+          r=json.load(open('/tmp/report.json'))
+          print(json.dumps({
+            'name':r['name'],
+            'verified_count':r['verified_count'],
+            'best_label':r['best_label'],
+            'reference_tokens':r['reference_tokens'],
+            'best_tokens':r['best_tokens'],
+            'best_length_reduction_pct':r['best_length_reduction_pct'],
+            'strict_token_gain':r['strict_token_gain'],
+          },indent=2))
+          if not r['strict_token_gain']:
+              raise SystemExit('NO_PRIORITY_WAVE1_GAIN')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-wave1-wrapper-${{ matrix.id }}
+          path: |
+            /tmp/live-summary.json
+            /tmp/best.jsonl
+            /tmp/report.json
