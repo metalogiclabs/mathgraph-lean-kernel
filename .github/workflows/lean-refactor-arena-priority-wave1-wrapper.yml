@@ -76,7 +76,6 @@ jobs:
             --benchmark /tmp/lra-space/benchmark_data_warmup.jsonl \
             --name "${{ matrix.name }}" \
             --workspace /tmp/project \
-            --source-file /tmp/project/target.lean \
             --candidates "${{ matrix.candidates }}" \
             --out-best /tmp/best.jsonl \
             --out-report /tmp/report.json \
