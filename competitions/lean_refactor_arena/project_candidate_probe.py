@@ -76,8 +76,8 @@ class IsolatedWorkspace:
         started = time.perf_counter()
         try:
             proc = subprocess.run(
-                ["lake", "env", "lean", str(tmp.relative_to(self.run_cwd))],
-                cwd=self.run_cwd,
+                ["lake", "env", "lean", str(tmp.relative_to(self.workspace))],
+                cwd=self.workspace,
                 text=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
@@ -140,8 +140,8 @@ class ExactWorkspace:
         started = time.perf_counter()
         try:
             proc = subprocess.run(
-                ["lake", "env", "lean", str(tmp.relative_to(self.workspace))],
-                cwd=self.workspace,
+                ["lake", "env", "lean", str(tmp.relative_to(self.run_cwd))],
+                cwd=self.run_cwd,
                 text=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
