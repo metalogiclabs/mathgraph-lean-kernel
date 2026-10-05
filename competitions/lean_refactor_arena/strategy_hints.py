@@ -34,11 +34,16 @@ def route(row: dict) -> list[dict]:
     if "Diamond" in stmt or any(w in stmt for w in ("progress", "bisim", "Simulation", "simulation")):
         add("DERIVATION_INDUCTION", "the theorem protects future reductions/transitions")
 
-    if "∃" in stmt and any(w in src for w in ("updatedState", "UpdateState", "InitState", "comm", "Comm")):
+    if "∃" in stmt and any(w in src for w in ("updatedState", "updatedStates", "UpdateState", "UpdateStates", "InitState", "InitStates")):
         add("SEMANTIC_RECONSTRUCTION", "the goal asks for a canonical witness and the environment exposes update/commutation laws")
 
     if "Submodule.span" in src or "span_induction" in proof:
         add("BASIS_QUOTIENT", "the proof is closed under linear span constructors")
+
+    if ("= 0" in stmt or "=0" in stmt) and (
+        "IsTestFunction" in stmt or re.search(r"∀\s+\w+\s*,", stmt)
+    ):
+        add("SEPARATING_WITNESS", "a universal testing hypothesis may be contradicted by one localized separating probe")
 
     if any(w in stmt.lower() for w in ("period", "recurrence")) or (
         "bounded" in stmt.lower() and proof.count("induction") > 0
