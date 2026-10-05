@@ -1,0 +1,128 @@
+name: Lean Refactor Arena public score floor
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'competition/lean-refactor-arena-track1'
+    paths:
+      - 'competitions/lean_refactor_arena/probes/**'
+      - 'competitions/lean_refactor_arena/public_harness_bridge.py'
+      - '.github/workflows/lean-refactor-arena-public-score-floor.yml'
+
+jobs:
+  score:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: v4.26
+            id: v426
+            targets: >-
+              [{"name":"CallElimCorrect.substOldPostSubset","file":"competitions/lean_refactor_arena/probes/strata_subst_public_v1.jsonl"},
+               {"name":"CallElimCorrect.extractedOldExprInVars","file":"competitions/lean_refactor_arena/probes/extracted_old_expr_retained_v1.jsonl"},
+               {"name":"putnam_1964_b2","file":"competitions/lean_refactor_arena/probes/putnam_1964_b2_v1.jsonl"}]
+          - project: v4.27
+            id: v427
+            targets: >-
+              [{"name":"putnam_1964_a4","file":"competitions/lean_refactor_arena/probes/putnam_1964_a4_v1.jsonl"},
+               {"name":"putnam_1995_a3","file":"competitions/lean_refactor_arena/probes/putnam_1995_a3_v1.jsonl"}]
+          - project: v4.29.1
+            id: v4291
+            targets: >-
+              [{"name":"Core.InitsUpdatesComm","file":"competitions/lean_refactor_arena/probes/core_inits_updates_comm_v1.jsonl"}]
+          - project: v4.31
+            id: v431
+            targets: >-
+              [{"name":"Binius.BinaryBasefold.fiberwise_dist_lt_imp_dist_lt_unique_decoding_radius","file":"competitions/lean_refactor_arena/probes/arklib_fiberwise_v1.jsonl"},
+               {"name":"Binius.BinaryBasefold.fold_advances_evaluation_poly","file":"competitions/lean_refactor_arena/probes/arklib_fold_v1.jsonl"},
+               {"name":"interleaved_affine_gaps_imply_tensor_gaps","file":"competitions/lean_refactor_arena/probes/arklib_interleaved_v1.jsonl"}]
+          - project: v4.32
+            id: v432
+            targets: >-
+              [{"name":"fundamental_theorem_of_variational_calculus'","file":"competitions/lean_refactor_arena/probes/fundamental_variational_v1.jsonl"},
+               {"name":"Electromagnetism.ElectromagneticPotential.time_deriv_time_deriv_electricField_of_isExtrema","file":"competitions/lean_refactor_arena/probes/physlib_em_v1.jsonl"},
+               {"name":"FieldSpecification.WickAlgebra.ι_timeOrderF_superCommuteF_eq_time","file":"competitions/lean_refactor_arena/probes/physlib_wick_v1.jsonl"}]
+          - project: v4.33
+            id: v433
+            targets: >-
+              [{"name":"Cslib.LambdaCalculus.LocallyNameless.Fsub.Typing.progress","file":"competitions/lean_refactor_arena/probes/cslib_typing_progress_v1.jsonl"},
+               {"name":"Cslib.SKI.parallelReduction_diamond","file":"competitions/lean_refactor_arena/probes/ski_diamond_v1.jsonl"},
+               {"name":"Cslib.CCS.bisimilarity_congr_choice","file":"competitions/lean_refactor_arena/probes/ccs_bisim_choice_v1.jsonl"}]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install elan
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+
+      - name: Clone public Arena harness
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/lean-refactor
+          git clone --depth=1 --filter=blob:none --sparse https://github.com/aurasoph/lean-refactor.git /tmp/lean-refactor
+          git -C /tmp/lean-refactor sparse-checkout set competition
+          git -C /tmp/lean-refactor rev-parse HEAD | tee /tmp/public-harness-head.txt
+
+      - name: Materialize project dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "/tmp/lean-refactor/competition/projects/${{ matrix.project }}"
+          "$HOME/.elan/bin/lake" update
+          echo VERIFIED_PUBLIC_ARENA_PROJECT_MATERIALIZED
+
+      - name: Score candidate batch with public harness
+        shell: bash
+        env:
+          TARGETS_JSON: ${{ matrix.targets }}
+          PROJECT: ${{ matrix.project }}
+        run: |
+          set -euo pipefail
+          : > /tmp/scores.jsonl
+          echo "$TARGETS_JSON" | jq -c '.[]' | while read -r item; do
+            name="$(echo "$item" | jq -r '.name')"
+            file="$(echo "$item" | jq -r '.file')"
+            label="$(echo "$item" | jq -r '.label // empty')"
+            args=(
+              --competition /tmp/lean-refactor/competition
+              --project "$PROJECT"
+              --name "$name"
+              --candidate "$GITHUB_WORKSPACE/$file"
+            )
+            if [ -n "$label" ]; then args+=(--label "$label"); fi
+            python3 competitions/lean_refactor_arena/public_harness_bridge.py "${args[@]}"
+            cd /tmp/lean-refactor/competition
+            python3 arena.py check --name "$name" > /tmp/one-score.json
+            cd "$GITHUB_WORKSPACE"
+            cat /tmp/one-score.json
+            jq -c . /tmp/one-score.json >> /tmp/scores.jsonl
+          done
+          python3 - <<'PY'
+          import json
+          rows=[json.loads(x) for x in open('/tmp/scores.jsonl') if x.strip()]
+          bad=[r for r in rows if not r.get('compiled') or not r.get('statement_ok') or r.get('survival_pct',0) < 100]
+          print(json.dumps({
+            'count':len(rows),
+            'names':[r['name'] for r in rows],
+            'objective_sum_total':round(sum(r.get('objective_sum_pct') or 0 for r in rows),2),
+            'combined_mean':round(sum(r.get('combined_pct') or 0 for r in rows)/len(rows),2) if rows else None,
+            'bad':[r.get('name') for r in bad],
+          },indent=2))
+          if bad: raise SystemExit('PUBLIC_ARENA_SCORE_BATCH_HAS_INVALID_CANDIDATE')
+          print('VERIFIED_PUBLIC_ARENA_SCORE_BATCH')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-public-score-${{ matrix.id }}
+          path: |
+            /tmp/public-harness-head.txt
+            /tmp/scores.jsonl
