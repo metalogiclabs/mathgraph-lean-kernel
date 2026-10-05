@@ -51,14 +51,6 @@ jobs:
           (cd /tmp/project && "$HOME/.elan/bin/lake" update)
           echo VERIFIED_ARENA_WRAPPER_MATERIALIZED
 
-      - name: Materialize organizer-prepared source when applicable
-        if: matrix.id == 'variational'
-        shell: bash
-        run: |
-          set -euo pipefail
-          curl -fsSL "https://raw.githubusercontent.com/aurasoph/lean-refactor/main/competition/projects/${{ matrix.project }}/problems/${{ matrix.problem_file }}" \
-            -o /tmp/project/target.lean
-
       - name: Freeze public warm-up payload
         shell: bash
         run: |
