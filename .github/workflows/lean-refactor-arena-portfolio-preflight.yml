@@ -1,0 +1,62 @@
+name: Lean Refactor Arena portfolio preflight
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'competition/lean-refactor-arena-track1'
+    paths:
+      - 'competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl'
+      - 'competitions/lean_refactor_arena/public_comparator_reconcile.py'
+      - 'competitions/lean_refactor_arena/arena_upload.py'
+      - '.github/workflows/lean-refactor-arena-portfolio-preflight.yml'
+
+jobs:
+  preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Freeze live public benchmark
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/lra-space
+          git clone --depth=1 https://huggingface.co/spaces/delta-lab-ai/lean-refactor-arena /tmp/lra-space
+          git -C /tmp/lra-space rev-parse HEAD | tee /tmp/lra-space-head.txt
+          sha256sum /tmp/lra-space/benchmark_data_warmup.jsonl | tee /tmp/lra-warmup-sha256.txt
+
+      - name: Validate exact 15-row upload
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 competitions/lean_refactor_arena/arena_upload.py validate \
+            --benchmark /tmp/lra-space/benchmark_data_warmup.jsonl \
+            --upload competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl
+          cp competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl /tmp/warmup-upload-v1.jsonl
+          echo VERIFIED_15_TARGET_PORTFOLIO_PREFLIGHT
+
+      - name: Reconcile exact candidates with public best trials
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/public-refactor
+          git clone --depth=1 --filter=blob:none --sparse https://github.com/aurasoph/lean-refactor.git /tmp/public-refactor
+          git -C /tmp/public-refactor sparse-checkout set runs/trials
+          git -C /tmp/public-refactor rev-parse HEAD | tee /tmp/public-comparator-head.txt
+          python3 competitions/lean_refactor_arena/public_comparator_reconcile.py \
+            --portfolio competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl \
+            --public-trials /tmp/public-refactor/runs/trials \
+            --out /tmp/public-comparator-reconciliation.json
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-warmup-portfolio-preflight
+          path: |
+            /tmp/lra-space-head.txt
+            /tmp/lra-warmup-sha256.txt
+            /tmp/public-comparator-head.txt
+            /tmp/public-comparator-reconciliation.json
+            /tmp/warmup-upload-v1.jsonl
