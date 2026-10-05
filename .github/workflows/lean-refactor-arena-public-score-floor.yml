@@ -74,8 +74,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cd "/tmp/lean-refactor/competition/projects/${{ matrix.project }}"
-          "$HOME/.elan/bin/lake" update
+          cd /tmp/lean-refactor/competition
+          ./build-all.sh "${{ matrix.project }}"
           echo VERIFIED_PUBLIC_ARENA_PROJECT_MATERIALIZED
 
       - name: Score candidate batch with public harness
