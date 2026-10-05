@@ -58,6 +58,35 @@ jobs:
           open('/tmp/lra-read-like-apis.json','w').write(json.dumps(names,indent=2)+'\n')
           PY
 
+      - name: Fetch live closed-track leaderboard
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://delta-lab-ai-lean-refactor-arena.hf.space"
+          response="$(curl -fsSL --retry 3 -X POST -H 'Content-Type: application/json' \
+            -d '{"data":[]}' "$base/gradio_api/call/leaderboard")"
+          echo "$response" | tee /tmp/lra-leaderboard-call.json
+          event_id="$(echo "$response" | jq -r '.event_id // empty')"
+          test -n "$event_id"
+          curl -fsSL --retry 3 "$base/gradio_api/call/leaderboard/$event_id" \
+            -o /tmp/lra-leaderboard.sse
+          cat /tmp/lra-leaderboard.sse
+          python3 - <<'PY'
+          import json,re
+          txt=open('/tmp/lra-leaderboard.sse').read()
+          payloads=[]
+          for line in txt.splitlines():
+              if line.startswith('data: '):
+                  raw=line[6:]
+                  try: payloads.append(json.loads(raw))
+                  except Exception: pass
+          print('PAYLOAD_COUNT=',len(payloads))
+          if not payloads:
+              raise SystemExit('NO_LEADERBOARD_PAYLOAD')
+          open('/tmp/lra-leaderboard-payloads.json','w').write(json.dumps(payloads,indent=2,ensure_ascii=False)+'\n')
+          print('VERIFIED_LIVE_LEADERBOARD_FETCH')
+          PY
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -66,3 +95,6 @@ jobs:
             /tmp/lra-space-config.json
             /tmp/lra-api-surface.json
             /tmp/lra-read-like-apis.json
+            /tmp/lra-leaderboard-call.json
+            /tmp/lra-leaderboard.sse
+            /tmp/lra-leaderboard-payloads.json
