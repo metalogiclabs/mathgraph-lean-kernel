@@ -1,0 +1,40 @@
+{
+  "schema": "mathgraph.lean-refactor-arena.warranted-result.v1",
+  "status": "WARRANTED",
+  "target": "CallElimCorrect.extractedOldExprInVars",
+  "source": "strata",
+  "theorem_statement_preserved": true,
+  "source_commit": "451e5f047bafa010d178856db76c00029bfa4d7f",
+  "lean_version": "v4.26.0",
+  "lineage": {
+    "prior_residual": "competitions/lean_refactor_arena/evidence/strata_extracted_old_expr_deletion_residual_v1.json",
+    "operation": "EXPAND",
+    "representation_change": "induct on the NormalizedOldExpr witness rather than on the underlying expression syntax",
+    "candidate_label": "witness_induction_refine_membership"
+  },
+  "result": {
+    "reference_proof_tokens": 222,
+    "candidate_proof_tokens": 44,
+    "proof_token_reduction_pct": 80.1802,
+    "published_reference_heartbeats": 2696,
+    "measured_candidate_heartbeats": 644,
+    "measured_candidate_ratio_to_published_reference": 0.23887240356083086,
+    "required_toolchain_survival": "1/1",
+    "full_15_problem_upload_shape_verified": true
+  },
+  "authority": {
+    "github_actions_run_id": 37252348540,
+    "job_id": 111582390586,
+    "artifact_id": 11321392167,
+    "artifact_sha256": "b19ed9d69291e011da2edf3b019f13d4df341df0f35c9ec1d9cc4435ee8a1693",
+    "branch_head": "57bbe6cf0a2d64baffd1f01ad31a6c8400cfe235"
+  },
+  "external_comparator": {
+    "role": "non-retainable public warm-up comparator only",
+    "tokens": 44,
+    "reported_heartbeats": 640,
+    "note": "The MathGraph candidate was independently reverified in the exact pinned Strata workspace; no superiority over this comparator is claimed."
+  },
+  "reusable_candidate_law": "When an inductive witness already certifies exactly the distinctions relevant to the theorem, recurse over that witness instead of the richer syntax it classifies; preserve only the constructor-local consequence needed by the protected output.",
+  "next_residual": "The 44-token candidate matches the public token frontier but does not yet beat it. Minimize the verified proof or reduce elaboration cost without reintroducing syntax distinctions."
+}
