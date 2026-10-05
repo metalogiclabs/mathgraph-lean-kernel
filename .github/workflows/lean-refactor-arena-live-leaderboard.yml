@@ -1,0 +1,68 @@
+name: Lean Refactor Arena live leaderboard inspect
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'competition/lean-refactor-arena-track1'
+    paths:
+      - '.github/workflows/lean-refactor-arena-live-leaderboard.yml'
+
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Inspect public Space API surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://delta-lab-ai-lean-refactor-arena.hf.space"
+          curl -fsSL --retry 3 "$base/config" -o /tmp/lra-space-config.json
+          python3 - <<'PY'
+          import json
+          c=json.load(open('/tmp/lra-space-config.json'))
+          deps=c.get('dependencies') or []
+          rows=[]
+          for d in deps:
+              api=d.get('api_name')
+              if api is False: continue
+              rows.append({
+                  'id':d.get('id'),
+                  'api_name':api,
+                  'inputs':d.get('inputs'),
+                  'outputs':d.get('outputs'),
+                  'trigger_mode':d.get('trigger_mode'),
+                  'queue':d.get('queue'),
+              })
+          print(json.dumps(rows,indent=2))
+          open('/tmp/lra-api-surface.json','w').write(json.dumps(rows,indent=2)+'\n')
+          print('VERIFIED_PUBLIC_SPACE_API_SURFACE')
+          PY
+
+      - name: Probe only read-like leaderboard endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, urllib.request
+          c=json.load(open('/tmp/lra-space-config.json'))
+          names=[]
+          for d in c.get('dependencies') or []:
+              api=d.get('api_name')
+              if isinstance(api,str) and any(k in api.lower() for k in ('leader','refresh','status')):
+                  names.append(api)
+          print('READ_LIKE_APIS=',names)
+          open('/tmp/lra-read-like-apis.json','w').write(json.dumps(names,indent=2)+'\n')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-live-space-api
+          path: |
+            /tmp/lra-space-config.json
+            /tmp/lra-api-surface.json
+            /tmp/lra-read-like-apis.json
