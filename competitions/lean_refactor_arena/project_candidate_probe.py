@@ -67,10 +67,19 @@ def read_candidates(path: Path, name: str) -> list[dict]:
 class ExactWorkspace:
     def __init__(self, workspace: Path, relative: str, frozen_src: str, timeout: int):
         self.workspace = workspace.resolve()
-        self.source = (self.workspace / relative).resolve()
+        direct = (self.workspace / relative).resolve()
+        package_guess = (self.workspace / ".lake" / "packages" / Path(relative).parts[0] / relative).resolve()
+        candidates = [direct, package_guess]
+        # Package names can differ in case from the top-level Lean namespace
+        # (for example cslib/Cslib/...). Fall back to a bounded package scan.
+        package_root = self.workspace / ".lake" / "packages"
+        if package_root.is_dir():
+            candidates.extend((p / relative).resolve() for p in package_root.iterdir() if p.is_dir())
+        self.source = next((p for p in candidates if p.is_file()), direct)
         self.timeout = timeout
         if not self.source.is_file():
-            raise SystemExit(f"source file not found: {self.source}")
+            tried = "\n".join(str(p) for p in candidates)
+            raise SystemExit(f"source file not found; tried:\n{tried}")
         self.original = self.source.read_text(encoding="utf-8")
         count = self.original.count(frozen_src)
         if count != 1:
