@@ -26,7 +26,7 @@ jobs:
           git clone --depth=1 --filter=blob:none --sparse https://github.com/aurasoph/lean-refactor.git /tmp/lean-refactor
           git -C /tmp/lean-refactor sparse-checkout set competition
           cd /tmp/lean-refactor/competition
-          ./build-all.sh v4.33
+          ./build-all.sh v4.33 || { cat build-logs/v4.33.log || true; exit 1; }
       - name: Score compact candidates
         shell: bash
         run: |
