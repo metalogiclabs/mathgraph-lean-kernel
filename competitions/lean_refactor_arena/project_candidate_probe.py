@@ -64,6 +64,45 @@ def read_candidates(path: Path, name: str) -> list[dict]:
     return rows
 
 
+class IsolatedWorkspace:
+    def __init__(self, workspace: Path, header: str, timeout: int):
+        self.workspace = workspace.resolve()
+        self.header = header.rstrip() + "\n\n"
+        self.timeout = timeout
+
+    def run(self, candidate: str) -> dict:
+        tmp = self.workspace / f"temp_lra_probe_{uuid.uuid4().hex}.lean"
+        tmp.write_text(self.header + candidate.rstrip() + "\n", encoding="utf-8")
+        started = time.perf_counter()
+        try:
+            proc = subprocess.run(
+                ["lake", "env", "lean", str(tmp.relative_to(self.workspace))],
+                cwd=self.workspace,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=self.timeout,
+            )
+            return {
+                "ok": proc.returncode == 0,
+                "returncode": proc.returncode,
+                "wall_seconds": time.perf_counter() - started,
+                "stdout_tail": proc.stdout[-8000:],
+                "stderr_tail": proc.stderr[-8000:],
+            }
+        except subprocess.TimeoutExpired as exc:
+            return {
+                "ok": False,
+                "timeout": True,
+                "returncode": None,
+                "wall_seconds": time.perf_counter() - started,
+                "stdout_tail": (exc.stdout or "")[-8000:] if isinstance(exc.stdout, str) else "",
+                "stderr_tail": (exc.stderr or "")[-8000:] if isinstance(exc.stderr, str) else "",
+            }
+        finally:
+            tmp.unlink(missing_ok=True)
+
+
 class ExactWorkspace:
     def __init__(self, workspace: Path, relative: str, frozen_src: str, timeout: int):
         self.workspace = workspace.resolve()
@@ -134,8 +173,6 @@ def main() -> int:
     rows = load(Path(args.benchmark))
     row = choose_row(rows, args.name)
     rel = relative_path(row)
-    if not rel:
-        raise SystemExit("exact-project structural probe requires nonblank file_path")
 
     reference_tokens = proof_length_live(row["statement"], row["src"])
     expected_tokens = int(row["proof_length"])
@@ -144,7 +181,12 @@ def main() -> int:
             f"reference token regression mismatch: published={expected_tokens} measured={reference_tokens}"
         )
 
-    workspace = ExactWorkspace(Path(args.workspace), rel, row["src"], args.timeout)
+    if rel:
+        workspace = ExactWorkspace(Path(args.workspace), rel, row["src"], args.timeout)
+        workspace_mode = "source-splice"
+    else:
+        workspace = IsolatedWorkspace(Path(args.workspace), str(row.get("header") or ""), args.timeout)
+        workspace_mode = "isolated-header"
     baseline = workspace.run(row["src"])
     if not baseline["ok"]:
         raise SystemExit(
@@ -220,6 +262,7 @@ def main() -> int:
         "name": row["name"],
         "source": row.get("source"),
         "source_path": rel,
+        "workspace_mode": workspace_mode,
         "workspace_commit_expected": next(iter(row["version_info"][0].values())),
         "lean_version_expected": next(iter(row["version_info"][0].keys())),
         "reference_tokens": reference_tokens,
