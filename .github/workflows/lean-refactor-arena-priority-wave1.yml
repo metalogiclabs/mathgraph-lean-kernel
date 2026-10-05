@@ -1,0 +1,120 @@
+name: Lean Refactor Arena priority wave 1
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'competition/lean-refactor-arena-track1'
+    paths:
+      - 'competitions/lean_refactor_arena/probes/core_inits_updates_comm_v1.jsonl'
+      - 'competitions/lean_refactor_arena/probes/ccs_bisim_choice_v1.jsonl'
+      - 'competitions/lean_refactor_arena/probes/ski_diamond_v1.jsonl'
+      - 'competitions/lean_refactor_arena/project_candidate_probe.py'
+      - '.github/workflows/lean-refactor-arena-priority-wave1.yml'
+
+jobs:
+  probe:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: core-inits
+            name: Core.InitsUpdatesComm
+            repo: https://github.com/strata-org/Strata.git
+            commit: 384e22374e0872095ad9c6f74c5998c09cfd93a9
+            toolchain: leanprover/lean4:v4.29.1
+            build: Strata.Languages.Core.StatementSemanticsProps
+            candidates: competitions/lean_refactor_arena/probes/core_inits_updates_comm_v1.jsonl
+          - id: ccs-choice
+            name: Cslib.CCS.bisimilarity_congr_choice
+            repo: https://github.com/leanprover/cslib.git
+            commit: 3aa9d4416c185e0b9faeb72bbd65abe85b95dbcc
+            toolchain: leanprover/lean4:v4.33.0-rc2
+            build: Cslib.Languages.CCS.BehaviouralTheory
+            candidates: competitions/lean_refactor_arena/probes/ccs_bisim_choice_v1.jsonl
+          - id: ski-diamond
+            name: Cslib.SKI.parallelReduction_diamond
+            repo: https://github.com/leanprover/cslib.git
+            commit: 3aa9d4416c185e0b9faeb72bbd65abe85b95dbcc
+            toolchain: leanprover/lean4:v4.33.0-rc2
+            build: Cslib.Languages.CombinatoryLogic.Confluence
+            candidates: competitions/lean_refactor_arena/probes/ski_diamond_v1.jsonl
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install exact Lean
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \
+            | sh -s -- -y --default-toolchain "${{ matrix.toolchain }}"
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          "$HOME/.elan/bin/lean" --version
+
+      - name: Freeze public warm-up payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/lra-space
+          git clone --depth=1 https://huggingface.co/spaces/delta-lab-ai/lean-refactor-arena /tmp/lra-space
+          python3 competitions/lean_refactor_arena/official_jsonl.py \
+            /tmp/lra-space/benchmark_data_warmup.jsonl \
+            --summary-out /tmp/live-summary.json
+          python3 competitions/lean_refactor_arena/arena_metrics.py regression \
+            --benchmark /tmp/lra-space/benchmark_data_warmup.jsonl
+
+      - name: Materialize exact project
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/project
+          git init /tmp/project
+          git -C /tmp/project remote add origin "${{ matrix.repo }}"
+          git -C /tmp/project fetch --depth=1 origin "${{ matrix.commit }}"
+          git -C /tmp/project checkout --detach FETCH_HEAD
+          test "$(git -C /tmp/project rev-parse HEAD)" = "${{ matrix.commit }}"
+          test "$(cat /tmp/project/lean-toolchain)" = "${{ matrix.toolchain }}"
+          (
+            cd /tmp/project
+            "$HOME/.elan/bin/lake" update
+            "$HOME/.elan/bin/lake" build "${{ matrix.build }}"
+          )
+
+      - name: Probe routed candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 competitions/lean_refactor_arena/project_candidate_probe.py \
+            --benchmark /tmp/lra-space/benchmark_data_warmup.jsonl \
+            --name "${{ matrix.name }}" \
+            --workspace /tmp/project \
+            --candidates "${{ matrix.candidates }}" \
+            --out-best /tmp/best.jsonl \
+            --out-report /tmp/report.json \
+            --timeout 180
+          python3 - <<'PY'
+          import json
+          r=json.load(open('/tmp/report.json'))
+          print(json.dumps({
+            'name':r['name'],
+            'verified_count':r['verified_count'],
+            'best_label':r['best_label'],
+            'reference_tokens':r['reference_tokens'],
+            'best_tokens':r['best_tokens'],
+            'best_length_reduction_pct':r['best_length_reduction_pct'],
+            'strict_token_gain':r['strict_token_gain'],
+          },indent=2))
+          if not r['strict_token_gain']:
+              raise SystemExit('NO_PRIORITY_WAVE1_GAIN')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-wave1-${{ matrix.id }}
+          path: |
+            /tmp/live-summary.json
+            /tmp/best.jsonl
+            /tmp/report.json
