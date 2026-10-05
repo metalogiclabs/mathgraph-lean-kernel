@@ -1,0 +1,143 @@
+name: Lean Refactor Arena priority wave 3 wrapper
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'competition/lean-refactor-arena-track1'
+    paths:
+      - 'competitions/lean_refactor_arena/probes/strata_subst_public_v1.jsonl'
+      - 'competitions/lean_refactor_arena/probes/physlib_em_v1.jsonl'
+      - 'competitions/lean_refactor_arena/probes/physlib_wick_v1.jsonl'
+      - 'competitions/lean_refactor_arena/probes/cslib_typing_progress_v1.jsonl'
+      - 'competitions/lean_refactor_arena/probes/arklib_fiberwise_v1.jsonl'
+      - 'competitions/lean_refactor_arena/probes/arklib_fold_v1.jsonl'
+      - 'competitions/lean_refactor_arena/probes/arklib_interleaved_v1.jsonl'
+      - 'competitions/lean_refactor_arena/probes/putnam_1995_a3_v1.jsonl'
+      - 'competitions/lean_refactor_arena/project_candidate_probe.py'
+      - '.github/workflows/lean-refactor-arena-priority-wave3-wrapper.yml'
+
+jobs:
+  probe:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: strata-subst
+            name: CallElimCorrect.substOldPostSubset
+            project: v4.26
+            problem_file: strata__CallElimCorrect.substOldPostSubset.lean
+            candidates: competitions/lean_refactor_arena/probes/strata_subst_public_v1.jsonl
+          - id: phys-em
+            name: Electromagnetism.ElectromagneticPotential.time_deriv_time_deriv_electricField_of_isExtrema
+            project: v4.32
+            problem_file: physlib__Electromagnetism.ElectromagneticPotential.time_deriv_time_deriv_electricField_of_isExtrema.lean
+            candidates: competitions/lean_refactor_arena/probes/physlib_em_v1.jsonl
+          - id: phys-wick
+            name: FieldSpecification.WickAlgebra.ι_timeOrderF_superCommuteF_eq_time
+            project: v4.32
+            problem_file: physlib__FieldSpecification.WickAlgebra.ι_timeOrderF_superCommuteF_eq_time.lean
+            candidates: competitions/lean_refactor_arena/probes/physlib_wick_v1.jsonl
+          - id: typing-progress
+            name: Cslib.LambdaCalculus.LocallyNameless.Fsub.Typing.progress
+            project: v4.33
+            problem_file: cslib__Cslib.LambdaCalculus.LocallyNameless.Fsub.Typing.progress.lean
+            candidates: competitions/lean_refactor_arena/probes/cslib_typing_progress_v1.jsonl
+          - id: arklib-fiberwise
+            name: Binius.BinaryBasefold.fiberwise_dist_lt_imp_dist_lt_unique_decoding_radius
+            project: v4.31
+            problem_file: arklib__Binius.BinaryBasefold.fiberwise_dist_lt_imp_dist_lt_unique_decoding_radius.lean
+            candidates: competitions/lean_refactor_arena/probes/arklib_fiberwise_v1.jsonl
+          - id: arklib-fold
+            name: Binius.BinaryBasefold.fold_advances_evaluation_poly
+            project: v4.31
+            problem_file: arklib__Binius.BinaryBasefold.fold_advances_evaluation_poly.lean
+            candidates: competitions/lean_refactor_arena/probes/arklib_fold_v1.jsonl
+          - id: arklib-interleaved
+            name: interleaved_affine_gaps_imply_tensor_gaps
+            project: v4.31
+            problem_file: arklib__interleaved_affine_gaps_imply_tensor_gaps.lean
+            candidates: competitions/lean_refactor_arena/probes/arklib_interleaved_v1.jsonl
+          - id: putnam-1995-a3
+            name: putnam_1995_a3
+            project: v4.27
+            problem_file: ""
+            candidates: competitions/lean_refactor_arena/probes/putnam_1995_a3_v1.jsonl
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Materialize organizer-compatible wrapper
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/project
+          base="https://raw.githubusercontent.com/aurasoph/lean-refactor/main/competition/projects/${{ matrix.project }}"
+          curl -fsSL "$base/lakefile.toml" -o /tmp/project/lakefile.toml
+          curl -fsSL "$base/lake-manifest.json" -o /tmp/project/lake-manifest.json
+          curl -fsSL "$base/lean-toolchain" -o /tmp/project/lean-toolchain
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \
+            | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          (cd /tmp/project && "$HOME/.elan/bin/lake" update)
+          if [ -n "${{ matrix.problem_file }}" ]; then
+            curl -fsSL "https://raw.githubusercontent.com/aurasoph/lean-refactor/main/competition/projects/${{ matrix.project }}/problems/${{ matrix.problem_file }}" \
+              -o /tmp/project/target.lean
+          fi
+          echo VERIFIED_ARENA_WRAPPER_MATERIALIZED
+
+      - name: Freeze public warm-up payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/lra-space
+          git clone --depth=1 https://huggingface.co/spaces/delta-lab-ai/lean-refactor-arena /tmp/lra-space
+          python3 competitions/lean_refactor_arena/official_jsonl.py \
+            /tmp/lra-space/benchmark_data_warmup.jsonl \
+            --summary-out /tmp/live-summary.json
+          python3 competitions/lean_refactor_arena/arena_metrics.py regression \
+            --benchmark /tmp/lra-space/benchmark_data_warmup.jsonl
+
+      - name: Probe warm-up candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          extra=()
+          if [ -n "${{ matrix.problem_file }}" ]; then
+            extra+=(--source-file /tmp/project/target.lean)
+          fi
+          python3 competitions/lean_refactor_arena/project_candidate_probe.py \
+            --benchmark /tmp/lra-space/benchmark_data_warmup.jsonl \
+            --name "${{ matrix.name }}" \
+            --workspace /tmp/project \
+            "${extra[@]}" \
+            --candidates "${{ matrix.candidates }}" \
+            --out-best /tmp/best.jsonl \
+            --out-report /tmp/report.json \
+            --timeout 480
+          python3 - <<'PY'
+          import json
+          r=json.load(open('/tmp/report.json'))
+          print(json.dumps({
+            'name':r['name'],
+            'workspace_mode':r['workspace_mode'],
+            'verified_count':r['verified_count'],
+            'best_label':r['best_label'],
+            'reference_tokens':r['reference_tokens'],
+            'best_tokens':r['best_tokens'],
+            'best_length_reduction_pct':r['best_length_reduction_pct'],
+            'strict_token_gain':r['strict_token_gain'],
+          },indent=2))
+          if not r['strict_token_gain']:
+              raise SystemExit('NO_PRIORITY_WAVE3_GAIN')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-wave3-${{ matrix.id }}
+          path: |
+            /tmp/live-summary.json
+            /tmp/best.jsonl
+            /tmp/report.json
