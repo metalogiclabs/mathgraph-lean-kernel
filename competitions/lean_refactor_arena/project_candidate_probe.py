@@ -104,9 +104,9 @@ class IsolatedWorkspace:
 
 
 class ExactWorkspace:
-    def __init__(self, workspace: Path, relative: str, frozen_src: str, timeout: int):
+    def __init__(self, workspace: Path, relative: str, frozen_src: str, timeout: int, source_override: Path | None = None):
         self.workspace = workspace.resolve()
-        direct = (self.workspace / relative).resolve()
+        direct = (source_override.resolve() if source_override is not None else (self.workspace / relative).resolve())
         package_guess = (self.workspace / ".lake" / "packages" / Path(relative).parts[0] / relative).resolve()
         candidates = [direct, package_guess]
         # Package names can differ in case from the top-level Lean namespace
@@ -176,6 +176,7 @@ def main() -> int:
     ap.add_argument("--out-best", required=True)
     ap.add_argument("--out-report", required=True)
     ap.add_argument("--timeout", type=int, default=180)
+    ap.add_argument("--source-file", help="optional prepared source file to splice instead of resolving benchmark file_path")
     args = ap.parse_args()
 
     rows = load(Path(args.benchmark))
@@ -190,7 +191,8 @@ def main() -> int:
         )
 
     if rel:
-        workspace = ExactWorkspace(Path(args.workspace), rel, row["src"], args.timeout)
+        source_override = Path(args.source_file) if args.source_file else None
+        workspace = ExactWorkspace(Path(args.workspace), rel, row["src"], args.timeout, source_override=source_override)
         workspace_mode = "source-splice"
     else:
         workspace = IsolatedWorkspace(Path(args.workspace), str(row.get("header") or ""), args.timeout)
