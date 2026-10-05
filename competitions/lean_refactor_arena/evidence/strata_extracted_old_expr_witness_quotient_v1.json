@@ -10,7 +10,8 @@
     "prior_residual": "competitions/lean_refactor_arena/evidence/strata_extracted_old_expr_deletion_residual_v1.json",
     "operation": "EXPAND",
     "representation_change": "induct on the NormalizedOldExpr witness rather than on the underlying expression syntax",
-    "candidate_label": "witness_induction_refine_membership"
+    "candidate_label": "witness_induction_refine_membership",
+    "discovery_boundary": "The deletion residual was MathGraph-derived. The subsequent witness-induction representation class was informed by a public warm-up comparator, then locally instantiated, tested, and verified."
   },
   "result": {
     "reference_proof_tokens": 222,
@@ -33,7 +34,7 @@
     "role": "non-retainable public warm-up comparator only",
     "tokens": 44,
     "reported_heartbeats": 640,
-    "note": "The MathGraph candidate was independently reverified in the exact pinned Strata workspace; no superiority over this comparator is claimed."
+    "note": "A public 44-token comparator had already exposed the witness-induction representation class before this MathGraph run. MathGraph's labeled local candidate was independently reverified in the exact pinned Strata workspace; independent discovery or superiority is not claimed."
   },
   "reusable_candidate_law": "When an inductive witness already certifies exactly the distinctions relevant to the theorem, recurse over that witness instead of the richer syntax it classifies; preserve only the constructor-local consequence needed by the protected output.",
   "next_residual": "The 44-token candidate matches the public token frontier but does not yet beat it. Minimize the verified proof or reduce elaboration cost without reintroducing syntax distinctions."
