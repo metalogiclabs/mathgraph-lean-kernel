@@ -110,7 +110,7 @@ jobs:
           hit=[r for r in rows if r.get('label') == 'prospective_codomain_explicit_v4']
           assert len(hit) == 1, len(hit)
           with open('/tmp/subst-v4.jsonl','w') as f:
-              f.write(json.dumps(hit[0])+'\\n')
+              f.write(json.dumps(hit[0])+'\n')
           PY
 
       - name: Measure low-heartbeat v4 candidate
