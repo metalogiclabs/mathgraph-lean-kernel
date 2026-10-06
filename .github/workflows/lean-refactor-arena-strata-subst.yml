@@ -99,6 +99,39 @@ jobs:
               raise SystemExit('NO_RETAINABLE_PROSPECTIVE_INVARIANT_GAIN')
           PY
 
+      - name: Isolate low-heartbeat v4 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          src='competitions/lean_refactor_arena/probes/strata_subst_old_post_v1.jsonl'
+          rows=[json.loads(x) for x in open(src) if x.strip()]
+          hit=[r for r in rows if r.get('label') == 'prospective_codomain_explicit_v4']
+          assert len(hit) == 1, len(hit)
+          with open('/tmp/subst-v4.jsonl','w') as f:
+              f.write(json.dumps(hit[0])+'\\n')
+          PY
+
+      - name: Measure low-heartbeat v4 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 competitions/lean_refactor_arena/project_heartbeat.py \
+            --benchmark /tmp/lra-space/benchmark_data_warmup.jsonl \
+            --heartbeats /tmp/lra-space/benchmark_heartbeats.jsonl \
+            --name "$TARGET_NAME" \
+            --workspace /tmp/Strata \
+            --candidate /tmp/subst-v4.jsonl \
+            --out /tmp/subst-v4-heartbeats.json \
+            --timeout 180
+          python3 - <<'PY'
+          import json
+          h=json.load(open('/tmp/subst-v4-heartbeats.json'))
+          print('V4_HEARTBEATS=',h['reference_heartbeat_published'],'->',h['measured_heartbeat'])
+          print('V4_HEARTBEAT_RATIO=',h['ratio_to_published'])
+          PY
+
       - name: Measure retained candidate heartbeats
         shell: bash
         run: |
@@ -138,3 +171,5 @@ jobs:
             /tmp/subst-best.jsonl
             /tmp/subst-probe-report.json
             /tmp/subst-heartbeats.json
+            /tmp/subst-v4.jsonl
+            /tmp/subst-v4-heartbeats.json
