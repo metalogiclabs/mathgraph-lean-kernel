@@ -69,6 +69,8 @@ def _admission(
             measurement.get("statement_ok") is not True or
             measurement.get("eligible") is not True or measurement.get("untested")):
         return {"status": "UNKNOWN", "reason": "incomplete admission certificate"}
+    if measurement.get("survival_pct") != 100:
+        return {"status": "UNKNOWN", "reason": "not all protected versions survive"}
     try:
         length, hb = int(measurement["length"]), int(measurement["heartbeats"])
         ref_length = int(measurement["reference_length"])
