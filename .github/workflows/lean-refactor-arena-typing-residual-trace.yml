@@ -1,0 +1,72 @@
+name: Lean Refactor Arena Typing exact residual trace
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'competition/lean-refactor-arena-track1'
+    paths:
+      - '.github/workflows/lean-refactor-arena-typing-residual-trace.yml'
+      - 'competitions/lean_refactor_arena/experiments/typing_grind_residual_repair_v1.jsonl'
+
+concurrency:
+  group: lra-typing-exact-residual
+  cancel-in-progress: true
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      PUBLIC_REPO_SHA: 7f3a401470d04f70013d293db4253b088ec8a0ae
+      TARGET_NAME: Cslib.LambdaCalculus.LocallyNameless.Fsub.Typing.progress
+      CANDIDATES: competitions/lean_refactor_arena/experiments/typing_grind_residual_repair_v1.jsonl
+    steps:
+      - uses: actions/checkout@v4
+      - name: Materialize pinned public Cslib environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.elan/bin:$PATH"
+          git clone --depth=1 --filter=blob:none --sparse https://github.com/aurasoph/lean-refactor.git /tmp/lean-refactor
+          git -C /tmp/lean-refactor fetch --depth=1 origin "$PUBLIC_REPO_SHA"
+          git -C /tmp/lean-refactor checkout --detach FETCH_HEAD
+          git -C /tmp/lean-refactor sparse-checkout set competition
+          test "$(git -C /tmp/lean-refactor rev-parse HEAD)" = "$PUBLIC_REPO_SHA"
+          (cd /tmp/lean-refactor/competition && ./build-all.sh v4.33)
+      - name: Show all protected Typing goals just before terminal grind
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/typing-residual
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          bank=Path('competitions/lean_refactor_arena/experiments/typing_grind_residual_repair_v1.jsonl')
+          row=next(r for r in map(json.loads,bank.read_text().splitlines())
+                   if r['label']=='typing_compact_failed_219')
+          needle='  all_goals grind only ['
+          hits=row['proof'].count(needle)
+          assert hits==2, 'TRACE_TARGET_DRIFT: expected inner and terminal grind'
+          where=row['proof'].rfind(needle)
+          row['proof']=row['proof'][:where]+'  all_goals trace_state\n'+row['proof'][where:]
+          Path('/tmp/typing-residual/injected.jsonl').write_text(json.dumps(row,ensure_ascii=False)+'\n')
+          print('VERIFIED_EXACT_TRACE_TARGET',{'grind_occurrences':hits,'final_offset':where})
+          PY
+          python3 competitions/lean_refactor_arena/public_harness_bridge.py \
+            --competition /tmp/lean-refactor/competition --project v4.33 \
+            --name "$TARGET_NAME" --candidate /tmp/typing-residual/injected.jsonl \
+            --label typing_compact_failed_219
+          (
+            cd /tmp/lean-refactor/competition/projects/v4.33
+            lake env lean Arena/Cslib_LambdaCalculus_LocallyNameless_Fsub_Typing_progress.lean
+          ) > /tmp/typing-residual/exact-goals.log 2>&1 || true
+          sed -n '1,280p' /tmp/typing-residual/exact-goals.log
+          test -s /tmp/typing-residual/exact-goals.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-typing-exact-four-goals
+          path: /tmp/typing-residual
