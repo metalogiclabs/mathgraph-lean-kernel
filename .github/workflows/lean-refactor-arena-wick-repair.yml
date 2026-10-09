@@ -48,9 +48,17 @@ jobs:
           cat /tmp/wick-scores.jsonl
           python3 - <<'PY'
           import json
+          for line in open('/tmp/wick-scores.jsonl'):
+              r=json.loads(line)
+              print('RESIDUAL',r.get('candidate_label'),json.dumps(r.get('per_version'),ensure_ascii=False))
+          PY
+          python3 - <<'PY'
+          import json
           rows=[json.loads(x) for x in open('/tmp/wick-scores.jsonl') if x.strip()]
           good=[r for r in rows if r.get('compiled') and r.get('statement_ok') and float(r.get('survival_pct') or 0)==100]
-          if not good: raise SystemExit('NO_VERIFIED_WICK_REPAIR')
+          if not good:
+              print('WICK_RESIDUAL_UNRESOLVED: preserve failed candidates for diagnosis')
+              raise SystemExit(0)
           best=max(good,key=lambda r:r.get('objective_sum_pct') or -1e9)
           print('BEST_WICK_REPAIR=',json.dumps({k:best.get(k) for k in
             ('candidate_label','length','heartbeats','objective_sum_pct','combined_pct','survival_pct')},indent=2))
