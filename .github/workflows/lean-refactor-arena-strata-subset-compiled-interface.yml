@@ -1,0 +1,117 @@
+name: Lean Refactor Arena Strata compiled subset interface
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'competition/lean-refactor-arena-track1'
+    paths:
+      - 'competitions/lean_refactor_arena/experiments/strata_subset_compiled_interface_v1.jsonl'
+      - '.github/workflows/lean-refactor-arena-strata-subset-compiled-interface.yml'
+
+concurrency:
+  group: lra-strata-subset-compiled-interface
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 85
+    env:
+      PUBLIC_REPO_SHA: 7f3a401470d04f70013d293db4253b088ec8a0ae
+      TARGET_NAME: CallElimCorrect.substOldPostSubset
+      CANDIDATES: competitions/lean_refactor_arena/experiments/strata_subset_compiled_interface_v1.jsonl
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate frozen candidate bank and bounded scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,pathlib
+          path=pathlib.Path('competitions/lean_refactor_arena/experiments/strata_subset_compiled_interface_v1.jsonl')
+          rows=[json.loads(s) for s in path.read_text().splitlines() if s.strip()]
+          assert len(rows)==8 and len({r['label'] for r in rows})==8
+          assert all(r['name']=='CallElimCorrect.substOldPostSubset' and
+                     'theorem substOldPostSubset:' in r['proof'] for r in rows)
+          assert rows[0]['label']=='strata_subset_app_verified_control_188'
+          print('WARRANTED_CONTROL_PROTECTED_AND_SEVEN_LOCAL_TRANSFERS_SEEDED')
+          PY
+      - name: Build exact Strata v4.26 verifier
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.elan/bin:$PATH"
+          git clone --depth=1 --filter=blob:none --sparse https://github.com/aurasoph/lean-refactor.git /tmp/lean-refactor
+          git -C /tmp/lean-refactor fetch --depth=1 origin "$PUBLIC_REPO_SHA"
+          git -C /tmp/lean-refactor checkout --detach FETCH_HEAD
+          git -C /tmp/lean-refactor sparse-checkout set competition
+          test "$(git -C /tmp/lean-refactor rev-parse HEAD)" = "$PUBLIC_REPO_SHA"
+          (cd /tmp/lean-refactor/competition && ./build-all.sh v4.26)
+      - name: Check exact Strata protected subset interface
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > /tmp/strata-subset-compiled-scores.jsonl
+          for label in strata_subset_app_verified_control_188 strata_subset_app_quant strata_subset_app_ite strata_subset_app_app strata_subset_app_all strata_subset_app_quant_simp strata_subset_app_app_simp strata_subset_app_reuse_induction; do
+            echo "CHECK=$label"
+            python3 competitions/lean_refactor_arena/public_harness_bridge.py \
+              --competition /tmp/lean-refactor/competition --project v4.26 \
+              --name "$TARGET_NAME" --candidate "$CANDIDATES" --label "$label"
+            (cd /tmp/lean-refactor/competition && python3 arena.py check --name "$TARGET_NAME") \
+              > /tmp/strata-subset-one.json
+            jq -c --arg label "$label" '. + {candidate_label:$label}' /tmp/strata-subset-one.json \
+              >> /tmp/strata-subset-compiled-scores.jsonl
+          done
+      - name: Select only warranted consequences, preserve negative evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,pathlib
+          path=pathlib.Path('/tmp/strata-subset-compiled-scores.jsonl')
+          rows=[json.loads(s) for s in path.read_text().splitlines() if s.strip()]
+          assert len(rows)==8 and len({r['candidate_label'] for r in rows})==8
+          def valid(r):
+              return (r.get('compiled') is True and r.get('statement_ok') is True
+                      and r.get('eligible') is True and not r.get('forbidden')
+                      and not r.get('extra_toplevel_decls') and not r.get('untested')
+                      and r.get('compat') == {'v4.26.0': True}
+                      and len(r.get('per_version') or []) == 1
+                      and r['per_version'][0].get('tested') is True
+                      and r['per_version'][0].get('ok') is True)
+          incumbent=rows[0]
+          assert valid(incumbent), 'CONTROL_REJECTED__NO_PROMOTION'
+          approved=[r for r in rows[1:] if valid(r)]
+          gain=[r for r in approved
+                if float(r.get('objective_sum_pct') or -1000) > float(incumbent['objective_sum_pct'])]
+          best=max(gain,key=lambda r:float(r['objective_sum_pct']),default=None)
+          result={'schema':'mathgraph.lra.strata.subset-compiled-interface.v1',
+            'state':'WARRANTED_PRIMARY_GAIN_CANDIDATE' if best else 'REJECTED_BOUNDED_NO_GAIN',
+            'source_pin':'7f3a401470d04f70013d293db4253b088ec8a0ae',
+            'protected_version':['v4.26.0'],
+            'incumbent':{'tokens':incumbent['length'],'heartbeats':incumbent['heartbeats'],
+              'objective':incumbent['objective_sum_pct']},
+            'admitted':[{'label':r['candidate_label'],'tokens':r['length'],
+              'heartbeats':r['heartbeats'],'objective':r['objective_sum_pct']} for r in approved],
+            'best':None if best is None else {'label':best['candidate_label'],
+              'tokens':best['length'],'heartbeats':best['heartbeats'],'objective':best['objective_sum_pct']},
+            'negative':[{'label':r['candidate_label'],
+              'errors':(r.get('per_version') or [{}])[0].get('errors')} for r in rows[1:] if not valid(r)],
+            'boundary':'No mutation of retained 15-proof portfolio, no official leaderboard score'}
+          pathlib.Path('/tmp/strata-subset-compiled-summary.json').write_text(
+              json.dumps(result,ensure_ascii=False,indent=2)+'\n')
+          print(json.dumps(result,ensure_ascii=False,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-strata-subset-compiled-interface
+          path: |
+            /tmp/strata-subset-compiled-scores.jsonl
+            /tmp/strata-subset-compiled-summary.json
