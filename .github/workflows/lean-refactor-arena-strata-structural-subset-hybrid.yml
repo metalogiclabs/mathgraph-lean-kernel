@@ -1,0 +1,106 @@
+name: Lean Refactor Arena Strata protected-subset hybrid
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'competition/lean-refactor-arena-track1'
+    paths:
+      - 'competitions/lean_refactor_arena/experiments/strata_structural_subset_hybrid_v1.jsonl'
+      - '.github/workflows/lean-refactor-arena-strata-structural-subset-hybrid.yml'
+
+concurrency:
+  group: lra-strata-structural-subset
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 105
+    env:
+      PUBLIC_REPO_SHA: 7f3a401470d04f70013d293db4253b088ec8a0ae
+      TARGET_NAME: CallElimCorrect.substOldPostSubset
+      CANDIDATES: competitions/lean_refactor_arena/experiments/strata_structural_subset_hybrid_v1.jsonl
+    steps:
+      - uses: actions/checkout@v4
+      - name: Materialize exact pinned Strata project
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.elan/bin:$PATH"
+          git clone --depth=1 --filter=blob:none --sparse https://github.com/aurasoph/lean-refactor.git /tmp/lean-refactor
+          git -C /tmp/lean-refactor fetch --depth=1 origin "$PUBLIC_REPO_SHA"
+          git -C /tmp/lean-refactor checkout --detach FETCH_HEAD
+          git -C /tmp/lean-refactor sparse-checkout set competition
+          test "$(git -C /tmp/lean-refactor rev-parse HEAD)" = "$PUBLIC_REPO_SHA"
+          (cd /tmp/lean-refactor/competition && ./build-all.sh v4.26)
+      - name: Verify control plus selected lawful future-subset alternatives
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' >/tmp/strata-structural-labels.txt
+          import json
+          from pathlib import Path
+          rows=[json.loads(line) for line in Path('competitions/lean_refactor_arena/experiments/strata_structural_subset_hybrid_v1.jsonl').read_text().splitlines() if line.strip()]
+          assert len(rows)==14 and len({r['label'] for r in rows})==14
+          assert all(r['name']=='CallElimCorrect.substOldPostSubset' for r in rows)
+          for r in rows: print(r['label'])
+          PY
+          : > /tmp/strata-structural-scores.jsonl
+          while IFS= read -r label; do
+            echo "STRATA_STRUCTURAL=$label"
+            python3 competitions/lean_refactor_arena/public_harness_bridge.py \
+              --competition /tmp/lean-refactor/competition --project v4.26 \
+              --name "$TARGET_NAME" --candidate "$CANDIDATES" --label "$label"
+            (cd /tmp/lean-refactor/competition && python3 arena.py check --name "$TARGET_NAME") \
+              > /tmp/strata-structural-one.json
+            jq -c --arg label "$label" '. + {candidate_label:$label}' \
+              /tmp/strata-structural-one.json >> /tmp/strata-structural-scores.jsonl
+          done < /tmp/strata-structural-labels.txt
+      - name: Select only verified objective-gain frontier
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          rows=[json.loads(s) for s in Path('/tmp/strata-structural-scores.jsonl').read_text().splitlines() if s.strip()]
+          assert len(rows)==14 and len({r['candidate_label'] for r in rows})==14
+          valid=lambda r: bool(r.get('compiled') and r.get('statement_ok')
+            and r.get('eligible') and float(r.get('survival_pct') or 0)==100
+            and r.get('compat')=={'v4.26.0':True}
+            and not r.get('forbidden') and not r.get('extra_toplevel_decls'))
+          incumbent=next(r for r in rows if r['candidate_label']=='strata_struct_retained_188')
+          assert valid(incumbent),'STRUCTURAL_INCUMBENT_FAILED'
+          valid_rows=[r for r in rows if valid(r)]
+          gains=[r for r in valid_rows if r['candidate_label']!='strata_struct_retained_188'
+                 and float(r.get('objective_sum_pct') or 0)>float(incumbent['objective_sum_pct'])]
+          winner=max(gains,key=lambda r:float(r['objective_sum_pct']),default=None)
+          evidence={'schema':'mathgraph.lra.strata.structural-subset-hybrid.v1',
+            'status':'WARRANTED_PRIMARY_CANDIDATE' if winner else 'REJECTED_BOUNDED_NO_GAIN',
+            'pin':'7f3a401470d04f70013d293db4253b088ec8a0ae',
+            'incumbent':{'length':incumbent['length'],'heartbeats':incumbent['heartbeats'],
+              'objective':incumbent['objective_sum_pct']},
+            'verified_candidates':[{'label':r['candidate_label'],'length':r['length'],
+              'heartbeats':r['heartbeats'],'objective':r['objective_sum_pct']} for r in valid_rows],
+            'gain_candidates':[{'label':r['candidate_label'],'length':r['length'],
+              'heartbeats':r['heartbeats'],'objective':r['objective_sum_pct']} for r in gains],
+            'best':None if winner is None else winner['candidate_label'],
+            'failed':[{'label':r['candidate_label'],
+              'errors':(r.get('per_version') or [{}])[0].get('errors',[])} for r in rows if not valid(r)],
+            'boundary':'Pinned Strata required single v4.26 version only, no retained proof/packet mutation from unverified variants.'}
+          Path('/tmp/strata-structural-summary.json').write_text(json.dumps(evidence,ensure_ascii=False,indent=2)+'\n')
+          print(json.dumps(evidence,ensure_ascii=False,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-strata-structural-subset
+          path: |
+            /tmp/strata-structural-scores.jsonl
+            /tmp/strata-structural-summary.json
