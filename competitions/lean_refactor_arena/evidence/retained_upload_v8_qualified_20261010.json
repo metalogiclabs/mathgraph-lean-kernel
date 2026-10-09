@@ -1,0 +1,61 @@
+{
+  "schema": "mathgraph.lra.retained-upload-v8-qualified.v1",
+  "state": "WARRANTED_PINNED_EM_V432_AND_EXACT_15_PACKET__NO_OFFICIAL_ARENA_SUBMISSION",
+  "observed_on": "2026-10-10",
+  "authority": {
+    "repo": "metalogiclabs/mathgraph-lean-kernel",
+    "branch": "competition/lra-em-v8-gauss-transport",
+    "run": 37988092501,
+    "job": 114015550192,
+    "conclusion": "success",
+    "artifact_id": 11644017210,
+    "url": "https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/37988092501",
+    "originating_em_compiler": {
+      "run": 37985510361,
+      "job": 114006384538,
+      "conclusion": "success"
+    }
+  },
+  "protected": {
+    "organizer_sha": "7f3a401470d04f70013d293db4253b088ec8a0ae",
+    "theorem": "Electromagnetism.ElectromagneticPotential.time_deriv_time_deriv_electricField_of_isExtrema",
+    "required_versions": [
+      "v4.32.0"
+    ],
+    "source_proof_sha256": "cc643e34cf4fa940686b85018ef05099ba1f4f712d9212f4c98c08ef5abab60b",
+    "witness": "Differentiate already proven Gauss function equality using congrArg and transport finite-sum/constant derivatives",
+    "other_proof_rows_byte_identical": 14,
+    "source_control_exact": true,
+    "portfolio_changed_only_one_theorem": true
+  },
+  "metrics": {
+    "prior_tokens": 566,
+    "prior_heartbeats": 10499,
+    "prior_objective": 121.04,
+    "selected_tokens": 551,
+    "selected_heartbeats": 10403,
+    "selected_objective": 122.47,
+    "objective_gain": 1.43
+  },
+  "packet": {
+    "portfolio_git_blob_sha": "319880b2a6d12731e793b78a9edbc3e07b9db956",
+    "committed_packet_git_blob_sha": "e7ba8515d9ed2c0d2b0bbe8fd501758f95c312cb",
+    "portfolio_sha256": "33c86785503dc6f23a1c4fd2d3a2b58a26b465f3827f4bf3cbbc44d0b6b8fbe3",
+    "generated_upload_sha256": "f7f0533ccb1e041479a9e8e896e408232149fc5c922921a813b424a1ce1eb46b",
+    "generated_upload_bytes": 27415,
+    "rows": 15,
+    "reference_fallbacks": 0,
+    "external_exact_required_version_witnesses": 10,
+    "independent_exact_required_version_witnesses": 5
+  },
+  "scoring": {
+    "composed_objective_sum": 2223.79,
+    "composed_warmup_projected_pct": 82.7509,
+    "last_recorded_closed_leader_pct": 89.38,
+    "combined_gap_pct_points": 6.6291,
+    "remaining_objective_debt_to_tie": 298.31,
+    "official_submission": false,
+    "status": "PROJECTED_NOT_OFFICIAL"
+  },
+  "boundary": "The pinned run verifies exact v4.32 source and all 14 unchanged previous-proof bytes with inherited required-version lineage; it does not establish official ranking or generalization to unobserved full benchmark."
+}
