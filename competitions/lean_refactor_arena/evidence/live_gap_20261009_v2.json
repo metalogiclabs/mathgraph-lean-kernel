@@ -365,5 +365,111 @@
       "retained_full_version": 37889600290,
       "typing_full_version": 37890948417
     }
+  },
+  "minimum_warranted_frontier_reclosure_20261009": {
+    "state": "WARRANTED_COMPOSED_PREEXISTING_PROOF_CERTIFICATES__OFFICIAL_ARENA_NOT_SUBMITTED",
+    "protected_future": "same 15 statements, required Lean toolchains, no forbidden terms, valid exact JSONL, all admission certificates tied to pinned proof bytes",
+    "current_portfolio_proof_selection": {
+      "commit": "251510427f59c73c840a0610e2e5f25796a398eb",
+      "portfolio_blob_sha": "a20bdebe6707c0b181eb98fbfb946d640cb3e820",
+      "packet_commit": "e0b55983db576d37a867c74816d515a364fec413",
+      "packet_blob_sha": "0f571b6038413f8f615c70c3f0da321214e6b91a",
+      "packet_SHA256": "0c3b480d95cae4ba35b8cca2d877463edfd9aaa1fb0450d789226c9d7c5f44b4",
+      "packet_preflight_run": 37896330914,
+      "packet_verified_rows": 15,
+      "packet_bytes": 28369,
+      "change": "EM only: removed final <;> ring; all other 14 proof fields identical"
+    },
+    "admission_ledger": {
+      "exact_public_full_version": 12,
+      "independent_exact_required_version": 3,
+      "strict_source": "competitions/lean_refactor_arena/evidence/retained_exact_full_version_audit_20261009_v2.json",
+      "independent": "Core run 37889600290; Wick run 37887798992; EM run 37891035688",
+      "fresh_all_15_full_version_replay": "NOT_COMPLETED_AS_SINGLE_RUN"
+    },
+    "em_nondominated_verified_frontier": [
+      {
+        "label": "em_terminal_field_simp_only",
+        "tokens": 565,
+        "heartbeats": 10556,
+        "objective": 120.9,
+        "selected": true
+      },
+      {
+        "label": "em_hcross_simp",
+        "tokens": 568,
+        "heartbeats": 10499,
+        "objective": 120.89,
+        "selected": false
+      }
+    ],
+    "composed_projected": {
+      "status": "CANDIDATE_NOT_OFFICIAL",
+      "objective_sum": 2198.55,
+      "combined_pct": 82.19,
+      "recorded_leader": 89.38,
+      "remaining_objective_debt_to_tie": 323.55
+    },
+    "arklib_reclosure": {
+      "status": "WARRANTED_PRIMARY_ONLY__FULL_VERSION_COMPARATOR_INHERITED",
+      "whole_library_build_failed_run": 37893171891,
+      "failed_unrelated_module": "ArkLib.Data.CodingTheory.ProximityGap.BCIKS20.WeightedAgreement",
+      "required_module_build_and_three_proofs_pass_run": 37897071346,
+      "proofs": [
+        "Binius.BinaryBasefold.fiberwise_dist_lt_imp_dist_lt_unique_decoding_radius",
+        "Binius.BinaryBasefold.fold_advances_evaluation_poly",
+        "interleaved_affine_gaps_imply_tensor_gaps"
+      ],
+      "primary_objectives": [
+        129.55,
+        161.33,
+        162.51
+      ],
+      "scope": "v4.31 primary only; other toolchain survival externally pinned and exact proof matched"
+    },
+    "reusable_capability": {
+      "module": "competitions/lean_refactor_arena/frontier_reclose.py",
+      "tests": "competitions/lean_refactor_arena/tests/test_frontier_reclose.py",
+      "run": 37898174420,
+      "tests_green": 14,
+      "states": [
+        "UNKNOWN",
+        "REJECTED",
+        "WARRANTED"
+      ],
+      "operations": [
+        "bind proof bytes and all required versions",
+        "ParetoMin verified length-heartbeat frontier",
+        "choose objective-winning lawful representative",
+        "reclose exactly one packet row"
+      ],
+      "assurance": "unit and real-EM integration tests passed, not formal soundness theorem"
+    },
+    "bounded_failed_proof": {
+      "name": "wick_bilinear_559",
+      "run": 37895461307,
+      "classification": "REJECTED_PROOF",
+      "errors": [
+        "missing MulHomClass on linear map",
+        "final transport mismatch"
+      ],
+      "source": "two valid control runs at 606 tokens, invalid challenger raw 125.83 not a score",
+      "candidate_terminal_repair_run": 37898753536,
+      "status": "UNKNOWN_PENDING_PINNED_REPLAY"
+    },
+    "active_boundary": {
+      "em_pareto_composition_run": 37896523425,
+      "typing_target_module_reclosure_run": 37899030016,
+      "typing_slight_gain": "WARRANTED_PRIMARY_ONLY+0.25; protect three-version check",
+      "official_submission": "NOT_SUBMITTED"
+    },
+    "caution": "This ledger supersedes earlier current statuses embedded in the same file; preserve them as historical provenance, not active authority."
+  },
+  "submission_package_current": {
+    "status": "VERIFIED_EXACT_15_PACKET_NOT_SUBMITTED",
+    "run": 37896330914,
+    "bytes": 28369,
+    "sha256": "0c3b480d95cae4ba35b8cca2d877463edfd9aaa1fb0450d789226c9d7c5f44b4",
+    "file": "competitions/lean_refactor_arena/submissions/mathgraph_verified_15_warmup_20261009.jsonl"
   }
 }
