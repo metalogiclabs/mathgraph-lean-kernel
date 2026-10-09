@@ -1,0 +1,46 @@
+{
+  "schema": "mathgraph.lra.wick.structural-crossover.v1",
+  "state": "WARRANTED_PRIMARY_TOOLCHAIN",
+  "authority": {
+    "repository": "metalogiclabs/mathgraph-lean-kernel",
+    "branch": "competition/lean-refactor-arena-track1",
+    "head_sha": "5da5035c98a6f3a6a5cb9afb63c97ef5931892b7",
+    "run_id": 37887798992,
+    "job_id": 113681601946,
+    "artifact_id": 11597896226,
+    "external_harness_sha": "7f3a401470d04f70013d293db4253b088ec8a0ae",
+    "toolchain": "v4.32.0"
+  },
+  "target": "FieldSpecification.WickAlgebra.ι_timeOrderF_superCommuteF_eq_time",
+  "candidate": {
+    "label": "wick_extensional_compact_rw",
+    "candidate_path": "competitions/lean_refactor_arena/probes/physlib_wick_structural_crossover_v1.jsonl",
+    "proof_length_tokens": 606,
+    "heartbeats": 13656,
+    "length_reduction_pct": 50.21,
+    "heartbeat_reduction_pct": 67.79,
+    "objective_sum_pct": 118,
+    "combined_pct_primary": 72.67,
+    "compiled": true,
+    "statement_ok": true,
+    "eligible": true,
+    "survival_pct": 100
+  },
+  "public_control": {
+    "label": "external_verified_compact_568",
+    "proof_length_tokens": 568,
+    "heartbeats_latest_run": 23520,
+    "objective_sum_pct_latest_run": 97.86,
+    "baseline_objective_from_composed_floor": 97.88,
+    "source": "public aurasoph/lean-refactor trial ledger"
+  },
+  "rejected_crossover": {
+    "label": "wick_extensional_compact_change",
+    "reason": "change tactic failed; apparent 125.07 raw objective is NOT valid because compiled=false and survival=0"
+  },
+  "improved_objective_vs_composed_baseline": 20.12,
+  "contribution_to_15_target_combined_if_all_other_proofs_and_100pct_survival_unchanged": 0.4471111111111111,
+  "protected_boundary": "Wick is a single-version benchmark target in the pinned warm-up (v4.32.0). Do not claim official leaderboard position; compose and submit separately. No change to proof statement, no admitted or forbidden symbols.",
+  "causal_law_candidate": "Two-stage LinearMap generator extensionality plus compact generator-local Wick factorization reduces elaborator pressure while preserving reasonable proof length; independently controls score 568/23520 and 705/18953 were both reproduced.",
+  "next": "Retain exact winning candidate in 15-target portfolio, rerun pinned primary score and portfolio shape. Evaluate possible transfer only with an independently pinned verifier."
+}
