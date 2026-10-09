@@ -33,7 +33,7 @@ jobs:
         run: |
           set -euo pipefail
           : > /tmp/wick-scores.jsonl
-          for label in wick_module_residual_v1 wick_simp_only_comm_v1; do
+          for label in wick_module_residual_v1 wick_simp_only_comm_v1 wick_public_verified_568 wick_prune_map_sub wick_prune_map_smul wick_prune_mul_sub wick_prune_sub_mul wick_prune_smul_sub wick_prune_Algebra_mul_smul_comm wick_prune_Algebra_smul_mul_assoc; do
             python3 competitions/lean_refactor_arena/public_harness_bridge.py \
               --competition /tmp/lean-refactor/competition \
               --project v4.32 \
@@ -68,6 +68,12 @@ jobs:
           best=max(good,key=lambda r:r.get('objective_sum_pct') or -1e9)
           print('BEST_WICK_REPAIR=',json.dumps({k:best.get(k) for k in
             ('candidate_label','length','heartbeats','objective_sum_pct','combined_pct','survival_pct')},indent=2))
+          if best.get('candidate_label')=='wick_public_verified_568':
+              print('WICK_EXTERNAL_CONTROL_ONLY: no MathGraph improvement')
+          elif best.get('candidate_label','').startswith('wick_prune_') and float(best.get('objective_sum_pct') or 0)>97.88:
+              print('WICK_PRUNE_CANDIDATE_GAIN: local v4.32 authority only; check all required versions before portfolio promotion')
+          else:
+              print('WICK_NO_PROVEN_OBJECTIVE_GAIN: preserve incumbent')
           PY
       - name: Capture actual Wick residual goals
         shell: bash
