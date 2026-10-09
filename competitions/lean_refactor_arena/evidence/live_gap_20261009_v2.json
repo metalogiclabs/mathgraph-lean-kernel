@@ -216,5 +216,64 @@
       "exact_cross_version_run": 37889600290,
       "portfolio_preflight_run": 37889600282
     }
+  },
+  "secondary_structural_experiments_20261009": {
+    "typing_pareto": {
+      "status": "WARRANTED_PRIMARY_ONLY_PENDING_CROSS_VERSION",
+      "verifier_run": 37890486198,
+      "proof_label": "typing_fast_cross_CLI",
+      "tokens": 338,
+      "heartbeats": 2198,
+      "objective_sum_pct": 113.51,
+      "baseline_objective": 113.26,
+      "local_gain": 0.25,
+      "all_three_versions_run": 37890948417,
+      "promotion": "PENDING"
+    },
+    "strata_compact": {
+      "status": "REJECTED_BOUNDED_NO_GAIN",
+      "verifier_run": 37890616991,
+      "controls": [
+        {
+          "tokens": 44,
+          "heartbeats": 4891,
+          "objective_sum_pct": 91.59
+        },
+        {
+          "tokens": 188,
+          "heartbeats": 1429,
+          "objective_sum_pct": 112.37
+        }
+      ],
+      "nearest_verified": {
+        "label": "strata_compact_simp_only",
+        "tokens": 45,
+        "heartbeats": 4404,
+        "objective_sum_pct": 100.67
+      },
+      "rejected_scope": "9 compact variants did not beat the retained 188-token incumbent. No promoted improvement."
+    },
+    "ski_delayed": {
+      "status": "REJECTED_BOUNDED_NO_GAIN",
+      "verifier_run": 37890767431,
+      "incumbent": {
+        "tokens": 278,
+        "heartbeats": 501,
+        "objective_sum_pct": 100.94
+      },
+      "result": "0/8 delayed-closure variants compiled; converting early all_goals trivial closure into late proof tail breaks named-case tactic elaboration or leaves unsolved goals."
+    }
+  },
+  "official_submission_surface": {
+    "status": "READ_ONLY_CONTRACT_VERIFIED",
+    "authority_run": 37891112898,
+    "required_inputs": [
+      "Username",
+      "Submission key (leave empty only for first-ever submission)",
+      "Track (Closed-source LLM / Open-source LLM)",
+      "Proof JSONL file"
+    ],
+    "endpoint": "verify_and_submit",
+    "note": "Do not submit with invented username/track or expose existing submission key in public GitHub Actions. A proof JSONL upload must first be verified and the user-specific account boundary resolved."
   }
 }
