@@ -41,14 +41,17 @@ def parse(proof: str) -> dict:
     header = proof.split(" := by\n", 1)[0]
     chunks: OrderedDict[str, str] = OrderedDict()
     end = len(lines)
-    footer_start = next(
-        (i for i in range(first, len(lines)) if TAIL.match(lines[i])), end
-    )
-    case_starts = [
+    # Do not treat global tactics between named cases as a terminal footer.
+    # They are part of the preceding proof segment and may affect later goals.
+    all_cases = [
         (i, CASE.match(lines[i]).group(1))
-        for i in range(first, footer_start)
+        for i in range(first, end)
         if CASE.match(lines[i])
     ]
+    footer_start = next(
+        (i for i in range(all_cases[-1][0] + 1, end) if TAIL.match(lines[i])), end
+    )
+    case_starts = [(i, key) for i, key in all_cases if i < footer_start]
     if len(case_starts) != len(set(k for _, k in case_starts)):
         raise ValueError("duplicate named case: reject ambiguous decomposition")
     for j, (start, key) in enumerate(case_starts):
