@@ -1,0 +1,128 @@
+{
+  "schema": "mathgraph.lra.minimum-warranted-present.live-frontier.v3",
+  "observed_on": "2026-10-10",
+  "status": "WARRANTED_SOURCE_AND_COST_COMPOSITION__NOT_OFFICIALLY_SCORED",
+  "source": {
+    "competition_branch": "competition/lean-refactor-arena-track1",
+    "portfolio_path": "competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl",
+    "portfolio_git_blob": "7a6594965c0d73d5e91409f838c81fa9553e02f2",
+    "packet_path": "competitions/lean_refactor_arena/submissions/mathgraph_verified_15_warmup_20261009.jsonl",
+    "packet_git_blob": "610e579d231fce22a982ba473fd235708c27ff0c",
+    "audit": "competitions/lean_refactor_arena/evidence/retained_exact_full_version_audit_20261010_v4.json",
+    "harness_commit": "7f3a401470d04f70013d293db4253b088ec8a0ae",
+    "last_packet_gate": 37970960961
+  },
+  "leader": {
+    "team": "EPFL-LARA",
+    "closed_combined_pct": 89.38,
+    "leaderboard_refresh_run": 37971602071,
+    "observed_at_utc": "2026-10-09T18:13:40Z"
+  },
+  "scores": {
+    "count": 15,
+    "total_objective_points": 2207.8,
+    "mean_objective": 147.1867,
+    "assumed_survival_pct": 100,
+    "composed_combined_if_all_admission": 82.3956,
+    "gap_combined_points": 6.9844,
+    "objective_point_debt_to_tie": 314.3,
+    "objective_point_debt_to_strict_first": ">314.30",
+    "official_submission": "NOT_SUBMITTED"
+  },
+  "protected_validation": {
+    "external_proofs": 11,
+    "independent_proofs": 4,
+    "all_required_version_audit": "WARRANTED_PRIOR_COMPOSED_AUTHORITY",
+    "new_full_15_compilation": "PENDING",
+    "no_changed_proof_promoted_without_complete_required_version_warrant": true
+  },
+  "active_residual": {
+    "classification": "UNKNOWN_COST_OPTIMIZATION",
+    "next_candidate": "Typing low-cost structural residual from earlier 219-token candidate",
+    "failed_goal_trace_run": 37890369017,
+    "repair_trace_run": 37971319918,
+    "arklib_build_residual": "v4.31 whole-package build fails before theorem checks; targeted module import closure succeeded previously; new targeted run 37970482973 pending",
+    "priority_rule": "Select least costly admissible proof representative. Do not treat failed goal as universal negative; do not recompile unaffected proofs unless a pin/dependency changes."
+  },
+  "per_theorem": [
+    {
+      "name": "CallElimCorrect.substOldPostSubset",
+      "objective": 112.37,
+      "evidence": "public_all_version"
+    },
+    {
+      "name": "CallElimCorrect.extractedOldExprInVars",
+      "objective": 156.55,
+      "evidence": "public_all_version"
+    },
+    {
+      "name": "Core.InitsUpdatesComm",
+      "objective": 154.77,
+      "evidence": "independent_all_3",
+      "run": 37889600290
+    },
+    {
+      "name": "fundamental_theorem_of_variational_calculus'",
+      "objective": 163.01,
+      "evidence": "public_all_version"
+    },
+    {
+      "name": "Electromagnetism.ElectromagneticPotential.time_deriv_time_deriv_electricField_of_isExtrema",
+      "objective": 121.04,
+      "evidence": "independent_v4.32",
+      "run": 37896523425
+    },
+    {
+      "name": "FieldSpecification.WickAlgebra.ι_timeOrderF_superCommuteF_eq_time",
+      "objective": 126.86,
+      "evidence": "independent_v4.32",
+      "run": 37898753536
+    },
+    {
+      "name": "Cslib.LambdaCalculus.LocallyNameless.Fsub.Typing.progress",
+      "objective": 113.51,
+      "evidence": "independent_all_3",
+      "run": 37899030016
+    },
+    {
+      "name": "Cslib.SKI.parallelReduction_diamond",
+      "objective": 100.94,
+      "evidence": "public_all_version"
+    },
+    {
+      "name": "Cslib.CCS.bisimilarity_congr_choice",
+      "objective": 157.19,
+      "evidence": "public_all_version"
+    },
+    {
+      "name": "Binius.BinaryBasefold.fiberwise_dist_lt_imp_dist_lt_unique_decoding_radius",
+      "objective": 129.55,
+      "evidence": "public_all_version"
+    },
+    {
+      "name": "Binius.BinaryBasefold.fold_advances_evaluation_poly",
+      "objective": 161.33,
+      "evidence": "public_all_version"
+    },
+    {
+      "name": "interleaved_affine_gaps_imply_tensor_gaps",
+      "objective": 162.51,
+      "evidence": "public_all_version"
+    },
+    {
+      "name": "putnam_1964_a4",
+      "objective": 181.75,
+      "evidence": "public_all_version"
+    },
+    {
+      "name": "putnam_1964_b2",
+      "objective": 192.31,
+      "evidence": "public_all_version"
+    },
+    {
+      "name": "putnam_1995_a3",
+      "objective": 174.11,
+      "evidence": "public_all_version"
+    }
+  ]
+}
