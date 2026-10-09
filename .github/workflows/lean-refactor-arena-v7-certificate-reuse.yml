@@ -1,0 +1,163 @@
+name: Lean Refactor Arena V7 consequential certificate reuse
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'competition/lra-strata-v7-tail-normalization'
+    paths:
+      - 'competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl'
+      - 'competitions/lean_refactor_arena/arena_upload.py'
+      - 'competitions/lean_refactor_arena/evidence/retained_exact_full_version_audit_20261010_v7.json'
+      - 'competitions/lean_refactor_arena/submissions/mathgraph_verified_15_warmup_20261009.jsonl'
+      - '.github/workflows/lean-refactor-arena-v7-certificate-reuse.yml'
+
+concurrency:
+  group: lra-v7-certificate-reuse
+  cancel-in-progress: true
+
+jobs:
+  qualify-upload:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bind current proof bytes to previous successful exact Lean v4.26 run
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 -H 'Accept: application/vnd.github+json' \
+            https://api.github.com/repos/metalogiclabs/mathgraph-lean-kernel/actions/runs/37980654973 \
+            -o /tmp/v7-pinned-source-run.json
+          curl -fsSL --retry 3 \
+            https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/889bcaf5323cbbd049cbe424c3ae18102246e2e2/competitions/lean_refactor_arena/experiments/strata_structural_crossover_v2.jsonl \
+            -o /tmp/v7-pinned-strata-candidates.jsonl
+          python3 - <<'PY'
+          import hashlib,json,pathlib,subprocess
+          run=json.load(open('/tmp/v7-pinned-source-run.json'))
+          assert run.get('id')==37980654973
+          assert run.get('status')=='completed' and run.get('conclusion')=='success', 'SOURCE_LEAN_RUN_NOT_SUCCESS'
+          assert run.get('head_sha')=='889bcaf5323cbbd049cbe424c3ae18102246e2e2','SOURCE_RUN_HEAD_MISMATCH'
+          old='f52d35ac5d144ac63b55e4c58f186eee7fe19b67'
+          current=pathlib.Path('competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl')
+          packet=pathlib.Path('competitions/lean_refactor_arena/submissions/mathgraph_verified_15_warmup_20261009.jsonl')
+          control=[json.loads(x) for x in current.read_text().splitlines() if x.strip()]
+          selected=next(x for x in control if x['name']=='CallElimCorrect.substOldPostSubset')
+          assert selected['label']=='warranted_strata_tail_simp_grind_135'
+          bank=[json.loads(x) for x in open('/tmp/v7-pinned-strata-candidates.jsonl') if x.strip()]
+          witness=next(x for x in bank if x['label']=='tail_simp_grind_lean')
+          assert witness['name']==selected['name'] and witness['proof']==selected['proof'],'SOURCE_CERT_PROOF_BYTES_MISMATCH'
+          packet_map={x['name']:x['proof'] for x in map(json.loads,packet.read_text().splitlines()) if x}
+          assert packet_map[selected['name']]==witness['proof'],'PACKET_PROOF_MISMATCH'
+          v6=subprocess.check_output(['git','show',f'{old}:competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl'],text=True)
+          before={x['name']:x for x in map(json.loads,v6.splitlines()) if x}
+          after={x['name']:x for x in control}
+          assert len(after)==15 and set(after)==set(before)
+          assert {n for n in after if after[n]['proof']!=before[n]['proof']}=={selected['name']}
+          assert all(before[n]==after[n] for n in before if n!=selected['name'])
+          proof_digest=hashlib.sha256(witness['proof'].encode()).hexdigest()
+          report={'schema':'mathgraph.lra.v7.certificate-reuse.v1',
+            'status':'WARRANTED_REUSED_PINNED_COMPILER_CERTIFICATE__EXACT_SOURCE_BOUND',
+            'source_run':37980654973,'source_commit':run['head_sha'],'proof_sha256':proof_digest,
+            'all_other_proof_records_byte_identical':14,'required_version':'v4.26.0',
+            'qualified_source_run':'SUCCESS', 'official_submission':False}
+          pathlib.Path('/tmp/v7-source-evidence.json').write_text(json.dumps(report,indent=2)+'\n')
+          print(json.dumps(report,indent=2))
+          print('WARRANTED_EXACT_V7_SOURCE_CERTIFICATE_REUSE')
+          PY
+      - name: Fetch pinned benchmark metadata without running external code
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 \
+            https://raw.githubusercontent.com/aurasoph/lean-refactor/7f3a401470d04f70013d293db4253b088ec8a0ae/competition/benchmark_data_warmup.jsonl \
+            -o /tmp/benchmark_data_warmup.jsonl
+          python3 competitions/lean_refactor_arena/official_jsonl.py /tmp/benchmark_data_warmup.jsonl \
+            --summary-out /tmp/benchmark-summary.json
+      - name: Build exact retained Arena submission and validate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 competitions/lean_refactor_arena/arena_upload.py build \
+            --benchmark /tmp/benchmark_data_warmup.jsonl \
+            --candidates competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl \
+            --out /tmp/lra-closed-retained-15.jsonl \
+            --report /tmp/lra-closed-retained-report.json
+          python3 competitions/lean_refactor_arena/arena_upload.py validate \
+            --benchmark /tmp/benchmark_data_warmup.jsonl \
+            --upload /tmp/lra-closed-retained-15.jsonl
+          python3 - <<'PY'
+          import hashlib,json,pathlib,subprocess
+          upload=pathlib.Path('/tmp/lra-closed-retained-15.jsonl')
+          portfolio=pathlib.Path('competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl')
+          bench=pathlib.Path('/tmp/benchmark_data_warmup.jsonl')
+          audit=pathlib.Path('competitions/lean_refactor_arena/evidence/retained_exact_full_version_audit_20261010_v7.json')
+          committed=pathlib.Path('competitions/lean_refactor_arena/submissions/mathgraph_verified_15_warmup_20261009.jsonl')
+          raw=lambda p:[json.loads(x) for x in p.read_text(encoding='utf-8').splitlines() if x.strip()]
+          rows,source,frozen=raw(upload),raw(portfolio),raw(bench)
+          assert len(rows)==len(source)==len(frozen)==15
+          source_map={r['name']:r['proof'] for r in source}
+          bench_names={r['name'] for r in frozen}
+          assert len(source_map)==15 and set(source_map)==bench_names
+          assert [r['name'] for r in rows]==[r['name'] for r in frozen]
+          assert all(set(r)=={'name','proof'} and r['proof']==source_map[r['name']] for r in rows)
+          # A green upload-format check cannot inherit an outdated verifier certificate.
+          # Bind the current proofs, current committed packet, and each protected
+          # Lean-version claim to the frozen exact-source audit.
+          a=json.loads(audit.read_text(encoding='utf-8'))
+          git_blob=lambda p: subprocess.check_output(
+            ['git','hash-object',str(p)], text=True).strip()
+          assert a.get('state') == 'WARRANTED_COMPOSED_PINNED_VERSIONS__NOT_OFFICIAL_ARENA_SUBMISSION', a.get('state')
+          assert a.get('source_sha') == '7f3a401470d04f70013d293db4253b088ec8a0ae'
+          assert a.get('portfolio_blob_sha') == git_blob(portfolio), 'STALE_AUDIT_PROOF_BYTES'
+          assert a.get('current_portfolio_blob_sha') == git_blob(portfolio)
+          assert a.get('current_packet',{}).get('git_blob_sha') == git_blob(committed), 'STALE_PACKET_AUTHORITY'
+          assert [(r['name'],r['proof']) for r in raw(committed)] == [(r['name'],r['proof']) for r in source]
+          records=a.get('records') or []
+          assert len(records)==15 and {r['name'] for r in records}==bench_names
+          for r in records:
+            assert r.get('label')==next(p['label'] for p in source if p['name']==r['name'])
+            required=r.get('required_versions')
+            assert isinstance(required,list) and len(required)>0 and len(required)==len(set(required))
+            if r.get('matches_pinned_public_full_test') is True:
+              assert r.get('evidence_status')=='WARRANTED_EXTERNAL_EXACT_FULL_VERSION'
+              assert r.get('public_hash')
+              assert r.get('public_compat')=={v: True for v in required}
+            else:
+              assert r.get('evidence_status')=='WARRANTED_INDEPENDENT_EXACT_REQUIRED_VERSION'
+              authority=r.get('independent_authority') or {}
+              run=r.get('independent_run') or authority.get('run')
+              assert isinstance(run,int) and run>0, 'MISSING_INDEPENDENT_PROOF_RUN'
+              evidence_versions=set(authority.get('required_versions_verified') or (r.get('compat') or {}).keys())
+              assert evidence_versions==set(required), 'INCOMPLETE_REQUIRED_VERSION_COVERAGE'
+          externally_warranted=sum(r.get('matches_pinned_public_full_test') is True for r in records)
+          independently_warranted=15-externally_warranted
+          assert externally_warranted==a['comparator_full_version_exact_count']
+          assert independently_warranted==a['independently_qualified_count']
+          assert a['total_authorized_by_prior_evidence']==15
+          sha=hashlib.sha256(upload.read_bytes()).hexdigest()
+          out={'schema':'mathgraph.lra.retained-upload.v1','status':'UPLOAD_FORMAT_WARRANTED__NOT_OFFICIAL_SCORE',
+            'submission_rows':15,'exact_retained_proofs':15,'reference_fallbacks':0,
+            'source_pin':'aurasoph/lean-refactor@7f3a401470d04f70013d293db4253b088ec8a0ae',
+            'portfolio_sha256':hashlib.sha256(portfolio.read_bytes()).hexdigest(),
+            'upload_sha256':sha,'upload_bytes':upload.stat().st_size,
+            'audit_path':str(audit),'audit_portfolio_git_blob':git_blob(portfolio),
+            'external_exact_full_version_witnesses':externally_warranted,
+            'independent_required_version_witnesses':independently_warranted,
+            'promotion_boundary':'Proof format and exact recorded version lineage checked against current v6 audit; no new Lean replay. Official ranking requires user-authorized upload and scoring; no keys accessed.'}
+          pathlib.Path('/tmp/lra-retained-manifest.json').write_text(json.dumps(out,indent=2)+'\n')
+          print(json.dumps(out,indent=2))
+          print('VERIFIED_EXACT_RETAINED_15_ROW_UPLOAD')
+          PY
+          sha256sum /tmp/lra-closed-retained-15.jsonl
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-v7-certificate-reuse-15
+          path: |
+            /tmp/lra-closed-retained-15.jsonl
+            /tmp/lra-retained-manifest.json
+            /tmp/lra-closed-retained-report.json
+            /tmp/benchmark-summary.json
+            /tmp/v7-source-evidence.json
+            /tmp/v7-pinned-source-run.json
