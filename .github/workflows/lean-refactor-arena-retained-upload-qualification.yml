@@ -1,0 +1,89 @@
+name: Lean Refactor Arena retained upload qualification
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'competition/lean-refactor-arena-track1'
+    paths:
+      - 'competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl'
+      - 'competitions/lean_refactor_arena/arena_upload.py'
+      - 'competitions/lean_refactor_arena/evidence/retained_exact_full_version_audit_20261009_v1.json'
+      - '.github/workflows/lean-refactor-arena-retained-upload-qualification.yml'
+
+concurrency:
+  group: lra-retained-upload
+  cancel-in-progress: true
+
+jobs:
+  qualify-upload:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch pinned benchmark metadata without running external code
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 \
+            https://raw.githubusercontent.com/aurasoph/lean-refactor/7f3a401470d04f70013d293db4253b088ec8a0ae/competition/benchmark_data_warmup.jsonl \
+            -o /tmp/benchmark_data_warmup.jsonl
+          python3 competitions/lean_refactor_arena/official_jsonl.py /tmp/benchmark_data_warmup.jsonl \
+            --summary-out /tmp/benchmark-summary.json
+      - name: Build exact retained Arena submission and validate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 competitions/lean_refactor_arena/arena_upload.py build \
+            --benchmark /tmp/benchmark_data_warmup.jsonl \
+            --candidates competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl \
+            --out /tmp/lra-closed-retained-15.jsonl \
+            --report /tmp/lra-closed-retained-report.json
+          python3 competitions/lean_refactor_arena/arena_upload.py validate \
+            --benchmark /tmp/benchmark_data_warmup.jsonl \
+            --upload /tmp/lra-closed-retained-15.jsonl
+          python3 - <<'PY'
+          import hashlib,json,pathlib
+          upload=pathlib.Path('/tmp/lra-closed-retained-15.jsonl')
+          portfolio=pathlib.Path('competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl')
+          bench=pathlib.Path('/tmp/benchmark_data_warmup.jsonl')
+          audit=pathlib.Path('competitions/lean_refactor_arena/evidence/retained_exact_full_version_audit_20261009_v1.json')
+          raw=lambda p:[json.loads(x) for x in p.read_text(encoding='utf-8').splitlines() if x.strip()]
+          rows,source,frozen=raw(upload),raw(portfolio),raw(bench)
+          assert len(rows)==len(source)==len(frozen)==15
+          source_map={r['name']:r['proof'] for r in source}
+          bench_names={r['name'] for r in frozen}
+          assert len(source_map)==15 and set(source_map)==bench_names
+          assert [r['name'] for r in rows]==[r['name'] for r in frozen]
+          assert all(set(r)=={'name','proof'} and r['proof']==source_map[r['name']] for r in rows)
+          a=json.loads(audit.read_text())
+          assert a['comparator_full_version_exact_count']==13
+          assert len(a['records'])==15
+          assert set(r['name'] for r in a['records'])==bench_names
+          assert {r['name'] for r in a['independently_qualified']}=={
+            'Core.InitsUpdatesComm',
+            'FieldSpecification.WickAlgebra.ι_timeOrderF_superCommuteF_eq_time'
+          }
+          sha=hashlib.sha256(upload.read_bytes()).hexdigest()
+          out={'schema':'mathgraph.lra.retained-upload.v1','status':'UPLOAD_FORMAT_WARRANTED__NOT_OFFICIAL_SCORE',
+            'submission_rows':15,'exact_retained_proofs':15,'reference_fallbacks':0,
+            'source_pin':'aurasoph/lean-refactor@7f3a401470d04f70013d293db4253b088ec8a0ae',
+            'portfolio_sha256':hashlib.sha256(portfolio.read_bytes()).hexdigest(),
+            'upload_sha256':sha,'upload_bytes':upload.stat().st_size,
+            'independent_wick_primary_run':37887798992,'independent_core_all_versions_run':37889600290,
+            'external_exact_full_version_witnesses':13,
+            'promotion_boundary':'Proof format verified; official ranking requires user-authorized upload in Arena UI and official verifier scoring; no keys accessed.'}
+          pathlib.Path('/tmp/lra-retained-manifest.json').write_text(json.dumps(out,indent=2)+'\n')
+          print(json.dumps(out,indent=2))
+          print('VERIFIED_EXACT_RETAINED_15_ROW_UPLOAD')
+          PY
+          sha256sum /tmp/lra-closed-retained-15.jsonl
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-closed-retained-15
+          path: |
+            /tmp/lra-closed-retained-15.jsonl
+            /tmp/lra-retained-manifest.json
+            /tmp/lra-closed-retained-report.json
+            /tmp/benchmark-summary.json
