@@ -627,5 +627,45 @@
       "UNKNOWN": "official #1 and full benchmark starting November 1"
     },
     "official_submission_gate": "Registration username, submission key if previously registered, Closed-source LLM track and explicit upload. No user's key sought or stored; not submitted."
+  },
+  "minimum_warranted_frontier_latest_20261010_v5": {
+    "status": "WARRANTED_EXACT_15_PACKET_AND_SOURCE_VERSION_LINEAGE__NOT_OFFICIAL",
+    "source_pin": "aurasoph/lean-refactor@7f3a401470d04f70013d293db4253b088ec8a0ae",
+    "changes_since_v4": [
+      "Strata 188/1429 objective112.37 -> 132/2217 objective115.06 (run37973089000)",
+      "Typing 338/2198 objective113.51 ->308/2697 objective120.03 (3/3 versions run37973211833)"
+    ],
+    "proof_selection": {
+      "portfolio_sha": "865c6afe6e4443117220bec601a9264aaeee602a",
+      "packet_sha": "c5fbe258fc8dbf880deb4bb83258d750ef013113",
+      "change": "exact 2 theorem rows compared with v4; 13 unchanged"
+    },
+    "admission": {
+      "status": "WARRANTED_COMPOSED_PINNED_COMPATIBILITY",
+      "strict_audit": "competitions/lean_refactor_arena/evidence/retained_exact_full_version_audit_20261010_v5.json",
+      "external_full_version": 10,
+      "independent_all_required_version": 5
+    },
+    "retained_packet": {
+      "qualification_run": 37975304036,
+      "conclusion": "success",
+      "evidence": "competitions/lean_refactor_arena/evidence/retained_upload_v5_qualified_20261010.json",
+      "uploaded_bytes": 27494,
+      "generated_upload_sha256": "59240c11d7a425a92f89f359563efa93087be94c851c3a15aac0c83857b13510"
+    },
+    "projected": {
+      "objective_sum": 2217.01,
+      "combined_pct": 82.6002,
+      "latest_readonly_leader": 89.38,
+      "combined_gap": 6.7798,
+      "objective_sum_debt": 305.09,
+      "officially_submitted": false
+    },
+    "current_search": {
+      "strata_protected_future_normalizer": "run37975875955 pending; 12 variants+protected 132 control",
+      "fiber_unselected_micro_gain": "fiber_rfl_mem 439/7051 objective129.56 vs129.55, primary-only, four-version replay not warranted for +0.01 without more gain"
+    },
+    "authority_boundary": "Projection not official; do not confuse sealed proof evidence and submission-key-gated external score. No unverified proof promoted.",
+    "supersedes_active_portfolio_references_in": "minimum_warranted_frontier_latest_20261010"
   }
 }
