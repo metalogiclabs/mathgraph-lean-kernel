@@ -1,0 +1,119 @@
+name: Lean Refactor Arena ArkLib targeted reclosure
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'competition/lean-refactor-arena-track1'
+    paths:
+      - '.github/workflows/lean-refactor-arena-arklib-targeted-reclosure.yml'
+      - 'competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl'
+concurrency:
+  group: lra-arklib-targeted-reclosure
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  arklib-scope:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      PUBLIC_REPO_SHA: 7f3a401470d04f70013d293db4253b088ec8a0ae
+      BENCH_VERSION: v4.31
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare exactly pinned public Arena workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.elan/bin:$PATH"
+          git clone --depth=1 --filter=blob:none --sparse https://github.com/aurasoph/lean-refactor.git /tmp/lean-refactor
+          git -C /tmp/lean-refactor fetch --depth=1 origin "$PUBLIC_REPO_SHA"
+          git -C /tmp/lean-refactor checkout --detach FETCH_HEAD
+          git -C /tmp/lean-refactor sparse-checkout set competition
+          test "$(git -C /tmp/lean-refactor rev-parse HEAD)" = "$PUBLIC_REPO_SHA"
+          mkdir -p /tmp/arklib-targeted
+          git -C /tmp/lean-refactor rev-parse HEAD | tee /tmp/arklib-targeted/harness-sha.txt
+      - name: Build only modules needed by the three frozen ArkLib theorems
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.elan/bin:$PATH"
+          proj=/tmp/lean-refactor/competition/projects/v4.31
+          cd "$proj"
+          cat lakefile.toml
+          printf '%s\n' "=== Lake update (pinned package manifest) ==="
+          lake update > /tmp/arklib-targeted/lake-update.log 2>&1 || {
+            tail -n 150 /tmp/arklib-targeted/lake-update.log
+            exit 1
+          }
+          echo "=== Mathlib/ArkLib cache retrieval if available ==="
+          lake exe cache get > /tmp/arklib-targeted/lake-cache.log 2>&1 || {
+            tail -n 50 /tmp/arklib-targeted/lake-cache.log
+            echo "CACHE_UNAVAILABLE__SOURCE_BUILD_FALLBACK"
+          }
+          echo "=== Build only exact import closures for benchmark modules ==="
+          set +e
+          lake build \
+            ArkLib.ProofSystem.Binius.BinaryBasefold.Prelude \
+            ArkLib.Data.CodingTheory.ProximityGap.DG25.MainResults \
+            > /tmp/arklib-targeted/required-module-build.log 2>&1
+          result=$?
+          set -e
+          tail -n 180 /tmp/arklib-targeted/required-module-build.log
+          echo "REQUIRED_MODULE_BUILD_EXIT=$result"
+          test "$result" -eq 0
+          echo "VERIFIED_REQUIRED_ARKLIB_IMPORT_CLOSURE"
+      - name: Verify exact retained proofs (single pinned v4.31 version)
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > /tmp/arklib-targeted/primary-scores.jsonl
+          for name in \
+            'Binius.BinaryBasefold.fiberwise_dist_lt_imp_dist_lt_unique_decoding_radius' \
+            'Binius.BinaryBasefold.fold_advances_evaluation_poly' \
+            'interleaved_affine_gaps_imply_tensor_gaps'; do
+            echo "TARGET=$name"
+            python3 competitions/lean_refactor_arena/public_harness_bridge.py \
+              --competition /tmp/lean-refactor/competition --project v4.31 \
+              --name "$name" \
+              --candidate competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl
+            (cd /tmp/lean-refactor/competition && python3 arena.py check --name "$name" --timeout 1800) \
+              > /tmp/arklib-targeted/one.json
+            jq -c . /tmp/arklib-targeted/one.json >> /tmp/arklib-targeted/primary-scores.jsonl
+          done
+      - name: Fail closed on any missing primary certificate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          rows=[json.loads(s) for s in Path('/tmp/arklib-targeted/primary-scores.jsonl').read_text().splitlines() if s.strip()]
+          assert len(rows)==3 and len({r['name'] for r in rows})==3
+          out=[]
+          for r in rows:
+              pv=r.get('per_version') or []
+              assert (r.get('compiled') is True and r.get('statement_ok') is True
+                  and r.get('eligible') is True and not r.get('forbidden')
+                  and not r.get('extra_toplevel_decls') and not r.get('untested')
+                  and r.get('compat')=={'v4.31.0':True}
+                  and len(pv)==1 and pv[0].get('tested') is True and pv[0].get('ok') is True)
+              out.append({'name':r['name'],'length':r.get('length'),
+                'heartbeats':r.get('heartbeats'),'objective':r.get('objective_sum_pct')})
+          record={'schema':'mathgraph.lra.arklib.targeted-reclosure.v1',
+             'state':'WARRANTED_PRIMARY_THREE_OF_THREE',
+             'pin':'7f3a401470d04f70013d293db4253b088ec8a0ae',
+             'module_scope':['ArkLib.ProofSystem.Binius.BinaryBasefold.Prelude',
+               'ArkLib.Data.CodingTheory.ProximityGap.DG25.MainResults'],
+             'status_of_unrelated_WeightedAgreement':'NOT_BUILT_BY_TARGETED_SCOPE',
+             'proofs':out,'all_versions_boundary':'Not fresh replay; refer to exact pinned public all-version comparator audit'}
+          Path('/tmp/arklib-targeted/summary.json').write_text(json.dumps(record,indent=2)+'\n')
+          print(json.dumps(record,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-arklib-targeted-reclosure
+          path: /tmp/arklib-targeted
