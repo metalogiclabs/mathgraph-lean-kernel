@@ -1,0 +1,41 @@
+name: Lean Refactor Arena V20 frozen syntax-aware consequence composition
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['competition/lra-typing-v20-typed-consequence-compiler']
+    paths:
+      - '.github/workflows/lean-refactor-arena-typing-v20-syntactic-composer.yml'
+      - 'competitions/lean_refactor_arena/typing_v20_consequence_composer.py'
+      - 'competitions/lean_refactor_arena/experiments/typing_consequence_compound_v20.jsonl'
+
+permissions:
+  contents: read
+
+jobs:
+  verify-source-exact:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reconstruct all sixteen frozen V20 proof bytes from typed consequence operators
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 competitions/lean_refactor_arena/typing_v20_consequence_composer.py \
+            --bank competitions/lean_refactor_arena/experiments/typing_consequence_compound_v20.jsonl \
+            --report /tmp/lra-typing-v20-typed-composition.json
+          python3 - <<'PY'
+          import json
+          x=json.load(open('/tmp/lra-typing-v20-typed-composition.json'))
+          assert x['verified_composites']==x['required_composites']==16
+          assert all(r['matches_frozen_bytes'] for r in x['results'])
+          assert x['state']=='VERIFIED_FROZEN_SYNTACTIC_COMPOSITION__LEAN_AUTHORITY_SEPARATE'
+          assert not x['portfolio_mutated'] and not x['officially_submitted']
+          print('VERIFIED_FROZEN_TYPED_CONSEQUENCE_SEMANTIC_OBSERVER_16_OF_16')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-typing-v20-typed-consequence-exact-bank
+          path: /tmp/lra-typing-v20-typed-composition.json
