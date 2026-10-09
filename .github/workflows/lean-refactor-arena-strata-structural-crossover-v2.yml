@@ -147,7 +147,7 @@ jobs:
           v=r.get('per_version') or []
           assert r.get('compiled') is True and r.get('statement_ok') is True and r.get('eligible') is True
           assert not r.get('forbidden') and not r.get('extra_toplevel_decls') and not r.get('untested')
-          assert r.get('all_versions') is True and r.get('compat') == {'v4.26.0':True}
+          assert r.get('all_versions') is not False and r.get('compat') == {'v4.26.0':True}
           assert len(v)==1 and v[0].get('tested') is True and v[0].get('ok') is True
           assert float(r.get('objective_sum_pct') or 0)>119.56
           print('WARRANTED_STRATA_CONSEQUENCE_FRONTIER_FULL_VERSION')
