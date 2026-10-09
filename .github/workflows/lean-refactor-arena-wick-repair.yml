@@ -50,6 +50,12 @@ jobs:
           import json
           for line in open('/tmp/wick-scores.jsonl'):
               r=json.loads(line)
+              print('WICK_EXACT_FAILURE',r.get('candidate_label'),json.dumps(r.get('per_version'),ensure_ascii=False))
+          PY
+          python3 - <<'PY'
+          import json
+          for line in open('/tmp/wick-scores.jsonl'):
+              r=json.loads(line)
               print('RESIDUAL',r.get('candidate_label'),json.dumps(r.get('per_version'),ensure_ascii=False))
           PY
           python3 - <<'PY'
