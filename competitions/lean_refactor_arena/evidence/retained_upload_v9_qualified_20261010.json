@@ -1,0 +1,54 @@
+{
+  "schema": "mathgraph.lra.retained-upload-v9-qualified.v1",
+  "state": "WARRANTED_EXACT_VARIATIONAL_V432_AND_FIFTEEN_PROOF_PACKET_NOT_OFFICIAL",
+  "observed_on": "2026-10-10",
+  "authority": {
+    "source_run": 37987082422,
+    "source_job": 114011644918,
+    "source_commit": "8e49779d12da2c226bee92080862518e5f04b78e",
+    "reclosure_run": 37990217044,
+    "reclosure_job": 114022142744,
+    "reclosure_commit": "fa314f6e7aef0b7bfe2a96fea9baef0fbfaf60e5",
+    "conclusion": "success",
+    "artifact_id": 11645455115
+  },
+  "protected": {
+    "organizer_source_sha": "7f3a401470d04f70013d293db4253b088ec8a0ae",
+    "theorem": "fundamental_theorem_of_variational_calculus'",
+    "required_versions": [
+      "v4.32.0"
+    ],
+    "source_proof_sha256": "c1c79d119a6f4382ecaba52ddaf7e3c405a42e9b40b23cf24950b6fe33ba4f03",
+    "operator": "Replace support membership case split with direct check φ x = 0",
+    "other_proof_rows_byte_identical": 14
+  },
+  "metrics": {
+    "previous_tokens": 171,
+    "previous_heartbeats": 2033,
+    "previous_objective": 163.01,
+    "new_tokens": 170,
+    "new_heartbeats": 2022,
+    "new_objective": 163.22,
+    "gain": 0.21
+  },
+  "packet": {
+    "portfolio_git_blob_sha": "822da10362ae9b4b7836518a08471fced812139f",
+    "committed_packet_git_blob_sha": "0f583ac51fc648cc9fffd60747538396950542db",
+    "portfolio_sha256": "296cc471720edb22163fbeed90f2f5a1973bffb180ea4aab5f771df85b4eeb3c",
+    "generated_upload_sha256": "f0125582f824c708fc3504cfc649f87f0e1b79266e0222e8e89ab0942dfe7a55",
+    "generated_upload_bytes": 27371,
+    "rows": 15,
+    "reference_fallbacks": 0,
+    "exact_external_full_version_witnesses": 9,
+    "independent_exact_required_version_witnesses": 6
+  },
+  "scoring": {
+    "composed_objective_sum_total": 2224,
+    "projected_warmup_pct": 82.7556,
+    "last_recorded_leader": 89.38,
+    "combined_gap_pct_points": 6.6244,
+    "objective_debt_to_tie": 298.1,
+    "official_submission": false
+  },
+  "boundary": "Verified exact single changed variational proof, statement, v4.32 toolchain, fourteen unchanged prior full required-version proofs and packet. Not an official score; no warrant for unseen November benchmark."
+}
