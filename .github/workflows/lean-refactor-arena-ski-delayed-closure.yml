@@ -1,0 +1,88 @@
+name: Lean Refactor Arena SKI delayed closure
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'competition/lean-refactor-arena-track1'
+    paths:
+      - 'competitions/lean_refactor_arena/experiments/ski_delayed_trivial_closure_v1.jsonl'
+      - '.github/workflows/lean-refactor-arena-ski-delayed-closure.yml'
+
+concurrency:
+  group: lra-ski-delayed-closure
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 105
+    env:
+      PUBLIC_REPO_SHA: 7f3a401470d04f70013d293db4253b088ec8a0ae
+      TARGET_NAME: Cslib.SKI.parallelReduction_diamond
+      CANDIDATES: competitions/lean_refactor_arena/experiments/ski_delayed_trivial_closure_v1.jsonl
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build exact public Cslib v4.33
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.elan/bin:$PATH"
+          git clone --depth=1 --filter=blob:none --sparse https://github.com/aurasoph/lean-refactor.git /tmp/lean-refactor
+          git -C /tmp/lean-refactor fetch --depth=1 origin "$PUBLIC_REPO_SHA"
+          git -C /tmp/lean-refactor checkout --detach FETCH_HEAD
+          git -C /tmp/lean-refactor sparse-checkout set competition
+          test "$(git -C /tmp/lean-refactor rev-parse HEAD)" = "$PUBLIC_REPO_SHA"
+          (cd /tmp/lean-refactor/competition && ./build-all.sh v4.33)
+      - name: Verify 278-token control and delayed-closure candidates
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > /tmp/ski-delayed-scores.jsonl
+          for label in ski_retained_278 ski_delayed_constructor ski_delayed_constructor_required ski_delayed_aesop ski_delayed_aesop_fallback ski_delayed_solvebyelim ski_delayed_grind ski_delayed_simp_all ski_delayed_constructor_try; do
+            echo "CHECK=$label"
+            python3 competitions/lean_refactor_arena/public_harness_bridge.py \
+              --competition /tmp/lean-refactor/competition --project v4.33 \
+              --name "$TARGET_NAME" --candidate "$CANDIDATES" --label "$label"
+            (cd /tmp/lean-refactor/competition && python3 arena.py check --name "$TARGET_NAME") \
+              > /tmp/ski-delayed-one.json
+            jq -c --arg label "$label" '. + {candidate_label:$label}' /tmp/ski-delayed-one.json \
+              >> /tmp/ski-delayed-scores.jsonl
+          done
+      - name: Qualify gains and preserve failed branches
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,pathlib
+          rows=[json.loads(s) for s in pathlib.Path('/tmp/ski-delayed-scores.jsonl').read_text().splitlines() if s.strip()]
+          assert len(rows)==9,len(rows)
+          valid=lambda r:bool(r.get('compiled') and r.get('statement_ok') and r.get('eligible') and
+            float(r.get('survival_pct') or 0)==100 and not r.get('forbidden') and not r.get('extra_toplevel_decls'))
+          control=next(r for r in rows if r['candidate_label']=='ski_retained_278')
+          assert valid(control),'SKI_278_CONTROL_FAILED'
+          qualified=[r for r in rows if valid(r) and r['candidate_label']!='ski_retained_278']
+          gains=[r for r in qualified if float(r.get('objective_sum_pct') or 0)>100.94]
+          best=max(gains,key=lambda r:float(r['objective_sum_pct']),default=None)
+          out={'schema':'mathgraph.lra.ski.delayed-closure.v1',
+            'status':'WARRANTED_PRIMARY_GAIN' if best else 'NO_GAIN',
+            'control':{'objective':control.get('objective_sum_pct'),'tokens':control.get('length'),
+              'heartbeats':control.get('heartbeats')},
+            'qualified':[{'label':r['candidate_label'],'tokens':r.get('length'),
+              'heartbeats':r.get('heartbeats'),'objective':r.get('objective_sum_pct')} for r in qualified],
+            'best':None if best is None else {'label':best['candidate_label'],
+              'tokens':best['length'],'heartbeats':best['heartbeats'],'objective':best['objective_sum_pct']},
+            'failures':[{'label':r['candidate_label'],'errors':(r.get('per_version') or [{}])[0].get('errors')} for r in rows if not valid(r)],
+            'scope':'Pinned primary v4.33. Need 4-version Cslib cross-check before retention.'}
+          pathlib.Path('/tmp/ski-delayed-summary.json').write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n')
+          print(json.dumps(out,ensure_ascii=False,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-ski-delayed-closure
+          path: |
+            /tmp/ski-delayed-scores.jsonl
+            /tmp/ski-delayed-summary.json
