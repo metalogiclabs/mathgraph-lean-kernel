@@ -1,0 +1,207 @@
+name: Lean Refactor Arena witness-consequence transfer
+on:
+  workflow_dispatch:
+  push:
+    branches: ['competition/lra-witness-consequence-transfer-v1']
+    paths:
+      - 'competitions/lean_refactor_arena/experiments/witness_consequence_transfer_v1.jsonl'
+      - '.github/workflows/lean-refactor-arena-witness-consequence-transfer.yml'
+concurrency:
+  group: lra-witness-consequence-transfer
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  probe:
+    name: ${{ matrix.id }} witness-consequence compiler
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: ski
+            name: Cslib.SKI.parallelReduction_diamond
+            module: Cslib.Languages.CombinatoryLogic.Confluence
+            required: 'v4.33,v4.32,v4.31,v4.30'
+          - id: typing
+            name: Cslib.LambdaCalculus.LocallyNameless.Fsub.Typing.progress
+            module: Cslib.Languages.LambdaCalculus.LocallyNameless.Fsub.Safety
+            required: 'v4.33,v4.32,v4.31'
+    env:
+      PUBLIC_SHA: 7f3a401470d04f70013d293db4253b088ec8a0ae
+      TARGET_ID: ${{ matrix.id }}
+      TARGET_NAME: ${{ matrix.name }}
+      TARGET_MODULE: ${{ matrix.module }}
+      REQUIRED_PROJECTS: ${{ matrix.required }}
+      ROOT: competitions/lean_refactor_arena
+      BANK: competitions/lean_refactor_arena/experiments/witness_consequence_transfer_v1.jsonl
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fail-closed candidate source and theorem boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,hashlib,os
+          from pathlib import Path
+          portfolio=Path(os.environ['ROOT'])/'portfolio/warmup_portfolio_v1.jsonl'
+          rows=[json.loads(x) for x in portfolio.read_text().splitlines() if x.strip()]
+          assert len(rows)==len({r['name'] for r in rows})==15
+          bank=[json.loads(x) for x in Path(os.environ['BANK']).read_text().splitlines() if x.strip()]
+          assert len(bank)==25 and len({(r['name'],r['label']) for r in bank})==25
+          sources={r['name']:r['proof'] for r in rows}
+          names={'Cslib.SKI.parallelReduction_diamond','Cslib.LambdaCalculus.LocallyNameless.Fsub.Typing.progress'}
+          assert {r['name'] for r in bank}==names
+          for name in names:
+              control=next(r for r in bank if r['name']==name and r['label']=='protected_exact_control')
+              assert sources[name]==control['proof'], 'STALE_PORTFOLIO_CONTROL'
+              prefix=sources[name].split(' := by\n',1)[0]+' := by\n'
+              assert sources[name].count(' := by\n')==1
+              for candidate in [r for r in bank if r['name']==name]:
+                  proof=candidate['proof']
+                  assert proof.startswith(prefix) and proof.count(' := by\n')==1
+                  assert not any(bad in proof for bad in ('sorryAx','by sorry','admit','run_elab','native_decide','axiom '))
+          manifest={'schema':'mathgraph.lra.witness-consequence-source-gate.v1',
+                    'status':'CANDIDATE_NOT_VERIFIED',
+                    'source_sha':os.environ['PUBLIC_SHA'],
+                    'portfolio_sha256':hashlib.sha256(portfolio.read_bytes()).hexdigest(),
+                    'bank_sha256':hashlib.sha256(Path(os.environ['BANK']).read_bytes()).hexdigest(),
+                    'source_control_exact':True, 'candidate_count':len(bank)}
+          Path('/tmp/witness-source-gate.json').write_text(json.dumps(manifest,indent=2)+'\n')
+          print(json.dumps(manifest,indent=2))
+          PY
+      - name: Build pinned primary Cslib Lean toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.elan/bin:$PATH"
+          git clone --depth=1 --filter=blob:none --sparse https://github.com/aurasoph/lean-refactor.git /tmp/lean-refactor
+          git -C /tmp/lean-refactor fetch --depth=1 origin "$PUBLIC_SHA"
+          git -C /tmp/lean-refactor checkout --detach FETCH_HEAD
+          git -C /tmp/lean-refactor sparse-checkout set competition
+          test "$(git -C /tmp/lean-refactor rev-parse HEAD)" = "$PUBLIC_SHA"
+          (cd /tmp/lean-refactor/competition && ./build-all.sh v4.33)
+      - name: Check every bounded candidate on primary Lean
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' > /tmp/witness-labels.txt
+          import json,os
+          for raw in open(os.environ['BANK']):
+              if not raw.strip(): continue
+              row=json.loads(raw)
+              if row['name']==os.environ['TARGET_NAME']:
+                  print(row['label'])
+          PY
+          : > /tmp/witness-scores.jsonl
+          while IFS= read -r label; do
+            echo "CONSEQUENCE_PROBE=$TARGET_ID/$label"
+            python3 "$ROOT/public_harness_bridge.py" \
+              --competition /tmp/lean-refactor/competition \
+              --project v4.33 --name "$TARGET_NAME" --candidate "$BANK" --label "$label"
+            (cd /tmp/lean-refactor/competition && python3 arena.py check --name "$TARGET_NAME") > /tmp/witness-one.json
+            jq -c --arg label "$label" '. + {candidate_label:$label}' /tmp/witness-one.json >> /tmp/witness-scores.jsonl
+          done < /tmp/witness-labels.txt
+      - name: Classify and select only primary verified scoring gains
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          candidates={r['label']:r for raw in Path(os.environ['BANK']).read_text().splitlines() if raw.strip()
+                      for r in [json.loads(raw)] if r['name']==os.environ['TARGET_NAME']}
+          scores=[json.loads(x) for x in Path('/tmp/witness-scores.jsonl').read_text().splitlines() if x.strip()]
+          assert len(scores)==len(candidates) and len({r['candidate_label'] for r in scores})==len(candidates)
+          def valid(r):
+              return (r.get('compiled') is True and r.get('statement_ok') is True and
+                r.get('eligible') is True and r.get('survival_pct')==100 and
+                not r.get('forbidden') and not r.get('extra_toplevel_decls') and
+                (r.get('compat') or {}).get('v4.33.0-rc2') is True)
+          control=next(r for r in scores if r['candidate_label']=='protected_exact_control')
+          assert valid(control),'PROTECTED_INCUMBENT_DID_NOT_COMPILE'
+          base=float(control['objective_sum_pct'])
+          good=[r for r in scores if valid(r)]
+          improved=[r for r in good if r['candidate_label']!='protected_exact_control'
+                    and float(r['objective_sum_pct'])>base]
+          improved.sort(key=lambda r:(-float(r['objective_sum_pct']),r['length'],r['heartbeats']))
+          best=improved[0] if improved else None
+          out={'schema':'mathgraph.lra.witness-consequence-transfer.primary.v1',
+               'status':'PRIMARY_GAIN_PENDING_ALL_VERSIONS' if best else 'NO_PRIMARY_GAIN_BOUNDED',
+               'target':os.environ['TARGET_NAME'],'source_sha':os.environ['PUBLIC_SHA'],
+               'control':{'objective':base,'tokens':control['length'],'heartbeats':control['heartbeats']},
+               'qualified_primary':[{'label':r['candidate_label'],'objective':r['objective_sum_pct'],
+                  'tokens':r['length'],'heartbeats':r['heartbeats']} for r in good],
+               'not_admitted':[{'label':r['candidate_label'],
+                  'errors':(r.get('per_version') or [{}])[0].get('errors',[])}
+                  for r in scores if not valid(r)],
+               'primary_winner':best['candidate_label'] if best else None,
+               'portfolio_changed':False,'official_submission':False}
+          Path('/tmp/witness-summary.json').write_text(json.dumps(out,indent=2,ensure_ascii=False)+'\n')
+          if best:
+              row=candidates[best['candidate_label']]
+              Path('/tmp/witness-winner.jsonl').write_text(json.dumps(row,ensure_ascii=False)+'\n')
+          print(json.dumps(out,indent=2,ensure_ascii=False))
+          PY
+      - name: Replay a primary winner across every protected Lean version
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -s /tmp/witness-winner.jsonl ]; then
+            echo NO_PROMOTION_OR_FURTHER_COMPILATION_WITHOUT_PRIMARY_GAIN
+            exit 0
+          fi
+          printf '%s' "$REQUIRED_PROJECTS" | tr ',' '\n' | while IFS= read -r project; do
+            echo "CROSS_VERSION_BUILD=$project"
+            (
+              cd "/tmp/lean-refactor/competition/projects/$project"
+              lake update
+              lake exe cache get || echo "SCOPE_BUILD_FALLBACK=$project"
+              lake build "$TARGET_MODULE"
+            )
+          done
+          python3 "$ROOT/public_harness_bridge.py" \
+            --competition /tmp/lean-refactor/competition --project v4.33 \
+            --name "$TARGET_NAME" --candidate /tmp/witness-winner.jsonl
+          (cd /tmp/lean-refactor/competition && python3 arena.py check --name "$TARGET_NAME" --all-versions --timeout 1800) > /tmp/witness-all-versions.json
+          python3 - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          d=json.load(open('/tmp/witness-all-versions.json'))
+          ctl=json.load(open('/tmp/witness-summary.json'))['control']
+          required={'ski':{'v4.33.0-rc2','v4.32.0','v4.31.0','v4.30.0'},
+                    'typing':{'v4.33.0-rc2','v4.32.0','v4.31.0'}}[os.environ['TARGET_ID']]
+          pv=d.get('per_version') or []
+          compat=d.get('compat') or {}
+          warranted=(d.get('compiled') is True and d.get('statement_ok') is True
+               and d.get('eligible') is True and d.get('all_versions') is True
+               and d.get('survival_pct')==100 and not d.get('forbidden')
+               and not d.get('extra_toplevel_decls') and not d.get('untested')
+               and set(compat)==required and all(compat[v] is True for v in required)
+               and len(pv)==len(required) and {x.get('version') for x in pv}==required
+               and all(x.get('tested') is True and x.get('ok') is True for x in pv)
+               and float(d.get('objective_sum_pct') or 0)>ctl['objective'])
+          proof=json.loads(Path('/tmp/witness-winner.jsonl').read_text())['proof']
+          result={'status':'WARRANTED_ALL_PROTECTED_VERSIONS_UNPROMOTED' if warranted else 'NOT_ADMITTED',
+                  'target':os.environ['TARGET_NAME'],'proof_sha256':hashlib.sha256(proof.encode()).hexdigest(),
+                  'objective':d.get('objective_sum_pct'),'required_versions':sorted(required),
+                  'compat':compat,'portfolio_changed':False,'official_submission':False}
+          Path('/tmp/witness-final.json').write_text(json.dumps(result,indent=2)+'\n')
+          print(json.dumps(result,indent=2))
+          if not warranted:
+              raise SystemExit('NOT_WARRANTED_FOR_PORTFOLIO_PROMOTION')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-witness-consequence-${{ matrix.id }}
+          path: |
+            /tmp/witness-source-gate.json
+            /tmp/witness-scores.jsonl
+            /tmp/witness-summary.json
+            /tmp/witness-winner.jsonl
+            /tmp/witness-all-versions.json
+            /tmp/witness-final.json
