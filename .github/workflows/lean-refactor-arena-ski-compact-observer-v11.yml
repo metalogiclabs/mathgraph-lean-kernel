@@ -1,0 +1,141 @@
+name: Lean Refactor Arena V11 SKI protected critical-pair quotient
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'competition/lra-ski-compact-observer-v11'
+    paths:
+      - 'competitions/lean_refactor_arena/experiments/ski_critical_observer_v11.jsonl'
+      - '.github/workflows/lean-refactor-arena-ski-compact-observer-v11.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lra-ski-compact-observer-v11
+  cancel-in-progress: true
+
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      PUBLIC_SHA: 7f3a401470d04f70013d293db4253b088ec8a0ae
+      TARGET: Cslib.SKI.parallelReduction_diamond
+      BANK: competitions/lean_refactor_arena/experiments/ski_critical_observer_v11.jsonl
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assert frozen proof identity and exactly fourteen semantic candidates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,hashlib
+          root=pathlib.Path('competitions/lean_refactor_arena')
+          read=lambda p:[json.loads(s) for s in p.read_text().splitlines() if s.strip()]
+          port=read(root/'portfolio/warmup_portfolio_v1.jsonl')
+          rows=read(pathlib.Path(os.environ['BANK']))
+          target=os.environ['TARGET']
+          assert len(port)==15 and len(rows)==14 and len({r['label'] for r in rows})==14
+          control=next(r for r in port if r['name']==target)
+          assert control['label']=='public_informed_derivation_278'
+          assert rows[0]['label']=='ski_exact_278_control' and rows[0]['proof']==control['proof']
+          assert rows[1]['label']=='ski_known_102_heartbeat_negative'
+          assert all(r['name']==target and r['proof'].startswith(
+            'theorem parallelReduction_diamond : Diamond ParallelReduction := by\n')
+            for r in rows)
+          assert all(not any(t in r['proof'] for t in
+            ['sorry','sorryAx','admit','native_decide','run_elab','axiom ']) for r in rows)
+          print('FROZEN_SKID_EMBEDDED_OBSERVER_AND_PROTECTED_278_BASELINE')
+          print('protected_sha256='+hashlib.sha256(control['proof'].encode()).hexdigest())
+          PY
+      - name: Build precisely required pinned Cslib proof module
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.elan/bin:$PATH"
+          git clone --depth=1 --filter=blob:none --sparse https://github.com/aurasoph/lean-refactor.git /tmp/lean-refactor
+          git -C /tmp/lean-refactor fetch --depth=1 origin "$PUBLIC_SHA"
+          git -C /tmp/lean-refactor checkout --detach FETCH_HEAD
+          git -C /tmp/lean-refactor sparse-checkout set competition
+          test "$(git -C /tmp/lean-refactor rev-parse HEAD)" = "$PUBLIC_SHA"
+          mkdir -p /tmp/lra-ski-v11
+          (
+            cd /tmp/lean-refactor/competition/projects/v4.33
+            lake update > /tmp/lra-ski-v11/lake-update.log 2>&1 || {
+              tail -n 100 /tmp/lra-ski-v11/lake-update.log; exit 1;
+            }
+            lake exe cache get > /tmp/lra-ski-v11/cache.log 2>&1 || echo CACHE_UNAVAILABLE_SOURCE_FALLBACK
+            lake build Cslib.Languages.CombinatoryLogic.Confluence \
+              > /tmp/lra-ski-v11/required-module.log 2>&1 || {
+              tail -n 150 /tmp/lra-ski-v11/required-module.log; exit 1;
+            }
+          )
+          echo VERIFIED_PINNED_CSLIB_SKI_TARGET_MODULE
+      - name: Score witness-factor crossovers and exact controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' > /tmp/lra-ski-v11/labels.txt
+          import json,os
+          for line in open(os.environ['BANK']):
+              if line.strip(): print(json.loads(line)['label'])
+          PY
+          : > /tmp/lra-ski-v11/scores.jsonl
+          while IFS= read -r label; do
+            echo SKI_OBSERVER_CANDIDATE="$label"
+            python3 competitions/lean_refactor_arena/public_harness_bridge.py \
+              --competition /tmp/lean-refactor/competition --project v4.33 \
+              --name "$TARGET" --candidate "$BANK" --label "$label"
+            (
+              cd /tmp/lean-refactor/competition
+              python3 arena.py check --name "$TARGET" --timeout 1800
+            ) > /tmp/lra-ski-v11/one.json
+            jq -c --arg label "$label" '. + {candidate_label:$label}' \
+              /tmp/lra-ski-v11/one.json >> /tmp/lra-ski-v11/scores.jsonl
+          done < /tmp/lra-ski-v11/labels.txt
+      - name: Select only actual primary gains and retain negative proof residuals
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,pathlib
+          root=pathlib.Path('/tmp/lra-ski-v11')
+          rows=[json.loads(s) for s in (root/'scores.jsonl').read_text().splitlines() if s.strip()]
+          assert len(rows)==14 and len({r['candidate_label'] for r in rows})==14
+          def good(r):
+              pv=r.get('per_version') or []
+              return (r.get('compiled') is True and r.get('statement_ok') is True
+                and r.get('eligible') is True and not r.get('forbidden')
+                and not r.get('extra_toplevel_decls') and not r.get('untested')
+                and r.get('compat')=={'v4.33.0-rc2':True}
+                and len(pv)==1 and pv[0].get('tested') is True and pv[0].get('ok') is True)
+          base=next(r for r in rows if r['candidate_label']=='ski_exact_278_control')
+          assert good(base),'CURRENT_278_BASELINE_NOT_POSITIVELY_VERIFIED'
+          others=[r for r in rows if good(r) and r is not base]
+          better=[r for r in others if float(r['objective_sum_pct'])>float(base['objective_sum_pct'])]
+          best=max(better,key=lambda r:float(r['objective_sum_pct']),default=None)
+          outcome={'schema':'mathgraph.lra.ski.compact-critical-observer.v11',
+           'status':'CANDIDATE_PRIMARY_GAIN_REQUIRES_FOUR_VERSION_CHECK' if best else
+                    'REJECTED_BOUNDED_NO_PRIMARY_GAIN',
+           'protected_control':{k:base[k] for k in ('length','heartbeats','objective_sum_pct')},
+           'qualified_primary':[
+              {'label':r['candidate_label'],'tokens':r['length'],
+               'heartbeats':r['heartbeats'],'objective':r['objective_sum_pct']} for r in others],
+           'negatives':[
+              {'label':r['candidate_label'],'errors':(r.get('per_version') or [{}])[0].get('errors',[])}
+               for r in rows if not good(r)],
+           'best':None if best is None else best['candidate_label'],
+           'scope':'Pinned v4.33 primary only; v4.33/4.32/4.31/4.30 positive evidence required before any admission.',
+           'portfolio_changed':False,'official_submission':False}
+          (root/'summary.json').write_text(json.dumps(outcome,ensure_ascii=False,indent=2)+'\n')
+          print(json.dumps(outcome,ensure_ascii=False,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-ski-v11-observer-crossover
+          path: /tmp/lra-ski-v11
