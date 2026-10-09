@@ -142,7 +142,7 @@ jobs:
           hit=[r for r in rows if r.get('label')=='external_public_incumbent_188']
           assert len(hit)==1
           with open('/tmp/subst-public.jsonl','w') as f:
-              f.write(json.dumps({'name':hit[0]['name'],'proof':hit[0]['proof']})+'\\n')
+              f.write(json.dumps({'name':hit[0]['name'],'proof':hit[0]['proof']})+chr(10))
           PY
           python3 competitions/lean_refactor_arena/project_heartbeat.py \
             --benchmark /tmp/lra-space/benchmark_data_warmup.jsonl \
