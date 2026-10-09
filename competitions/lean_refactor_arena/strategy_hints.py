@@ -50,6 +50,29 @@ def route(row: dict) -> list[dict]:
     ):
         add("MINIMAL_STATE_INVARIANT", "a bounded/recursive future may be controlled by a finite sufficient state")
 
+    # An equality of functions or linear maps may already determine the theorem
+    # after the protected observation (evaluation, derivative, application).
+    # This is a routing hint, not permission to infer theorem equivalence.
+    has_observed_equality = "=" in stmt
+    witness_transport = ("congrArg" in proof or "congrFun" in proof)
+    derivative_transport = (
+        any(t in proof for t in ("fderiv_fun_sum", "fderiv_const_mul", "Space.deriv_eq"))
+        and ("rw [" in proof or "calc" in proof)
+    )
+    multilinear_transport = (
+        any(t in proof for t in ("LinearMap.comp_apply", "LinearMap.congr_fun",
+                                  "ofCrAnListFBasis.ext"))
+        and ("ext" in proof or "congr" in proof)
+    )
+    if has_observed_equality and (
+        witness_transport or derivative_transport or multilinear_transport
+    ):
+        add(
+            "OBSERVATIONAL_CONSEQUENCE_TRANSPORT",
+            "the goal may be an observation of an already verified function/map equality; "
+            "apply congrArg/congrFun at that observation, then normalize only the residual",
+        )
+
     algebra_ops = proof.count("rw [") + proof.count("calc") + proof.count("ring") + proof.count("field_simp")
     if "=" in stmt and algebra_ops >= 6:
         add("LOCAL_ALGEBRAIC_FACTOR", "the reference has a large equality-normalization surface")

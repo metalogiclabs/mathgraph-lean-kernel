@@ -124,6 +124,23 @@
         "one verifier-authorized observable that distinguishes the nonzero world"
       ],
       "experiment": "Assume nonzero, choose a point/witness, construct a localized admissible test, and derive a positive observable contradicting the universal zero test."
+    },
+    {
+      "id": "OBSERVATIONAL_CONSEQUENCE_TRANSPORT",
+      "law": "When a verified equality of functions, maps or semantic states already fixes the relevant future observation, prove the requested consequence by applying that observation to the equality, rather than reconstructing both sides.",
+      "signals": [
+        "the conclusion is an equality of observations such as evaluation, derivative, or an applied multilinear map",
+        "a local, trusted equality already relates the richer source functions or maps",
+        "the current proof repeatedly rewrites a semantic equality inside observational contexts"
+      ],
+      "protected_future": [
+        "exact theorem statement, variables, imports, and constraints",
+        "same original observation on both sides of the transported equality",
+        "positive Lean verification on every pinned required toolchain version",
+        "strict combined token-plus-heartbeat objective gain before admission"
+      ],
+      "experiment": "Identify a local equality h : f = g and the protected observer O. Replace an explicit calc/rewrite consequence chain with congrArg O h or congrFun, normalize derivative/evaluation display with only the necessary rules, then compare the exact pinned verifier score.",
+      "negative_boundary": "A similar-looking expression or a shorter generated proof alone is not evidence that the semantic observer preserves the required equality. If the proof fails or heartbeat cost dominates, retain the exact residual and do not promote."
     }
   ]
 }
