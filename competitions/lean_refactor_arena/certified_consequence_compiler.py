@@ -18,7 +18,7 @@ from pathlib import Path
 BOUNDARY = " := by\n"
 FORBIDDEN = re.compile(
     r"\b(?:sorry|sorryAx|admit|axiom|unsafe|native_decide|run_cmd|run_elab)\b"
-    r"|#\s*(?:eval|reduce|exit)\b|\bIO\\."
+    r"|#\s*(?:eval|reduce|exit)\b|\bIO\."
 )
 
 
