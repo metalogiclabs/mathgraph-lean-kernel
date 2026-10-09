@@ -1,0 +1,67 @@
+name: Lean Refactor Arena Typing crossover admission
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'competition/lean-refactor-arena-track1'
+    paths:
+      - 'competitions/lean_refactor_arena/experiments/typing_pareto_crossover_v1.jsonl'
+      - '.github/workflows/lean-refactor-arena-typing-crossover-admission.yml'
+
+concurrency:
+  group: lra-typing-crossover-admission
+  cancel-in-progress: true
+
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 160
+    env:
+      PUBLIC_REPO_SHA: 7f3a401470d04f70013d293db4253b088ec8a0ae
+      TARGET_NAME: Cslib.LambdaCalculus.LocallyNameless.Fsub.Typing.progress
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build all three protected Cslib toolchains
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.elan/bin:$PATH"
+          git clone --depth=1 --filter=blob:none --sparse https://github.com/aurasoph/lean-refactor.git /tmp/lean-refactor
+          git -C /tmp/lean-refactor fetch --depth=1 origin "$PUBLIC_REPO_SHA"
+          git -C /tmp/lean-refactor checkout --detach FETCH_HEAD
+          git -C /tmp/lean-refactor sparse-checkout set competition
+          test "$(git -C /tmp/lean-refactor rev-parse HEAD)" = "$PUBLIC_REPO_SHA"
+          (cd /tmp/lean-refactor/competition && ./build-all.sh v4.33 v4.32 v4.31)
+      - name: Verify selected crossover on all required Lean versions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 competitions/lean_refactor_arena/public_harness_bridge.py \
+            --competition /tmp/lean-refactor/competition --project v4.33 \
+            --name "$TARGET_NAME" \
+            --candidate competitions/lean_refactor_arena/experiments/typing_pareto_crossover_v1.jsonl \
+            --label typing_fast_cross_CLI
+          (
+            cd /tmp/lean-refactor/competition
+            python3 arena.py check --name "$TARGET_NAME" --all-versions --timeout 1800
+          ) > /tmp/typing-admission.json
+          cat /tmp/typing-admission.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/typing-admission.json'))
+          assert d.get('compiled') and d.get('statement_ok') and d.get('eligible'),d
+          assert not d.get('forbidden') and not d.get('extra_toplevel_decls'),d
+          assert d.get('survival_pct')==100,d
+          assert len(d.get('compat') or {})==3 and all((d.get('compat') or {}).values()),d
+          assert not d.get('untested'),d
+          assert float(d.get('objective_sum_pct') or 0)>113.26,d
+          print('WARRANTED_ALL_THREE_VERSIONS_TYPING_CROSSOVER')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-typing-crossover-admission
+          path: /tmp/typing-admission.json
