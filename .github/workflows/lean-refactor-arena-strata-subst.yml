@@ -132,6 +132,34 @@ jobs:
           print('V4_HEARTBEAT_RATIO=',h['ratio_to_published'])
           PY
 
+      - name: Measure public comparator heartbeats
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          rows=[json.loads(x) for x in open('competitions/lean_refactor_arena/probes/strata_subst_old_post_v1.jsonl') if x.strip()]
+          hit=[r for r in rows if r.get('label')=='external_public_incumbent_188']
+          assert len(hit)==1
+          with open('/tmp/subst-public.jsonl','w') as f:
+              f.write(json.dumps({'name':hit[0]['name'],'proof':hit[0]['proof']})+'\\n')
+          PY
+          python3 competitions/lean_refactor_arena/project_heartbeat.py \
+            --benchmark /tmp/lra-space/benchmark_data_warmup.jsonl \
+            --heartbeats /tmp/lra-space/benchmark_heartbeats.jsonl \
+            --name "$TARGET_NAME" --workspace /tmp/Strata \
+            --candidate /tmp/subst-public.jsonl \
+            --out /tmp/subst-public-heartbeats.json --timeout 180
+          python3 - <<'PY'
+          import json
+          v=json.load(open('/tmp/subst-v4-heartbeats.json'))
+          p=json.load(open('/tmp/subst-public-heartbeats.json'))
+          assert v['ok'] and p['ok']
+          print('V4_HB=',v['measured_heartbeat'])
+          print('PUBLIC_HB=',p['measured_heartbeat'])
+          print('V4_TO_PUBLIC_RATIO=',v['measured_heartbeat']/p['measured_heartbeat'])
+          PY
+
       - name: Measure retained candidate heartbeats
         shell: bash
         run: |
@@ -173,5 +201,7 @@ jobs:
             /tmp/subst-heartbeats.json
             /tmp/subst-v4.jsonl
             /tmp/subst-v4-heartbeats.json
+            /tmp/subst-public.jsonl
+            /tmp/subst-public-heartbeats.json
 
 # fixed-head trigger
