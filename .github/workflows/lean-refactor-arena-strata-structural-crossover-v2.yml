@@ -1,0 +1,163 @@
+name: Lean Refactor Arena Strata structural consequence crossover
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'competition/lra-witness-consequence-transfer-v1'
+    paths:
+      - 'competitions/lean_refactor_arena/experiments/strata_structural_crossover_v2.jsonl'
+      - '.github/workflows/lean-refactor-arena-strata-structural-crossover-v2.yml'
+
+concurrency:
+  group: lra-strata-structural-crossover-v2
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 85
+    env:
+      PUBLIC_REPO_SHA: 7f3a401470d04f70013d293db4253b088ec8a0ae
+      TARGET_NAME: CallElimCorrect.substOldPostSubset
+      CANDIDATES: competitions/lean_refactor_arena/experiments/strata_structural_crossover_v2.jsonl
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate frozen candidate bank and bounded scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,pathlib
+          path=pathlib.Path('competitions/lean_refactor_arena/experiments/strata_structural_crossover_v2.jsonl')
+          rows=[json.loads(s) for s in path.read_text().splitlines() if s.strip()]
+          assert len(rows)==20 and len({r['label'] for r in rows})==20
+          assert all(r['name']=='CallElimCorrect.substOldPostSubset' and
+                     'theorem substOldPostSubset:' in r['proof'] for r in rows)
+          assert [r['label'] for r in rows[:3]]==['protected_132_v5','protected_139_primary','protected_130_pareto']
+          import pathlib
+          exact=pathlib.Path('competitions/lean_refactor_arena/experiments/strata_minimum_future_closure_v1.jsonl')
+          prev=[json.loads(s) for s in exact.read_text().splitlines() if s.strip()]
+          old={r['label']:r['proof'] for r in prev}
+          assert rows[0]['proof']==old['strata_control_132']
+          assert rows[1]['proof']==old['strata_simp_then_grind']
+          assert rows[2]['proof']==old['strata_grind_append_only']
+          print('PRESERVED_3_PINNED_STRATA_CONTROLS_AND_17_NEW_CONSEQUENCE_TRANSFERS')
+          PY
+      - name: Build exact Strata v4.26 verifier
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.elan/bin:$PATH"
+          git clone --depth=1 --filter=blob:none --sparse https://github.com/aurasoph/lean-refactor.git /tmp/lean-refactor
+          git -C /tmp/lean-refactor fetch --depth=1 origin "$PUBLIC_REPO_SHA"
+          git -C /tmp/lean-refactor checkout --detach FETCH_HEAD
+          git -C /tmp/lean-refactor sparse-checkout set competition
+          test "$(git -C /tmp/lean-refactor rev-parse HEAD)" = "$PUBLIC_REPO_SHA"
+          (cd /tmp/lean-refactor/competition && ./build-all.sh v4.26)
+      - name: Check exact Strata protected subset interface
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > /tmp/strata-structural-v2-scores.jsonl
+          python3 - <<'PY' > /tmp/strata-structural-labels.txt
+          import json
+          p='competitions/lean_refactor_arena/experiments/strata_structural_crossover_v2.jsonl'
+          for s in open(p):
+              if s.strip(): print(json.loads(s)['label'])
+          PY
+          while IFS= read -r label; do
+            echo "CHECK=$label"
+            python3 competitions/lean_refactor_arena/public_harness_bridge.py \
+              --competition /tmp/lean-refactor/competition --project v4.26 \
+              --name "$TARGET_NAME" --candidate "$CANDIDATES" --label "$label"
+            (cd /tmp/lean-refactor/competition && python3 arena.py check --name "$TARGET_NAME") \
+              > /tmp/strata-structural-v2-one.json
+            jq -c --arg label "$label" '. + {candidate_label:$label}' /tmp/strata-structural-v2-one.json \
+              >> /tmp/strata-structural-v2-scores.jsonl
+          done < /tmp/strata-structural-labels.txt
+      - name: Select only warranted consequences, preserve negative evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,pathlib
+          path=pathlib.Path('/tmp/strata-structural-v2-scores.jsonl')
+          rows=[json.loads(s) for s in path.read_text().splitlines() if s.strip()]
+          assert len(rows)==20 and len({r['candidate_label'] for r in rows})==20
+          def valid(r):
+              return (r.get('compiled') is True and r.get('statement_ok') is True
+                      and r.get('eligible') is True and not r.get('forbidden')
+                      and not r.get('extra_toplevel_decls') and not r.get('untested')
+                      and r.get('compat') == {'v4.26.0': True}
+                      and len(r.get('per_version') or []) == 1
+                      and r['per_version'][0].get('tested') is True
+                      and r['per_version'][0].get('ok') is True)
+          incumbent=rows[1]
+          assert valid(incumbent), 'CONTROL_REJECTED__NO_PROMOTION'
+          assert valid(rows[0]) and valid(rows[2]), 'HISTORICAL_CONTROLS_NOT_VERIFIED'
+          approved=[r for r in rows[3:] if valid(r)]
+          gain=[r for r in approved
+                if float(r.get('objective_sum_pct') or -1000) > float(incumbent['objective_sum_pct'])]
+          best=max(gain,key=lambda r:float(r['objective_sum_pct']),default=None)
+          result={'schema':'mathgraph.lra.strata.structural-crossover.v2',
+            'state':'WARRANTED_PRIMARY_GAIN_CANDIDATE' if best else 'REJECTED_BOUNDED_NO_GAIN',
+            'source_pin':'7f3a401470d04f70013d293db4253b088ec8a0ae',
+            'protected_version':['v4.26.0'],
+            'incumbent':{'tokens':incumbent['length'],'heartbeats':incumbent['heartbeats'],
+              'objective':incumbent['objective_sum_pct']},
+            'admitted':[{'label':r['candidate_label'],'tokens':r['length'],
+              'heartbeats':r['heartbeats'],'objective':r['objective_sum_pct']} for r in approved],
+            'best':None if best is None else {'label':best['candidate_label'],
+              'tokens':best['length'],'heartbeats':best['heartbeats'],'objective':best['objective_sum_pct']},
+            'negative':[{'label':r['candidate_label'],
+              'errors':(r.get('per_version') or [{}])[0].get('errors')} for r in rows[3:] if not valid(r)],
+            'boundary':'WARRANTED requires v4.26/statement/constraints and objective strictly >119.56; no automatic packet mutation'}
+          pathlib.Path('/tmp/strata-structural-v2-summary.json').write_text(
+              json.dumps(result,ensure_ascii=False,indent=2)+'\n')
+          print(json.dumps(result,ensure_ascii=False,indent=2))
+          if best:
+              import os
+              from pathlib import Path
+              proof_bank=[json.loads(s) for s in Path(os.environ['CANDIDATES']).read_text().splitlines() if s.strip()]
+              winner=next(x for x in proof_bank if x['label']==best['candidate_label'])
+              Path('/tmp/strata-structural-v2-winner.jsonl').write_text(json.dumps(winner,ensure_ascii=False)+'\n')
+          PY
+      - name: Fully replay only a primary improvement at the exact required version
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -s /tmp/strata-structural-v2-winner.jsonl ]; then
+            echo NO_GAIN__NO_FULL_REPLAY__PORTFOLIO_PROTECTED
+            exit 0
+          fi
+          python3 competitions/lean_refactor_arena/public_harness_bridge.py \
+            --competition /tmp/lean-refactor/competition --project v4.26 \
+            --name "$TARGET_NAME" --candidate /tmp/strata-structural-v2-winner.jsonl
+          (cd /tmp/lean-refactor/competition &&
+            python3 arena.py check --name "$TARGET_NAME" --all-versions --timeout 1800) > /tmp/strata-structural-v2-final.json
+          python3 - <<'PY'
+          import json
+          r=json.load(open('/tmp/strata-structural-v2-final.json'))
+          v=r.get('per_version') or []
+          assert r.get('compiled') is True and r.get('statement_ok') is True and r.get('eligible') is True
+          assert not r.get('forbidden') and not r.get('extra_toplevel_decls') and not r.get('untested')
+          assert r.get('all_versions') is True and r.get('compat') == {'v4.26.0':True}
+          assert len(v)==1 and v[0].get('tested') is True and v[0].get('ok') is True
+          assert float(r.get('objective_sum_pct') or 0)>119.56
+          print('WARRANTED_STRATA_CONSEQUENCE_FRONTIER_FULL_VERSION')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-strata-structural-crossover-v2
+          path: |
+            /tmp/strata-structural-v2-scores.jsonl
+            /tmp/strata-structural-v2-summary.json
+            /tmp/strata-structural-v2-winner.jsonl
+            /tmp/strata-structural-v2-final.json
