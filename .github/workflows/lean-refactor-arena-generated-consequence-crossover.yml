@@ -2,9 +2,10 @@ name: Lean Refactor Arena generated consequence crossovers
 on:
   workflow_dispatch:
   push:
-    branches: ['competition/lra-generated-consequence-crossover-v1']
+    branches: ['competition/lra-witness-consequence-transfer-v1']
     paths:
-      - 'competitions/lean_refactor_arena/experiments/consequence_crossover.py'
+      - 'competitions/lean_refactor_arena/consequence_crossover.py'
+      - 'competitions/lean_refactor_arena/tests/test_consequence_crossover.py'
       - '.github/workflows/lean-refactor-arena-generated-consequence-crossover.yml'
 concurrency:
   group: lra-generated-consequence-transfer
