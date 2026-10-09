@@ -1,0 +1,255 @@
+{
+  "schema": "mathgraph.lra.retained-proof-exact-version-audit.v1",
+  "observed_at_utc": "2026-10-09",
+  "source_repo": "aurasoph/lean-refactor",
+  "source_sha": "7f3a401470d04f70013d293db4253b088ec8a0ae",
+  "portfolio_path": "competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl",
+  "portfolio_blob_sha": "556ae73ddf145e190fad968a204bd2d9445655e8",
+  "note": "CRITICAL: Public trial survival_pct=100 may mean only primary verified. Count as full-version warranted ONLY if all_versions=true and every benchmark version is present true in compat, and candidate source is byte-identical.",
+  "comparator_full_version_exact_count": 13,
+  "independently_qualified": [
+    {
+      "name": "Core.InitsUpdatesComm",
+      "run": 37889600290,
+      "qualification": "3/3 pinned versions success"
+    },
+    {
+      "name": "FieldSpecification.WickAlgebra.ι_timeOrderF_superCommuteF_eq_time",
+      "run": 37887798992,
+      "qualification": "single required Lean v4.32 passed, portfolio primary replay 37889600265 passed"
+    }
+  ],
+  "records": [
+    {
+      "name": "CallElimCorrect.substOldPostSubset",
+      "label": "public_informed_prospective_codomain_188",
+      "required_versions": [
+        "v4.26.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "886b8667be4e",
+      "public_compat": {
+        "v4.26.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION"
+    },
+    {
+      "name": "CallElimCorrect.extractedOldExprInVars",
+      "label": "warranted_witness_44",
+      "required_versions": [
+        "v4.26.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "d2aa22236a16",
+      "public_compat": {
+        "v4.26.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION"
+    },
+    {
+      "name": "Core.InitsUpdatesComm",
+      "label": "public_informed_semantic_reconstruction_87",
+      "required_versions": [
+        "v4.29.1",
+        "v4.27.0",
+        "v4.26.0"
+      ],
+      "matches_pinned_public_full_test": false,
+      "public_hash": null,
+      "public_compat": null,
+      "evidence_status": "REQUIRES_INDEPENDENT_QUALIFICATION"
+    },
+    {
+      "name": "fundamental_theorem_of_variational_calculus'",
+      "label": "public_informed_separating_witness_171",
+      "required_versions": [
+        "v4.32.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "0322486625ed",
+      "public_compat": {
+        "v4.32.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION"
+    },
+    {
+      "name": "Electromagnetism.ElectromagneticPotential.time_deriv_time_deriv_electricField_of_isExtrema",
+      "label": "public_informed_local_algebra_567",
+      "required_versions": [
+        "v4.32.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "65c0a73bf0cd",
+      "public_compat": {
+        "v4.32.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION"
+    },
+    {
+      "name": "FieldSpecification.WickAlgebra.ι_timeOrderF_superCommuteF_eq_time",
+      "label": "warranted_wick_extensional_compact_rw_606",
+      "required_versions": [
+        "v4.32.0"
+      ],
+      "matches_pinned_public_full_test": false,
+      "public_hash": null,
+      "public_compat": null,
+      "evidence_status": "REQUIRES_INDEPENDENT_QUALIFICATION"
+    },
+    {
+      "name": "Cslib.LambdaCalculus.LocallyNameless.Fsub.Typing.progress",
+      "label": "public_informed_derivation_339",
+      "required_versions": [
+        "v4.33.0-rc2",
+        "v4.32.0",
+        "v4.31.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "f111ef225a85",
+      "public_compat": {
+        "v4.33.0-rc2": true,
+        "v4.32.0": true,
+        "v4.31.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION"
+    },
+    {
+      "name": "Cslib.SKI.parallelReduction_diamond",
+      "label": "public_informed_derivation_278",
+      "required_versions": [
+        "v4.33.0-rc2",
+        "v4.32.0",
+        "v4.31.0",
+        "v4.30.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "183765ced868",
+      "public_compat": {
+        "v4.33.0-rc2": true,
+        "v4.32.0": true,
+        "v4.31.0": true,
+        "v4.30.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION"
+    },
+    {
+      "name": "Cslib.CCS.bisimilarity_congr_choice",
+      "label": "public_informed_derivation_85",
+      "required_versions": [
+        "v4.33.0-rc2",
+        "v4.32.0",
+        "v4.31.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "3b5c96c77fc7",
+      "public_compat": {
+        "v4.33.0-rc2": true,
+        "v4.32.0": true,
+        "v4.31.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION"
+    },
+    {
+      "name": "Binius.BinaryBasefold.fiberwise_dist_lt_imp_dist_lt_unique_decoding_radius",
+      "label": "public_informed_local_factor_439",
+      "required_versions": [
+        "v4.31.0",
+        "v4.30.0",
+        "v4.29.0",
+        "v4.28.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "6ff578bb6cee",
+      "public_compat": {
+        "v4.31.0": true,
+        "v4.30.0": true,
+        "v4.29.0": true,
+        "v4.28.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION"
+    },
+    {
+      "name": "Binius.BinaryBasefold.fold_advances_evaluation_poly",
+      "label": "public_informed_local_factor_388",
+      "required_versions": [
+        "v4.31.0",
+        "v4.30.0",
+        "v4.29.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "f5667fc1e5b9",
+      "public_compat": {
+        "v4.31.0": true,
+        "v4.30.0": true,
+        "v4.29.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION"
+    },
+    {
+      "name": "interleaved_affine_gaps_imply_tensor_gaps",
+      "label": "public_informed_recursive_form_173",
+      "required_versions": [
+        "v4.31.0",
+        "v4.30.0",
+        "v4.29.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "fe4c6fa1984f",
+      "public_compat": {
+        "v4.31.0": true,
+        "v4.30.0": true,
+        "v4.29.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION"
+    },
+    {
+      "name": "putnam_1964_a4",
+      "label": "public_informed_minimal_state_291",
+      "required_versions": [
+        "v4.25.0",
+        "v4.26.0",
+        "v4.27.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "6801603b11c9",
+      "public_compat": {
+        "v4.25.0": true,
+        "v4.26.0": true,
+        "v4.27.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION"
+    },
+    {
+      "name": "putnam_1964_b2",
+      "label": "public_all_versions_d9377ebbc1d6",
+      "required_versions": [
+        "v4.25.0",
+        "v4.26.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "d9377ebbc1d6",
+      "public_compat": {
+        "v4.25.0": true,
+        "v4.26.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION"
+    },
+    {
+      "name": "putnam_1995_a3",
+      "label": "public_informed_digit_replace_414",
+      "required_versions": [
+        "v4.25.0",
+        "v4.26.0",
+        "v4.27.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "70b336d1cc35",
+      "public_compat": {
+        "v4.25.0": true,
+        "v4.26.0": true,
+        "v4.27.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION"
+    }
+  ]
+}
