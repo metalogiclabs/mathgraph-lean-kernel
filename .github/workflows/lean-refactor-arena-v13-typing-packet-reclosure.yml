@@ -152,8 +152,9 @@ jobs:
               assert r['public_hash'] and r['public_compat']=={v:True for v in req}
             else:
               assert r['evidence_status']=='WARRANTED_INDEPENDENT_EXACT_REQUIRED_VERSION'
-              assert isinstance(r.get('independent_run'),int) and r['independent_run']>0
               authority=r.get('independent_authority') or {}
+              run=r.get('independent_run') or authority.get('run')
+              assert isinstance(run,int) and run>0
               assert set(authority.get('required_versions_verified') or (r.get('compat') or {}).keys())==set(req)
           assert external==a['comparator_full_version_exact_count']==7
           assert a['independently_qualified_count']==8 and a['total_authorized_by_prior_evidence']==15
