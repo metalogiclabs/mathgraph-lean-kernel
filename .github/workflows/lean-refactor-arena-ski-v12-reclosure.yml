@@ -1,19 +1,19 @@
-name: Lean Refactor Arena retained upload qualification
+name: Lean Refactor Arena V12 SKI directed K critical-pair reclosure
 
 on:
   workflow_dispatch:
   push:
     branches:
-      - 'competition/lean-refactor-arena-track1'
+      - 'competition/lra-ski-v12-admission-candidate'
     paths:
       - 'competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl'
       - 'competitions/lean_refactor_arena/arena_upload.py'
       - 'competitions/lean_refactor_arena/evidence/retained_exact_full_version_audit_20261010_v12.json'
       - 'competitions/lean_refactor_arena/submissions/mathgraph_verified_15_warmup_20261009.jsonl'
-      - '.github/workflows/lean-refactor-arena-retained-upload-qualification.yml'
+      - '.github/workflows/lean-refactor-arena-ski-v12-reclosure.yml'
 
 concurrency:
-  group: lra-retained-upload
+  group: lra-ski-v12-reclosure
   cancel-in-progress: true
 
 jobs:
@@ -22,6 +22,61 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      - name: Verify selected SKI directed K witness and fourteen unchanged V11 proofs
+        shell: bash
+        run: |
+          set -euo pipefail
+          export SOURCE_SHA=0d32825de8fdc9ce77685f942e9b4e28258ebd50
+          export ANCESTOR_SHA=91e48f11464854bd6ec38bec72fd64a708042e6b
+          git fetch --depth=1 origin "$ANCESTOR_SHA"
+          curl -fsSL --retry 3 -H 'Accept: application/vnd.github+json' \
+            https://api.github.com/repos/metalogiclabs/mathgraph-lean-kernel/actions/runs/38001253884 \
+            -o /tmp/ski-v12-source-run.json
+          curl -fsSL --retry 3 -H 'Accept: application/vnd.github+json' \
+            https://api.github.com/repos/metalogiclabs/mathgraph-lean-kernel/actions/runs/38000770177 \
+            -o /tmp/ski-v12-primary-run.json
+          curl -fsSL --retry 3 \
+            "https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/$SOURCE_SHA/competitions/lean_refactor_arena/experiments/ski_directed_k_join_v17.jsonl" \
+            -o /tmp/ski-v12-frozen-candidates.jsonl
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib,subprocess
+          o=json.load(open('/tmp/ski-v12-source-run.json'))
+          assert o['id']==38001253884 and o['conclusion']=='success' and o['status']=='completed'
+          assert o['head_sha']=='dfcdf0a55bf76427c84c1276f6e85b45b801b92c', 'WRONG_FOUR_VERSION_HEAD'
+          assert o['name']=='Lean Refactor Arena V17 SKI directed K four-version admission'
+          primary=json.load(open('/tmp/ski-v12-primary-run.json'))
+          assert primary['id']==38000770177 and primary['conclusion']=='success' and primary['status']=='completed'
+          assert primary['head_sha']==os.environ['SOURCE_SHA'],'WRONG_PRIMARY_SOURCE_HEAD'
+
+          root=pathlib.Path('competitions/lean_refactor_arena')
+          target='Cslib.SKI.parallelReduction_diamond'
+          read=lambda p:[json.loads(line) for line in p.read_text().splitlines() if line.strip()]
+          portfolio=read(root/'portfolio/warmup_portfolio_v1.jsonl')
+          submitted=read(root/'submissions/mathgraph_verified_15_warmup_20261009.jsonl')
+          candidates=read(pathlib.Path('/tmp/ski-v12-frozen-candidates.jsonl'))
+          winner=next(x for x in candidates if x['name']==target and x['label']=='ski_v17_group_implicit')
+          actual=next(x for x in portfolio if x['name']==target)
+          assert actual['label']=='warranted_ski_directed_k_262'
+          assert actual['proof']==winner['proof'],'VERIFIED_SOURCE_BYTES_DO_NOT_MATCH_ACTIVE_PROOF'
+          assert next(x for x in submitted if x['name']==target)['proof']==winner['proof']
+          prior=subprocess.check_output(['git','show',
+            os.environ['ANCESTOR_SHA']+':competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl'],text=True)
+          before={x['name']:x for x in map(json.loads,prior.splitlines()) if x}
+          after={x['name']:x for x in portfolio}
+          assert len(before)==len(after)==15 and set(before)==set(after)
+          assert {n for n in before if before[n]['proof']!=after[n]['proof']}=={target}
+          assert all(before[n]==after[n] for n in before if n!=target),'UNRELATED_WARRANT_CHANGED'
+          proof_sha=hashlib.sha256(winner['proof'].encode()).hexdigest()
+          result={'schema':'mathgraph.lra.ski-directed-k-source-closure.v12',
+            'status':'WARRANTED_PREVIOUS_LEAN_RUN__EXACT_CURRENT_PROOF_MATCH',
+            'run_id':38001253884,'candidate_head':primary['head_sha'],'qualification_head':o['head_sha'],
+            'selected_label':winner['label'],'proof_sha256':proof_sha,
+            'other_14_proofs_exact':True,'required_lean_versions':['v4.33.0-rc2','v4.32.0','v4.31.0','v4.30.0'],
+            'external_submission':False}
+          pathlib.Path('/tmp/ski-v12-source-closure.json').write_text(json.dumps(result,indent=2)+'\n')
+          print(json.dumps(result,indent=2))
+          print('WARRANTED_V12_SKI_SOURCE_AND_FOURTEEN_UNCHANGED_PROOFS')
+          PY
       - name: Fetch pinned benchmark metadata without running external code
         shell: bash
         run: |
@@ -38,14 +93,14 @@ jobs:
           python3 competitions/lean_refactor_arena/arena_upload.py build \
             --benchmark /tmp/benchmark_data_warmup.jsonl \
             --candidates competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl \
-            --out /tmp/lra-closed-retained-15.jsonl \
+            --out /tmp/lra-ski-v12-exact-15.jsonl \
             --report /tmp/lra-closed-retained-report.json
           python3 competitions/lean_refactor_arena/arena_upload.py validate \
             --benchmark /tmp/benchmark_data_warmup.jsonl \
-            --upload /tmp/lra-closed-retained-15.jsonl
+            --upload /tmp/lra-ski-v12-exact-15.jsonl
           python3 - <<'PY'
           import hashlib,json,pathlib,subprocess
-          upload=pathlib.Path('/tmp/lra-closed-retained-15.jsonl')
+          upload=pathlib.Path('/tmp/lra-ski-v12-exact-15.jsonl')
           portfolio=pathlib.Path('competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl')
           bench=pathlib.Path('/tmp/benchmark_data_warmup.jsonl')
           audit=pathlib.Path('competitions/lean_refactor_arena/evidence/retained_exact_full_version_audit_20261010_v12.json')
@@ -106,13 +161,14 @@ jobs:
           print(json.dumps(out,indent=2))
           print('VERIFIED_EXACT_RETAINED_15_ROW_UPLOAD')
           PY
-          sha256sum /tmp/lra-closed-retained-15.jsonl
+          sha256sum /tmp/lra-ski-v12-exact-15.jsonl
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: lra-closed-retained-15
+          name: lra-ski-v12-exact-15
           path: |
-            /tmp/lra-closed-retained-15.jsonl
+            /tmp/lra-ski-v12-exact-15.jsonl
             /tmp/lra-retained-manifest.json
             /tmp/lra-closed-retained-report.json
             /tmp/benchmark-summary.json
+            /tmp/ski-v12-source-closure.json
