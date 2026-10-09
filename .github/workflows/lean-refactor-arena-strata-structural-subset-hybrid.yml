@@ -57,7 +57,7 @@ jobs:
             python3 competitions/lean_refactor_arena/public_harness_bridge.py \
               --competition /tmp/lean-refactor/competition --project v4.26 \
               --name "$TARGET_NAME" --candidate "$CANDIDATES" --label "$label"
-            (cd /tmp/lean-refactor/competition && python3 arena.py check --name "$TARGET_NAME") \
+            (cd /tmp/lean-refactor/competition && python3 arena.py check --name "$TARGET_NAME" --timeout 120) \
               > /tmp/strata-structural-one.json
             jq -c --arg label "$label" '. + {candidate_label:$label}' \
               /tmp/strata-structural-one.json >> /tmp/strata-structural-scores.jsonl
