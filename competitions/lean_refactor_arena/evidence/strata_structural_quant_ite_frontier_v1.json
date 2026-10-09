@@ -1,0 +1,69 @@
+{
+  "schema": "mathgraph.lra.strata.warranted-structural-frontier.v1",
+  "state": "WARRANTED_PINNED_V426_SINGLE_VERSION__ADMITTED_TO_15_PACKET_PENDING_REPLAY",
+  "source_pin": "aurasoph/lean-refactor@7f3a401470d04f70013d293db4253b088ec8a0ae",
+  "authority": {
+    "run_id": 37973089000,
+    "job_id": 113964425658,
+    "source_bank": "competitions/lean_refactor_arena/experiments/strata_structural_subset_hybrid_v1.jsonl",
+    "source_bank_blob": "0c78966cd65d50f827b517c8984cc6226b9308c0",
+    "verified_label": "strata_struct_quant_ite_auto_grind"
+  },
+  "protected": {
+    "theorem": "CallElimCorrect.substOldPostSubset",
+    "required_versions": [
+      "v4.26.0"
+    ],
+    "statement_preserved": true,
+    "no_forbidden_or_extra_declarations": true,
+    "unchanged_other_proofs": 14
+  },
+  "pareto_verified": [
+    {
+      "label": "public_informed_prospective_codomain_188",
+      "tokens": 188,
+      "heartbeats": 1429,
+      "objective_sum": 112.37,
+      "status": "WARRANTED_PUBLIC_CONTROL"
+    },
+    {
+      "label": "strata_struct_ite_auto_grind",
+      "tokens": 166,
+      "heartbeats": 1742,
+      "objective_sum": 113.36,
+      "status": "WARRANTED_NONDOMINATED"
+    },
+    {
+      "label": "strata_struct_quant_ite_auto_grind",
+      "tokens": 132,
+      "heartbeats": 2217,
+      "objective_sum": 115.06,
+      "status": "WARRANTED_SELECTED"
+    }
+  ],
+  "frontier_selection": {
+    "label": "warranted_strata_quant_ite_grind_132",
+    "gain_objective": 2.69,
+    "independently_qualified_single_required_version": true,
+    "source_candidate_proof_chars": 945
+  },
+  "transition": {
+    "operation": "REQUALIFY_EXISTING_REPRESENTATION",
+    "dependency_region": [
+      "Strata proof",
+      "retained portfolio",
+      "upload packet",
+      "version audit",
+      "aggregate score"
+    ],
+    "unchanged_proof_rows": 14
+  },
+  "projected_warmup": {
+    "before_objective": 2207.8,
+    "after_objective": 2210.49,
+    "combined_if_full_survival": 82.4553,
+    "recorded_leader": 89.38,
+    "official_submission": false
+  },
+  "caveat": "This proof was verified in an experiment, not a new full-packet replay. Retain prior version-bound evidence for the other 14 and require fresh packet shape and exact proof audit."
+}
