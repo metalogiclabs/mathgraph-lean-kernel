@@ -1,0 +1,141 @@
+name: Lean Refactor Arena EM Gauss-derivative consequence
+on:
+  workflow_dispatch:
+  push:
+    branches: ['competition/lra-em-consequence-derivative-v1']
+    paths:
+      - 'competitions/lean_refactor_arena/experiments/em_derivative_consequence_v1.jsonl'
+      - '.github/workflows/lean-refactor-arena-em-derivative-consequence.yml'
+concurrency:
+  group: lra-em-gauss-derivative
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 140
+    env:
+      PUBLIC_SHA: 7f3a401470d04f70013d293db4253b088ec8a0ae
+      TARGET: Electromagnetism.ElectromagneticPotential.time_deriv_time_deriv_electricField_of_isExtrema
+      BANK: competitions/lean_refactor_arena/experiments/em_derivative_consequence_v1.jsonl
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bind original statement and seven consequence transports
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          orig=[json.loads(x) for x in Path('competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl').read_text().splitlines() if x.strip()]
+          bank=[json.loads(x) for x in Path(os.environ['BANK']).read_text().splitlines() if x.strip()]
+          assert len(orig)==15 and len(bank)==8 and len({x['label'] for x in bank})==8
+          target=next(x['proof'] for x in orig if x['name']==os.environ['TARGET'])
+          assert bank[0]['proof']==target and bank[0]['label']=='retained_em_566_control'
+          header=target.split(' := by\n',1)[0]+' := by\n'
+          assert all(x['name']==os.environ['TARGET'] and x['proof'].startswith(header) for x in bank)
+          assert all(not any(b in x['proof'] for b in ['sorry','sorryAx','admit','native_decide','run_elab','axiom ']) for x in bank)
+          print('WARRANTED_EM_EXACT_THEOREM_BOUNDARY_AND_SEVEN_DIFFERENTIATED_CONSEQUENCE_CANDIDATES')
+          PY
+      - name: Build pinned primary Physlib v4.32
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.elan/bin:$PATH"
+          git clone --depth=1 --filter=blob:none --sparse https://github.com/aurasoph/lean-refactor.git /tmp/lean-refactor
+          git -C /tmp/lean-refactor fetch --depth=1 origin "$PUBLIC_SHA"
+          git -C /tmp/lean-refactor checkout --detach FETCH_HEAD
+          git -C /tmp/lean-refactor sparse-checkout set competition
+          test "$(git -C /tmp/lean-refactor rev-parse HEAD)" = "$PUBLIC_SHA"
+          (cd /tmp/lean-refactor/competition && ./build-all.sh v4.32)
+      - name: Score seven derivative-transport proof candidates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' > /tmp/em-labels.txt
+          import json,os
+          for x in open(os.environ['BANK']):
+              if x.strip(): print(json.loads(x)['label'])
+          PY
+          : > /tmp/em-scores.jsonl
+          while IFS= read -r label; do
+            echo "EM_WITNESS=$label"
+            python3 competitions/lean_refactor_arena/public_harness_bridge.py \
+              --competition /tmp/lean-refactor/competition --project v4.32 \
+              --name "$TARGET" --candidate "$BANK" --label "$label"
+            (cd /tmp/lean-refactor/competition && python3 arena.py check --name "$TARGET") > /tmp/em-one.json
+            jq -c --arg label "$label" '. + {candidate_label:$label}' /tmp/em-one.json >> /tmp/em-scores.jsonl
+          done < /tmp/em-labels.txt
+      - name: Reject unqualified or score-dominated candidates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          bank=[json.loads(x) for x in Path(os.environ['BANK']).read_text().splitlines() if x.strip()]
+          rows=[json.loads(x) for x in Path('/tmp/em-scores.jsonl').read_text().splitlines() if x.strip()]
+          assert len(rows)==len(bank)==8 and len({x['candidate_label'] for x in rows})==8
+          def admitted(r):
+              return (r.get('compiled') is True and r.get('statement_ok') is True and
+                      r.get('eligible') is True and not r.get('forbidden') and
+                      not r.get('extra_toplevel_decls') and r.get('survival_pct')==100 and
+                      r.get('compat')=={'v4.32.0':True} and
+                      any(z.get('version')=='v4.32.0' and z.get('tested') is True and z.get('ok') is True
+                          for z in (r.get('per_version') or [])))
+          control=next(x for x in rows if x['candidate_label']=='retained_em_566_control')
+          assert admitted(control),'FROZEN_EM_CONTROL_NOT_QUALIFIED'
+          feasible=[x for x in rows if admitted(x)]
+          improved=[x for x in feasible if x is not control and
+                    float(x['objective_sum_pct'])>float(control['objective_sum_pct'])]
+          improved.sort(key=lambda x:(-float(x['objective_sum_pct']),int(x['length']),int(x['heartbeats'])))
+          best=improved[0] if improved else None
+          outcome={'schema':'mathgraph.lra.em.derivative-consequence.v1',
+            'status':'WARRANTED_PRIMARY_GAIN_PENDING_INDEPENDENT_ALL_VERSION_REPLAY' if best else 'REJECTED_BOUNDED_NO_PRIMARY_GAIN',
+            'baseline':{'objective':control['objective_sum_pct'],'tokens':control['length'],'heartbeats':control['heartbeats']},
+            'qualified':[{'label':x['candidate_label'],'objective':x['objective_sum_pct'],
+                          'tokens':x['length'],'heartbeats':x['heartbeats']} for x in feasible],
+            'failed':[{'label':x['candidate_label'],
+                       'errors':(x.get('per_version') or [{}])[0].get('errors',[])} for x in rows if not admitted(x)],
+            'best':best['candidate_label'] if best else None,'portfolio_mutated':False,'officially_submitted':False}
+          Path('/tmp/em-summary.json').write_text(json.dumps(outcome,ensure_ascii=False,indent=2)+'\n')
+          if best:
+              candidate=next(x for x in bank if x['label']==best['candidate_label'])
+              Path('/tmp/em-winner.jsonl').write_text(json.dumps(candidate,ensure_ascii=False)+'\n')
+          print(json.dumps(outcome,ensure_ascii=False,indent=2))
+          PY
+      - name: Independently recheck exact winner on required version
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -s /tmp/em-winner.jsonl ]; then
+            echo NO_PRIMARY_GAIN_NO_PORTFOLIO_MUTATION
+            exit 0
+          fi
+          python3 competitions/lean_refactor_arena/public_harness_bridge.py \
+            --competition /tmp/lean-refactor/competition --project v4.32 \
+            --name "$TARGET" --candidate /tmp/em-winner.jsonl
+          (cd /tmp/lean-refactor/competition && python3 arena.py check --name "$TARGET" --all-versions --timeout 1800) > /tmp/em-all.json
+          python3 - <<'PY'
+          import json
+          x=json.load(open('/tmp/em-all.json'))
+          assert x.get('compiled') is True and x.get('statement_ok') is True and x.get('eligible') is True
+          assert not x.get('forbidden') and not x.get('extra_toplevel_decls') and not x.get('untested')
+          assert x.get('all_versions') is not False and x.get('compat')=={'v4.32.0':True}
+          pv=x.get('per_version') or []
+          assert len(pv)==1 and pv[0].get('version')=='v4.32.0' and pv[0].get('tested') is True and pv[0].get('ok') is True
+          assert float(x['objective_sum_pct'])>float(json.load(open('/tmp/em-summary.json'))['baseline']['objective'])
+          print('WARRANTED_EM_GAUSS_DERIVATIVE_CONSEQUENCE_REQUIRED_VERSION')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-em-gauss-derivative
+          path: |
+            /tmp/em-scores.jsonl
+            /tmp/em-summary.json
+            /tmp/em-winner.jsonl
+            /tmp/em-all.json
