@@ -89,6 +89,34 @@ class FrontierTests(unittest.TestCase):
         result = self.decision(scores=[self.old_score, bad])
         self.assertEqual(result["admission"]["better"]["status"], "UNKNOWN")
 
+    def test_omitted_organizer_full_version_summary_with_positive_matrix(self):
+        """The explicit positive matrix is the evidence, not an optional summary."""
+        no_summary = evidence("better", 80, 400, 120)
+        del no_summary["all_versions"]
+        result = self.decision(scores=[self.old_score, no_summary])
+        self.assertEqual(result["selected_label"], "better")
+        self.assertEqual(result["admission"]["better"]["status"], "WARRANTED")
+
+    def test_explicit_false_full_version_flag_vetoes_even_positive_matrix(self):
+        bad = evidence("better", 80, 400, 120, all_versions=False)
+        result = self.decision(scores=[self.old_score, bad])
+        self.assertEqual(result["selected_label"], "control")
+        self.assertEqual(result["admission"]["better"]["status"], "UNKNOWN")
+
+    def test_omitted_summary_with_incomplete_matrix_is_not_admitted(self):
+        bad = evidence("better", 80, 400, 120)
+        del bad["all_versions"]
+        bad["per_version"] = bad["per_version"][:1]
+        result = self.decision(scores=[self.old_score, bad])
+        self.assertEqual(result["selected_label"], "control")
+        self.assertEqual(result["admission"]["better"]["status"], "UNKNOWN")
+
+    def test_malformed_summary_string_does_not_override_version_gate(self):
+        bad = evidence("better", 80, 400, 120, all_versions="true")
+        result = self.decision(scores=[self.old_score, bad])
+        self.assertEqual(result["selected_label"], "control")
+        self.assertEqual(result["admission"]["better"]["status"], "UNKNOWN")
+
     def test_keeps_pareto_alternatives_instead_of_forgetting_fast_one(self):
         faster = entry("faster")
         quick = evidence("faster", 120, 300, 110)
@@ -190,13 +218,18 @@ class FrontierTests(unittest.TestCase):
         self.assertEqual(set(result["frontier_labels"]),{"em_terminal_field_simp_only","em_hcross_simp"})
         packet_path=root / "submissions" / "mathgraph_verified_15_warmup_20261009.jsonl"
         packet=packet_path.read_text()
+        portfolio_rows=[json.loads(line) for line in
+            (root / "portfolio" / "warmup_portfolio_v1.jsonl").read_text().splitlines()
+            if line.strip()]
         lines=packet.splitlines()
         idx=next(i for i,line in enumerate(lines) if json.loads(line)["name"]==benchmark)
         current=json.loads(lines[idx])
-        composed_bank=root / "experiments" / "em_minimal_frontier_compose_v1.jsonl"
-        composed=next(r for r in (json.loads(s) for s in composed_bank.read_text().splitlines() if s.strip())
-            if r["label"] == "em_compose_hcross_terminal_v1")
-        self.assertEqual(current["proof"], composed["proof"])
+        # The active EM frontier may advance without invalidating this
+        # historical primary-geometry control. Protect its exact current
+        # portfolio/packet identity rather than a superseded proof label.
+        current_portfolio=next(r for r in portfolio_rows
+            if r["name"] == benchmark)
+        self.assertEqual(current["proof"], current_portfolio["proof"])
         before=lines[:]
         current["proof"]=rows[0]["proof"]
         before[idx]=json.dumps(current,ensure_ascii=False)
@@ -222,13 +255,13 @@ class FrontierTests(unittest.TestCase):
             (root/"experiments"/"wick_bilinear_terminal_verified_v1.jsonl").read_text().splitlines()
             if s.strip())
         typing=next(json.loads(s) for s in
-            (root/"experiments"/"typing_pareto_crossover_v1.jsonl").read_text().splitlines()
-            if s.strip() and json.loads(s).get("label")=="typing_fast_cross_CLI")
+            (root/"experiments"/"typing_four_residual_structural_v1.jsonl").read_text().splitlines()
+            if s.strip() and json.loads(s).get("label")=="typing_movable_tli_grind")
         active={row["name"]:row for row in portfolio}
         self.assertEqual(active[bank["name"]]["proof"],bank["proof"])
         self.assertEqual(active[typing["name"]]["proof"],typing["proof"])
         self.assertEqual(active[bank["name"]]["label"],"warranted_wick_bilinear_terminal_555")
-        self.assertEqual(active[typing["name"]]["label"],"warranted_typing_pareto_CLI_338")
+        self.assertEqual(active[typing["name"]]["label"],"warranted_typing_movable_tli_grind_308")
 
 
 if __name__ == "__main__":
