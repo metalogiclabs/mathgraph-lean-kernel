@@ -1,0 +1,95 @@
+name: Lean Refactor Arena CCS symmetry Pareto
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'competition/lean-refactor-arena-track1'
+    paths:
+      - 'competitions/lean_refactor_arena/experiments/ccs_symmetry_pareto_v1.jsonl'
+      - '.github/workflows/lean-refactor-arena-ccs-symmetry-pareto.yml'
+concurrency:
+  group: lra-ccs-symmetry-pareto
+  cancel-in-progress: true
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      PUBLIC_REPO_SHA: 7f3a401470d04f70013d293db4253b088ec8a0ae
+      TARGET_NAME: Cslib.CCS.bisimilarity_congr_choice
+      CANDIDATES: competitions/lean_refactor_arena/experiments/ccs_symmetry_pareto_v1.jsonl
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build pinned Cslib primary environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.elan/bin:$PATH"
+          git clone --depth=1 --filter=blob:none --sparse https://github.com/aurasoph/lean-refactor.git /tmp/lean-refactor
+          git -C /tmp/lean-refactor fetch --depth=1 origin "$PUBLIC_REPO_SHA"
+          git -C /tmp/lean-refactor checkout --detach FETCH_HEAD
+          git -C /tmp/lean-refactor sparse-checkout set competition
+          test "$(git -C /tmp/lean-refactor rev-parse HEAD)" = "$PUBLIC_REPO_SHA"
+          (cd /tmp/lean-refactor/competition && ./build-all.sh v4.33)
+      - name: Test verified public Pareto controls and symmetry variants
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > /tmp/ccs-symmetry-scores.jsonl
+          python3 - <<'PY' > /tmp/ccs-labels.txt
+          import json
+          for line in open('competitions/lean_refactor_arena/experiments/ccs_symmetry_pareto_v1.jsonl'):
+              if line.strip(): print(json.loads(line)['label'])
+          PY
+          while IFS= read -r label; do
+            echo "CCS_CANDIDATE=$label"
+            python3 competitions/lean_refactor_arena/public_harness_bridge.py \
+              --competition /tmp/lean-refactor/competition --project v4.33 \
+              --name "$TARGET_NAME" --candidate "$CANDIDATES" --label "$label"
+            (cd /tmp/lean-refactor/competition && python3 arena.py check --name "$TARGET_NAME") > /tmp/ccs-score.json
+            jq -c --arg label "$label" '. + {candidate_label:$label}' /tmp/ccs-score.json >> /tmp/ccs-symmetry-scores.jsonl
+          done < /tmp/ccs-labels.txt
+      - name: Classify any verified gain and exact residuals
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,pathlib
+          rows=[json.loads(s) for s in pathlib.Path('/tmp/ccs-symmetry-scores.jsonl').read_text().splitlines() if s.strip()]
+          assert len(rows)==12, len(rows)
+          by_label={r['candidate_label']:r for r in rows}
+          assert len(by_label)==12, 'DUPLICATE_LABELS'
+          def valid(r):
+              return bool(r.get('compiled') and r.get('statement_ok') and r.get('eligible') and
+                  float(r.get('survival_pct') or 0)==100 and
+                  not r.get('forbidden') and not r.get('extra_toplevel_decls'))
+          for label in ('ccs_verified_85','ccs_fast_93'):
+              assert valid(by_label[label]), 'PUBLIC_CCS_CONTROL_FAILED_'+label
+          good=[r for r in rows if valid(r) and r['candidate_label'].startswith('ccs_sym_')]
+          winners=[r for r in good if float(r.get('objective_sum_pct') or 0)>157.19]
+          best=max(winners,key=lambda r:float(r['objective_sum_pct']),default=None)
+          result={'schema':'mathgraph.lra.ccs-symmetry-pareto.v1',
+            'status':'WARRANTED_PRIMARY_CANDIDATE' if best else 'REJECTED_BOUNDED_NO_GAIN',
+            'baseline_objective':157.19,'tested_variants':10,
+            'controls':[{'label':r['candidate_label'],'length':r.get('length'),
+              'heartbeats':r.get('heartbeats'),'objective':r.get('objective_sum_pct')}
+              for r in rows if r['candidate_label'] in ('ccs_verified_85','ccs_fast_93')],
+            'verified_alternatives':[{'label':r['candidate_label'],'length':r.get('length'),
+              'heartbeats':r.get('heartbeats'),'objective':r.get('objective_sum_pct')} for r in good],
+            'best':None if best is None else {'label':best['candidate_label'],
+              'length':best['length'],'heartbeats':best['heartbeats'],'objective':best['objective_sum_pct']},
+            'rejections':[{'label':r['candidate_label'],'errors':(r.get('per_version') or [{}])[0].get('errors',[])}
+              for r in rows if not valid(r)],
+            'boundary':'Primary pinned v4.33 only. Need full three-version qualification and portfolio recomposition before promotion.'}
+          pathlib.Path('/tmp/ccs-symmetry-summary.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
+          print(json.dumps(result,ensure_ascii=False,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-ccs-symmetry-pareto
+          path: |
+            /tmp/ccs-symmetry-scores.jsonl
+            /tmp/ccs-symmetry-summary.json
