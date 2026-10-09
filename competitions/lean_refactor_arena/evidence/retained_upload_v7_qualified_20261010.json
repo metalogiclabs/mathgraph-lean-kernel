@@ -1,0 +1,46 @@
+{
+  "schema": "mathgraph.lra.retained-upload-v7-qualified.v1",
+  "status": "WARRANTED_EXACT_STRATA_V7_AND_15_PROOF_PACKET_NOT_OFFICIALLY_SUBMITTED",
+  "observed_on": "2026-10-10",
+  "source_pin": "aurasoph/lean-refactor@7f3a401470d04f70013d293db4253b088ec8a0ae",
+  "authority": {
+    "ci_run": 37985044213,
+    "ci_job": 114004817243,
+    "conclusion": "success",
+    "artifact": 11642831162,
+    "uri": "https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/37985044213"
+  },
+  "changed_theorem": {
+    "name": "CallElimCorrect.substOldPostSubset",
+    "label": "warranted_strata_tail_simp_grind_135",
+    "verified_required_versions": [
+      "v4.26.0"
+    ],
+    "tokens": 135,
+    "heartbeats": 1890,
+    "objective_sum_pct": 120.41,
+    "previous_v6_tokens": 139,
+    "previous_v6_heartbeats": 1868,
+    "previous_v6_objective_sum_pct": 119.56,
+    "original_candidate_run": 37980654973
+  },
+  "packet": {
+    "proof_count": 15,
+    "unchanged_other_proofs": 14,
+    "retained_portfolio_git_blob_sha": "8886202155e36ebbd04bf1b00b4dcc0bc3674e2f",
+    "committed_packet_git_blob_sha": "43454a206e4d82406ab597ba8940c7881657260b",
+    "source_portfolio_sha256": "95b85b88aab7c13ed561f2ff2575ab9b1603e4e66df7c748a56ac8df338e92d1",
+    "generated_upload_sha256": "a6fe08dca8fb7a182462ef871b0facc82708e7bbcb50788d2a7be5c9ef53d77e",
+    "generated_upload_bytes": 27497,
+    "external_exact_full_version_proofs": 10,
+    "independently_qualified_exact_version_proofs": 5
+  },
+  "scoring": {
+    "composed_warmup_projection": 82.7191,
+    "comparison_leader_last_verified": 89.38,
+    "objective_sum_total": 2222.36,
+    "objective_gap_to_tie": 299.74,
+    "external_official_submission": "NOT_SUBMITTED"
+  },
+  "boundary": "Independent pinned v4.26 source replay plus fourteen byte-identical previous warrants and exact packet verification. No official score, rank or unseen full-benchmark claim."
+}
