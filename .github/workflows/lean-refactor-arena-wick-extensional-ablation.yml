@@ -1,0 +1,99 @@
+name: Lean Refactor Arena Wick extensional opening ablation
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'competition/lean-refactor-arena-track1'
+    paths:
+      - 'competitions/lean_refactor_arena/experiments/wick_extensional_opening_ablation_v1.jsonl'
+      - '.github/workflows/lean-refactor-arena-wick-extensional-ablation.yml'
+
+concurrency:
+  group: wick-extensional-opening-ablation
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 85
+    env:
+      PUBLIC_REPO_SHA: 7f3a401470d04f70013d293db4253b088ec8a0ae
+      TARGET_NAME: FieldSpecification.WickAlgebra.ι_timeOrderF_superCommuteF_eq_time
+      CANDIDATES: competitions/lean_refactor_arena/experiments/wick_extensional_opening_ablation_v1.jsonl
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build exact public Wick workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.elan/bin:$PATH"
+          git clone --depth=1 --filter=blob:none --sparse https://github.com/aurasoph/lean-refactor.git /tmp/lean-refactor
+          git -C /tmp/lean-refactor fetch --depth=1 origin "$PUBLIC_REPO_SHA"
+          git -C /tmp/lean-refactor checkout --detach FETCH_HEAD
+          git -C /tmp/lean-refactor sparse-checkout set competition
+          test "$(git -C /tmp/lean-refactor rev-parse HEAD)" = "$PUBLIC_REPO_SHA"
+          (cd /tmp/lean-refactor/competition && ./build-all.sh v4.32)
+      - name: Score unchanged verified control and bounded variants
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > /tmp/wick-outer-score.jsonl
+          for label in wick_verified_606_control outer_simp_first outer_simp_nested outer_simp_both outer_remove_coe_mk outer_remove_addhom outer_remove_fo_comp outer_remove_alg_map outer_remove_first_mul_assoc; do
+            python3 competitions/lean_refactor_arena/public_harness_bridge.py \
+              --competition /tmp/lean-refactor/competition \
+              --project v4.32 \
+              --name "$TARGET_NAME" \
+              --candidate "$CANDIDATES" --label "$label"
+            (
+              cd /tmp/lean-refactor/competition
+              python3 arena.py check --name "$TARGET_NAME"
+            ) > /tmp/wick-outer-one.json
+            jq -c --arg label "$label" '. + {candidate_label:$label}' /tmp/wick-outer-one.json \
+              >> /tmp/wick-outer-score.jsonl
+          done
+      - name: Fail closed and list only qualified improvements
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          rows=[json.loads(line) for line in Path('/tmp/wick-outer-score.jsonl').read_text().splitlines() if line.strip()]
+          assert len(rows)==9, len(rows)
+          by_label={r['candidate_label']:r for r in rows}
+          assert len(by_label)==9, 'DUPLICATE_LABELS'
+          def valid(r):
+              return bool(r.get('compiled') and r.get('statement_ok') and r.get('eligible') and
+                  float(r.get('survival_pct') or 0)==100 and
+                  not r.get('forbidden') and not r.get('extra_toplevel_decls'))
+          control=by_label['wick_verified_606_control']
+          assert valid(control), 'WICK_CONTROL_FAILED'
+          improvements=[]
+          for row in rows:
+              if row['candidate_label']=='wick_verified_606_control': continue
+              if valid(row) and float(row.get('objective_sum_pct') or 0)>118.0:
+                  improvements.append({'label':row['candidate_label'],'tokens':row.get('length'),
+                      'heartbeats':row.get('heartbeats'),'objective':row.get('objective_sum_pct')})
+          out={'schema':'mathgraph.lra.wick.extensional-opening-ablation.v1',
+               'status':'CANDIDATE_VERIFIED_PRIMARY' if improvements else 'REJECTED_BOUNDED_NO_OBJECTIVE_GAIN',
+               'pin':'7f3a401470d04f70013d293db4253b088ec8a0ae',
+               'control':{'tokens':control.get('length'),'heartbeats':control.get('heartbeats'),
+                   'objective':control.get('objective_sum_pct')},
+               'verified_improvements':improvements,
+               'candidate_count':8,'compiled_variants':sum(valid(r) for r in rows[1:]),
+               'failures':[{'label':r['candidate_label'],'error':(r.get('per_version') or [{}])[0].get('errors')}
+                           for r in rows[1:] if not valid(r)],
+               'boundary':'Only primary v4.32, 118.0 objective threshold, no portfolio promotion or leaderboard rank claim.'}
+          Path('/tmp/wick-outer-summary.json').write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n')
+          print(json.dumps(out,ensure_ascii=False,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-wick-extensional-ablation
+          path: |
+            /tmp/wick-outer-score.jsonl
+            /tmp/wick-outer-summary.json
