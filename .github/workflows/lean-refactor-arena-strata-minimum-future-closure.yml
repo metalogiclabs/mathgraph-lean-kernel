@@ -34,11 +34,11 @@ jobs:
           import json,pathlib
           path=pathlib.Path('competitions/lean_refactor_arena/experiments/strata_minimum_future_closure_v1.jsonl')
           rows=[json.loads(s) for s in path.read_text().splitlines() if s.strip()]
-          assert len(rows)==13 and len({r['label'] for r in rows})==8
+          assert len(rows)==13 and len({r['label'] for r in rows})==13
           assert all(r['name']=='CallElimCorrect.substOldPostSubset' and
                      'theorem substOldPostSubset:' in r['proof'] for r in rows)
           assert rows[0]['label']=='strata_control_132'
-          print('WARRANTED_CONTROL_PROTECTED_AND_SEVEN_LOCAL_TRANSFERS_SEEDED')
+          print('WARRANTED_CONTROL_PROTECTED_AND_TWELVE_LOCAL_TRANSFERS_SEEDED')
           PY
       - name: Build exact Strata v4.26 verifier
         shell: bash
