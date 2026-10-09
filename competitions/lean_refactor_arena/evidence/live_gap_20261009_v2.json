@@ -178,5 +178,26 @@
     "result": "0/7 compiled; public control 1/1 compiled; no promote. Local 2-token apparent savings are invalid due to compile failures.",
     "boundary": "Only establishes irredundancy of these seven individual simp-only rewrite rules within the pinned public proof, not a global token or heartbeat minimum.",
     "next_experiment": "Wick structural extensionality crossover run 37887798992"
+  },
+  "wick_exact_trace_residual_20261009": {
+    "status": "REJECTED_TWO_LOCAL_TACTIC_FAMILIES",
+    "authority_run": 37886045009,
+    "authority_job": 113676173389,
+    "source_proof_file": "competitions/lean_refactor_arena/probes/physlib_wick_repair_v1.jsonl",
+    "verified_control": "Public Wick 568-token candidate proof with explicit bounded simplification and separate rw [smul_comm]; objective 97.88 at 100% v4.32 survival",
+    "residuals": [
+      {
+        "label": "wick_module_residual_v1",
+        "actual_error": "ring failed, ring expressions not equal",
+        "separating_goal": "crAnTimeOrderSign (l ++ φ :: ψ :: r) = 0",
+        "inference": "ring/module cannot replace needed scalar-action interchange; this is a spurious unprovable goal under the current normalization, not evidence of the desired equality"
+      },
+      {
+        "label": "wick_simp_only_comm_v1",
+        "actual_error": "maximum recursion depth has been reached",
+        "culprit": "Adding smul_comm to the global simp-only rewrite collection instead of applying rw [smul_comm] after bounded normalization"
+      }
+    ],
+    "next_protected_move": "No further module or blanket simp variants; test compact generator proof under extensionality, run 37887798992; don't promote unless compiled and objective >97.88."
   }
 }
