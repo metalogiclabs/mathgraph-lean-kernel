@@ -76,7 +76,7 @@ jobs:
           import json,pathlib
           path=pathlib.Path('/tmp/strata-minimum-future-scores.jsonl')
           rows=[json.loads(s) for s in path.read_text().splitlines() if s.strip()]
-          assert len(rows)==13 and len({r['candidate_label'] for r in rows})==8
+          assert len(rows)==13 and len({r['candidate_label'] for r in rows})==13
           def valid(r):
               return (r.get('compiled') is True and r.get('statement_ok') is True
                       and r.get('eligible') is True and not r.get('forbidden')
