@@ -88,7 +88,7 @@ jobs:
           else:
               needle="      simp only [map_sub, map_smul, mul_sub, sub_mul, smul_sub, Algebra.mul_smul_comm, Algebra.smul_mul_assoc, smul_comm]"
           assert row["proof"].count(needle)==1, (label,"missing exact target")
-          row["proof"]=row["proof"].replace(needle,"      trace_state\\n"+needle,1)
+          row["proof"]=row["proof"].replace(needle,"      trace_state"+chr(10)+needle,1)
           pathlib.Path("/tmp/wick-residuals/"+label+".jsonl").write_text(json.dumps(row,ensure_ascii=False)+chr(10))
           PY
             python3 competitions/lean_refactor_arena/public_harness_bridge.py \
