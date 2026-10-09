@@ -1,0 +1,52 @@
+name: Lean Refactor Arena official submission schema inspect
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'competition/lean-refactor-arena-track1'
+    paths:
+      - '.github/workflows/lean-refactor-arena-submission-schema.yml'
+
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read public Gradio submission contract without submitting
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://delta-lab-ai-lean-refactor-arena.hf.space"
+          curl -fsSL --retry 3 "$base/config" -o /tmp/lra-public-config.json
+          python3 - <<'PY'
+          import json,datetime
+          c=json.load(open('/tmp/lra-public-config.json'))
+          components={x.get('id'):x for x in c.get('components',[])}
+          names=['verify_and_submit','submit_artifacts','leaderboard']
+          result={'schema':'mathgraph.lra.public-submission-surface.v1',
+              'observed_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),
+              'write_executed':False,'endpoints':[]}
+          for d in c.get('dependencies') or []:
+              if d.get('api_name') not in names: continue
+              result['endpoints'].append({
+                  'api_name':d.get('api_name'),'inputs':[
+                      {'id':i,'type':components.get(i,{}).get('type'),
+                       'props':{k:v for k,v in (components.get(i,{}).get('props') or {}).items()
+                          if k in ['label','value','choices','placeholder','file_types','file_count',
+                            'visible','interactive','info','lines','minimum','maximum','type','headers']}}
+                       for i in (d.get('inputs') or [])],
+                  'outputs':[{'id':i,'type':components.get(i,{}).get('type'),
+                     'label':(components.get(i,{}).get('props') or {}).get('label')}
+                     for i in (d.get('outputs') or [])]})
+          print(json.dumps(result,ensure_ascii=False,indent=2))
+          open('/tmp/lra-public-submission-contract.json','w').write(
+             json.dumps(result,ensure_ascii=False,indent=2)+'\n')
+          assert any(d['api_name']=='verify_and_submit' for d in result['endpoints'])
+          print('VERIFIED_READ_ONLY_SUBMISSION_SCHEMA')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lra-public-submission-contract
+          path: /tmp/lra-public-submission-contract.json
