@@ -8,7 +8,7 @@ on:
     paths:
       - 'competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl'
       - 'competitions/lean_refactor_arena/arena_upload.py'
-      - 'competitions/lean_refactor_arena/evidence/retained_exact_full_version_audit_20261010_v5.json'
+      - 'competitions/lean_refactor_arena/evidence/retained_exact_full_version_audit_20261010_v6.json'
       - 'competitions/lean_refactor_arena/submissions/mathgraph_verified_15_warmup_20261009.jsonl'
       - '.github/workflows/lean-refactor-arena-retained-upload-qualification.yml'
 
@@ -48,7 +48,7 @@ jobs:
           upload=pathlib.Path('/tmp/lra-closed-retained-15.jsonl')
           portfolio=pathlib.Path('competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl')
           bench=pathlib.Path('/tmp/benchmark_data_warmup.jsonl')
-          audit=pathlib.Path('competitions/lean_refactor_arena/evidence/retained_exact_full_version_audit_20261010_v5.json')
+          audit=pathlib.Path('competitions/lean_refactor_arena/evidence/retained_exact_full_version_audit_20261010_v6.json')
           committed=pathlib.Path('competitions/lean_refactor_arena/submissions/mathgraph_verified_15_warmup_20261009.jsonl')
           raw=lambda p:[json.loads(x) for x in p.read_text(encoding='utf-8').splitlines() if x.strip()]
           rows,source,frozen=raw(upload),raw(portfolio),raw(bench)
@@ -101,7 +101,7 @@ jobs:
             'audit_path':str(audit),'audit_portfolio_git_blob':git_blob(portfolio),
             'external_exact_full_version_witnesses':externally_warranted,
             'independent_required_version_witnesses':independently_warranted,
-            'promotion_boundary':'Proof format and exact recorded version lineage checked against current v5 audit; no new Lean replay. Official ranking requires user-authorized upload and scoring; no keys accessed.'}
+            'promotion_boundary':'Proof format and exact recorded version lineage checked against current v6 audit; no new Lean replay. Official ranking requires user-authorized upload and scoring; no keys accessed.'}
           pathlib.Path('/tmp/lra-retained-manifest.json').write_text(json.dumps(out,indent=2)+'\n')
           print(json.dumps(out,indent=2))
           print('VERIFIED_EXACT_RETAINED_15_ROW_UPLOAD')
