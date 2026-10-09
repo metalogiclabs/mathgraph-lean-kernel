@@ -1,0 +1,89 @@
+{
+  "schema": "mathgraph.lra.minimum-warranted-em-reclosure.v1",
+  "state": "VERIFIED_REMOTE_TRANSPORT__PINNED_EM_PROOF_WARRANT__NOT_OFFICIALLY_SUBMITTED",
+  "target": "Electromagnetism.ElectromagneticPotential.time_deriv_time_deriv_electricField_of_isExtrema",
+  "protected_future": {
+    "statement": "identical benchmark theorem statement",
+    "required_versions": [
+      "v4.32.0"
+    ],
+    "forbidden_constructs": "no banned constructs or additional top-level declarations",
+    "other_portfolio_members": "other 14 proof rows preserved",
+    "submission_format": "15 unique exact JSONL name/proof records"
+  },
+  "selection_law": "Restrict equivalence to admitted proof behavior under all required toolchains, retain Pareto cost frontier, choose maximum verified (length reduction + heartbeat reduction) from it. Cost is not part of semantic equivalence.",
+  "verifier": {
+    "public_harness_sha": "7f3a401470d04f70013d293db4253b088ec8a0ae",
+    "run": 37891035688,
+    "job": 113691788396,
+    "artifact_id": 11598689337,
+    "primary_toolchain": "v4.32.0",
+    "status": "PASS"
+  },
+  "prior": {
+    "label": "em_retained_567_control",
+    "tokens": 567,
+    "heartbeats": 10557,
+    "objective_sum_pct": 120.75
+  },
+  "pareto_frontier": [
+    {
+      "label": "em_terminal_field_simp_only",
+      "tokens": 565,
+      "heartbeats": 10556,
+      "objective_sum_pct": 120.9,
+      "compiled": true,
+      "statement_ok": true,
+      "compat": {
+        "v4.32.0": true
+      },
+      "selected": true
+    },
+    {
+      "label": "em_hcross_simp",
+      "tokens": 568,
+      "heartbeats": 10499,
+      "objective_sum_pct": 120.89,
+      "compiled": true,
+      "statement_ok": true,
+      "compat": {
+        "v4.32.0": true
+      },
+      "selected": false
+    }
+  ],
+  "certified_residual": "trailing '<;> ring' may be erased after 'field_simp' under this frozen proof and context; does not establish that other ring uses are irrelevant",
+  "exact_change": {
+    "remove": "\\n  <;> ring",
+    "scope": "one theorem proof, no theorem or prior proof data altered"
+  },
+  "git": {
+    "portfolio_commit": "251510427f59c73c840a0610e2e5f25796a398eb",
+    "packet_commit": "e0b55983db576d37a867c74816d515a364fec413",
+    "portfolio_path": "competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl",
+    "packet_path": "competitions/lean_refactor_arena/submissions/mathgraph_verified_15_warmup_20261009.jsonl",
+    "experimental_source": "competitions/lean_refactor_arena/experiments/em_terminal_normalization_v1.jsonl"
+  },
+  "remote_readback": {
+    "unique_portfolio_rows": 15,
+    "unique_submission_rows": 15,
+    "same_proofs_all_rows": true,
+    "em_matches_pinned_candidate": true,
+    "other_14_unmodified_vs_pre_change": true
+  },
+  "projected_score_not_official": {
+    "prior_objective_sum": 2198.4,
+    "verified_delta": 0.15,
+    "objective_sum_estimate": 2198.55,
+    "combined_if_all_protected_survival": 82.19,
+    "recorded_leader": 89.38,
+    "remaining_combined_gap": 7.19,
+    "remaining_objective_sum_tie_gap": 323.55
+  },
+  "outstanding": [
+    "Official Arena submission not performed",
+    "Build of other 14 independent proofs not repeated; inherit only matching pinned evidence",
+    "ArkLib v4.31 dependency build failure remains an environment blocker for the fresh all-15 CI replay",
+    "New combined EM variant, if attempted, requires independent compilation before any promotion"
+  ]
+}
