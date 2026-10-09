@@ -50,7 +50,20 @@ jobs:
           git -C /tmp/lean-refactor checkout --detach FETCH_HEAD
           git -C /tmp/lean-refactor sparse-checkout set competition
           test "$(git -C /tmp/lean-refactor rev-parse HEAD)" = "$PUBLIC_SHA"
-          (cd /tmp/lean-refactor/competition && ./build-all.sh v4.31)
+          mkdir -p /tmp/lra-binius-scope
+          project=/tmp/lean-refactor/competition/projects/v4.31
+          cd "$project"
+          lake update > /tmp/lra-binius-scope/lake-update-v431.log 2>&1 || {
+            tail -n 100 /tmp/lra-binius-scope/lake-update-v431.log; exit 1;
+          }
+          lake exe cache get > /tmp/lra-binius-scope/cache-v431.log 2>&1 || {
+            echo "CACHE_MISS_TARGETED_SOURCE_FALLBACK"
+          }
+          lake build ArkLib.ProofSystem.Binius.BinaryBasefold.Prelude \
+            > /tmp/lra-binius-scope/required-module-v431.log 2>&1 || {
+            tail -n 130 /tmp/lra-binius-scope/required-module-v431.log; exit 1;
+          }
+          echo "QUALIFIED_TARGETED_ARKLIB_V431_IMPORT_CLOSURE"
       - name: Score fourteen finite-fiber proof candidates
         shell: bash
         run: |
@@ -115,7 +128,19 @@ jobs:
             echo NO_PRIMARY_GAIN_NO_PORTFOLIO_MUTATION
             exit 0
           fi
-          (cd /tmp/lean-refactor/competition && ./build-all.sh v4.30 && ./build-all.sh v4.29)
+          export PATH="$HOME/.elan/bin:$PATH"
+          for version in v4.30 v4.29; do
+            project="/tmp/lean-refactor/competition/projects/$version"
+            ( cd "$project"
+              lake update > "/tmp/lra-binius-scope/lake-update-$version.log" 2>&1
+              lake exe cache get > "/tmp/lra-binius-scope/cache-$version.log" 2>&1 || true
+              lake build ArkLib.ProofSystem.Binius.BinaryBasefold.Prelude \
+                > "/tmp/lra-binius-scope/required-module-$version.log" 2>&1
+            ) || {
+              tail -n 130 "/tmp/lra-binius-scope/required-module-$version.log"; exit 1;
+            }
+          done
+          echo "QUALIFIED_REQUIRED_ARKLIB_BINIUS_V429_V430_MODULES"
           python3 competitions/lean_refactor_arena/public_harness_bridge.py \
             --competition /tmp/lean-refactor/competition --project v4.31 \
             --name "$TARGET" --candidate /tmp/em-winner.jsonl
@@ -143,3 +168,4 @@ jobs:
             /tmp/em-summary.json
             /tmp/em-winner.jsonl
             /tmp/em-all.json
+            /tmp/lra-binius-scope
