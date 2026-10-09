@@ -35,7 +35,15 @@ jobs:
           git -C /tmp/lean-refactor checkout --detach FETCH_HEAD
           git -C /tmp/lean-refactor sparse-checkout set competition
           test "$(git -C /tmp/lean-refactor rev-parse HEAD)" = "$PUBLIC_REPO_SHA"
-          (cd /tmp/lean-refactor/competition && ./build-all.sh v4.31)
+          # Respect the smallest protected import closure. The broad build
+          # attempts unrelated WeightedAgreement and fails before any proof.
+          (
+            cd /tmp/lean-refactor/competition/projects/v4.31
+            lake update
+            lake exe cache get || echo FIBER_CACHE_FALLBACK
+            lake build ArkLib.ProofSystem.Binius.BinaryBasefold.Prelude
+          )
+          echo VERIFIED_REQUIRED_FIBERWISE_IMPORT_CLOSURE
       - name: Verify pinned fiberwise proof variants
         shell: bash
         run: |
