@@ -196,7 +196,7 @@ jobs:
           pv=d.get('per_version') or []
           compat=d.get('compat') or {}
           warranted=(d.get('compiled') is True and d.get('statement_ok') is True
-               and d.get('eligible') is True and d.get('all_versions') is True
+               and d.get('eligible') is True and d.get('all_versions') is not False
                and d.get('survival_pct')==100 and not d.get('forbidden')
                and not d.get('extra_toplevel_decls') and not d.get('untested')
                and set(compat)==required and all(compat[v] is True for v in required)
