@@ -7,10 +7,10 @@ on:
       - 'competition/lean-refactor-arena-track1'
     paths:
       - 'competitions/lean_refactor_arena/experiments/strata_subset_transport_v1.jsonl'
-      - '.github/workflows/lean-refactor-arena-strata-compact-heartbeat.yml'
+      - '.github/workflows/lean-refactor-arena-strata-subset-transport.yml'
 
 concurrency:
-  group: lra-strata-compact
+  group: lra-strata-subset-transport
   cancel-in-progress: true
 
 jobs:
