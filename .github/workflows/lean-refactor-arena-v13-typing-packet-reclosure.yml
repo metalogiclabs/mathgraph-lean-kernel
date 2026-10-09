@@ -1,0 +1,179 @@
+name: Lean Refactor Arena V13 Typing exact packet and lineage reclosure
+on:
+  workflow_dispatch:
+  push:
+    branches: ['competition/lra-v13-typing-compound-admission']
+    paths:
+      - 'competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl'
+      - 'competitions/lean_refactor_arena/submissions/mathgraph_verified_15_warmup_20261009.jsonl'
+      - 'competitions/lean_refactor_arena/evidence/retained_exact_full_version_audit_20261010_v13.json'
+      - '.github/workflows/lean-refactor-arena-v13-typing-packet-reclosure.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: lra-v13-typing-reclosure
+  cancel-in-progress: true
+
+jobs:
+  exact-packet:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    env:
+      BASE_SHA: 984a761f98ed5ac35da447a26340e398c8993c87
+      V20_PRIMARY_SHA: 022bacae843b6ef532a550e380247d232d42ff25
+      SEAL_SHA: 14a62df4fdb52b7019e22581bd9c0705d4fd6015
+      NAME: Cslib.LambdaCalculus.LocallyNameless.Fsub.Typing.progress
+    steps:
+      - uses: actions/checkout@v4
+      - name: Retrieve independently sealed V20 source and version authority
+        uses: actions/download-artifact@v4
+        with:
+          name: lra-v20-strict-artifact-evidence
+          run-id: 38005749459
+          repository: metalogiclabs/mathgraph-lean-kernel
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: /tmp/lra-v13-seal
+
+      - name: Prove exact source lineage and fourteen frozen unchanged proof objects
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/lra-v13
+          git fetch --depth=1 origin "$BASE_SHA"
+          curl -fsSL --retry 3 -H 'Accept: application/vnd.github+json' \
+            https://api.github.com/repos/metalogiclabs/mathgraph-lean-kernel/actions/runs/38005749459 \
+            -o /tmp/lra-v13/run.json
+          curl -fsSL --retry 3 \
+            "https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/$V20_PRIMARY_SHA/competitions/lean_refactor_arena/experiments/typing_consequence_compound_v20.jsonl" \
+            -o /tmp/lra-v13/bank.jsonl
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib,subprocess
+          root=pathlib.Path('competitions/lean_refactor_arena')
+          rp=lambda p:[json.loads(x) for x in pathlib.Path(p).read_text().splitlines() if x.strip()]
+          portfolio=root/'portfolio/warmup_portfolio_v1.jsonl'
+          submission=root/'submissions/mathgraph_verified_15_warmup_20261009.jsonl'
+          past=subprocess.check_output(['git','show',os.environ['BASE_SHA']+':'+str(portfolio)],text=True)
+          before={r['name']:r for r in (json.loads(x) for x in past.splitlines() if x.strip())}
+          after={r['name']:r for r in rp(portfolio)}
+          packet={r['name']:r['proof'] for r in rp(submission)}
+          assert len(before)==len(after)==len(packet)==15
+          assert set(before)==set(after)==set(packet)
+          name=os.environ['NAME']
+          assert {n for n in before if before[n]['proof']!=after[n]['proof']}=={name}
+          assert all(before[n]==after[n] for n in before if n!=name),'UNRELATED_V12_ROW_CHANGED'
+          bank=rp('/tmp/lra-v13/bank.jsonl')
+          assert len(bank)==16 and len({x['label'] for x in bank})==16
+          incumbent=next(x for x in bank if x['label']=='typing_v20_exact_308_control')
+          winner=next(x for x in bank if x['label']=='typing_v20_compound_TCLR')
+          assert before[name]['proof']==incumbent['proof']
+          assert after[name]['proof']==winner['proof']
+          assert after[name]['label']=='warranted_typing_v20_compounded_obligation_297'
+          assert before[name]['proof'].split(' := by\n',1)[0]==after[name]['proof'].split(' := by\n',1)[0]
+          assert packet=={n:x['proof'] for n,x in after.items()}
+          seal=json.loads(pathlib.Path('/tmp/lra-v13-seal/lra-v20-evidence-seal.json').read_text())
+          run=json.loads(pathlib.Path('/tmp/lra-v13/run.json').read_text())
+          digest=lambda s:hashlib.sha256(s.encode('utf-8')).hexdigest()
+          assert run['id']==38005749459 and run['head_sha']==os.environ['SEAL_SHA']
+          assert run['status']=='completed' and run['conclusion']=='success'
+          assert seal['state']=='WARRANTED_EXACT_THREE_VERSIONS__NOT_YET_IN_RETAINED_PACKET'
+          assert seal['source_run']==38004209274 and seal['failed_audit_run']==38004698336
+          assert seal['all_protected_versions']==sorted(['v4.33.0-rc2','v4.32.0','v4.31.0'])
+          assert seal['candidate']['proof_sha256']==digest(winner['proof'])
+          assert seal['candidate']['label']=='typing_v20_compound_TCLR'
+          assert seal['candidate']['tokens']==297 and seal['candidate']['heartbeats']==2832
+          assert round(seal['candidate']['objective'],2)==122.51
+          manifest={'schema':'mathgraph.lra.v13.source-exact-reclosure',
+            'state':'WARRANTED_SEALED_TYPING_AND_FOURTEEN_UNCHANGED',
+            'source_run':38005749459,'source_proof_sha256':digest(winner['proof']),
+            'proofs_unchanged':14,'required_versions':seal['all_protected_versions'],
+            'portfolio_mutated_on_active_branch':False,'official_submission':False}
+          pathlib.Path('/tmp/lra-v13/source.json').write_text(json.dumps(manifest,indent=2)+'\n')
+          print(json.dumps(manifest,indent=2))
+          PY
+
+      - name: Generate and validate exact 15-row official warm-up submission format
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 \
+            https://raw.githubusercontent.com/aurasoph/lean-refactor/7f3a401470d04f70013d293db4253b088ec8a0ae/competition/benchmark_data_warmup.jsonl \
+            -o /tmp/lra-v13/benchmark.jsonl
+          python3 competitions/lean_refactor_arena/official_jsonl.py \
+            /tmp/lra-v13/benchmark.jsonl --summary-out /tmp/lra-v13/benchmark-summary.json
+          python3 competitions/lean_refactor_arena/arena_upload.py build \
+            --benchmark /tmp/lra-v13/benchmark.jsonl \
+            --candidates competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl \
+            --out /tmp/lra-v13/exact-15.jsonl --report /tmp/lra-v13/build-report.json
+          python3 competitions/lean_refactor_arena/arena_upload.py validate \
+            --benchmark /tmp/lra-v13/benchmark.jsonl --upload /tmp/lra-v13/exact-15.jsonl
+
+      - name: Certify all retained proof and version evidence boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,pathlib,subprocess
+          root=pathlib.Path('competitions/lean_refactor_arena')
+          read=lambda p:[json.loads(x) for x in pathlib.Path(p).read_text().splitlines() if x.strip()]
+          p=root/'portfolio/warmup_portfolio_v1.jsonl'
+          q=root/'submissions/mathgraph_verified_15_warmup_20261009.jsonl'
+          audit=root/'evidence/retained_exact_full_version_audit_20261010_v13.json'
+          a=json.loads(audit.read_text())
+          blob=lambda path:subprocess.check_output(['git','hash-object',str(path)],text=True).strip()
+          assert a['schema']=='mathgraph.lra.retained-proof-exact-version-audit.v13'
+          assert a['state']=='WARRANTED_COMPOSED_PINNED_VERSIONS__NOT_OFFICIAL_ARENA_SUBMISSION'
+          assert a['source_sha']=='7f3a401470d04f70013d293db4253b088ec8a0ae'
+          assert a['portfolio_blob_sha']==a['current_portfolio_blob_sha']==blob(p)
+          assert a['current_packet']['git_blob_sha']==blob(q)
+          frozen=read('/tmp/lra-v13/benchmark.jsonl')
+          built=read('/tmp/lra-v13/exact-15.jsonl')
+          committed=read(q)
+          portfolio=read(p)
+          names=[x['name'] for x in frozen]
+          assert len(names)==len(set(names))==15
+          assert len(built)==len(committed)==len(portfolio)==15
+          assert [x['name'] for x in built]==names
+          assert built==committed
+          assert all(set(x)=={'name','proof'} for x in committed)
+          assert {x['name']:x['proof'] for x in portfolio}=={x['name']:x['proof'] for x in committed}
+          records=a['records']
+          assert len(records)==15 and {r['name'] for r in records}==set(names)
+          external=0
+          for r in records:
+            assert r['label']==next(x['label'] for x in portfolio if x['name']==r['name'])
+            req=r['required_versions']
+            assert req and len(req)==len(set(req))
+            if r['matches_pinned_public_full_test'] is True:
+              external+=1
+              assert r['evidence_status']=='WARRANTED_EXTERNAL_EXACT_FULL_VERSION'
+              assert r['public_hash'] and r['public_compat']=={v:True for v in req}
+            else:
+              assert r['evidence_status']=='WARRANTED_INDEPENDENT_EXACT_REQUIRED_VERSION'
+              assert isinstance(r.get('independent_run'),int) and r['independent_run']>0
+              authority=r.get('independent_authority') or {}
+              assert set(authority.get('required_versions_verified') or (r.get('compat') or {}).keys())==set(req)
+          assert external==a['comparator_full_version_exact_count']==7
+          assert a['independently_qualified_count']==8 and a['total_authorized_by_prior_evidence']==15
+          assert a['change_fingerprint']['preserved_proof_rows_from_v12']==14
+          assert round(a['projected_score']['objective_sum_total'],2)==2229.04
+          assert round(a['projected_score']['combined_pct_if_full_survival'],4)==82.8675
+          out={'schema':'mathgraph.lra.v13.exact-15-upload',
+            'state':'WARRANTED_EXACT_15_PACKET_NOT_OFFICIAL_SCORE',
+            'source_run':38005749459,'unchanged_prior_proofs':14,
+            'external_warrants':7,'independent_warrants':8,
+            'portfolio_blob_sha':blob(p),'packet_blob_sha':blob(q),
+            'upload_sha256':hashlib.sha256(pathlib.Path('/tmp/lra-v13/exact-15.jsonl').read_bytes()).hexdigest(),
+            'combined_projection_pct':82.8675,'official_submission':False}
+          pathlib.Path('/tmp/lra-v13/reclosure.json').write_text(json.dumps(out,indent=2)+'\n')
+          print(json.dumps(out,indent=2))
+          print('WARRANTED_EXACT_V13_TYPING_15_ROW_PACKET')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-typing-v13-exact-15-packet
+          path: /tmp/lra-v13
