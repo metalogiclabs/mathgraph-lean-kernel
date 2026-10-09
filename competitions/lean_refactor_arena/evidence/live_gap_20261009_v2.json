@@ -1,0 +1,57 @@
+{
+  "schema": "mathgraph.lean-refactor-arena.live-gap.v2",
+  "status": "WARRANTED_LEADERBOARD_SNAPSHOT__CANDIDATE_COMPOSED_PORTFOLIO",
+  "observed_at_utc": "2026-10-09T05:06:35Z",
+  "authority": {
+    "github_actions_run_id": 37886989550,
+    "head_sha": "d5af5aae2650b5189055023bbbd2498eb6e443a5",
+    "source": "public Gradio leaderboard endpoint; successful GitHub Actions fetch; leaderboard HTML parsed from its logs"
+  },
+  "closed_track_top_five": [
+    {
+      "rank": 1,
+      "user": "EPFL-LARA",
+      "combined_pct": 89.38
+    },
+    {
+      "rank": 2,
+      "user": "Sebastien Larivee",
+      "combined_pct": 85.89
+    },
+    {
+      "rank": 3,
+      "user": "addarshh-refactor-agent",
+      "combined_pct": 83.8
+    },
+    {
+      "rank": 4,
+      "user": "RMA (Claude Sonnet 5)",
+      "combined_pct": 83.65
+    },
+    {
+      "rank": 5,
+      "user": "grandecoming-gpt-6",
+      "combined_pct": 82.73
+    }
+  ],
+  "composition_basis": {
+    "source": "live_gap_20261006_v1.json",
+    "status": "CANDIDATE_COMPOSED_NOT_OFFICIAL",
+    "combined_pct_if_full_survival": 81.7396,
+    "objective_mean": 145.2187,
+    "survival_pct_assumed": 100
+  },
+  "gap_to_leader_combined_points": 7.6404,
+  "required_objective_mean_for_tie": 168.14,
+  "objective_sum_debt_for_tie": 343.8195,
+  "note": "Supersedes the October 6 snapshot as the leaderboard target, not the portfolio verification. Need strict gain above tie objective to attain #1. No proof promotion or official MathGraph submission implied.",
+  "wick_running_authority": {
+    "verification_run": 37886299555,
+    "origin": "seven deterministic deletion candidates from public verified 568-token proof; not original discovery",
+    "status": "UNKNOWN_PENDING_RUN"
+  },
+  "strata_v4": {
+    "status": "REJECTED_DOMINATED",
+    "authority_run": 37874186039
+  }
+}
