@@ -1,0 +1,45 @@
+{
+  "schema": "mathgraph.lra.official-submission-readiness.v1",
+  "date_local": "2026-10-09",
+  "status": "UPLOAD_FORMAT_VERIFIED__AWAITING_OFFICIAL_ARENA_SUBMISSION",
+  "source_branch": "competition/lean-refactor-arena-track1",
+  "exact_upload_path": "competitions/lean_refactor_arena/submissions/mathgraph_verified_15_warmup_20261009.jsonl",
+  "retained_portfolio_path": "competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl",
+  "retained_entry_parity": "VERIFIED_15_OF_15_BYTE_IDENTICAL_PROOF_FIELDS",
+  "upload_fields": [
+    "name",
+    "proof"
+  ],
+  "upload_row_count": 15,
+  "unique_target_count": 15,
+  "reference_fallbacks": 0,
+  "independent_qualification_provenance": {
+    "wick_primary_run": 37887798992,
+    "core_all_versions_run": 37889600290,
+    "external_exact_full_version_proof_count": 13,
+    "audit_path": "competitions/lean_refactor_arena/evidence/retained_exact_full_version_audit_20261009_v1.json"
+  },
+  "package_ci": {
+    "run": 37892494567,
+    "artifact_id": 11598594499,
+    "upload_bytes": 28426,
+    "sha256_workflow_artifact_jsonl": "26706a4c2d5f3fdffd534677818ac63beae63c19952335ea7e041148f81b6091",
+    "note": "Checksum is for the workflow-generated JSONL, not independently asserted for the separately committed direct JSONL."
+  },
+  "latest_closed_leaderboard": {
+    "first_place": "EPFL-LARA",
+    "combined_pct": 89.38,
+    "authority_run": 37892489225
+  },
+  "composed_mathgraph_score_if_100pct_compat": 82.1867,
+  "composed_score_status": "WARRANTED_FROM_COMPOSED_PROOFS_NOT_OFFICIAL",
+  "closed_track_submission_status": "NOT_SUBMITTED",
+  "official_submission_requirements": [
+    "Username",
+    "Existing submission key if previously submitted",
+    "Closed-source LLM track selection",
+    "15-row JSONL file"
+  ],
+  "security_boundary": "Do not insert submission key into public repo, workflow logs, or code. No credentialless agent can submit in user's place.",
+  "next": "Use direct proof JSONL from repository or qualified workflow artifact in the official Arena submission UI; obtain official score and improve structural candidates only after full all-version verification. CCS symmetry trial 37892883138 is not included in retained portfolio."
+}
