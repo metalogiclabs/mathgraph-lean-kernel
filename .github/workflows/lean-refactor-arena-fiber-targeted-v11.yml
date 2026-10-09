@@ -1,0 +1,94 @@
+name: Lean Refactor Arena V11 fiberwise targeted witness transport
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'competition/lra-fiber-targeted-v11'
+    paths:
+      - 'competitions/lean_refactor_arena/experiments/fiber_witness_transport_v1.jsonl'
+      - '.github/workflows/lean-refactor-arena-fiber-targeted-v11.yml'
+
+concurrency:
+  group: lra-fiber-targeted-v11
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      PUBLIC_REPO_SHA: 7f3a401470d04f70013d293db4253b088ec8a0ae
+      TARGET_NAME: Binius.BinaryBasefold.fiberwise_dist_lt_imp_dist_lt_unique_decoding_radius
+      CANDIDATES: competitions/lean_refactor_arena/experiments/fiber_witness_transport_v1.jsonl
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build pinned ArkLib v4.31
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.elan/bin:$PATH"
+          git clone --depth=1 --filter=blob:none --sparse https://github.com/aurasoph/lean-refactor.git /tmp/lean-refactor
+          git -C /tmp/lean-refactor fetch --depth=1 origin "$PUBLIC_REPO_SHA"
+          git -C /tmp/lean-refactor checkout --detach FETCH_HEAD
+          git -C /tmp/lean-refactor sparse-checkout set competition
+          test "$(git -C /tmp/lean-refactor rev-parse HEAD)" = "$PUBLIC_REPO_SHA"
+          # Respect the smallest protected import closure. The broad build
+          # attempts unrelated WeightedAgreement and fails before any proof.
+          (
+            cd /tmp/lean-refactor/competition/projects/v4.31
+            lake update
+            lake exe cache get || echo FIBER_CACHE_FALLBACK
+            lake build ArkLib.ProofSystem.Binius.BinaryBasefold.Prelude
+          )
+          echo VERIFIED_REQUIRED_FIBERWISE_IMPORT_CLOSURE
+      - name: Verify pinned fiberwise proof variants
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > /tmp/fiber-transport-scores.jsonl
+          for label in fiber_retained_439 fiber_classical_after_size fiber_rfl_mem fiber_finish_convert fiber_witness_rcases fiber_hd_calc fiber_hd_simp fiber_hn_omega; do
+            echo "CHECK=$label"
+            python3 competitions/lean_refactor_arena/public_harness_bridge.py \
+              --competition /tmp/lean-refactor/competition --project v4.31 \
+              --name "$TARGET_NAME" --candidate "$CANDIDATES" --label "$label"
+            (cd /tmp/lean-refactor/competition && python3 arena.py check --name "$TARGET_NAME") > /tmp/fiber-transport-one.json
+            jq -c --arg label "$label" '. + {candidate_label:$label}' /tmp/fiber-transport-one.json >> /tmp/fiber-transport-scores.jsonl
+          done
+      - name: Qualify only valid improvements
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,pathlib
+          rows=[json.loads(s) for s in pathlib.Path('/tmp/fiber-transport-scores.jsonl').read_text().splitlines() if s.strip()]
+          assert len(rows)==8,len(rows)
+          valid=lambda r:bool(r.get('compiled') and r.get('statement_ok') and r.get('eligible') and
+            float(r.get('survival_pct') or 0)==100 and not r.get('forbidden') and not r.get('extra_toplevel_decls'))
+          control=next(r for r in rows if r['candidate_label']=='fiber_retained_439')
+          assert valid(control),'FIBER_CONTROL_DID_NOT_VERIFY'
+          qualified=[r for r in rows if valid(r) and r['candidate_label']!='fiber_retained_439']
+          improved=[r for r in qualified if float(r.get('objective_sum_pct') or 0)>129.55]
+          best=max(improved,key=lambda r:float(r['objective_sum_pct']),default=None)
+          result={'schema':'mathgraph.lra.fiber.witness-transport.v1',
+            'status':'CANDIDATE_PRIMARY_GAIN_REQUIRES_4_VERSIONS' if best else 'NO_QUALIFIED_GAIN',
+            'control':{'objective':control.get('objective_sum_pct'),'tokens':control.get('length'),
+              'heartbeats':control.get('heartbeats')},
+            'qualified':[{'label':r['candidate_label'],'objective':r['objective_sum_pct'],
+              'tokens':r['length'],'heartbeats':r['heartbeats']} for r in qualified],
+            'best':None if best is None else {'label':best['candidate_label'],
+              'objective':best['objective_sum_pct'],'tokens':best['length'],'heartbeats':best['heartbeats']},
+            'failures':[{'label':r['candidate_label'],'errors':(r.get('per_version') or [{}])[0].get('errors')} for r in rows if not valid(r)],
+            'scope':'Pinned ArkLib v4.31 primary only; four-version replay required before retention.'}
+          pathlib.Path('/tmp/fiber-transport-summary.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
+          print(json.dumps(result,ensure_ascii=False,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-fiber-targeted-v11
+          path: |
+            /tmp/fiber-transport-scores.jsonl
+            /tmp/fiber-transport-summary.json
