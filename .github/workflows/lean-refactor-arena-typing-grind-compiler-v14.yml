@@ -107,7 +107,7 @@ jobs:
               jq -c --arg label "$label" '. + {candidate_label:$label}' \
                 "/tmp/typing-v14/$label.scored.json" >> /tmp/typing-v14/scores.jsonl
             else
-              python3 - "$label" "$code" <<'PY'
+              python3 - "$label" "$code" >> /tmp/typing-v14/scores.jsonl <<'PY'
           import json,sys
           print(json.dumps({'candidate_label':sys.argv[1],'name':'Cslib.LambdaCalculus.LocallyNameless.Fsub.Typing.progress',
               'compiled':False,'eligible':False,'check_exit':int(sys.argv[2]),'per_version':[{'errors':['CHECKER_EXIT_NONZERO']}] }))
