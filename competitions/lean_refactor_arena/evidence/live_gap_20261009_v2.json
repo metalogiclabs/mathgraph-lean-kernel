@@ -545,7 +545,7 @@
     "supersession_notice": "The prior minimum_warranted_frontier_reclosure_20261009 reflects older EM 565 selection. This object supersedes only its active portfolio/packet/score references, retaining the historical record."
   },
   "minimum_warranted_frontier_latest_20261010": {
-    "state": "WARRANTED_COMPOSED_FULL_VERSION_CERTIFICATES__OFFICIALLY_NOT_SUBMITTED",
+    "state": "WARRANTED_15_PROOF_COMPOSED_COMPATIBILITY__NOT_OFFICIALLY_SUBMITTED",
     "source_pin": "aurasoph/lean-refactor@7f3a401470d04f70013d293db4253b088ec8a0ae",
     "portfolio_blob_sha": "7a6594965c0d73d5e91409f838c81fa9553e02f2",
     "packet_blob_sha": "610e579d231fce22a982ba473fd235708c27ff0c",
@@ -588,12 +588,44 @@
     "prospective_portfolio": {
       "objective_sum_total": 2207.8,
       "combined_pct_if_100_percent_survival": 82.3956,
-      "recorded_leader_oct9_pct": 89.38,
-      "gap_to_recorded_leader": 6.9844,
+      "recorded_leader_pct": 89.38,
+      "gap_to_leader": 6.9844,
       "objective_sum_debt_to_tie": 314.3,
       "official_submitted": false
     },
     "constraint": "Only compatible fully attested proofs admitted; retain established EM crossover 566, Wick 555, Typing 338; no fresh official rank claim.",
-    "pending_current_commit_ci": "submission preflight and local frontier regression run must both pass before calling packet reclosed"
+    "pending_current_commit_ci": "submission preflight and local frontier regression run must both pass before calling packet reclosed",
+    "proof_portfolio_commit": "eedee9e5e2ce1cae51cc56dc22185b4d646e137e",
+    "sha256_packet": "14853583ac53b6a1ecfec950eb543411cc7548d9d0617d2e354c364e7bb461e6",
+    "packet_bytes": 27865,
+    "packet_artifact_id": 11635506811,
+    "packet_verified_run": 37970483056,
+    "admission_regression_run": 37970482931,
+    "admission_tests_green": 15,
+    "current_arklib_build_repair_commit": "b5336f9a8feb88a7b6949e8ee50d489051bcbb22",
+    "current_arklib_build_repair_run": 37971347701,
+    "latest_leaderboard_read": {
+      "run": 37892489225,
+      "run_attempt": 2,
+      "observed_at_utc": "2026-10-09T18:04:43Z",
+      "top_submitter": "EPFL-LARA",
+      "closed_pct": 89.38,
+      "mathgraph_officially_submitted": false
+    },
+    "competition_calendar": {
+      "full_benchmark_release": "2026-11-01",
+      "submission_deadline": "2026-11-08",
+      "winners_announced": "2026-11-22",
+      "source": "https://huggingface.co/spaces/delta-lab-ai/lean-refactor-arena/blob/main/app.py"
+    },
+    "frontier_transition": {
+      "REUSE": "11 exact pinned public full-version proof witnesses; Core/EM preserved",
+      "REQUALIFY": "Wick 555 objective 126.86, Typing 338 objective 113.51 from complete pinned-version evidence",
+      "PRUNE": "all invalid and score-dominated local alternatives",
+      "COMPILE": "one immutable Wick proof bank, one 15-row upload packet",
+      "RECLOSE": "only changed Wick and Typing rows, dependent audit and regression tests",
+      "UNKNOWN": "official #1 and full benchmark starting November 1"
+    },
+    "official_submission_gate": "Registration username, submission key if previously registered, Closed-source LLM track and explicit upload. No user's key sought or stored; not submitted."
   }
 }

@@ -316,8 +316,12 @@
   "current_packet": {
     "path": "competitions/lean_refactor_arena/submissions/mathgraph_verified_15_warmup_20261009.jsonl",
     "git_blob_sha": "610e579d231fce22a982ba473fd235708c27ff0c",
+    "sha256": "14853583ac53b6a1ecfec950eb543411cc7548d9d0617d2e354c364e7bb461e6",
+    "bytes": 27865,
     "rows": 15,
-    "state": "WARRANTED_PACKET_BYTE_EQUIVALENCE_PENDING_CURRENT_CI_PREFLIGHT"
+    "status": "WARRANTED_EXACT_15_PACKET_MATCHED_PORTFOLIO",
+    "preflight_run": 37970483056,
+    "artifact_id": 11635506811
   },
   "active_verified_em_frontier": [
     {
@@ -361,5 +365,31 @@
       "heartbeats": 2198,
       "objective": 113.51
     }
-  }
+  },
+  "targeted_reclosure_CI": {
+    "frontier_regression_tests": {
+      "run": 37970482931,
+      "passed": 15,
+      "failed": 0
+    },
+    "upload_shape": {
+      "run": 37970483065,
+      "state": "VERIFIED_15_ROW_SHAPE__NOT_OFFICIAL"
+    },
+    "portfolio_preflight": {
+      "run": 37970482745,
+      "state": "PASS"
+    },
+    "track1_smoke": {
+      "run": 37970482684,
+      "state": "PASS"
+    },
+    "full_primary_scoring": {
+      "run": 37971347701,
+      "state": "RUNNING_TARGETED_ARKLIB_BUILD",
+      "root_cause_previous": "Unrelated WeightedAgreement library build failure; exact ArkLib required import closure passed run 37899375575"
+    }
+  },
+  "protected_future_invariant": "Every retained proof must preserve exact theorem statement and all pinned versions; selected costs optimize only within warranted alternatives; 13 unaffected packet rows unchanged. No official score inferred.",
+  "current_version_alias": "v4 + 2026-10-10 CI addendum"
 }
