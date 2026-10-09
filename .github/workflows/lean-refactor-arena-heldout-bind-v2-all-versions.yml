@@ -1,0 +1,154 @@
+name: Lean Refactor Arena heldout V2 four-version semantic consequence admission
+on:
+  workflow_dispatch:
+  push:
+    branches: ['competition/lra-heldout-bind-witness-v2']
+    paths: ['.github/workflows/lean-refactor-arena-heldout-bind-v2-all-versions.yml']
+permissions:
+  contents: read
+concurrency:
+  group: lra-heldout-bind-v2-all-versions
+  cancel-in-progress: true
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 145
+    env:
+      PUBLIC_SHA: 7f3a401470d04f70013d293db4253b088ec8a0ae
+      SOURCE_HEAD: 7c8b4dd327569fd075b937fb21e83a8d2d430a40
+      SOURCE_RUN: '38003888483'
+      NAME: CslibTests.runEff_eval_correct
+      BANK: competitions/lean_refactor_arena/experiments/heldout_bind_witness_v2.jsonl
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bind exact heldout source/proof bytes to successful pinned primary verifier
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/lra-heldout-v2-all
+          curl -fsSL --retry 3 -H 'Accept: application/vnd.github+json' \
+            https://api.github.com/repos/metalogiclabs/mathgraph-lean-kernel/actions/runs/38003888483 \
+            -o /tmp/lra-heldout-v2-all/primary-run.json
+          curl -fsSL --retry 3 \
+            https://raw.githubusercontent.com/aurasoph/lean-refactor/7f3a401470d04f70013d293db4253b088ec8a0ae/competition/benchmark_data_extra.jsonl \
+            -o /tmp/lra-heldout-v2-all/benchmark_data_extra.jsonl
+          python3 - <<'PY'
+          import json,hashlib,os,pathlib
+          a=[json.loads(s) for s in pathlib.Path(os.environ['BANK']).read_text().splitlines() if s.strip()]
+          b=[json.loads(s) for s in pathlib.Path('/tmp/lra-heldout-v2-all/benchmark_data_extra.jsonl').read_text().splitlines() if s.strip()]
+          run=json.load(open('/tmp/lra-heldout-v2-all/primary-run.json'))
+          assert run['id']==int(os.environ['SOURCE_RUN'])
+          assert run['head_sha']==os.environ['SOURCE_HEAD']
+          assert run['status']=='completed' and run['conclusion']=='success'
+          assert len(a)==18 and len({x['label'] for x in a})==18
+          assert len(b)==1 and b[0]['name']==os.environ['NAME']
+          control=next(x for x in a if x['label']=='heldout_v2_exact_source_423')
+          winner=next(x for x in a if x['label']=='heldout_v2_eval_only_all')
+          assert control['proof']==b[0]['src'] and b[0]['proof_length']==423
+          assert winner['name']==control['name']==os.environ['NAME']
+          assert winner['proof'].startswith(b[0]['statement']+' := by\n')
+          assert winner['proof'].count('simp only [eval]')==3
+          assert winner['proof'].count('runEff_bind_ok')==6
+          assert not any(term in winner['proof'] for term in [
+            'sorry','sorryAx','admit','axiom ','unsafe','native_decide','run_elab','run_cmd'])
+          record={'schema':'mathgraph.lra.heldout-bind-v2-source-authority.v1',
+             'primary_source_run':run['id'],'primary_source_head':run['head_sha'],
+             'reference_sha256':hashlib.sha256(control['proof'].encode()).hexdigest(),
+             'winner_sha256':hashlib.sha256(winner['proof'].encode()).hexdigest(),
+             'required_versions':['v4.33.0-rc2','v4.32.0','v4.31.0','v4.30.0'],
+             'external_submission':False}
+          pathlib.Path('/tmp/lra-heldout-v2-all/source.json').write_text(json.dumps(record,indent=2)+'\n')
+          print(json.dumps(record,indent=2))
+          PY
+      - name: Build exact CSLib FreeMonad source module under each required toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.elan/bin:$PATH"
+          git clone --depth=1 --filter=blob:none --sparse \
+            https://github.com/aurasoph/lean-refactor.git /tmp/lean-refactor
+          git -C /tmp/lean-refactor fetch --depth=1 origin "$PUBLIC_SHA"
+          git -C /tmp/lean-refactor checkout --detach FETCH_HEAD
+          git -C /tmp/lean-refactor sparse-checkout set competition
+          test "$(git -C /tmp/lean-refactor rev-parse HEAD)" = "$PUBLIC_SHA"
+          for version in v4.33 v4.32 v4.31 v4.30; do
+            echo "HELDOUT_REQUIRED_LEAN_TOOLCHAIN=$version"
+            (
+              cd "/tmp/lean-refactor/competition/projects/$version"
+              lake update > "/tmp/lra-heldout-v2-all/update-$version.log" 2>&1
+              lake exe cache get > "/tmp/lra-heldout-v2-all/cache-$version.log" 2>&1 || echo CACHE_MISS
+              lake build CslibTests.FreeMonad \
+                > "/tmp/lra-heldout-v2-all/module-$version.log" 2>&1
+            ) || { tail -n 120 "/tmp/lra-heldout-v2-all/module-$version.log"; exit 1; }
+          done
+          echo VERIFIED_PINNED_HELDOUT_FOUR_MODULE_IMPORT_CLOSURES
+      - name: Execute exact frozen reference and challenger on four Lean toolchains
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.elan/bin:$PATH"
+          for label in heldout_v2_exact_source_423 heldout_v2_eval_only_all; do
+            echo HELDOUT_ALL_VERSION_PROOF="$label"
+            python3 - "$label" <<'PY'
+          import json,os,pathlib,subprocess,sys
+          label=sys.argv[1]
+          comp=pathlib.Path('/tmp/lean-refactor/competition')
+          rows=[json.loads(s) for s in open(os.environ['BANK']) if s.strip()]
+          proof=next(x for x in rows if x['label']==label)
+          source=json.loads((comp/'benchmark_data_extra.jsonl').read_text().splitlines()[0])
+          assert proof['name']==source['name']==os.environ['NAME']
+          subprocess.run(['python3','arena.py','prepare','--name',os.environ['NAME'],'--force'],cwd=comp,check=True)
+          p=comp/'projects/v4.33/Arena/CslibTests_runEff_eval_correct.lean'
+          text=p.read_text()
+          assert text.count(source['src'])==1
+          p.write_text(text.replace(source['src'],proof['proof'],1))
+          PY
+            (cd /tmp/lean-refactor/competition && \
+              python3 arena.py check --name "$NAME" --all-versions --timeout 1800) \
+              > "/tmp/lra-heldout-v2-all/$label.json"
+          done
+      - name: Seal exact all-version proof and bounded two-axis gain
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,pathlib,os
+          root=pathlib.Path('/tmp/lra-heldout-v2-all')
+          required={'v4.33.0-rc2','v4.32.0','v4.31.0','v4.30.0'}
+          def valid(label):
+            r=json.loads((root/(label+'.json')).read_text())
+            pv=r.get('per_version') or []
+            c=r.get('compat') or {}
+            assert r.get('compiled') is True and r.get('statement_ok') is True
+            assert r.get('eligible') is True and not r.get('forbidden') and not r.get('extra_toplevel_decls') and not r.get('untested')
+            assert r.get('all_versions') is not False and r.get('survival_pct')==100.0
+            assert set(c)==required and all(c[v] is True for v in required)
+            assert len(pv)==4 and {v.get('version') for v in pv}==required
+            assert all(v.get('tested') is True and v.get('ok') is True for v in pv)
+            return r
+          control=valid('heldout_v2_exact_source_423')
+          winner=valid('heldout_v2_eval_only_all')
+          assert (control['length'],control['heartbeats'])==(423,1786)
+          assert (winner['length'],winner['heartbeats'])==(426,1703)
+          score=lambda z:round((1-z['length']/control['length'])*100,2)+round((1-z['heartbeats']/control['heartbeats'])*100,2)
+          assert score(winner)>0
+          out={'schema':'mathgraph.lra.heldout-bind-v2-all-version.v1',
+            'status':'WARRANTED_ALL_FOUR_VERSION_HELDOUT__NOT_LEADERBOARD',
+            'source':json.loads((root/'source.json').read_text()),
+            'reference':{'tokens':control['length'],'heartbeats':control['heartbeats']},
+            'winner':{'tokens':winner['length'],'heartbeats':winner['heartbeats'],
+                      'relative_two_axis_pct':score(winner)},
+            'full_required_versions_verified':sorted(required),
+            'official_competition_submission':False,
+            'portfolio_mutated':False,
+            'scope':'Extra theorem outside 15, verifies only this source-local simplifier interface'}
+          (root/'qualification.json').write_text(json.dumps(out,indent=2)+'\n')
+          print(json.dumps(out,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-heldout-v2-four-version
+          path: /tmp/lra-heldout-v2-all
