@@ -1,0 +1,80 @@
+name: Lean Refactor Arena generic observational consequence router
+on:
+  workflow_dispatch:
+  push:
+    branches: ['competition/lra-observational-consequence-compiler-v1']
+    paths:
+      - 'competitions/lean_refactor_arena/strategy_hints.py'
+      - 'competitions/lean_refactor_arena/strategy_bank_v1.json'
+      - 'competitions/lean_refactor_arena/tests/test_observational_consequence_router.py'
+      - 'competitions/lean_refactor_arena/evidence/observational_consequence_transport_v1.json'
+      - '.github/workflows/lean-refactor-arena-observational-router.yml'
+permissions:
+  contents: read
+jobs:
+  test-and-route:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test generic semantics without external Lean execution
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s competitions/lean_refactor_arena/tests \
+            -p test_observational_consequence_router.py -v
+          python3 -m py_compile competitions/lean_refactor_arena/strategy_hints.py
+          python3 -m json.tool competitions/lean_refactor_arena/strategy_bank_v1.json > /dev/null
+          python3 -m json.tool competitions/lean_refactor_arena/evidence/observational_consequence_transport_v1.json > /dev/null
+      - name: Freeze and route public statements without including source-specific solutions
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 \
+            https://raw.githubusercontent.com/aurasoph/lean-refactor/7f3a401470d04f70013d293db4253b088ec8a0ae/competition/benchmark_data_warmup.jsonl \
+            -o /tmp/pinned-warmup.jsonl
+          python3 - <<'PY'
+          import collections,json,sys
+          from pathlib import Path
+          sys.path.insert(0,'competitions/lean_refactor_arena')
+          from official_jsonl import load
+          from strategy_hints import route
+          from arena_metrics import proof_length_live
+          b=load(Path('/tmp/pinned-warmup.jsonl'))
+          assert len(b)==15 and len({r['name'] for r in b})==15
+          bank=json.loads(Path('competitions/lean_refactor_arena/strategy_bank_v1.json').read_text())
+          ids={x['id'] for x in bank['strategies']}
+          assert len(ids)==len(bank['strategies'])
+          plans=[]
+          for r in b:
+              hints=route(r)
+              assert 0<=len(hints)<=4
+              assert all(h['strategy'] in ids for h in hints)
+              assert all('reason' in h and h['reason'] for h in hints)
+              assert proof_length_live(r['statement'],r['src'])==int(r['proof_length'])
+              plans.append({'name':r['name'],'source':r.get('source'),
+                            'hint_ids':[h['strategy'] for h in hints],
+                            'frozen_reference_tokens':int(r['proof_length'])})
+          path=Path('/tmp/observational-routed-pinned15.jsonl')
+          path.write_text(''.join(json.dumps(x,ensure_ascii=False)+'\n' for x in plans))
+          stats=collections.Counter(k for x in plans for k in x['hint_ids'])
+          report={'schema':'mathgraph.lra.generic-observation-router.v1',
+            'state':'WARRANTED_ROUTING_REGRESSION_ONLY__NOT_A_PROOF_OR_SCORE',
+            'bench_source_sha':'7f3a401470d04f70013d293db4253b088ec8a0ae',
+            'frozen_problem_count':15,
+            'registered_strategy_count':len(ids),
+            'routed_counts':dict(sorted(stats.items())),
+            'trained_warmup_solutions_in_generic_router':False,
+            'officially_submitted':False}
+          Path('/tmp/observational-route-manifest.json').write_text(json.dumps(report,indent=2)+'\n')
+          print(json.dumps(report,indent=2))
+          print('WARRANTED_OBSERVATIONAL_ROUTER_STABLE_ON_PINNED_PUBLIC_15')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-observational-router-15
+          path: |
+            /tmp/pinned-warmup.jsonl
+            /tmp/observational-routed-pinned15.jsonl
+            /tmp/observational-route-manifest.json
