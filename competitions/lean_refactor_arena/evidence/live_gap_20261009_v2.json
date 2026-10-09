@@ -53,5 +53,93 @@
   "strata_v4": {
     "status": "REJECTED_DOMINATED",
     "authority_run": 37874186039
+  },
+  "score_geometry_20261009": {
+    "status": "DERIVED_FROM_PUBLIC_VERIFIED_COMPARATORS__NOT_NEW_PROOFS",
+    "source": "aurasoph/lean-refactor/runs/trials/* public ledger, compiled=true and survival_pct=100 comparators; objective reduction axes as explicitly published in trial rows",
+    "provenance": "13 of 15 composed portfolio candidate proofs were byte-identical to public all-survival trials at the October 5 composition authority; treat these as baselines, not independently discovered MathGraph advances.",
+    "mathematical_criterion": "For n=15 proofs all with 100% survival, +1 sum-of-two-axes objective point on one problem produces +1/45 ≈ 0.02222 combined portfolio points.",
+    "six": [
+      {
+        "name": "Wick algebra",
+        "public_proof_hash": "6fc5af2e7443",
+        "required_versions": 1,
+        "objective_sum_pct": 97.88,
+        "length_reduction_pct": 53.33,
+        "heartbeat_reduction_pct": 44.55,
+        "remaining_length_axis_theoretical_pct": 46.67,
+        "remaining_heartbeat_axis_theoretical_pct": 55.45,
+        "max_possible_one_axis_gain_pct": 55.45
+      },
+      {
+        "name": "SKI diamond",
+        "public_proof_hash": "183765ced868",
+        "required_versions": 4,
+        "objective_sum_pct": 100.94,
+        "length_reduction_pct": 31.7,
+        "heartbeat_reduction_pct": 69.24,
+        "remaining_length_axis_theoretical_pct": 68.3,
+        "remaining_heartbeat_axis_theoretical_pct": 30.76,
+        "max_possible_one_axis_gain_pct": 68.3
+      },
+      {
+        "name": "Strata substOldPostSubset",
+        "public_proof_hash": "886b8667be4e",
+        "required_versions": 1,
+        "objective_sum_pct": 112.37,
+        "length_reduction_pct": 39.94,
+        "heartbeat_reduction_pct": 72.43,
+        "remaining_length_axis_theoretical_pct": 60.06,
+        "remaining_heartbeat_axis_theoretical_pct": 27.57,
+        "max_possible_one_axis_gain_pct": 60.06
+      },
+      {
+        "name": "Typing.progress",
+        "public_proof_hash": "f111ef225a85",
+        "required_versions": 3,
+        "objective_sum_pct": 113.26,
+        "length_reduction_pct": 16.91,
+        "heartbeat_reduction_pct": 96.35,
+        "remaining_length_axis_theoretical_pct": 83.09,
+        "remaining_heartbeat_axis_theoretical_pct": 3.65,
+        "max_possible_one_axis_gain_pct": 83.09
+      },
+      {
+        "name": "Electromagnetism",
+        "public_proof_hash": "65c0a73bf0cd",
+        "required_versions": 1,
+        "objective_sum_pct": 120.75,
+        "length_reduction_pct": 58.67,
+        "heartbeat_reduction_pct": 62.08,
+        "remaining_length_axis_theoretical_pct": 41.33,
+        "remaining_heartbeat_axis_theoretical_pct": 37.92,
+        "max_possible_one_axis_gain_pct": 41.33
+      },
+      {
+        "name": "Fiberwise decoding",
+        "public_proof_hash": "6ff578bb6cee",
+        "required_versions": 4,
+        "objective_sum_pct": 129.55,
+        "length_reduction_pct": 69.99,
+        "heartbeat_reduction_pct": 59.56,
+        "remaining_length_axis_theoretical_pct": 30.01,
+        "remaining_heartbeat_axis_theoretical_pct": 40.44,
+        "max_possible_one_axis_gain_pct": 40.44
+      }
+    ],
+    "six_objective_sum": 674.75,
+    "six_objective_mean": 112.45833333333333,
+    "six_max_theoretical_total_gain": 525.25,
+    "one_axis_per_problem_theoretical_gain_ceiling": 348.67,
+    "gap_required_to_tie_current_leader": 343.8195,
+    "single_axis_per_problem_ceiling_margin": 4.8505,
+    "largest_three_lowest_scoring_target_theoretical_gain_ceiling": 288.81,
+    "deduction": "If only the six weak targets change, gains on at least four are mathematically necessary even at impossible perfect-axis limits. The one-axis-per-target best-case total is only 4.85 objective points above the 343.82 required, so optimizing one axis alone is not a credible strategy. Favor structural proof substitutions that jointly improve length and heartbeats, or cheap gains on any of the other nine proofs. Typing has nearly saturated heartbeat savings (96.35%) and needs large length reduction; SKI and Strata also primarily need length; Wick and Electromagnetism need both; Fiberwise has more heartbeat than length headroom.",
+    "cost_sanity": "Seven one-lemma deletions of the 568-token public Wick proof are diagnostic probes, not plausibly enough to close a 343.82-point objective deficit.",
+    "active_tests": [
+      37886299555,
+      37886045009
+    ],
+    "promotion_boundary": "Statement intact, compiled, no forbidden constructs or extra declarations, all required Lean versions, comparable official objective gain, then recompute 15-target score."
   }
 }
