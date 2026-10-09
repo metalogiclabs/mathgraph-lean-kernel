@@ -275,5 +275,42 @@
     ],
     "endpoint": "verify_and_submit",
     "note": "Do not submit with invented username/track or expose existing submission key in public GitHub Actions. A proof JSONL upload must first be verified and the user-specific account boundary resolved."
+  },
+  "strict_15_proof_full_version_composition_20261009": {
+    "status": "WARRANTED_COMPOSED_VERSION_COMPATIBILITY__NOT_OFFICIAL_LEADERBOARD",
+    "external_full_version_proof_count": 13,
+    "source_pin": "aurasoph/lean-refactor@7f3a401470d04f70013d293db4253b088ec8a0ae",
+    "audit_path": "competitions/lean_refactor_arena/evidence/retained_exact_full_version_audit_20261009_v1.json",
+    "audit_commit": "ebd7ac8bbdb17ba765f2060193cdcce50d2624e5",
+    "independent_core": {
+      "run": 37889600290,
+      "required_versions": 3,
+      "tested_versions": 3,
+      "objective": 154.77,
+      "status": "WARRANTED_ALL_VERSIONS"
+    },
+    "independent_wick": {
+      "run": 37887798992,
+      "retained_primary_replay": 37889600265,
+      "required_versions": 1,
+      "objective": 118,
+      "status": "WARRANTED_ALL_VERSIONS"
+    },
+    "portfolio_preflight": 37889600282,
+    "combined_composed_estimate": 82.1867,
+    "official_leaderboard_submission": "NOT_SUBMITTED",
+    "critical_correction": "Do not accept public survival_pct 100 unless exact trial all_versions=true AND every required Lean version appears true in compat; strict audit established 13 valid externally warrantable trials."
+  },
+  "wick_outer_ablation_20261009": {
+    "status": "REJECTED_BOUNDED_NO_GAIN",
+    "authority_run": 37889920835,
+    "proof_control": {
+      "length": 606,
+      "heartbeats": 13656,
+      "objective": 118
+    },
+    "variants": 8,
+    "compiled": 3,
+    "objective_gain": 0
   }
 }
