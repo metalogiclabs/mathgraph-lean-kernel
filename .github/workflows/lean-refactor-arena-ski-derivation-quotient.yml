@@ -1,10 +1,10 @@
-name: Lean Refactor Arena SKI derivation quotient
+name: Lean Refactor Arena SKI term-relative induction V2
 on:
   workflow_dispatch:
   push:
     branches: ['competition/lra-ski-derivation-quotient-v1']
     paths:
-      - 'competitions/lean_refactor_arena/experiments/ski_derivation_quotient_v1.jsonl'
+      - 'competitions/lean_refactor_arena/experiments/ski_term_induction_v2.jsonl'
       - '.github/workflows/lean-refactor-arena-ski-derivation-quotient.yml'
 concurrency:
   group: lra-ski-derivation-quotient
@@ -31,7 +31,7 @@ jobs:
       TARGET_MODULE: ${{ matrix.module }}
       REQUIRED_PROJECTS: ${{ matrix.required }}
       ROOT: competitions/lean_refactor_arena
-      BANK: competitions/lean_refactor_arena/experiments/ski_derivation_quotient_v1.jsonl
+      BANK: competitions/lean_refactor_arena/experiments/ski_term_induction_v2.jsonl
     steps:
       - uses: actions/checkout@v4
       - name: Fail-closed candidate source and theorem boundary
@@ -45,7 +45,7 @@ jobs:
           rows=[json.loads(x) for x in portfolio.read_text().splitlines() if x.strip()]
           assert len(rows)==len({r['name'] for r in rows})==15
           bank=[json.loads(x) for x in Path(os.environ['BANK']).read_text().splitlines() if x.strip()]
-          assert len(bank)==11 and len({(r['name'],r['label']) for r in bank})==11
+          assert len(bank)==9 and len({(r['name'],r['label']) for r in bank})==9
           sources={r['name']:r['proof'] for r in rows}
           names={'Cslib.SKI.parallelReduction_diamond'}
           assert {r['name'] for r in bank}==names
