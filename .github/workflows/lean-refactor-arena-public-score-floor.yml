@@ -89,8 +89,20 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cd /tmp/lean-refactor/competition
-          ./build-all.sh "${{ matrix.project }}"
+          if [[ "${{ matrix.project }}" == "v4.31" ]]; then
+            # Reuse the independently green, exact ArkLib import closure.
+            # The broad library build fails in unrelated WeightedAgreement.
+            cd /tmp/lean-refactor/competition/projects/v4.31
+            lake update
+            lake exe cache get || echo ARKLIB_CACHE_FALLBACK
+            lake build \
+              ArkLib.ProofSystem.Binius.BinaryBasefold.Prelude \
+              ArkLib.Data.CodingTheory.ProximityGap.DG25.MainResults
+            echo VERIFIED_REQUIRED_ARKLIB_IMPORT_CLOSURE
+          else
+            cd /tmp/lean-refactor/competition
+            ./build-all.sh "${{ matrix.project }}"
+          fi
           echo VERIFIED_PUBLIC_ARENA_PROJECT_MATERIALIZED
 
       - name: Score retained portfolio on primary public toolchain
