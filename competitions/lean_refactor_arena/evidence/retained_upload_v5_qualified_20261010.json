@@ -1,0 +1,62 @@
+{
+  "schema": "mathgraph.lean-refactor-arena.retained-upload-v5-qualified.v1",
+  "status": "WARRANTED_EXACT_15_PACKET_FORMAT_AND_COMPOSED_VERSION_LINEAGE__NOT_OFFICIAL_SCORE",
+  "observed_on": "2026-10-10",
+  "source_pin": "aurasoph/lean-refactor@7f3a401470d04f70013d293db4253b088ec8a0ae",
+  "authority": {
+    "run": 37975304036,
+    "job": 113971982514,
+    "workflow": "Lean Refactor Arena retained upload qualification",
+    "verified_marker": "VERIFIED_EXACT_RETAINED_15_ROW_UPLOAD",
+    "conclusion": "success"
+  },
+  "proofs": 15,
+  "source": "competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl",
+  "source_portfolio_git_blob_sha": "865c6afe6e4443117220bec601a9264aaeee602a",
+  "packet_path": "competitions/lean_refactor_arena/submissions/mathgraph_verified_15_warmup_20261009.jsonl",
+  "packet_git_blob_sha": "c5fbe258fc8dbf880deb4bb83258d750ef013113",
+  "generated_upload_sha256": "59240c11d7a425a92f89f359563efa93087be94c851c3a15aac0c83857b13510",
+  "generated_upload_bytes": 27494,
+  "strict_audit": "competitions/lean_refactor_arena/evidence/retained_exact_full_version_audit_20261010_v5.json",
+  "version_evidence": {
+    "external_exact_full_version_witnesses": 10,
+    "independent_required_version_witnesses": 5
+  },
+  "frontier": {
+    "Wick": {
+      "objective": 126.86,
+      "tokens": 555,
+      "heartbeat": 11678
+    },
+    "Electromagnetism": {
+      "objective": 121.04,
+      "tokens": 566,
+      "heartbeat": 10499
+    },
+    "Strata": {
+      "objective": 115.06,
+      "tokens": 132,
+      "heartbeat": 2217
+    },
+    "Typing": {
+      "objective": 120.03,
+      "tokens": 308,
+      "heartbeat": 2697
+    }
+  },
+  "score_projection": {
+    "status": "CANDIDATE_COMPOSED_NOT_OFFICIAL",
+    "objective_sum": 2217.01,
+    "combined_pct_if_all_survival": 82.6002,
+    "recorded_leader_pct": 89.38,
+    "combined_gap_to_recorded_leader": 6.7798,
+    "objective_debt_to_tie": 305.09
+  },
+  "authority_boundary": "A successful 15-row format/recorded lineage qualification is not a fresh all-version compilation, an official submission, or a leaderboard rank.",
+  "transition": [
+    "Strata and Typing only were requalified and substituted by exact proof bytes",
+    "all 13 other previous compatible proof witnesses are preserved",
+    "upload packet generated without reference fallbacks"
+  ],
+  "official_submission": "NOT_SUBMITTED"
+}
