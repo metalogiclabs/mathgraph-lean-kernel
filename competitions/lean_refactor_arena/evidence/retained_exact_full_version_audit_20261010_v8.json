@@ -1,0 +1,446 @@
+{
+  "schema": "mathgraph.lra.retained-proof-exact-version-audit.v8",
+  "state": "WARRANTED_COMPOSED_PINNED_VERSIONS__NOT_OFFICIAL_ARENA_SUBMISSION",
+  "observed_on": "2026-10-10",
+  "source_repo": "aurasoph/lean-refactor",
+  "source_sha": "7f3a401470d04f70013d293db4253b088ec8a0ae",
+  "portfolio_path": "competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl",
+  "portfolio_blob_sha": "35b19d6505a65773ac37753f9b579580d2d901f4",
+  "previous_audit_path": "competitions/lean_refactor_arena/evidence/retained_exact_full_version_audit_20261010_v7.json",
+  "previous_audit_portfolio_blob": "8886202155e36ebbd04bf1b00b4dcc0bc3674e2f",
+  "protected_evidence_rule": "Full-version public trials only when all_versions=true and every benchmark required compat version is true, and exact proof bytes match. Independent proof evidence uses identical pinned source statement and every required version. Numerical score is separate from admission.",
+  "change_fingerprint": {
+    "kind": "Verified Gauss-law functional-observation consequence transport",
+    "changed_theorems": [
+      "Electromagnetism.ElectromagneticPotential.time_deriv_time_deriv_electricField_of_isExtrema"
+    ],
+    "preserved_proof_rows_from_v7": 14,
+    "source_runs": [
+      37985510361
+    ],
+    "old_portfolio_blob": "8886202155e36ebbd04bf1b00b4dcc0bc3674e2f",
+    "new_portfolio_blob": "35b19d6505a65773ac37753f9b579580d2d901f4",
+    "new_proof_label": "congrarg_inferred",
+    "verified_version": "v4.32.0",
+    "construction": "Apply congrArg to Gauss-law function equality and normalize only both derivative displays"
+  },
+  "comparator_full_version_exact_count": 10,
+  "independently_qualified_count": 5,
+  "total_authorized_by_prior_evidence": 15,
+  "independently_qualified": [
+    {
+      "name": "Core.InitsUpdatesComm",
+      "run": 37889600290,
+      "qualification": "3/3 required versions positive, proof bytes retained"
+    },
+    {
+      "name": "Electromagnetism.ElectromagneticPotential.time_deriv_time_deriv_electricField_of_isExtrema",
+      "run": 37985510361,
+      "qualification": "v4.32.0 1/1 independently replayed; exact 551 tokens /10403 heartbeats /122.47 objective"
+    },
+    {
+      "name": "FieldSpecification.WickAlgebra.ι_timeOrderF_superCommuteF_eq_time",
+      "run": 37898753536,
+      "qualification": "1/1 v4.32 positive, 555 tokens/11678 heartbeats, objective 126.86, source SHA256 e99ed1ddd30a6b7041d2268e5b686578fe116f364aed4970ca2d7bc4f7fbe43e"
+    },
+    {
+      "name": "CallElimCorrect.substOldPostSubset",
+      "run": 37980654973,
+      "qualification": "v4.26.0 1/1 exact proof; 135 tokens/1890 heartbeats/objective120.41"
+    },
+    {
+      "name": "Cslib.LambdaCalculus.LocallyNameless.Fsub.Typing.progress",
+      "run": 37973211833,
+      "qualification": "v4.33.0-rc2/v4.32.0/v4.31.0 3/3 verified; 308 tokens/2697 heartbeats/objective 120.03"
+    }
+  ],
+  "score_not_official": true,
+  "records": [
+    {
+      "name": "CallElimCorrect.substOldPostSubset",
+      "label": "warranted_strata_tail_simp_grind_135",
+      "required_versions": [
+        "v4.26.0"
+      ],
+      "matches_pinned_public_full_test": false,
+      "public_hash": null,
+      "public_compat": null,
+      "evidence_status": "WARRANTED_INDEPENDENT_EXACT_REQUIRED_VERSION",
+      "independent_run": 37980654973,
+      "compat": {
+        "v4.26.0": true
+      },
+      "independent_authority": {
+        "run": 37980654973,
+        "job": 113990516584,
+        "required_versions_verified": [
+          "v4.26.0"
+        ],
+        "workflow": "Lean Refactor Arena Strata structural consequence crossover",
+        "proof_label": "tail_simp_grind_lean",
+        "all_required_versions_positive": true
+      },
+      "measured_objective_sum_pct": 120.41
+    },
+    {
+      "name": "CallElimCorrect.extractedOldExprInVars",
+      "label": "warranted_witness_44",
+      "required_versions": [
+        "v4.26.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "d2aa22236a16",
+      "public_compat": {
+        "v4.26.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION"
+    },
+    {
+      "name": "Core.InitsUpdatesComm",
+      "label": "public_informed_semantic_reconstruction_87",
+      "required_versions": [
+        "v4.29.1",
+        "v4.27.0",
+        "v4.26.0"
+      ],
+      "matches_pinned_public_full_test": false,
+      "public_hash": null,
+      "public_compat": null,
+      "evidence_status": "WARRANTED_INDEPENDENT_EXACT_REQUIRED_VERSION",
+      "independent_authority": {
+        "run": 37889600290,
+        "required_versions_verified": [
+          "v4.29.1",
+          "v4.27.0",
+          "v4.26.0"
+        ]
+      }
+    },
+    {
+      "name": "fundamental_theorem_of_variational_calculus'",
+      "label": "public_informed_separating_witness_171",
+      "required_versions": [
+        "v4.32.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "0322486625ed",
+      "public_compat": {
+        "v4.32.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION"
+    },
+    {
+      "name": "Electromagnetism.ElectromagneticPotential.time_deriv_time_deriv_electricField_of_isExtrema",
+      "label": "warranted_em_gauss_derivative_congrarg_551",
+      "required_versions": [
+        "v4.32.0"
+      ],
+      "matches_pinned_public_full_test": false,
+      "public_hash": null,
+      "public_compat": null,
+      "evidence_status": "WARRANTED_INDEPENDENT_EXACT_REQUIRED_VERSION",
+      "independent_authority": {
+        "run": 37985510361,
+        "job": 114006384538,
+        "workflow": "Lean Refactor Arena EM Gauss-derivative consequence",
+        "required_versions_verified": [
+          "v4.32.0"
+        ],
+        "source_candidate_label": "congrarg_inferred",
+        "source_bank": "competitions/lean_refactor_arena/experiments/em_derivative_consequence_v1.jsonl",
+        "source_branch": "competition/lra-em-consequence-derivative-v1",
+        "source_commit": "20b10c5379043956307bd651e3bcdaef1cc7ce9f",
+        "measured": {
+          "tokens": 551,
+          "heartbeats": 10403,
+          "objective_sum_pct": 122.47
+        },
+        "prior_warrant_run": 37896523425
+      },
+      "independent_run": 37985510361,
+      "compat": {
+        "v4.32.0": true
+      },
+      "measured_objective_sum_pct": 122.47
+    },
+    {
+      "name": "FieldSpecification.WickAlgebra.ι_timeOrderF_superCommuteF_eq_time",
+      "label": "warranted_wick_bilinear_terminal_555",
+      "required_versions": [
+        "v4.32.0"
+      ],
+      "matches_pinned_public_full_test": false,
+      "public_hash": null,
+      "public_compat": null,
+      "evidence_status": "WARRANTED_INDEPENDENT_EXACT_REQUIRED_VERSION",
+      "independent_authority": {
+        "run": 37887798992,
+        "required_versions_verified": [
+          "v4.32.0"
+        ]
+      },
+      "independent_run": 37898753536,
+      "compat": {
+        "v4.32.0": true
+      },
+      "measured_objective_sum_pct": 126.86
+    },
+    {
+      "name": "Cslib.LambdaCalculus.LocallyNameless.Fsub.Typing.progress",
+      "label": "warranted_typing_movable_tli_grind_308",
+      "required_versions": [
+        "v4.33.0-rc2",
+        "v4.32.0",
+        "v4.31.0"
+      ],
+      "matches_pinned_public_full_test": false,
+      "public_hash": null,
+      "public_compat": null,
+      "evidence_status": "WARRANTED_INDEPENDENT_EXACT_REQUIRED_VERSION",
+      "independent_run": 37973211833,
+      "compat": {
+        "v4.33.0-rc2": true,
+        "v4.32.0": true,
+        "v4.31.0": true
+      },
+      "measured_objective_sum_pct": 120.03,
+      "independent_authority": {
+        "run": 37973211833,
+        "required_versions_verified": [
+          "v4.33.0-rc2",
+          "v4.32.0",
+          "v4.31.0"
+        ]
+      }
+    },
+    {
+      "name": "Cslib.SKI.parallelReduction_diamond",
+      "label": "public_informed_derivation_278",
+      "required_versions": [
+        "v4.33.0-rc2",
+        "v4.32.0",
+        "v4.31.0",
+        "v4.30.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "183765ced868",
+      "public_compat": {
+        "v4.33.0-rc2": true,
+        "v4.32.0": true,
+        "v4.31.0": true,
+        "v4.30.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION"
+    },
+    {
+      "name": "Cslib.CCS.bisimilarity_congr_choice",
+      "label": "public_informed_derivation_85",
+      "required_versions": [
+        "v4.33.0-rc2",
+        "v4.32.0",
+        "v4.31.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "3b5c96c77fc7",
+      "public_compat": {
+        "v4.33.0-rc2": true,
+        "v4.32.0": true,
+        "v4.31.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION"
+    },
+    {
+      "name": "Binius.BinaryBasefold.fiberwise_dist_lt_imp_dist_lt_unique_decoding_radius",
+      "label": "public_informed_local_factor_439",
+      "required_versions": [
+        "v4.31.0",
+        "v4.30.0",
+        "v4.29.0",
+        "v4.28.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "6ff578bb6cee",
+      "public_compat": {
+        "v4.31.0": true,
+        "v4.30.0": true,
+        "v4.29.0": true,
+        "v4.28.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION"
+    },
+    {
+      "name": "Binius.BinaryBasefold.fold_advances_evaluation_poly",
+      "label": "public_informed_local_factor_388",
+      "required_versions": [
+        "v4.31.0",
+        "v4.30.0",
+        "v4.29.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "f5667fc1e5b9",
+      "public_compat": {
+        "v4.31.0": true,
+        "v4.30.0": true,
+        "v4.29.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION"
+    },
+    {
+      "name": "interleaved_affine_gaps_imply_tensor_gaps",
+      "label": "public_informed_recursive_form_173",
+      "required_versions": [
+        "v4.31.0",
+        "v4.30.0",
+        "v4.29.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "fe4c6fa1984f",
+      "public_compat": {
+        "v4.31.0": true,
+        "v4.30.0": true,
+        "v4.29.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION"
+    },
+    {
+      "name": "putnam_1964_a4",
+      "label": "public_informed_minimal_state_291",
+      "required_versions": [
+        "v4.25.0",
+        "v4.26.0",
+        "v4.27.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "6801603b11c9",
+      "public_compat": {
+        "v4.25.0": true,
+        "v4.26.0": true,
+        "v4.27.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION"
+    },
+    {
+      "name": "putnam_1964_b2",
+      "label": "public_all_versions_d9377ebbc1d6",
+      "required_versions": [
+        "v4.25.0",
+        "v4.26.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "d9377ebbc1d6",
+      "public_compat": {
+        "v4.25.0": true,
+        "v4.26.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION"
+    },
+    {
+      "name": "putnam_1995_a3",
+      "label": "public_informed_digit_replace_414",
+      "required_versions": [
+        "v4.25.0",
+        "v4.26.0",
+        "v4.27.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "70b336d1cc35",
+      "public_compat": {
+        "v4.25.0": true,
+        "v4.26.0": true,
+        "v4.27.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION"
+    }
+  ],
+  "current_portfolio_blob_sha": "35b19d6505a65773ac37753f9b579580d2d901f4",
+  "current_packet": {
+    "path": "competitions/lean_refactor_arena/submissions/mathgraph_verified_15_warmup_20261009.jsonl",
+    "git_blob_sha": "e7ba8515d9ed2c0d2b0bbe8fd501758f95c312cb",
+    "rows": 15,
+    "status": "BOUND_TO_EXACT_PROOFS__PENDING_FRESH_V8_REPLAY",
+    "sha256": null
+  },
+  "active_verified_em_frontier": [
+    {
+      "label": "em_terminal_field_simp_only",
+      "tokens": 565,
+      "heartbeats": 10556,
+      "objective": 120.9,
+      "selected": false
+    },
+    {
+      "label": "em_compose_hcross_terminal_v1",
+      "tokens": 566,
+      "heartbeats": 10499,
+      "objective": 121.04,
+      "selected": true
+    }
+  ],
+  "dominated_historical_em_candidate": {
+    "label": "em_hcross_simp",
+    "tokens": 568,
+    "heartbeats": 10499,
+    "objective": 120.89,
+    "dominated_by": "em_compose_hcross_terminal_v1",
+    "verification_run": 37891035688
+  },
+  "warranted_frontier": {
+    "Wick": {
+      "label": "warranted_wick_bilinear_terminal_555",
+      "proof_blob_sha": "83b3dd4d2c233e73ea026c8fbacfe77a48887142",
+      "source_sha256": "e99ed1ddd30a6b7041d2268e5b686578fe116f364aed4970ca2d7bc4f7fbe43e",
+      "run": 37898753536,
+      "length": 555,
+      "heartbeats": 11678,
+      "objective": 126.86
+    },
+    "Typing": {
+      "label": "warranted_typing_movable_tli_grind_308",
+      "run": 37973211833,
+      "length": 308,
+      "heartbeats": 2697,
+      "objective": 120.03
+    },
+    "Strata": {
+      "label": "warranted_strata_tail_simp_grind_135",
+      "run": 37980654973,
+      "length": 135,
+      "heartbeats": 1890,
+      "objective": 120.41
+    },
+    "Electromagnetism": {
+      "label": "warranted_em_gauss_derivative_congrarg_551",
+      "run": 37985510361,
+      "length": 551,
+      "heartbeats": 10403,
+      "objective": 122.47
+    }
+  },
+  "targeted_reclosure_CI": {
+    "historical_v7_run": 37985044213,
+    "v7_main_upload_qualification": 37986043309,
+    "fresh_packet_validation": "PENDING_V8_EXACT_REPLAY",
+    "unchanged_other_proofs": 14
+  },
+  "protected_future_invariant": "Every theorem statement and exact protected version unchanged; only EM proof differs from V7; 14 other proof strings byte-identical and prior authority preserved. Scores remain conditional, not an official rank.",
+  "current_version_alias": "v8 one EM Gauss-law derivative consequence transport",
+  "projected_score": {
+    "objective_sum_total": 2223.79,
+    "combined_pct_if_full_survival": 82.7509,
+    "recorded_leader": 89.38,
+    "combined_gap": 6.6291,
+    "objective_debt_to_tie": 298.31,
+    "status": "PROJECTED__NOT_OFFICIALLY_SUBMITTED"
+  },
+  "promotion_boundary": {
+    "status": "PENDING_FRESH_V8_EXACT_15_PROOF_REPLAY",
+    "changed_target": "Electromagnetism.ElectromagneticPotential.time_deriv_time_deriv_electricField_of_isExtrema",
+    "changed_source_run": 37985510361,
+    "required_versions": [
+      "v4.32.0"
+    ],
+    "measured_objective": 122.47,
+    "other_proof_records": "Fourteen byte-identical inherited V7 proof records with preserved external version authorities",
+    "official_submission": false
+  }
+}
