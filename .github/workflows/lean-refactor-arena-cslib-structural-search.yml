@@ -65,9 +65,9 @@ jobs:
           import json,pathlib
           p=pathlib.Path('competitions/lean_refactor_arena/experiments/typing_grind_residual_repair_v1.jsonl')
           row=next(x for x in map(json.loads,p.read_text().splitlines()) if x['label']=='typing_compact_failed_219')
-          token='  all_goals grind only ['
+          token='\n  all_goals grind only [→ wf'
           assert row['proof'].count(token)==1
-          row['proof']=row['proof'].replace(token,'  trace_state\n'+token,1)
+          row['proof']=row['proof'].replace(token,'\n  trace_state'+token,1)
           pathlib.Path('/tmp/typing-goal.jsonl').write_text(json.dumps(row,ensure_ascii=False)+'\n')
           PY
           python3 competitions/lean_refactor_arena/public_harness_bridge.py \
