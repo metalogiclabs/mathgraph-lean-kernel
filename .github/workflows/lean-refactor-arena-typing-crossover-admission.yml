@@ -34,7 +34,15 @@ jobs:
           git -C /tmp/lean-refactor checkout --detach FETCH_HEAD
           git -C /tmp/lean-refactor sparse-checkout set competition
           test "$(git -C /tmp/lean-refactor rev-parse HEAD)" = "$PUBLIC_REPO_SHA"
-          (cd /tmp/lean-refactor/competition && ./build-all.sh v4.33 v4.32 v4.31)
+          echo "=== Build exact Typing theorem dependencies only ==="
+          for project in v4.33 v4.32 v4.31; do
+            echo "TYPING_REQUIRED_VERSION=$project"
+            cd "/tmp/lean-refactor/competition/projects/$project"
+            lake update
+            lake exe cache get || echo "TYPING_CACHE_FALLBACK_SOURCE_BUILD=$project"
+            lake build Cslib.Languages.LambdaCalculus.LocallyNameless.Fsub.Safety
+          done
+          echo VERIFIED_TYPING_REQUIRED_MODULES_ONLY_ALL_PROTECTED_VERSIONS
       - name: Verify selected crossover on all required Lean versions
         shell: bash
         run: |
@@ -55,7 +63,12 @@ jobs:
           assert d.get('compiled') and d.get('statement_ok') and d.get('eligible'),d
           assert not d.get('forbidden') and not d.get('extra_toplevel_decls'),d
           assert d.get('survival_pct')==100,d
-          assert len(d.get('compat') or {})==3 and all((d.get('compat') or {}).values()),d
+          required={'v4.33.0-rc2','v4.32.0','v4.31.0'}
+          compat=d.get('compat') or {}
+          pv=d.get('per_version') or []
+          assert set(compat)==required and all(compat[v] is True for v in required),d
+          assert len(pv)==3 and {r.get('version') for r in pv}==required,d
+          assert all(r.get('tested') is True and r.get('ok') is True for r in pv),d
           assert not d.get('untested'),d
           assert float(d.get('objective_sum_pct') or 0)>113.26,d
           print('WARRANTED_ALL_THREE_VERSIONS_TYPING_CROSSOVER')
