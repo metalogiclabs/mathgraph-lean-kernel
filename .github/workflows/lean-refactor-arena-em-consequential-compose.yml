@@ -1,0 +1,112 @@
+name: Lean Refactor Arena EM consequential compose
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'competition/lean-refactor-arena-track1'
+    paths:
+      - '.github/workflows/lean-refactor-arena-em-consequential-compose.yml'
+      - 'competitions/lean_refactor_arena/experiments/em_minimal_frontier_compose_v1.jsonl'
+concurrency:
+  group: lra-em-consequential-compose
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  compare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    env:
+      PUBLIC_REPO_SHA: 7f3a401470d04f70013d293db4253b088ec8a0ae
+      EM_NAME: Electromagnetism.ElectromagneticPotential.time_deriv_time_deriv_electricField_of_isExtrema
+      EM_BANK: competitions/lean_refactor_arena/experiments/em_minimal_frontier_compose_v1.jsonl
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prove minimal source transport before compiling
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib
+          rows=[json.loads(s) for s in pathlib.Path(os.environ['EM_BANK']).read_text().splitlines() if s.strip()]
+          assert len(rows)==3 and len({r['label'] for r in rows})==3
+          assert len({r['name'] for r in rows})==1 and rows[0]['name']==os.environ['EM_NAME']
+          a,b,c=(r['proof'] for r in rows)
+          old='  rw [hcross, FreeSpace.c_sq]'
+          new='  simp only [hcross, FreeSpace.c_sq]'
+          assert a.count(old)==1 and c==a.replace(old,new)
+          assert b.count(new)==1 and b.endswith('\n  <;> ring')
+          assert c==b[:-len('\n  <;> ring')]
+          assert a.split(' := by\n',1)[0]==c.split(' := by\n',1)[0]
+          from pathlib import Path
+          portfolio=[json.loads(s) for s in Path('competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl').read_text().splitlines() if s.strip()]
+          assert len(portfolio)==15 and next(r for r in portfolio if r['name']==os.environ['EM_NAME'])['proof']==a
+          print('VERIFIED_EXACT_TWO_CONSEQUENCE_TRANSPORT_NOT_YET_LEAN_COMPILED')
+          PY
+      - name: Materialize pinned Physlib v4.32
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.elan/bin:$PATH"
+          git clone --depth=1 --filter=blob:none --sparse https://github.com/aurasoph/lean-refactor.git /tmp/lean-refactor
+          git -C /tmp/lean-refactor fetch --depth=1 origin "$PUBLIC_REPO_SHA"
+          git -C /tmp/lean-refactor checkout --detach FETCH_HEAD
+          git -C /tmp/lean-refactor sparse-checkout set competition
+          test "$(git -C /tmp/lean-refactor rev-parse HEAD)" = "$PUBLIC_REPO_SHA"
+          (cd /tmp/lean-refactor/competition && ./build-all.sh v4.32)
+      - name: Check exact-version control A candidate control B
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > /tmp/em-consequence-composition.jsonl
+          for label in em_selected_verified_565 em_compose_hcross_terminal_v1 em_fast_pareto_verified_568; do
+            echo "CHECK=$label"
+            python3 competitions/lean_refactor_arena/public_harness_bridge.py \
+              --competition /tmp/lean-refactor/competition --project v4.32 \
+              --name "$EM_NAME" --candidate "$EM_BANK" --label "$label"
+            (cd /tmp/lean-refactor/competition && python3 arena.py check --name "$EM_NAME" --all-versions --timeout 1800) \
+              > /tmp/em-consequence-one.json
+            jq -c --arg label "$label" '. + {candidate_label:$label}' /tmp/em-consequence-one.json \
+              >> /tmp/em-consequence-composition.jsonl
+          done
+      - name: Admit only a fully checked improvement
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,pathlib
+          rows=[json.loads(s) for s in pathlib.Path('/tmp/em-consequence-composition.jsonl').read_text().splitlines() if s.strip()]
+          assert [r['candidate_label'] for r in rows]==['em_selected_verified_565','em_compose_hcross_terminal_v1','em_fast_pareto_verified_568']
+          def lawful(r):
+              pv=r.get('per_version') or []
+              return (r.get('compiled') is True and r.get('statement_ok') is True
+                  and r.get('eligible') is True and r.get('compat')=={'v4.32.0':True}
+                  and len(pv)==1 and pv[0].get('version')=='v4.32.0'
+                  and pv[0].get('tested') is True and pv[0].get('ok') is True
+                  and not r.get('untested') and not r.get('forbidden')
+                  and not r.get('extra_toplevel_decls'))
+          assert lawful(rows[0]) and lawful(rows[2]),'CONTROL_MUST_REQUALIFY'
+          control_max=max(float(rows[0]['objective_sum_pct']),float(rows[2]['objective_sum_pct']))
+          cand=rows[1]
+          improved=lawful(cand) and float(cand.get('objective_sum_pct') or 0)>control_max
+          result={'schema':'mathgraph.lra.em.consequence-compose.v1',
+                  'state':'WARRANTED_PRIMARY_GAIN__NOT_PORTFOLIO_PROMOTED' if improved else 'REJECTED_OR_NONDOMINANT_BOUNDED',
+                  'controls':[{'label':r['candidate_label'],'length':r['length'],'heartbeats':r['heartbeats'],'objective_sum_pct':r['objective_sum_pct']} for r in (rows[0],rows[2])],
+                  'candidate':{'label':cand['candidate_label'],'compiled':cand.get('compiled'),
+                        'length':cand.get('length'),'heartbeats':cand.get('heartbeats'),
+                        'objective_sum_pct':cand.get('objective_sum_pct'),'per_version':cand.get('per_version')},
+                  'prospective_objective_gain':round(float(cand.get('objective_sum_pct') or 0)-control_max,3) if improved else 0,
+                  'protected_version':'v4.32.0','leaderboard_submission':'NOT_PERFORMED',
+                  'next':'If qualified and better, select into retained portfolio and exact submission; else keep 565 and fast 568'}
+          pathlib.Path('/tmp/em-consequence-summary.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
+          print(json.dumps(result,ensure_ascii=False,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-em-consequence-compose
+          path: |
+            /tmp/em-consequence-composition.jsonl
+            /tmp/em-consequence-summary.json
