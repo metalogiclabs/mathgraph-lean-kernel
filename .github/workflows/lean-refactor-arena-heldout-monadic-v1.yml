@@ -1,0 +1,147 @@
+name: Lean Refactor Arena heldout CSLib monadic witness qualification
+on:
+  workflow_dispatch:
+  push:
+    branches: ['competition/lra-heldout-monadic-witness-v1']
+    paths:
+      - 'competitions/lean_refactor_arena/experiments/heldout_monadic_witness_v1.jsonl'
+      - '.github/workflows/lean-refactor-arena-heldout-monadic-v1.yml'
+permissions:
+  contents: read
+concurrency:
+  group: lra-heldout-monadic-v1
+  cancel-in-progress: true
+jobs:
+  primary:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      PUBLIC_SHA: 7f3a401470d04f70013d293db4253b088ec8a0ae
+      NAME: CslibTests.runEff_eval_correct
+      CANDIDATES: competitions/lean_refactor_arena/experiments/heldout_monadic_witness_v1.jsonl
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify heldout source identity and scope before compilation
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/lra-heldout-v1
+          curl -fsSL --retry 3 \
+            https://raw.githubusercontent.com/aurasoph/lean-refactor/7f3a401470d04f70013d293db4253b088ec8a0ae/competition/benchmark_data_extra.jsonl \
+            -o /tmp/lra-heldout-v1/benchmark_data_extra.jsonl
+          python3 - <<'PY'
+          import json,hashlib,os,pathlib
+          a=[json.loads(s) for s in pathlib.Path(os.environ['CANDIDATES']).read_text().splitlines() if s.strip()]
+          b=[json.loads(s) for s in pathlib.Path('/tmp/lra-heldout-v1/benchmark_data_extra.jsonl').read_text().splitlines() if s.strip()]
+          assert len(b)==1 and b[0]['name']==os.environ['NAME']
+          assert len(a)==9 and len({x['label'] for x in a})==9
+          assert all(x['name']==os.environ['NAME'] for x in a)
+          assert a[0]['label']=='heldout_exact_423_reference'
+          assert a[0]['proof']==b[0]['src'] and b[0]['proof_length']==423
+          h=b[0]['statement']
+          assert all(x['proof'].startswith(h+' := by\n') for x in a)
+          assert all(not any(s in x['proof'] for s in
+            ['sorry','sorryAx','admit','axiom ','unsafe','native_decide','run_elab','run_cmd']) for x in a)
+          print(json.dumps({'schema':'mathgraph.lra.heldout-exact-source.v1',
+            'state':'CANDIDATE_UNVERIFIED','problem':os.environ['NAME'],
+            'source_sha256':hashlib.sha256(a[0]['proof'].encode()).hexdigest(),
+            'count':len(a),'official_warmup_submission':False},indent=2))
+          PY
+      - name: Materialize only pinned CSLib FreeMonad target module
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.elan/bin:$PATH"
+          git clone --depth=1 --filter=blob:none --sparse \
+            https://github.com/aurasoph/lean-refactor.git /tmp/lean-refactor
+          git -C /tmp/lean-refactor fetch --depth=1 origin "$PUBLIC_SHA"
+          git -C /tmp/lean-refactor checkout --detach FETCH_HEAD
+          git -C /tmp/lean-refactor sparse-checkout set competition
+          test "$(git -C /tmp/lean-refactor rev-parse HEAD)" = "$PUBLIC_SHA"
+          (
+            cd /tmp/lean-refactor/competition/projects/v4.33
+            lake update > /tmp/lra-heldout-v1/lake-update.log 2>&1
+            lake exe cache get > /tmp/lra-heldout-v1/cache.log 2>&1 || echo 'CACHE_FALLBACK'
+            lake build CslibTests.FreeMonad > /tmp/lra-heldout-v1/module.log 2>&1
+          ) || { tail -n 170 /tmp/lra-heldout-v1/module.log; exit 1; }
+          echo VERIFIED_FROZEN_CSLIB_HELDOUT_MODULE_SCOPE
+      - name: Check exact reference and eight structural consequences in pinned v4.33
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.elan/bin:$PATH"
+          : > /tmp/lra-heldout-v1/primary-scores.jsonl
+          python3 - <<'PY' > /tmp/lra-heldout-v1/labels.txt
+          import json,os
+          rows=[json.loads(s) for s in open(os.environ['CANDIDATES']) if s.strip()]
+          for r in rows: print(r['label'])
+          PY
+          while IFS= read -r label; do
+            echo "HELDOUT_EXACT_CANDIDATE=$label"
+            python3 - "$label" <<'PY'
+          import json,os,pathlib,subprocess,sys
+          label=sys.argv[1]
+          comp=pathlib.Path('/tmp/lean-refactor/competition')
+          source=json.loads((comp/'benchmark_data_extra.jsonl').read_text().splitlines()[0])
+          rows=[json.loads(s) for s in pathlib.Path(os.environ['CANDIDATES']).read_text().splitlines() if s.strip()]
+          item=next(x for x in rows if x['label']==label)
+          assert source['name']==item['name']==os.environ['NAME']
+          subprocess.run(['python3','arena.py','prepare','--name',os.environ['NAME'],'--force'],cwd=comp,check=True)
+          work=comp/'projects/v4.33/Arena/CslibTests_runEff_eval_correct.lean'
+          raw=work.read_text()
+          assert raw.count(source['src'])==1,'ORIGINAL_DECLARATION_MISSING'
+          work.write_text(raw.replace(source['src'],item['proof'],1))
+          PY
+            (
+              cd /tmp/lean-refactor/competition
+              python3 arena.py check --name "$NAME" --timeout 1200
+            ) > /tmp/lra-heldout-v1/one.json
+            jq -c --arg label "$label" '. + {candidate_label:$label}' \
+              /tmp/lra-heldout-v1/one.json >> /tmp/lra-heldout-v1/primary-scores.jsonl
+          done < /tmp/lra-heldout-v1/labels.txt
+      - name: Classify exact viable frontier and retain failed proof obligations
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib
+          dest=pathlib.Path('/tmp/lra-heldout-v1')
+          a=[json.loads(s) for s in (dest/'primary-scores.jsonl').read_text().splitlines() if s.strip()]
+          assert len(a)==9 and len({r['candidate_label'] for r in a})==9
+          def valid(r):
+            pv=r.get('per_version') or []
+            return (r.get('compiled') is True and r.get('statement_ok') is True and
+              r.get('eligible') is True and not r.get('forbidden') and
+              not r.get('extra_toplevel_decls') and not r.get('untested') and
+              r.get('compat')=={'v4.33.0-rc2':True} and len(pv)==1 and
+              pv[0].get('tested') is True and pv[0].get('ok') is True)
+          control=next(r for r in a if r['candidate_label']=='heldout_exact_423_reference')
+          assert valid(control),'FROZEN_REFERENCE_FAILED_NOT_A_VALID_EXPERIMENT'
+          m=[r for r in a if valid(r)]
+          def score(r):
+            return round((1-r['length']/control['length'])*100,2) + round((1-r['heartbeats']/control['heartbeats'])*100,2)
+          positive=[r for r in m if r is not control and score(r)>0]
+          positive.sort(key=lambda r:(-score(r),r['length'],r['heartbeats']))
+          result={'schema':'mathgraph.lra.heldout-monadic-semantics.v1',
+            'status':'CANDIDATE_POSITIVE_PRIMARY_HELDOUT__FOUR_VERSION_UNKNOWN' if positive else
+              'REJECTED_BOUNDED_NO_POSITIVE_HELDOUT',
+            'source_pin':os.environ['PUBLIC_SHA'],'theorem':os.environ['NAME'],
+            'control':{'length':control['length'],'heartbeats':control['heartbeats']},
+            'valid': [{'label':r['candidate_label'],'length':r['length'],
+              'heartbeats':r['heartbeats'],'relative_two_axis_pct':score(r)} for r in m],
+            'failed':[{'label':r['candidate_label'],'errors':(r.get('per_version') or [{}])[0].get('errors',[])}
+              for r in a if not valid(r)],
+            'best':positive[0]['candidate_label'] if positive else None,
+            'external_benchmark_score':None,'protected_full_version_check':'UNKNOWN',
+            'portfolio_mutated':False,'official_submission':False,
+            'boundary':'Extra corpus theorem not in official 15; independent four-toolchain replay required for any reuse.'}
+          (dest/'summary.json').write_text(json.dumps(result,indent=2)+'\n')
+          print(json.dumps(result,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-heldout-monadic-v1
+          path: /tmp/lra-heldout-v1
