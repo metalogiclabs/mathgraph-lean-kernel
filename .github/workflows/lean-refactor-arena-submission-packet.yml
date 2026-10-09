@@ -1,0 +1,48 @@
+name: Lean Refactor Arena submission packet preflight
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'competition/lean-refactor-arena-track1'
+    paths:
+      - 'competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl'
+      - 'competitions/lean_refactor_arena/submissions/mathgraph_verified_15_warmup_20261009.jsonl'
+      - '.github/workflows/lean-refactor-arena-submission-packet.yml'
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify submission bytes match retained portfolio
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,hashlib,pathlib
+          base=pathlib.Path('competitions/lean_refactor_arena')
+          src=base/'portfolio/warmup_portfolio_v1.jsonl'
+          pkg=base/'submissions/mathgraph_verified_15_warmup_20261009.jsonl'
+          a=[json.loads(line) for line in src.read_text().splitlines() if line.strip()]
+          b=[json.loads(line) for line in pkg.read_text().splitlines() if line.strip()]
+          assert len(a)==len(b)==15
+          assert len({x['name'] for x in a})==15
+          assert len({x['name'] for x in b})==15
+          assert all(set(row)=={'name','proof'} for row in b)
+          assert [(x['name'],x['proof']) for x in a]==[(x['name'],x['proof']) for x in b]
+          assert all(x['proof'].strip() for x in b)
+          forbidden=('sorry','sorryAx','admit','native_decide','run_cmd')
+          assert not any(any(word in x['proof'] for word in forbidden) for x in b)
+          print(json.dumps({'schema':'mathgraph.lra.submission-packet.v1',
+           'status':'VERIFIED_EXACT_15_PROOF_PACKET',
+           'source':'retained portfolio','submission':str(pkg),
+           'bytes':len(pkg.read_bytes()),'sha256':hashlib.sha256(pkg.read_bytes()).hexdigest(),
+           'rows':len(b),'no_external_submission_executed':True},indent=2))
+          PY
+      - name: Upload audited submission JSONL as CI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mathgraph-lra-15-proof-submission
+          path: competitions/lean_refactor_arena/submissions/mathgraph_verified_15_warmup_20261009.jsonl
