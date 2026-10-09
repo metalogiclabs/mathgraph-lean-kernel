@@ -1,0 +1,80 @@
+name: Lean Refactor Arena ArkLib build diagnosis
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'competition/lean-refactor-arena-track1'
+    paths:
+      - '.github/workflows/lean-refactor-arena-arklib-build-diagnosis.yml'
+concurrency:
+  group: lra-arklib-build-diagnosis
+  cancel-in-progress: true
+jobs:
+  isolate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build pinned ArkLib and capture exact failure
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.elan/bin:$PATH"
+          git clone --depth=1 --filter=blob:none --sparse https://github.com/aurasoph/lean-refactor.git /tmp/lean-refactor
+          git -C /tmp/lean-refactor fetch --depth=1 origin 7f3a401470d04f70013d293db4253b088ec8a0ae
+          git -C /tmp/lean-refactor checkout --detach FETCH_HEAD
+          git -C /tmp/lean-refactor sparse-checkout set competition
+          set +e
+          (cd /tmp/lean-refactor/competition && ./build-all.sh v4.31) > /tmp/arklib-build-summary.log 2>&1
+          code=$?
+          set -e
+          cat /tmp/arklib-build-summary.log
+          echo "ARKLIB_BUILD_EXIT_CODE=$code"
+          echo "=== PINNED ARKLIB BUILD LOG LAST 220 LINES ==="
+          tail -n 220 /tmp/lean-refactor/competition/build-logs/v4.31.log || true
+          if [[ "$code" -ne 0 ]]; then
+            echo "ARKLIB_ENVIRONMENT_BUILD_FAILED__NO_PROOF_SCORE_ATTEMPTED"
+            exit "$code"
+          fi
+          echo VERIFIED_ARKLIB_ENVIRONMENT_V431
+      - name: Score only retained ArkLib proofs
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > /tmp/arklib-scores.jsonl
+          for name in \
+            'Binius.BinaryBasefold.fiberwise_dist_lt_imp_dist_lt_unique_decoding_radius' \
+            'Binius.BinaryBasefold.fold_advances_evaluation_poly' \
+            'interleaved_affine_gaps_imply_tensor_gaps'; do
+            echo "ARKLIB_TARGET=$name"
+            python3 competitions/lean_refactor_arena/public_harness_bridge.py \
+              --competition /tmp/lean-refactor/competition --project v4.31 \
+              --name "$name" --candidate competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl
+            (
+              cd /tmp/lean-refactor/competition
+              python3 arena.py check --name "$name"
+            ) > /tmp/arklib-one.json
+            jq -c . /tmp/arklib-one.json >> /tmp/arklib-scores.jsonl
+          done
+          python3 - <<'PY'
+          import json
+          rows=[json.loads(x) for x in open('/tmp/arklib-scores.jsonl') if x.strip()]
+          assert len(rows)==3
+          for r in rows:
+              assert r.get('compiled') and r.get('statement_ok') and r.get('eligible')
+              assert r.get('survival_pct')==100.0 and not r.get('forbidden') and not r.get('extra_toplevel_decls')
+          print(json.dumps({'status':'WARRANTED_PINNED_V431_PRIMARY',
+              'targets':[{'name':r['name'],'objective':r['objective_sum_pct'],
+                'length':r['length'],'heartbeats':r['heartbeats']} for r in rows]},indent=2))
+          print('VERIFIED_RETAINED_ARKLIB_PRIMARY_3_OF_3')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-arklib-build-diagnosis
+          path: |
+            /tmp/arklib-build-summary.log
+            /tmp/lean-refactor/competition/build-logs/v4.31.log
+            /tmp/arklib-scores.jsonl
