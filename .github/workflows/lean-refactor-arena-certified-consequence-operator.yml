@@ -1,0 +1,58 @@
+name: Lean Refactor Arena certified consequence operator
+on:
+  workflow_dispatch:
+  push:
+    branches: ['competition/lra-certified-consequence-compiler-v1']
+    paths:
+      - 'competitions/lean_refactor_arena/certified_consequence_compiler.py'
+      - 'competitions/lean_refactor_arena/capabilities/consequence_operator_registry_v1.jsonl'
+      - 'competitions/lean_refactor_arena/capabilities/reference_em_gauss_derivative_v7.jsonl'
+      - 'competitions/lean_refactor_arena/tests/test_certified_consequence_compiler.py'
+      - '.github/workflows/lean-refactor-arena-certified-consequence-operator.yml'
+permissions:
+  contents: read
+concurrency:
+  group: lra-certified-consequence-operator
+  cancel-in-progress: true
+jobs:
+  run:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify proof guard invariants and decline semantics
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover \
+            -s competitions/lean_refactor_arena/tests \
+            -p 'test_certified_consequence_compiler.py' -v
+          python3 -m py_compile \
+            competitions/lean_refactor_arena/certified_consequence_compiler.py
+      - name: Generate bounded candidate without inheriting future certificate
+        run: |
+          set -euo pipefail
+          python3 competitions/lean_refactor_arena/certified_consequence_compiler.py \
+            --sources competitions/lean_refactor_arena/capabilities/reference_em_gauss_derivative_v7.jsonl \
+            --operators competitions/lean_refactor_arena/capabilities/consequence_operator_registry_v1.jsonl \
+            --out /tmp/lra-certified-proposals.jsonl \
+            --manifest /tmp/lra-certified-manifest.json
+          python3 - <<'PY'
+          import json,hashlib
+          data=[json.loads(x) for x in open('/tmp/lra-certified-proposals.jsonl') if x.strip()]
+          m=json.load(open('/tmp/lra-certified-manifest.json'))
+          assert len(data)==2
+          assert data[0]['status']=='EXACT_CONTROL_NO_NEW_WARRANT'
+          assert data[1]['status']=='CANDIDATE_UNVERIFIED_FOR_NEW_ADMISSION'
+          assert data[1]['historical_exact_certificate_match'] is True
+          assert data[1]['proof_sha256']=='cc643e34cf4fa940686b85018ef05099ba1f4f712d9212f4c98c08ef5abab60b'
+          assert m['exact_prior_certificate_matches']==1 and m['proposals']==1
+          assert m['portfolio_mutated'] is False and m['official_submission'] is False
+          print('VERIFIED_STATEFUL_OPERATOR_REPRODUCES_PINNED_GAUSS_WITNESS_WITHOUT_AUTOPROMOTION')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-certified-consequence-compiler
+          path: |
+            /tmp/lra-certified-proposals.jsonl
+            /tmp/lra-certified-manifest.json
