@@ -1,0 +1,58 @@
+{
+  "schema": "mathgraph.lra.observational-consequence-transport.v1",
+  "state": "CANDIDATE_REUSABLE_STRATEGY_WITH_BOUNDED_POSITIVE_WARRANTS",
+  "source_pin": "aurasoph/lean-refactor@7f3a401470d04f70013d293db4253b088ec8a0ae",
+  "operator": {
+    "form": "Given a verified equality h:f=g and the protected observer O, generate congrArg O h and normalize only the observation-specific residual.",
+    "semantic_identity": "The truth of f=g is sufficient for equality O f = O g for any well-typed Lean function O. This does not authorize changing the theorem, inventing h, or skipping Lean verification.",
+    "protected_future": [
+      "same statement",
+      "required versions",
+      "no forbidden declarations",
+      "strict combined score gain"
+    ]
+  },
+  "evidence": [
+    {
+      "role": "CONTROLLED_PRIMARY_SCORE_IMPROVEMENT",
+      "family": "Physlib / Electromagnetism",
+      "name": "Electromagnetism.ElectromagneticPotential.time_deriv_time_deriv_electricField_of_isExtrema",
+      "original": "566 tokens; 10499 heartbeats; objective 121.04",
+      "new": "551 tokens; 10403 heartbeats; objective 122.47",
+      "gain_objective": 1.43,
+      "mechanism": "hdiv : equality of Gauss-law functions; transport through O(g)=(∂[i] g) x; normalize sum derivative and constant scaling",
+      "source_run": 37985510361,
+      "job": 114006384538,
+      "source_branch": "competition/lra-em-consequence-derivative-v1",
+      "source_head_sha": "20b10c5379043956307bd651e3bcdaef1cc7ce9f",
+      "source_label": "congrarg_inferred",
+      "version": "v4.32.0",
+      "certificate": "WARRANTED_REQUIRED_VERSION"
+    },
+    {
+      "role": "QUALIFIED_USE_OF_SAME_OPERATOR_NOT_INDEPENDENT_CAUSAL_ABLATION",
+      "family": "Physlib / Wick algebra",
+      "name": "FieldSpecification.WickAlgebra.ι_timeOrderF_superCommuteF_eq_time",
+      "proof_closure": "exact congrArg (fun f => f a b) h",
+      "source_run": 37898753536,
+      "certificate": "WARRANTED_REQUIRED_VERSION",
+      "version": "v4.32.0",
+      "measured": "555 tokens; 11678 heartbeats; objective 126.86",
+      "qualification": "The proof uses an observer on a verified bilinear-map equality; score improvement cannot be attributed solely to this final congrArg."
+    }
+  ],
+  "negative_boundaries": [
+    {
+      "run": 37984213376,
+      "family": "PutnamBench digit replacement",
+      "observation": "shorter explicit replacement witnesses compiled but regressed heartbeat and objective; 0/11 overall gains"
+    },
+    {
+      "run": 37983266565,
+      "family": "CSLib SKI term induction",
+      "observation": "blind goal automation could not construct required existential join; 0/8 candidates compiled"
+    }
+  ],
+  "inference_scope": "Routes hidden tasks by generic proof-surface signals only. Does not contain warm-up theorem names or solutions in strategy_hints.py. No official Arena submission, universal adequacy proof, or #1 claim.",
+  "next": "Test on untouched theorem families and admit only exact pinned-score improvements; keep all failures as operator-specific negative evidence."
+}
