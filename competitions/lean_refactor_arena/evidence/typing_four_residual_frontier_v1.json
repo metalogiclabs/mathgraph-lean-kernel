@@ -1,0 +1,40 @@
+{
+  "schema": "mathgraph.lra.typing.protected-frontier.v1",
+  "state": "WARRANTED_EXACT_THREE_VERSION_PROOF__PACKET_REQUALIFICATION_PENDING",
+  "authority": {
+    "source_pin": "aurasoph/lean-refactor@7f3a401470d04f70013d293db4253b088ec8a0ae",
+    "run": 37973211833,
+    "job": 113964832165,
+    "source_bank": "competitions/lean_refactor_arena/experiments/typing_four_residual_structural_v1.jsonl",
+    "source_label": "typing_movable_tli_grind"
+  },
+  "theorem": "Cslib.LambdaCalculus.LocallyNameless.Fsub.Typing.progress",
+  "required_versions": [
+    "v4.33.0-rc2",
+    "v4.32.0",
+    "v4.31.0"
+  ],
+  "pareto": [
+    {
+      "label": "warranted_typing_pareto_CLI_338",
+      "tokens": 338,
+      "heartbeats": 2198,
+      "objective": 113.51,
+      "state": "WARRANTED_FASTER"
+    },
+    {
+      "label": "warranted_typing_movable_tli_grind_308",
+      "tokens": 308,
+      "heartbeats": 2697,
+      "objective": 120.03,
+      "state": "WARRANTED_SELECTED"
+    }
+  ],
+  "gain_objective": 6.52,
+  "changed_exact_packet_rows": 1,
+  "other_fourteen_unchanged": true,
+  "portfolio_commit": "46c82cc2ad3a6ac7c53c147dc4c1f6c35a8fc3ba",
+  "packet_commit": "4dc41e9de6e82824fbfd0e34771cd8d21ff4ee11",
+  "action": "REQUALIFY compact proof using explicit high-consequence cases, preserve other future obligations",
+  "official_arena_submitted": false
+}
