@@ -18,7 +18,7 @@ import re
 from collections import OrderedDict
 from pathlib import Path
 
-CASE = re.compile(r"^  case ([^\s=|]+).*=>\s*$")
+CASE = re.compile(r"^  case ([^\s=|]+).*=>.*$")
 TAIL = re.compile(r"^  all_goals(?:\s|$)")
 FORBIDDEN = re.compile(
     r"\b(?:sorry|sorryAx|admit|axiom|native_decide|run_cmd|run_elab)\b"
