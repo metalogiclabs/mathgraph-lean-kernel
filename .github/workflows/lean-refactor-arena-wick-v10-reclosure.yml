@@ -1,0 +1,166 @@
+name: Lean Refactor Arena V10 Wick bilinear observer reclosure
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'competition/lra-wick-v10-observer-closure'
+    paths:
+      - 'competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl'
+      - 'competitions/lean_refactor_arena/arena_upload.py'
+      - 'competitions/lean_refactor_arena/evidence/retained_exact_full_version_audit_20261010_v10.json'
+      - 'competitions/lean_refactor_arena/submissions/mathgraph_verified_15_warmup_20261009.jsonl'
+      - '.github/workflows/lean-refactor-arena-wick-v10-reclosure.yml'
+
+concurrency:
+  group: lra-wick-v10-reclosure
+  cancel-in-progress: true
+
+jobs:
+  qualify-upload:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify selected Wick bilinear observer and fourteen unchanged V9 proofs
+        shell: bash
+        run: |
+          set -euo pipefail
+          export SOURCE_SHA=518d5866d0f9e1c957f72b7a3fa2d8b9973f375a
+          export ANCESTOR_SHA=f4630db45653fa14c150f82a0adce7e1935e89f7
+          git fetch --depth=1 origin "$ANCESTOR_SHA"
+          curl -fsSL --retry 3 -H 'Accept: application/vnd.github+json' \
+            https://api.github.com/repos/metalogiclabs/mathgraph-lean-kernel/actions/runs/37987841544 \
+            -o /tmp/wick-v10-source-run.json
+          curl -fsSL --retry 3 \
+            "https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/$SOURCE_SHA/competitions/lean_refactor_arena/experiments/wick_bilinear_consequence_v1.jsonl" \
+            -o /tmp/wick-v10-frozen-candidates.jsonl
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib,subprocess
+          o=json.load(open('/tmp/wick-v10-source-run.json'))
+          assert o['id']==37987841544 and o['conclusion']=='success' and o['status']=='completed'
+          assert o['head_sha']==os.environ['SOURCE_SHA'],'CANDIDATE_WARRANT_FROM_DIFFERENT_COMMIT'
+          root=pathlib.Path('competitions/lean_refactor_arena')
+          target='FieldSpecification.WickAlgebra.ι_timeOrderF_superCommuteF_eq_time'
+          read=lambda p:[json.loads(line) for line in p.read_text().splitlines() if line.strip()]
+          portfolio=read(root/'portfolio/warmup_portfolio_v1.jsonl')
+          submitted=read(root/'submissions/mathgraph_verified_15_warmup_20261009.jsonl')
+          candidates=read(pathlib.Path('/tmp/wick-v10-frozen-candidates.jsonl'))
+          winner=next(x for x in candidates if x['name']==target and x['label']=='finish_apply')
+          actual=next(x for x in portfolio if x['name']==target)
+          assert actual['label']=='warranted_wick_finish_apply_552'
+          assert actual['proof']==winner['proof'],'VERIFIED_SOURCE_BYTES_DO_NOT_MATCH_ACTIVE_PROOF'
+          assert next(x for x in submitted if x['name']==target)['proof']==winner['proof']
+          prior=subprocess.check_output(['git','show',
+            os.environ['ANCESTOR_SHA']+':competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl'],text=True)
+          before={x['name']:x for x in map(json.loads,prior.splitlines()) if x}
+          after={x['name']:x for x in portfolio}
+          assert len(before)==len(after)==15 and set(before)==set(after)
+          assert {n for n in before if before[n]['proof']!=after[n]['proof']}=={target}
+          assert all(before[n]==after[n] for n in before if n!=target),'UNRELATED_WARRANT_CHANGED'
+          proof_sha=hashlib.sha256(winner['proof'].encode()).hexdigest()
+          result={'schema':'mathgraph.lra.wick-bilinear-observer-source-closure.v10',
+            'status':'WARRANTED_PREVIOUS_LEAN_RUN__EXACT_CURRENT_PROOF_MATCH',
+            'run_id':37987841544,'candidate_head':o['head_sha'],
+            'selected_label':winner['label'],'proof_sha256':proof_sha,
+            'other_14_proofs_exact':True,'required_lean_version':'v4.32.0',
+            'external_submission':False}
+          pathlib.Path('/tmp/wick-v10-source-closure.json').write_text(json.dumps(result,indent=2)+'\n')
+          print(json.dumps(result,indent=2))
+          print('WARRANTED_V9_INDEPENDENT_SOURCE_AND_FOURTEEN_UNCHANGED_PROOFS')
+          PY
+      - name: Fetch pinned benchmark metadata without running external code
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 \
+            https://raw.githubusercontent.com/aurasoph/lean-refactor/7f3a401470d04f70013d293db4253b088ec8a0ae/competition/benchmark_data_warmup.jsonl \
+            -o /tmp/benchmark_data_warmup.jsonl
+          python3 competitions/lean_refactor_arena/official_jsonl.py /tmp/benchmark_data_warmup.jsonl \
+            --summary-out /tmp/benchmark-summary.json
+      - name: Build exact retained Arena submission and validate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 competitions/lean_refactor_arena/arena_upload.py build \
+            --benchmark /tmp/benchmark_data_warmup.jsonl \
+            --candidates competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl \
+            --out /tmp/lra-wick-v10-exact-15.jsonl \
+            --report /tmp/lra-closed-retained-report.json
+          python3 competitions/lean_refactor_arena/arena_upload.py validate \
+            --benchmark /tmp/benchmark_data_warmup.jsonl \
+            --upload /tmp/lra-wick-v10-exact-15.jsonl
+          python3 - <<'PY'
+          import hashlib,json,pathlib,subprocess
+          upload=pathlib.Path('/tmp/lra-wick-v10-exact-15.jsonl')
+          portfolio=pathlib.Path('competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl')
+          bench=pathlib.Path('/tmp/benchmark_data_warmup.jsonl')
+          audit=pathlib.Path('competitions/lean_refactor_arena/evidence/retained_exact_full_version_audit_20261010_v10.json')
+          committed=pathlib.Path('competitions/lean_refactor_arena/submissions/mathgraph_verified_15_warmup_20261009.jsonl')
+          raw=lambda p:[json.loads(x) for x in p.read_text(encoding='utf-8').splitlines() if x.strip()]
+          rows,source,frozen=raw(upload),raw(portfolio),raw(bench)
+          assert len(rows)==len(source)==len(frozen)==15
+          source_map={r['name']:r['proof'] for r in source}
+          bench_names={r['name'] for r in frozen}
+          assert len(source_map)==15 and set(source_map)==bench_names
+          assert [r['name'] for r in rows]==[r['name'] for r in frozen]
+          assert all(set(r)=={'name','proof'} and r['proof']==source_map[r['name']] for r in rows)
+          # A green upload-format check cannot inherit an outdated verifier certificate.
+          # Bind the current proofs, current committed packet, and each protected
+          # Lean-version claim to the frozen exact-source audit.
+          a=json.loads(audit.read_text(encoding='utf-8'))
+          git_blob=lambda p: subprocess.check_output(
+            ['git','hash-object',str(p)], text=True).strip()
+          assert a.get('state') == 'WARRANTED_COMPOSED_PINNED_VERSIONS__NOT_OFFICIAL_ARENA_SUBMISSION', a.get('state')
+          assert a.get('source_sha') == '7f3a401470d04f70013d293db4253b088ec8a0ae'
+          assert a.get('portfolio_blob_sha') == git_blob(portfolio), 'STALE_AUDIT_PROOF_BYTES'
+          assert a.get('current_portfolio_blob_sha') == git_blob(portfolio)
+          assert a.get('current_packet',{}).get('git_blob_sha') == git_blob(committed), 'STALE_PACKET_AUTHORITY'
+          assert [(r['name'],r['proof']) for r in raw(committed)] == [(r['name'],r['proof']) for r in source]
+          records=a.get('records') or []
+          assert len(records)==15 and {r['name'] for r in records}==bench_names
+          for r in records:
+            assert r.get('label')==next(p['label'] for p in source if p['name']==r['name'])
+            required=r.get('required_versions')
+            assert isinstance(required,list) and len(required)>0 and len(required)==len(set(required))
+            if r.get('matches_pinned_public_full_test') is True:
+              assert r.get('evidence_status')=='WARRANTED_EXTERNAL_EXACT_FULL_VERSION'
+              assert r.get('public_hash')
+              assert r.get('public_compat')=={v: True for v in required}
+            else:
+              assert r.get('evidence_status')=='WARRANTED_INDEPENDENT_EXACT_REQUIRED_VERSION'
+              authority=r.get('independent_authority') or {}
+              run=r.get('independent_run') or authority.get('run')
+              assert isinstance(run,int) and run>0, 'MISSING_INDEPENDENT_PROOF_RUN'
+              evidence_versions=set(authority.get('required_versions_verified') or (r.get('compat') or {}).keys())
+              assert evidence_versions==set(required), 'INCOMPLETE_REQUIRED_VERSION_COVERAGE'
+          externally_warranted=sum(r.get('matches_pinned_public_full_test') is True for r in records)
+          independently_warranted=15-externally_warranted
+          assert externally_warranted==a['comparator_full_version_exact_count']
+          assert independently_warranted==a['independently_qualified_count']
+          assert a['total_authorized_by_prior_evidence']==15
+          sha=hashlib.sha256(upload.read_bytes()).hexdigest()
+          out={'schema':'mathgraph.lra.retained-upload.v1','status':'UPLOAD_FORMAT_WARRANTED__NOT_OFFICIAL_SCORE',
+            'submission_rows':15,'exact_retained_proofs':15,'reference_fallbacks':0,
+            'source_pin':'aurasoph/lean-refactor@7f3a401470d04f70013d293db4253b088ec8a0ae',
+            'portfolio_sha256':hashlib.sha256(portfolio.read_bytes()).hexdigest(),
+            'upload_sha256':sha,'upload_bytes':upload.stat().st_size,
+            'audit_path':str(audit),'audit_portfolio_git_blob':git_blob(portfolio),
+            'external_exact_full_version_witnesses':externally_warranted,
+            'independent_required_version_witnesses':independently_warranted,
+            'promotion_boundary':'Proof format and exact recorded version lineage checked against current v8 audit; no new Lean replay. Official ranking requires user-authorized upload and scoring; no keys accessed.'}
+          pathlib.Path('/tmp/lra-retained-manifest.json').write_text(json.dumps(out,indent=2)+'\n')
+          print(json.dumps(out,indent=2))
+          print('VERIFIED_EXACT_RETAINED_15_ROW_UPLOAD')
+          PY
+          sha256sum /tmp/lra-wick-v10-exact-15.jsonl
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-wick-v10-exact-15
+          path: |
+            /tmp/lra-wick-v10-exact-15.jsonl
+            /tmp/lra-retained-manifest.json
+            /tmp/lra-closed-retained-report.json
+            /tmp/benchmark-summary.json
+            /tmp/wick-v10-source-closure.json
