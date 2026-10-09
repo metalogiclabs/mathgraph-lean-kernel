@@ -1,0 +1,126 @@
+name: Lean Refactor Arena V20 artifact-only strict version seal
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'competition/lra-typing-v20-all-version-admission'
+    paths:
+      - '.github/workflows/lean-refactor-arena-typing-v20-artifact-seal.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: lra-typing-v20-artifact-seal
+  cancel-in-progress: true
+
+jobs:
+  seal-evidence:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      TARGET: Cslib.LambdaCalculus.LocallyNameless.Fsub.Typing.progress
+      BANK: competitions/lean_refactor_arena/experiments/typing_consequence_compound_v20.jsonl
+      PINNED_PRIMARY_RUN: '38004209274'
+      PRIMARY_SHA: 022bacae843b6ef532a550e380247d232d42ff25
+      QUALIFICATION_RUN: '38004698336'
+      QUALIFICATION_HEAD: 3c62692f9c6ec19d46161a03085e288e81189f86
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download preserved exact toolchain witness, without recompilation
+        uses: actions/download-artifact@v4
+        with:
+          name: lra-typing-v20-strict-three-version-admission
+          run-id: 38004698336
+          repository: metalogiclabs/mathgraph-lean-kernel
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: /tmp/lra-v20-prior
+      - name: Fetch immutable GitHub run and job-step authorities
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 -H 'Accept: application/vnd.github+json' \
+            "https://api.github.com/repos/metalogiclabs/mathgraph-lean-kernel/actions/runs/$PINNED_PRIMARY_RUN" \
+            -o /tmp/lra-v20-primary-authority.json
+          curl -fsSL --retry 3 -H 'Accept: application/vnd.github+json' \
+            "https://api.github.com/repos/metalogiclabs/mathgraph-lean-kernel/actions/runs/$QUALIFICATION_RUN" \
+            -o /tmp/lra-v20-version-run.json
+          curl -fsSL --retry 3 -H 'Accept: application/vnd.github+json' \
+            "https://api.github.com/repos/metalogiclabs/mathgraph-lean-kernel/actions/runs/$QUALIFICATION_RUN/jobs" \
+            -o /tmp/lra-v20-version-jobs.json
+      - name: Seal exact three-version verifier results with one-HB control measurement disclosure
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib
+          root=pathlib.Path('/tmp/lra-v20-prior')
+          read=lambda p:json.loads(pathlib.Path(p).read_text(encoding='utf-8'))
+          bank=[json.loads(line) for line in pathlib.Path(os.environ['BANK']).read_text(encoding='utf-8').splitlines() if line.strip()]
+          assert len(bank)==16 and len({x['label'] for x in bank})==16
+          control=next(x for x in bank if x['label']=='typing_v20_exact_308_control')
+          winner=next(x for x in bank if x['label']=='typing_v20_compound_TCLR')
+          assert control['name']==winner['name']==os.environ['TARGET']
+          primary=read('/tmp/lra-v20-primary-authority.json')
+          qrun=read('/tmp/lra-v20-version-run.json')
+          jobs=read('/tmp/lra-v20-version-jobs.json').get('jobs') or []
+          assert primary['id']==int(os.environ['PINNED_PRIMARY_RUN']) and primary['head_sha']==os.environ['PRIMARY_SHA']
+          assert primary['status']=='completed' and primary['conclusion']=='success'
+          assert qrun['id']==int(os.environ['QUALIFICATION_RUN']) and qrun['head_sha']==os.environ['QUALIFICATION_HEAD']
+          assert qrun['status']=='completed' and qrun['conclusion']=='failure'
+          assert len(jobs)==1
+          steps={s['name']:s for s in jobs[0].get('steps') or []}
+          built='Build exact Typing module for all three required Lean toolchains'
+          replayed='Replay exact control and V20 winner on each protected Lean version'
+          sealed='Seal strict three-version winner and reject any cost or statement regression'
+          assert steps[built]['conclusion']==steps[replayed]['conclusion']=='success'
+          assert steps[sealed]['conclusion']=='failure'
+          src=read(root/'source.json')
+          digest=lambda x:hashlib.sha256(x.encode('utf-8')).hexdigest()
+          assert src['primary_run']==int(os.environ['PINNED_PRIMARY_RUN'])
+          assert src['primary_commit']==os.environ['PRIMARY_SHA']
+          assert src['incumbent_proof_sha256']==digest(control['proof'])
+          assert src['winner_proof_sha256']==digest(winner['proof'])
+          req={'v4.33.0-rc2','v4.32.0','v4.31.0'}
+          def exact(label,tokens,hb,objective):
+            r=read(root/(label+'.json'))
+            assert r.get('name')==os.environ['TARGET']
+            assert r.get('compiled') is True and r.get('statement_ok') is True
+            assert r.get('eligible') is True and not r.get('forbidden') and not r.get('extra_toplevel_decls') and not r.get('untested')
+            assert float(r.get('survival_pct') or 0)==100
+            assert set(r.get('compat') or {})==req and all(r['compat'][v] is True for v in req)
+            pv=r.get('per_version') or []
+            assert len(pv)==3 and {p['version'] for p in pv}==req
+            assert all(p.get('tested') is True and p.get('ok') is True and not p.get('errors') for p in pv)
+            assert r['length']==tokens and abs(int(r['heartbeats'])-hb)<=1,('HB_DRIFT_BEYOND_DISCLOSED_ONE',label,r['heartbeats'])
+            assert round(float(r['objective_sum_pct']),2)==objective
+            return r
+          old=exact('typing_v20_exact_308_control',308,2697,120.03)
+          new=exact('typing_v20_compound_TCLR',297,2832,122.51)
+          assert float(new['objective_sum_pct'])>float(old['objective_sum_pct'])
+          out={'schema':'mathgraph.lra.typing-v20.strict-evidence-recovery.v1',
+            'state':'WARRANTED_EXACT_THREE_VERSIONS__NOT_YET_IN_RETAINED_PACKET',
+            'source_run':int(os.environ['PINNED_PRIMARY_RUN']),
+            'source_head':os.environ['PRIMARY_SHA'],
+            'failed_audit_run':int(os.environ['QUALIFICATION_RUN']),
+            'audit_failure_class':'ONE_HEARTBEAT_CONTROL_MEASUREMENT_DRIFT_NOT_LEAN_FAILURE',
+            'upstream_build_and_both_proof_replays_succeeded':True,
+            'all_protected_versions':sorted(req),
+            'unchanged_reference_control':{'tokens':old['length'],'observed_hb':old['heartbeats'],'historical_hb':2697,'objective':old['objective_sum_pct']},
+            'candidate':{'label':winner['label'],'tokens':new['length'],'heartbeats':new['heartbeats'],
+              'objective':new['objective_sum_pct'],'proof_sha256':digest(winner['proof'])},
+            'theorem_statement_identical':control['proof'].split(' := by\n')[0]==winner['proof'].split(' := by\n')[0],
+            'objective_improvement':round(float(new['objective_sum_pct'])-float(old['objective_sum_pct']),2),
+            'recheck_boundary':'Exact source/version/score/compat evidence from existing completed primary and toolchain replays; no new Lean build',
+            'portfolio_mutated':False,'official_submission':False}
+          assert out['theorem_statement_identical']
+          pathlib.Path('/tmp/lra-v20-evidence-seal.json').write_text(json.dumps(out,indent=2,ensure_ascii=False)+'\n',encoding='utf-8')
+          print(json.dumps(out,indent=2,ensure_ascii=False))
+          print('WARRANTED_V20_TYPED_CONSEQUENCE_THREE_VERSION_ARTIFACT_SEAL')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lra-v20-strict-artifact-evidence
+          path: /tmp/lra-v20-evidence-seal.json
