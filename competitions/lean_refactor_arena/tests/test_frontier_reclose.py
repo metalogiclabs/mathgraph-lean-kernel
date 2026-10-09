@@ -117,6 +117,19 @@ class FrontierTests(unittest.TestCase):
         self.assertEqual(result["selected_label"], "control")
         self.assertEqual(result["admission"]["better"]["status"], "UNKNOWN")
 
+    def test_full_version_matrix_with_partial_survival_not_admitted(self):
+        bad = evidence("better", 80, 400, 120, survival_pct=75)
+        result = self.decision(scores=[self.old_score, bad])
+        self.assertEqual(result["selected_label"], "control")
+        self.assertEqual(result["admission"]["better"]["status"], "UNKNOWN")
+
+    def test_full_version_matrix_with_missing_survival_not_admitted(self):
+        bad = evidence("better", 80, 400, 120)
+        del bad["survival_pct"]
+        result = self.decision(scores=[self.old_score, bad])
+        self.assertEqual(result["selected_label"], "control")
+        self.assertEqual(result["admission"]["better"]["status"], "UNKNOWN")
+
     def test_keeps_pareto_alternatives_instead_of_forgetting_fast_one(self):
         faster = entry("faster")
         quick = evidence("faster", 120, 300, 110)
