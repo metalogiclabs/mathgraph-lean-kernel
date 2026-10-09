@@ -69,8 +69,46 @@ jobs:
           print('BEST_WICK_REPAIR=',json.dumps({k:best.get(k) for k in
             ('candidate_label','length','heartbeats','objective_sum_pct','combined_pct','survival_pct')},indent=2))
           PY
+      - name: Capture actual Wick residual goals
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/wick-residuals
+          for label in wick_module_residual_v1 wick_simp_only_comm_v1; do
+            python3 - "$label" <<'PY'
+          import json,sys,pathlib
+          label=sys.argv[1]
+          path=pathlib.Path("competitions/lean_refactor_arena/probes/physlib_wick_repair_v1.jsonl")
+          rows=[json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+          hits=[r for r in rows if r.get("label")==label]
+          assert len(hits)==1
+          row=dict(hits[0])
+          if label=="wick_module_residual_v1":
+              needle="      module"
+          else:
+              needle="      simp only [map_sub, map_smul, mul_sub, sub_mul, smul_sub, Algebra.mul_smul_comm, Algebra.smul_mul_assoc, smul_comm]"
+          assert row["proof"].count(needle)==1, (label,"missing exact target")
+          row["proof"]=row["proof"].replace(needle,"      trace_state\\n"+needle,1)
+          pathlib.Path("/tmp/wick-residuals/"+label+".jsonl").write_text(json.dumps(row,ensure_ascii=False)+chr(10))
+          PY
+            python3 competitions/lean_refactor_arena/public_harness_bridge.py \
+              --competition /tmp/lean-refactor/competition \
+              --project v4.32 \
+              --name "FieldSpecification.WickAlgebra.ι_timeOrderF_superCommuteF_eq_time" \
+              --candidate "/tmp/wick-residuals/$label.jsonl" \
+              --label "$label"
+            (
+              cd /tmp/lean-refactor/competition/projects/v4.32
+              lake env lean Arena/FieldSpecification_WickAlgebra_timeOrderF_superCommuteF_eq_time.lean
+            ) > "/tmp/wick-residuals/$label.lean.log" 2>&1 || true
+            echo "=== EXACT WICK RESIDUAL: $label ==="
+            grep -A 65 -B 2 -E 'unsolved goals|case |⊢ |ring failed|Tactic .simp.|error:' "/tmp/wick-residuals/$label.lean.log" | head -n 170 || true
+          done
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: lra-wick-repair
-          path: /tmp/wick-scores.jsonl
+          path: |
+            /tmp/wick-scores.jsonl
+            /tmp/wick-residuals/
