@@ -152,5 +152,31 @@
     "workflow_run": 37887798992,
     "promotion": "Only if compiled and statement intact under pinned v4.32; objective >97.88; then update 15-target total. No current gain claimed.",
     "note": "The two candidates can fail elaboration; they are a cheap falsification of representation transfer rather than leaderboard-qualified results."
+  },
+  "wick_deletion_census_20261009": {
+    "status": "REJECTED_BOUNDED",
+    "authority_run": 37886299555,
+    "authority_job": 113676954553,
+    "verified_public_control": {
+      "label": "wick_public_verified_568",
+      "compiled": true,
+      "statement_ok": true,
+      "primary_version": "v4.32.0",
+      "tokens": 568,
+      "heartbeats": 23511,
+      "objective_sum_pct": 97.88
+    },
+    "rejected_exact_candidates": [
+      "wick_prune_map_sub",
+      "wick_prune_map_smul",
+      "wick_prune_mul_sub",
+      "wick_prune_sub_mul",
+      "wick_prune_smul_sub",
+      "wick_prune_Algebra_mul_smul_comm",
+      "wick_prune_Algebra_smul_mul_assoc"
+    ],
+    "result": "0/7 compiled; public control 1/1 compiled; no promote. Local 2-token apparent savings are invalid due to compile failures.",
+    "boundary": "Only establishes irredundancy of these seven individual simp-only rewrite rules within the pinned public proof, not a global token or heartbeat minimum.",
+    "next_experiment": "Wick structural extensionality crossover run 37887798992"
   }
 }
