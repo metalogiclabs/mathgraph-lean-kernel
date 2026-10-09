@@ -1,0 +1,166 @@
+name: Lean Refactor Arena Typing V18 frozen obligation quotient census
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'competition/lra-typing-compact-obligation-v18'
+    paths:
+      - 'competitions/lean_refactor_arena/experiments/typing_compact_obligation_v18.jsonl'
+      - '.github/workflows/lean-refactor-arena-typing-v18-compact-obligation.yml'
+
+concurrency:
+  group: lra-typing-v18-frozen-quotient
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  qualify-primary:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      PUBLIC_SHA: 7f3a401470d04f70013d293db4253b088ec8a0ae
+      V12_SHA: 984a761f98ed5ac35da447a26340e398c8993c87
+      TARGET: Cslib.LambdaCalculus.LocallyNameless.Fsub.Typing.progress
+      BANK: competitions/lean_refactor_arena/experiments/typing_compact_obligation_v18.jsonl
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Freeze V12 protected control, exact statement, and sixteen proposal bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 "https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/$V12_SHA/competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl" -o /tmp/lra-typing-v12-portfolio.jsonl
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib,re
+          read=lambda p:[json.loads(x) for x in pathlib.Path(p).read_text().splitlines() if x.strip()]
+          bank=read(os.environ['BANK'])
+          portfolio=read('/tmp/lra-typing-v12-portfolio.jsonl')
+          name=os.environ['TARGET']
+          assert len(portfolio)==15 and len(bank)==16,'FROZEN_BANK_CARDINALITY_MISMATCH'
+          assert len({x['label'] for x in bank})==16,'DUPLICATE_CANDIDATE_LABEL'
+          assert len({x['proof'] for x in bank})==16,'DUPLICATE_CANDIDATE_BYTES'
+          assert bank[0]['label']=='typing_v18_exact_308_control','WRONG_CONTROL'
+          source=next(x['proof'] for x in portfolio if x['name']==name)
+          assert bank[0]['proof']==source,'NOT_CURRENT_V12_TYPING_BYTES'
+          header=source.split(' := by\n',1)[0]+' := by\n'
+          forbidden=re.compile(r'\b(?:sorry|sorryAx|admit|axiom|native_decide|run_cmd|run_elab|unsafe)\b|#\s*(?:eval|reduce|exit)\b')
+          assert all(x['name']==name and x['proof'].startswith(header) for x in bank),'FROZEN_STATEMENT_CHANGED'
+          assert all(forbidden.search(x['proof']) is None for x in bank),'FORBIDDEN_PROOF_SURFACE'
+          report={'schema':'mathgraph.lra.typing.frozen-obligation-quotient.v18',
+            'status':'UNVERIFIED_PROPOSALS','candidate_count':len(bank),
+            'source_sha':os.environ['PUBLIC_SHA'],'composed_v12_sha':os.environ['V12_SHA'],
+            'control_proof_sha256':hashlib.sha256(source.encode()).hexdigest(),
+            'candidate_proof_sha256':{x['label']:hashlib.sha256(x['proof'].encode()).hexdigest() for x in bank},
+            'protected_future':['v4.33.0-rc2','v4.32.0','v4.31.0'],
+            'official_submission':False,'portfolio_mutated':False}
+          pathlib.Path('/tmp/lra-typing-v18-frozen.json').write_text(json.dumps(report,indent=2)+'\n')
+          print('VERIFIED_SOURCE_EXACT_FROZEN_V12_CONTROL_AND_V18_PROPOSAL_IDENTITY')
+          PY
+
+      - name: Build pinned v4.33 Cslib Fsub Safety target and dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.elan/bin:$PATH"
+          git clone --depth=1 --filter=blob:none --sparse https://github.com/aurasoph/lean-refactor.git /tmp/lean-refactor
+          git -C /tmp/lean-refactor fetch --depth=1 origin "$PUBLIC_SHA"
+          git -C /tmp/lean-refactor checkout --detach FETCH_HEAD
+          git -C /tmp/lean-refactor sparse-checkout set competition
+          test "$(git -C /tmp/lean-refactor rev-parse HEAD)" = "$PUBLIC_SHA"
+          project=/tmp/lean-refactor/competition/projects/v4.33
+          cd "$project"
+          lake update > /tmp/lra-typing-v18-lake-update.log 2>&1 || {
+            tail -n 120 /tmp/lra-typing-v18-lake-update.log; exit 1;
+          }
+          lake exe cache get > /tmp/lra-typing-v18-cache.log 2>&1 || echo 'CACHE_MISS_FALLBACK'
+          lake build Cslib.Languages.LambdaCalculus.LocallyNameless.Fsub.Safety > /tmp/lra-typing-v18-build.log 2>&1 || {
+            tail -n 150 /tmp/lra-typing-v18-build.log; exit 1;
+          }
+          echo 'PINNED_CSLIB_TYPING_TARGET_READY'
+
+      - name: Score every V18 representation against exactly the V12 incumbent
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' > /tmp/lra-typing-v18-labels.txt
+          import json,os
+          labels=[json.loads(line)['label'] for line in open(os.environ['BANK']) if line.strip()]
+          assert len(labels)==16 and len(set(labels))==16
+          for x in labels: print(x)
+          PY
+          : > /tmp/lra-typing-v18-scores.jsonl
+          while IFS= read -r label; do
+            echo "V18_PROBE=$label"
+            python3 competitions/lean_refactor_arena/public_harness_bridge.py \
+              --competition /tmp/lean-refactor/competition --project v4.33 \
+              --name "$TARGET" --candidate "$BANK" --label "$label"
+            (cd /tmp/lean-refactor/competition && \
+              python3 arena.py check --name "$TARGET" --timeout 1200) > /tmp/lra-typing-v18-one.json
+            jq -c --arg label "$label" '. + {candidate_label:$label}' \
+              /tmp/lra-typing-v18-one.json >> /tmp/lra-typing-v18-scores.jsonl
+          done < /tmp/lra-typing-v18-labels.txt
+
+      - name: Separate compiler rejection from objective gain and gate promotion
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib
+          read=lambda p:[json.loads(x) for x in pathlib.Path(p).read_text().splitlines() if x.strip()]
+          bank=read(os.environ['BANK'])
+          rows=read('/tmp/lra-typing-v18-scores.jsonl')
+          assert len(bank)==len(rows)==16,'INCOMPLETE_CENSUS'
+          assert {r['candidate_label'] for r in rows}=={x['label'] for x in bank},'CENSUS_IDENTITY_MISMATCH'
+          def valid(r):
+            versions=r.get('per_version') or []
+            return (r.get('compiled') is True and r.get('statement_ok') is True and
+              r.get('eligible') is True and not r.get('forbidden') and
+              not r.get('extra_toplevel_decls') and not r.get('untested') and
+              r.get('compat')=={'v4.33.0-rc2':True} and
+              len(versions)==1 and versions[0].get('tested') is True and versions[0].get('ok') is True)
+          baseline=next(x for x in rows if x['candidate_label']=='typing_v18_exact_308_control')
+          assert valid(baseline),'CURRENT_V12_TYPING_CONTROL_NOT_VALID'
+          assert (int(baseline['length']),int(baseline['heartbeats']))==(308,2697),'CONTROL_COST_DRIFT'
+          verified=[x for x in rows if valid(x)]
+          better=[x for x in verified if x is not baseline and
+            float(x['objective_sum_pct'])>float(baseline['objective_sum_pct'])]
+          better.sort(key=lambda x:(-float(x['objective_sum_pct']),int(x['length']),int(x['heartbeats'])))
+          best=better[0] if better else None
+          out={'schema':'mathgraph.lra.typing.compact-obligation-v18.primary',
+            'status':'CANDIDATE_PRIMARY_GAIN_REQUIRES_ALL_THREE_VERSIONS' if best else 'REJECTED_BOUNDED_NO_PRIMARY_GAIN',
+            'pinned_harness_sha':os.environ['PUBLIC_SHA'],
+            'comparator':'EXACT_MERGED_V12_TYPING_308_2697',
+            'control':{'tokens':baseline['length'],'heartbeats':baseline['heartbeats'],'objective':baseline['objective_sum_pct']},
+            'tested':len(rows),'compiled':len(verified),'rejected':len(rows)-len(verified),
+            'verified':[{'label':r['candidate_label'],'tokens':r['length'],'heartbeats':r['heartbeats'],'objective':r['objective_sum_pct']} for r in verified],
+            'failed':[{'label':r['candidate_label'],'errors':(r.get('per_version') or [{}])[0].get('errors',[])} for r in rows if not valid(r)],
+            'best':None if best is None else
+              {'label':best['candidate_label'],'tokens':best['length'],'heartbeats':best['heartbeats'],
+                'objective':best['objective_sum_pct'],
+                'proof_sha256':hashlib.sha256(next(b['proof'] for b in bank if b['label']==best['candidate_label']).encode()).hexdigest()},
+            'protected_future':['v4.33.0-rc2','v4.32.0','v4.31.0'],
+            'reclosure_required':'3/3 pinned versions, immutable proof bytes, exact 15-row packet, upstream external rank',
+            'portfolio_mutated':False,'official_submission':False}
+          pathlib.Path('/tmp/lra-typing-v18-summary.json').write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n')
+          if best:
+            winner=next(x for x in bank if x['label']==best['candidate_label'])
+            pathlib.Path('/tmp/lra-typing-v18-candidate.jsonl').write_text(json.dumps(winner,ensure_ascii=False)+'\n')
+          print(json.dumps({k:v for k,v in out.items() if k!='failed'},indent=2,ensure_ascii=False))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-typing-v18-obligation-quotient
+          path: |
+            /tmp/lra-typing-v18-frozen.json
+            /tmp/lra-typing-v18-scores.jsonl
+            /tmp/lra-typing-v18-summary.json
+            /tmp/lra-typing-v18-candidate.jsonl
+            /tmp/lra-typing-v18-build.log
+            /tmp/lra-typing-v18-lake-update.log
