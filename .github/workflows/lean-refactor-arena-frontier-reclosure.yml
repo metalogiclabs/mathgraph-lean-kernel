@@ -1,0 +1,27 @@
+name: Lean Refactor Arena protected frontier reclosure
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'competition/lean-refactor-arena-track1'
+    paths:
+      - 'competitions/lean_refactor_arena/frontier_reclose.py'
+      - 'competitions/lean_refactor_arena/tests/test_frontier_reclose.py'
+      - '.github/workflows/lean-refactor-arena-frontier-reclosure.yml'
+permissions:
+  contents: read
+jobs:
+  regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile capability module
+        run: python3 -m py_compile competitions/lean_refactor_arena/frontier_reclose.py
+      - name: Verify protected-future, evidence binding and Pareto behavior
+        env:
+          PYTHONPATH: competitions/lean_refactor_arena
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s competitions/lean_refactor_arena/tests -p 'test_frontier_reclose.py' -v
+          echo VERIFIED_FRONTIER_RECLOSURE_CONTRACT
