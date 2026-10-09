@@ -1,0 +1,56 @@
+{
+  "schema": "mathgraph.lra.retained-upload-v6-qualified.v1",
+  "state": "WARRANTED_PINNED_V426_AND_EXACT_15_PACKET__NOT_OFFICIAL_ARENA_SCORE",
+  "observed_on": "2026-10-10",
+  "authority": {
+    "repo": "metalogiclabs/mathgraph-lean-kernel",
+    "branch": "competition/lra-strata-frontier-v6",
+    "run_head": "efb216c6f7e97a77a9884f69144b3c229fc225f4",
+    "run_id": 37980627614,
+    "job_id": 113989925867,
+    "conclusion": "success",
+    "artifact_id": 11641282584,
+    "url": "https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/37980627614"
+  },
+  "protected": {
+    "organizer_sha": "7f3a401470d04f70013d293db4253b088ec8a0ae",
+    "theorem": "CallElimCorrect.substOldPostSubset",
+    "lean_version": "v4.26.0",
+    "successful_compiler": true,
+    "other_proof_rows_byte_identical": 14,
+    "all_15_source_lineages_reconciled": true,
+    "official_submission": false
+  },
+  "costs": {
+    "strata_tokens": 139,
+    "strata_heartbeats": 1868,
+    "strata_objective": 119.56,
+    "prior_tokens": 132,
+    "prior_heartbeats": 2217,
+    "prior_objective": 115.06
+  },
+  "proof_packet": {
+    "portfolio_blob_sha": "bd904581fcfe5dc843e39f8d8f26e3a5afb73768",
+    "committed_packet_blob_sha": "2c2fb6be8014c3e6ee6740132c839ecc857033af",
+    "generated_upload_sha256": "739f4b511333e93b84cc401bae0bc8bbe0f4f4e7c012af0b9ece003a8aa70ab6",
+    "generated_upload_bytes": 27516,
+    "source_portfolio_sha256": "cef039585d75842dc8b8504d8beb01240c821fec434504a1bd994f32eeba1b3f",
+    "exact_proofs": 15,
+    "reference_fallbacks": 0,
+    "external_exact_version_evidence": 10,
+    "independent_exact_version_evidence": 5
+  },
+  "estimate": {
+    "composed_score_if_all_certificates_survive": 82.7002,
+    "leader_last_checked": 89.38,
+    "gap_combined": 6.6798,
+    "objective_gap_to_tie": 300.59,
+    "status": "PROJECTED__NOT_OFFICIALLY_SUBMITTED"
+  },
+  "supersession": {
+    "v5_portfolio_blob": "865c6afe6e4443117220bec601a9264aaeee602a",
+    "retained_unchanged_other_proofs": 14,
+    "other_negative_experiment_evidence_retained": true
+  },
+  "boundary": "The pinned V6 reclosure warrants one changed Strata theorem, byte identity for fourteen unchanged proofs, exact 15-row packet and recorded certificates. It does not warrant an official leaderboard rank, November full-benchmark generalization, or a new winning algorithm."
+}
