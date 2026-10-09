@@ -58,7 +58,7 @@ class ObservationTransportTests(unittest.TestCase):
         self.assertNotIn(NEW, self.names(stmt, "  rfl"))
 
     def test_separating_witness_preserved(self) -> None:
-        stmt = "lemma arbitraryZero : f = 0"
+        stmt = "lemma arbitraryZero (hg : ∀ g, IsTestFunction g → Probe g = 0) : f = 0"
         proof = "  intro x\n  have ht : IsTestFunction g := by exact hg"
         names = self.names(stmt, proof)
         self.assertIn("SEPARATING_WITNESS", names)
