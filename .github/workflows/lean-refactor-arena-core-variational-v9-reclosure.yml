@@ -1,0 +1,182 @@
+name: Lean Refactor Arena Core and Variational V9 exact reclosure
+on:
+  workflow_dispatch:
+  push:
+    branches: ['competition/lra-core-variational-v9']
+    paths:
+      - 'competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl'
+      - 'competitions/lean_refactor_arena/submissions/mathgraph_verified_15_warmup_20261009.jsonl'
+      - 'competitions/lean_refactor_arena/evidence/retained_exact_full_version_audit_20261010_v9.json'
+      - '.github/workflows/lean-refactor-arena-core-variational-v9-reclosure.yml'
+concurrency:
+  group: lra-core-variational-v9
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  qualify-exact-15:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch frozen organizer benchmark and exact V8 authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 \
+            https://raw.githubusercontent.com/aurasoph/lean-refactor/7f3a401470d04f70013d293db4253b088ec8a0ae/competition/benchmark_data_warmup.jsonl \
+            -o /tmp/benchmark-pinned.jsonl
+          python3 competitions/lean_refactor_arena/official_jsonl.py \
+            /tmp/benchmark-pinned.jsonl --summary-out /tmp/benchmark-meta.json
+          git fetch --depth=1 origin 754f7b274567e2ab2f3e6efa579d183a77d6823f
+          curl -fsSL --retry 3 -H 'Accept: application/vnd.github+json' \
+            https://api.github.com/repos/metalogiclabs/mathgraph-lean-kernel/actions/runs/37987607911 \
+            -o /tmp/core-source-run.json
+          curl -fsSL --retry 3 -H 'Accept: application/vnd.github+json' \
+            https://api.github.com/repos/metalogiclabs/mathgraph-lean-kernel/actions/runs/37987082422 \
+            -o /tmp/variational-source-run.json
+          curl -fsSL --retry 3 \
+            https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/238bcac3f049a5c0072737edb5011b1f0ed634e9/competitions/lean_refactor_arena/experiments/core_store_consequence_v1.jsonl \
+            -o /tmp/core-frozen-bank.jsonl
+          curl -fsSL --retry 3 \
+            https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/8e49779d12da2c226bee92080862518e5f04b78e/competitions/lean_refactor_arena/experiments/variational_support_witness_v1.jsonl \
+            -o /tmp/variational-frozen-bank.jsonl
+      - name: Verify exactly two source-qualified proof promotions and thirteen unchanged rows
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,pathlib,subprocess
+          root=pathlib.Path('competitions/lean_refactor_arena')
+          pp=root/'portfolio/warmup_portfolio_v1.jsonl'
+          packet=root/'submissions/mathgraph_verified_15_warmup_20261009.jsonl'
+          audit=root/'evidence/retained_exact_full_version_audit_20261010_v9.json'
+          read=lambda f:[json.loads(line) for line in f.read_text(encoding='utf8').splitlines() if line.strip()]
+          frozen=read(pathlib.Path('/tmp/benchmark-pinned.jsonl'))
+          now=read(pp); prepared=read(packet); record=json.loads(audit.read_text())
+          oldsha='754f7b274567e2ab2f3e6efa579d183a77d6823f'
+          older=subprocess.check_output(['git','show',f'{oldsha}:{pp}'],text=True)
+          was=[json.loads(line) for line in older.splitlines() if line.strip()]
+          assert len(frozen)==len(now)==len(was)==len(prepared)==15
+          names=[r['name'] for r in frozen]
+          old={x['name']:x for x in was}; current={x['name']:x for x in now}
+          assert set(current)==set(old)==set(names)
+          assert set(x['name'] for x in prepared)==set(names)
+          changed={k for k in old if current[k]['proof']!=old[k]['proof']}
+          exact={
+            'Core.InitsUpdatesComm':{
+              'label':'warranted_core_terminal_simp_87',
+              'candidate':'terminal_simp',
+              'bank':'/tmp/core-frozen-bank.jsonl',
+              'run':'/tmp/core-source-run.json',
+              'run_id':37987607911,
+              'head':'238bcac3f049a5c0072737edb5011b1f0ed634e9',
+              'versions':['v4.29.1','v4.27.0','v4.26.0'],
+              'tokens':87,'heartbeats':244,'objective':155.79
+            },
+            "fundamental_theorem_of_variational_calculus'":{
+              'label':'warranted_variational_support_nonzero_170',
+              'candidate':'support_on_nonzero',
+              'bank':'/tmp/variational-frozen-bank.jsonl',
+              'run':'/tmp/variational-source-run.json',
+              'run_id':37987082422,
+              'head':'8e49779d12da2c226bee92080862518e5f04b78e',
+              'versions':['v4.32.0'],
+              'tokens':170,'heartbeats':2022,'objective':163.22
+            }
+          }
+          assert changed==set(exact),changed
+          assert all(old[k]==current[k] for k in old if k not in exact),'UNRELATED_PROOF_ROW_MUTATED'
+          assert [(r['name'],r['proof']) for r in prepared] == [(r['name'],r['proof']) for r in now]
+          audit_records={r['name']:r for r in record['records']}
+          assert len(audit_records)==15 and set(audit_records)==set(current)
+          proof_digests={}
+          for name,details in exact.items():
+              run=json.load(open(details['run']))
+              assert run.get('id')==details['run_id'] and run.get('head_sha')==details['head']
+              assert run.get('status')=='completed' and run.get('conclusion')=='success','SOURCE_RUN_NOT_SUCCESS'
+              bank=read(pathlib.Path(details['bank']))
+              witness=next(x for x in bank if x['name']==name and x['label']==details['candidate'])
+              assert current[name]['label']==details['label']
+              assert current[name]['proof']==witness['proof'],'CERTIFIED_SOURCE_PROOF_BYTES_MISMATCH'
+              assert current[name]['proof'].split(' := by\n',1)[0]==old[name]['proof'].split(' := by\n',1)[0]
+              rec=audit_records[name]
+              assert rec['label']==current[name]['label']
+              assert rec['evidence_status']=='WARRANTED_INDEPENDENT_EXACT_REQUIRED_VERSION'
+              assert rec['independent_run']==run['id']
+              assert set(rec['required_versions'])==set(details['versions'])
+              assert set(rec['independent_authority']['required_versions_verified'])==set(details['versions'])
+              assert float(rec['measured_objective_sum_pct'])==details['objective']
+              proof_digests[name]=hashlib.sha256(witness['proof'].encode()).hexdigest()
+          for name in old:
+              if name not in exact:
+                  assert audit_records[name]['label']==current[name]['label']
+          assert record['source_sha']=='7f3a401470d04f70013d293db4253b088ec8a0ae'
+          gitblob=lambda path:subprocess.check_output(['git','hash-object',str(path)],text=True).strip()
+          assert gitblob(pp)==record['portfolio_blob_sha']==record['current_portfolio_blob_sha']
+          assert gitblob(packet)==record['current_packet']['git_blob_sha']
+          assert record['state']=='WARRANTED_COMPOSED_PINNED_VERSIONS__NOT_OFFICIAL_ARENA_SUBMISSION'
+          assert sum(x.get('matches_pinned_public_full_test') is True for x in audit_records.values())==9
+          assert sum(x.get('matches_pinned_public_full_test') is not True for x in audit_records.values())==6
+          for k,r in audit_records.items():
+              versions=r['required_versions']
+              assert len(versions)==len(set(versions)) and bool(versions)
+              if r.get('matches_pinned_public_full_test') is True:
+                  assert r.get('public_hash') and r.get('public_compat')=={v:True for v in versions}
+                  assert r.get('evidence_status')=='WARRANTED_EXTERNAL_EXACT_FULL_VERSION'
+              else:
+                  assert r['evidence_status']=='WARRANTED_INDEPENDENT_EXACT_REQUIRED_VERSION'
+                  auth=r['independent_authority']
+                  assert isinstance(auth['run'],int) and auth['run']>0
+                  assert set(auth['required_versions_verified'])==set(versions)
+          assert abs(record['projected_score']['objective_sum_total']-2225.02)<1e-9
+          report={'schema':'mathgraph.lra.v9.source-reclosure.v1',
+            'status':'WARRANTED_REUSED_PINNED_EXACT_SOURCE_CERTIFICATES',
+            'source_pin':record['source_sha'],
+            'new_source_runs':[37987607911,37987082422],
+            'changed_proofs':proof_digests,'preserved_other_proof_rows':13,
+            'external_version_warrants':9,'independent_version_warrants':6,
+            'portfolio_blob':gitblob(pp),'packet_blob':gitblob(packet),
+            'composed_score':'PROJECTED_NOT_OFFICIAL','official_submission':False}
+          pathlib.Path('/tmp/v9-source-manifest.json').write_text(json.dumps(report,indent=2)+'\n')
+          print(json.dumps(report,indent=2))
+          print('WARRANTED_TWO_SOURCE_CONSEQUENCES_AND_THIRTEEN_UNCHANGED_PROOFS')
+          PY
+      - name: Build and validate exact 15-row organizer-compatible upload
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 competitions/lean_refactor_arena/arena_upload.py build \
+            --benchmark /tmp/benchmark-pinned.jsonl \
+            --candidates competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl \
+            --out /tmp/lra-v9-exact-15.jsonl \
+            --report /tmp/lra-v9-upload-report.json
+          python3 competitions/lean_refactor_arena/arena_upload.py validate \
+            --benchmark /tmp/benchmark-pinned.jsonl --upload /tmp/lra-v9-exact-15.jsonl
+          python3 - <<'PY'
+          import hashlib,json,pathlib,subprocess
+          p=pathlib.Path('/tmp/lra-v9-exact-15.jsonl')
+          rows=[json.loads(x) for x in p.read_text().splitlines() if x.strip()]
+          packet=pathlib.Path('competitions/lean_refactor_arena/submissions/mathgraph_verified_15_warmup_20261009.jsonl')
+          src=[json.loads(x) for x in packet.read_text().splitlines() if x.strip()]
+          assert len(rows)==len(src)==15
+          assert [(r['name'],r['proof']) for r in rows]==[(r['name'],r['proof']) for r in src]
+          h=hashlib.sha256(p.read_bytes()).hexdigest()
+          r={'schema':'mathgraph.lra.v9.exact-upload.v1',
+             'status':'WARRANTED_EXACT_15_ROW_UPLOAD_NOT_OFFICIAL_SCORE',
+             'sha256':h,'bytes':p.stat().st_size,
+             'rows':15,'reference_fallbacks':0,'official_submission':False}
+          pathlib.Path('/tmp/v9-upload-manifest.json').write_text(json.dumps(r,indent=2)+'\n')
+          print(json.dumps(r,indent=2))
+          print('VERIFIED_V9_FIFTEEN_ROW_UPLOAD_WITH_TWO_CHANGED_PROOFS')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-core-variational-v9-exact-15
+          path: |
+            /tmp/v9-source-manifest.json
+            /tmp/v9-upload-manifest.json
+            /tmp/lra-v9-exact-15.jsonl
+            /tmp/lra-v9-upload-report.json
+            /tmp/benchmark-meta.json
