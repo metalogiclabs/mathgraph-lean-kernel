@@ -73,6 +73,14 @@ class ConsequenceCompilerTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "FORBIDDEN_GENERATED"):
             compile_bank(self.sources, [rule])
 
+    def test_io_and_executable_surface_are_rejected(self):
+        for bad in ("IO.println", "run_cmd", "native_decide", "#eval 1"):
+            with self.subTest(bad=bad):
+                op = deepcopy(self.operators[0])
+                op["replacement_after"] = bad
+                with self.assertRaisesRegex(ValueError, "FORBIDDEN_GENERATED"):
+                    compile_bank(self.sources, [op])
+
     def test_duplicate_operator_ids_fail_closed(self):
         with self.assertRaisesRegex(ValueError, "DUPLICATE_OPERATOR_ID"):
             compile_bank(self.sources, self.operators + self.operators)
