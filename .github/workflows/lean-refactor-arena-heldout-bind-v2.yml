@@ -34,7 +34,7 @@ jobs:
           a=[json.loads(s) for s in pathlib.Path(os.environ['CANDIDATES']).read_text().splitlines() if s.strip()]
           b=[json.loads(s) for s in pathlib.Path('/tmp/lra-heldout-v2/benchmark_data_extra.jsonl').read_text().splitlines() if s.strip()]
           assert len(b)==1 and b[0]['name']==os.environ['NAME']
-          assert len(a)==18 and len({x['label'] for x in a})==9
+          assert len(a)==18 and len({x['label'] for x in a})==18
           assert all(x['name']==os.environ['NAME'] for x in a)
           assert a[0]['label']=='heldout_v2_exact_source_423'
           assert a[0]['proof']==b[0]['src'] and b[0]['proof_length']==423
@@ -109,7 +109,7 @@ jobs:
           import json,os,pathlib
           dest=pathlib.Path('/tmp/lra-heldout-v2')
           a=[json.loads(s) for s in (dest/'primary-scores.jsonl').read_text().splitlines() if s.strip()]
-          assert len(a)==18 and len({r['candidate_label'] for r in a})==9
+          assert len(a)==18 and len({r['candidate_label'] for r in a})==18
           def valid(r):
             pv=r.get('per_version') or []
             return (r.get('compiled') is True and r.get('statement_ok') is True and
