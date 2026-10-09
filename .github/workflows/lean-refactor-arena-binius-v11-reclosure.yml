@@ -1,19 +1,19 @@
-name: Lean Refactor Arena retained upload qualification
+name: Lean Refactor Arena V11 Binius fold quotient observer reclosure
 
 on:
   workflow_dispatch:
   push:
     branches:
-      - 'competition/lean-refactor-arena-track1'
+      - 'competition/lra-binius-fold-v11-reclosure'
     paths:
       - 'competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl'
       - 'competitions/lean_refactor_arena/arena_upload.py'
       - 'competitions/lean_refactor_arena/evidence/retained_exact_full_version_audit_20261010_v11.json'
       - 'competitions/lean_refactor_arena/submissions/mathgraph_verified_15_warmup_20261009.jsonl'
-      - '.github/workflows/lean-refactor-arena-retained-upload-qualification.yml'
+      - '.github/workflows/lean-refactor-arena-binius-v11-reclosure.yml'
 
 concurrency:
-  group: lra-retained-upload
+  group: lra-binius-v11-reclosure
   cancel-in-progress: true
 
 jobs:
@@ -22,6 +22,55 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      - name: Verify selected Wick bilinear observer and fourteen unchanged V10 proofs
+        shell: bash
+        run: |
+          set -euo pipefail
+          export SOURCE_SHA=dd18eec19df40de72cdb11dd272ad59e20f6d046
+          export ANCESTOR_SHA=001389c34d220173f31a95d37146384b028b318c
+          git fetch --depth=1 origin "$ANCESTOR_SHA"
+          curl -fsSL --retry 3 -H 'Accept: application/vnd.github+json' \
+            https://api.github.com/repos/metalogiclabs/mathgraph-lean-kernel/actions/runs/37996810588 \
+            -o /tmp/binius-v11-source-run.json
+          curl -fsSL --retry 3 \
+            "https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/$SOURCE_SHA/competitions/lean_refactor_arena/experiments/binius_fold_fiber_observer_v1.jsonl" \
+            -o /tmp/binius-v11-frozen-candidates.jsonl
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib,subprocess
+          o=json.load(open('/tmp/binius-v11-source-run.json'))
+          assert o['id']==37996810588 and o['conclusion']=='success' and o['status']=='completed'
+          assert o['head_sha']==os.environ['SOURCE_SHA'],'CANDIDATE_WARRANT_FROM_DIFFERENT_COMMIT'
+          assert o['name'] is not None
+
+          root=pathlib.Path('competitions/lean_refactor_arena')
+          target='Binius.BinaryBasefold.fold_advances_evaluation_poly'
+          read=lambda p:[json.loads(line) for line in p.read_text().splitlines() if line.strip()]
+          portfolio=read(root/'portfolio/warmup_portfolio_v1.jsonl')
+          submitted=read(root/'submissions/mathgraph_verified_15_warmup_20261009.jsonl')
+          candidates=read(pathlib.Path('/tmp/binius-v11-frozen-candidates.jsonl'))
+          winner=next(x for x in candidates if x['name']==target and x['label']=='compose_hq_simpa_calc_norm')
+          actual=next(x for x in portfolio if x['name']==target)
+          assert actual['label']=='warranted_binius_fold_fiber_observer_385'
+          assert actual['proof']==winner['proof'],'VERIFIED_SOURCE_BYTES_DO_NOT_MATCH_ACTIVE_PROOF'
+          assert next(x for x in submitted if x['name']==target)['proof']==winner['proof']
+          prior=subprocess.check_output(['git','show',
+            os.environ['ANCESTOR_SHA']+':competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl'],text=True)
+          before={x['name']:x for x in map(json.loads,prior.splitlines()) if x}
+          after={x['name']:x for x in portfolio}
+          assert len(before)==len(after)==15 and set(before)==set(after)
+          assert {n for n in before if before[n]['proof']!=after[n]['proof']}=={target}
+          assert all(before[n]==after[n] for n in before if n!=target),'UNRELATED_WARRANT_CHANGED'
+          proof_sha=hashlib.sha256(winner['proof'].encode()).hexdigest()
+          result={'schema':'mathgraph.lra.binius-fold-observer-source-closure.v11',
+            'status':'WARRANTED_PREVIOUS_LEAN_RUN__EXACT_CURRENT_PROOF_MATCH',
+            'run_id':37996810588,'candidate_head':o['head_sha'],
+            'selected_label':winner['label'],'proof_sha256':proof_sha,
+            'other_14_proofs_exact':True,'required_lean_versions':['v4.31.0','v4.30.0','v4.29.0'],
+            'external_submission':False}
+          pathlib.Path('/tmp/binius-v11-source-closure.json').write_text(json.dumps(result,indent=2)+'\n')
+          print(json.dumps(result,indent=2))
+          print('WARRANTED_V11_BINIUS_SOURCE_AND_FOURTEEN_UNCHANGED_PROOFS')
+          PY
       - name: Fetch pinned benchmark metadata without running external code
         shell: bash
         run: |
@@ -38,14 +87,14 @@ jobs:
           python3 competitions/lean_refactor_arena/arena_upload.py build \
             --benchmark /tmp/benchmark_data_warmup.jsonl \
             --candidates competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl \
-            --out /tmp/lra-closed-retained-15.jsonl \
+            --out /tmp/lra-binius-v11-exact-15.jsonl \
             --report /tmp/lra-closed-retained-report.json
           python3 competitions/lean_refactor_arena/arena_upload.py validate \
             --benchmark /tmp/benchmark_data_warmup.jsonl \
-            --upload /tmp/lra-closed-retained-15.jsonl
+            --upload /tmp/lra-binius-v11-exact-15.jsonl
           python3 - <<'PY'
           import hashlib,json,pathlib,subprocess
-          upload=pathlib.Path('/tmp/lra-closed-retained-15.jsonl')
+          upload=pathlib.Path('/tmp/lra-binius-v11-exact-15.jsonl')
           portfolio=pathlib.Path('competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl')
           bench=pathlib.Path('/tmp/benchmark_data_warmup.jsonl')
           audit=pathlib.Path('competitions/lean_refactor_arena/evidence/retained_exact_full_version_audit_20261010_v11.json')
@@ -106,13 +155,14 @@ jobs:
           print(json.dumps(out,indent=2))
           print('VERIFIED_EXACT_RETAINED_15_ROW_UPLOAD')
           PY
-          sha256sum /tmp/lra-closed-retained-15.jsonl
+          sha256sum /tmp/lra-binius-v11-exact-15.jsonl
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: lra-closed-retained-15
+          name: lra-binius-v11-exact-15
           path: |
-            /tmp/lra-closed-retained-15.jsonl
+            /tmp/lra-binius-v11-exact-15.jsonl
             /tmp/lra-retained-manifest.json
             /tmp/lra-closed-retained-report.json
             /tmp/benchmark-summary.json
+            /tmp/binius-v11-source-closure.json
