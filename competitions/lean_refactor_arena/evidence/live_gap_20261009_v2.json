@@ -143,15 +143,19 @@
     "promotion_boundary": "Statement intact, compiled, no forbidden constructs or extra declarations, all required Lean versions, comparable official objective gain, then recompute 15-target score."
   },
   "wick_structural_crossover_20261009": {
-    "status": "CANDIDATE_UNVERIFIED",
-    "candidate_file": "competitions/lean_refactor_arena/probes/physlib_wick_structural_crossover_v1.jsonl",
-    "proof_boundary": "Two-stage LinearMap basis extensionality over compact Wick generator-local splitting; tested against public verified 568-token/23513-HB and 705-token/18955-HB controls.",
-    "external_public_pin": "aurasoph/lean-refactor@7f3a401470d04f70013d293db4253b088ec8a0ae",
-    "candidate_commit": "76898becb55e163fed32dd41ced445995a015c4f",
-    "workflow_commit": "5da5035c98a6f3a6a5cb9afb63c97ef5931892b7",
-    "workflow_run": 37887798992,
-    "promotion": "Only if compiled and statement intact under pinned v4.32; objective >97.88; then update 15-target total. No current gain claimed.",
-    "note": "The two candidates can fail elaboration; they are a cheap falsification of representation transfer rather than leaderboard-qualified results."
+    "status": "WARRANTED_PRIMARY_AND_RETAINED",
+    "qualification_run": 37887798992,
+    "artifact_id": 11597896226,
+    "evidence_path": "competitions/lean_refactor_arena/evidence/wick_extensional_compact_crossover_v1.json",
+    "portfolio_commit": "a15e78d843793e01d858cc52ca2731cd4c259150",
+    "primary_objective_sum_pct": 118,
+    "previous_composed_objective_pct": 97.88,
+    "objective_gain": 20.12,
+    "primary_heartbeats": 13656,
+    "primary_tokens": 606,
+    "full_warmup_required_versions": 1,
+    "official_leaderboard_score_claim": false,
+    "note": "One novel proof representation verified, not proof of general transfer. Former candidate state superseded by run 37887798992."
   },
   "wick_deletion_census_20261009": {
     "status": "REJECTED_BOUNDED",
@@ -199,5 +203,18 @@
       }
     ],
     "next_protected_move": "No further module or blanket simp variants; test compact generator proof under extensionality, run 37887798992; don't promote unless compiled and objective >97.88."
+  },
+  "post_wick_projected_portfolio": {
+    "status": "CANDIDATE_COMPOSITION_PENDING_INDEPENDENT_15_PROOF_REPLAY",
+    "objective_sum_total": 2198.4,
+    "objective_sum_mean": 146.56,
+    "combined_pct_if_all_survival": 82.1867,
+    "gap_to_current_leader": 7.1933,
+    "remaining_objective_sum_debt_for_tie": 323.6995,
+    "checks": {
+      "primary_score_run": 37889600265,
+      "exact_cross_version_run": 37889600290,
+      "portfolio_preflight_run": 37889600282
+    }
   }
 }
