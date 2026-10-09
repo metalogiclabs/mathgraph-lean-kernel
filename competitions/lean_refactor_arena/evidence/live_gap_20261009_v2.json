@@ -467,9 +467,81 @@
   },
   "submission_package_current": {
     "status": "VERIFIED_EXACT_15_PACKET_NOT_SUBMITTED",
-    "run": 37896330914,
-    "bytes": 28369,
-    "sha256": "0c3b480d95cae4ba35b8cca2d877463edfd9aaa1fb0450d789226c9d7c5f44b4",
+    "run": 37899381680,
+    "bytes": 28376,
+    "sha256": "53b60970d4b1650217de91943419e90768c3c2adf04c470f62ef6ee412bd4376",
     "file": "competitions/lean_refactor_arena/submissions/mathgraph_verified_15_warmup_20261009.jsonl"
+  },
+  "minimum_warranted_frontier_latest_20261009": {
+    "status": "WARRANTED_COMPOSED_PROOF_COMPATIBILITY__NOT_OFFICIALLY_SUBMITTED",
+    "derived_from": "minimum_warranted_frontier_reclosure_20261009 plus verified EM composition run 37896523425",
+    "current_portfolio": {
+      "commit": "7121587cea422c136639f814190445efff114027",
+      "blob_sha": "6bbebde2f427435f3f1e72b4d4cc221d8c0f05e8",
+      "packet_commit": "56f59f446415477f524066c56514a99fa29bf768",
+      "packet_run": 37899381680,
+      "packet_bytes": 28376,
+      "packet_sha256": "53b60970d4b1650217de91943419e90768c3c2adf04c470f62ef6ee412bd4376",
+      "proofs": 15,
+      "unaffected_other_14_exact": true
+    },
+    "current_full_version_audit": {
+      "path": "competitions/lean_refactor_arena/evidence/retained_exact_full_version_audit_20261009_v3.json",
+      "commit": "540f7c94f3c459a1b9574cfc23c3be81d2040ea7",
+      "external_exact_count": 12,
+      "independent_required_count": 3,
+      "independent_names": [
+        "Core.InitsUpdatesComm",
+        "FieldSpecification.WickAlgebra.ι_timeOrderF_superCommuteF_eq_time",
+        "Electromagnetism.ElectromagneticPotential.time_deriv_time_deriv_electricField_of_isExtrema"
+      ]
+    },
+    "em_verifier_authority": {
+      "run": 37896523425,
+      "required_version": "v4.32.0",
+      "control_565": {
+        "length": 565,
+        "heartbeats": 10557,
+        "objective": 120.9
+      },
+      "selected_composition": {
+        "length": 566,
+        "heartbeats": 10499,
+        "objective": 121.04,
+        "exact_source_sha256": "ae7e19b3a14e7581e416e85e3d9d059d5fa1814d10276ffea1344b24bf30c28b"
+      },
+      "pareto_other_565": {
+        "length": 565,
+        "heartbeats": 10556,
+        "objective": 120.9
+      },
+      "dominated_568": {
+        "length": 568,
+        "heartbeats": 10499,
+        "objective": 120.89
+      }
+    },
+    "positive_reclosure": {
+      "arklib": 37897071346,
+      "verified_primary_targets": 3,
+      "frontier_gate": 37898174420,
+      "regression_tests_green": 14
+    },
+    "remaining_evidence": {
+      "wick_bilinear_terminal_run": 37898753536,
+      "typing_targeted_three_version_run": 37899030016,
+      "original_em_composite_run": 37896523425,
+      "full_portfolio_ci_version_build": "MIXED_INFRASTRUCTURE__INHERIT_STRICT_AUDIT",
+      "official_leaderboard_submission": "NOT_PERFORMED"
+    },
+    "projected_score": {
+      "not_official": true,
+      "combined_pct": 82.1931,
+      "objective_sum": 2198.69,
+      "latest_checked_leader": 89.38,
+      "remaining_combined_to_tie": 7.1869,
+      "remaining_objective_to_tie": 323.41
+    },
+    "supersession_notice": "The prior minimum_warranted_frontier_reclosure_20261009 reflects older EM 565 selection. This object supersedes only its active portfolio/packet/score references, retaining the historical record."
   }
 }
