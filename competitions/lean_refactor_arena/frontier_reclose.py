@@ -49,8 +49,14 @@ def _admission(
         return {"status": "UNKNOWN", "reason": "proof source not bound to measurement"}
     if measurement.get("public_harness_sha") != public_sha:
         return {"status": "UNKNOWN", "reason": "different verifier environment"}
-    if measurement.get("all_versions") is not True:
-        return {"status": "UNKNOWN", "reason": "full-version run not established"}
+    # Organizer releases may omit the derived all_versions summary. The
+    # epistemic authority is the exact *positive* pinned per-version matrix,
+    # not the mere presence of a summary boolean. An explicit false flag
+    # always vetoes admission; absent is permitted only if the complete
+    # version matrix and other source/cost gates below positively verify it.
+    all_versions_flag = measurement.get("all_versions")
+    if all_versions_flag is not None and all_versions_flag is not True:
+        return {"status": "UNKNOWN", "reason": "explicit or malformed full-version flag"}
     compat = measurement.get("compat") or {}
     version_records = {x.get("version"): x for x in pv}
     if (set(compat) != versions or len(pv) != len(versions)
