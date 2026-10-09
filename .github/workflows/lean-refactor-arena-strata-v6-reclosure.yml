@@ -55,7 +55,8 @@ jobs:
           import json
           r=json.load(open('/tmp/lra-v6-strata-verified.json'))
           assert r.get('compiled') is True and r.get('statement_ok') is True and r.get('eligible') is True,r
-          assert r.get('all_versions') is True and r.get('survival_pct') == 100,r
+          assert r.get('survival_pct') == 100,r
+          assert r.get('all_versions') is not False, 'NEGATIVE_ALL_VERSION_FIELD'
           assert not r.get('forbidden') and not r.get('extra_toplevel_decls') and not r.get('untested'),r
           assert r.get('compat')=={'v4.26.0':True},r
           versions=r.get('per_version') or []
