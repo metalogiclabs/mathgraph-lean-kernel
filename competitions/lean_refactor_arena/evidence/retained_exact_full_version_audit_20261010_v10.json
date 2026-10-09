@@ -1,0 +1,503 @@
+{
+  "schema": "mathgraph.lra.retained-proof-exact-version-audit.v10",
+  "state": "WARRANTED_COMPOSED_PINNED_VERSIONS__NOT_OFFICIAL_ARENA_SUBMISSION",
+  "observed_on": "2026-10-10",
+  "source_repo": "aurasoph/lean-refactor",
+  "source_sha": "7f3a401470d04f70013d293db4253b088ec8a0ae",
+  "portfolio_path": "competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl",
+  "portfolio_blob_sha": "027bca72945edc864d8b807062b17575105d9d18",
+  "previous_audit_path": "competitions/lean_refactor_arena/evidence/retained_exact_full_version_audit_20261010_v9.json",
+  "previous_audit_portfolio_blob": "822da10362ae9b4b7836518a08471fced812139f",
+  "protected_evidence_rule": "Full-version public trials only when all_versions=true and every benchmark required compat version is true, and exact proof bytes match. Independent proof evidence uses identical pinned source statement and every required version. Numerical score is separate from admission.",
+  "change_fingerprint": {
+    "kind": "Observation application closure via partial function on verified bilinear equality",
+    "changed_theorems": [
+      "FieldSpecification.WickAlgebra.ι_timeOrderF_superCommuteF_eq_time"
+    ],
+    "preserved_proof_rows_from_v9": 14,
+    "source_runs": [
+      37987841544
+    ],
+    "old_portfolio_blob": "822da10362ae9b4b7836518a08471fced812139f",
+    "new_portfolio_blob": "027bca72945edc864d8b807062b17575105d9d18",
+    "witness": "Exact `congrArg (· a b)` of a verified bilinear map equality, rather than lambda wrapping; three fewer proof tokens, same heartbeat cost."
+  },
+  "comparator_full_version_exact_count": 9,
+  "independently_qualified_count": 6,
+  "total_authorized_by_prior_evidence": 15,
+  "independently_qualified": [
+    {
+      "name": "Core.InitsUpdatesComm",
+      "run": 37889600290,
+      "qualification": "3/3 required versions positive, proof bytes retained"
+    },
+    {
+      "name": "Electromagnetism.ElectromagneticPotential.time_deriv_time_deriv_electricField_of_isExtrema",
+      "run": 37985510361,
+      "qualification": "Pinned organizer v4.32.0 1/1 with independent all-versions replay; 551 tokens/10403 HB/objective122.47."
+    },
+    {
+      "name": "FieldSpecification.WickAlgebra.ι_timeOrderF_superCommuteF_eq_time",
+      "run": 37987841544,
+      "qualification": "pinned v4.32.0 required-version replay succeeded, 552 tokens/11678 heartbeats/objective127.10"
+    },
+    {
+      "name": "CallElimCorrect.substOldPostSubset",
+      "run": 37980654973,
+      "qualification": "v4.26.0 1/1 exact proof; 135 tokens/1890 heartbeats/objective120.41"
+    },
+    {
+      "name": "Cslib.LambdaCalculus.LocallyNameless.Fsub.Typing.progress",
+      "run": 37973211833,
+      "qualification": "v4.33.0-rc2/v4.32.0/v4.31.0 3/3 verified; 308 tokens/2697 heartbeats/objective 120.03"
+    },
+    {
+      "name": "fundamental_theorem_of_variational_calculus'",
+      "run": 37987082422,
+      "qualification": "1/1 pinned Lean v4.32.0 proof passed, 170 tokens/2022 HB/objective163.22; direct φ x = 0 support consequence"
+    }
+  ],
+  "score_not_official": true,
+  "records": [
+    {
+      "name": "CallElimCorrect.substOldPostSubset",
+      "label": "warranted_strata_tail_simp_grind_135",
+      "required_versions": [
+        "v4.26.0"
+      ],
+      "matches_pinned_public_full_test": false,
+      "public_hash": null,
+      "public_compat": null,
+      "evidence_status": "WARRANTED_INDEPENDENT_EXACT_REQUIRED_VERSION",
+      "independent_run": 37980654973,
+      "compat": {
+        "v4.26.0": true
+      },
+      "independent_authority": {
+        "run": 37980654973,
+        "job": 113990516584,
+        "required_versions_verified": [
+          "v4.26.0"
+        ],
+        "workflow": "Lean Refactor Arena Strata structural consequence crossover",
+        "proof_label": "tail_simp_grind_lean",
+        "all_required_versions_positive": true
+      },
+      "measured_objective_sum_pct": 120.41
+    },
+    {
+      "name": "CallElimCorrect.extractedOldExprInVars",
+      "label": "warranted_witness_44",
+      "required_versions": [
+        "v4.26.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "d2aa22236a16",
+      "public_compat": {
+        "v4.26.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION"
+    },
+    {
+      "name": "Core.InitsUpdatesComm",
+      "label": "public_informed_semantic_reconstruction_87",
+      "required_versions": [
+        "v4.29.1",
+        "v4.27.0",
+        "v4.26.0"
+      ],
+      "matches_pinned_public_full_test": false,
+      "public_hash": null,
+      "public_compat": null,
+      "evidence_status": "WARRANTED_INDEPENDENT_EXACT_REQUIRED_VERSION",
+      "independent_authority": {
+        "run": 37889600290,
+        "required_versions_verified": [
+          "v4.29.1",
+          "v4.27.0",
+          "v4.26.0"
+        ]
+      }
+    },
+    {
+      "name": "fundamental_theorem_of_variational_calculus'",
+      "label": "warranted_variational_support_nonzero_170",
+      "required_versions": [
+        "v4.32.0"
+      ],
+      "matches_pinned_public_full_test": false,
+      "public_hash": null,
+      "public_compat": null,
+      "evidence_status": "WARRANTED_INDEPENDENT_EXACT_REQUIRED_VERSION",
+      "independent_run": 37987082422,
+      "compat": {
+        "v4.32.0": true
+      },
+      "independent_authority": {
+        "run": 37987082422,
+        "job": 114011644918,
+        "source_head": "8e49779d12da2c226bee92080862518e5f04b78e",
+        "proof_label": "support_on_nonzero",
+        "required_versions_verified": [
+          "v4.32.0"
+        ],
+        "measured": {
+          "tokens": 170,
+          "heartbeats": 2022,
+          "objective_sum_pct": 163.22
+        },
+        "replay": "--all-versions success on pinned v4.32.0"
+      },
+      "measured_objective_sum_pct": 163.22
+    },
+    {
+      "name": "Electromagnetism.ElectromagneticPotential.time_deriv_time_deriv_electricField_of_isExtrema",
+      "label": "warranted_em_congrarg_inferred_551",
+      "required_versions": [
+        "v4.32.0"
+      ],
+      "matches_pinned_public_full_test": false,
+      "public_hash": null,
+      "public_compat": null,
+      "evidence_status": "WARRANTED_INDEPENDENT_EXACT_REQUIRED_VERSION",
+      "independent_authority": {
+        "run": 37985510361,
+        "job": 114006384538,
+        "source_branch": "competition/lra-em-consequence-derivative-v1",
+        "source_head": "20b10c5379043956307bd651e3bcdaef1cc7ce9f",
+        "protected_source_sha": "7f3a401470d04f70013d293db4253b088ec8a0ae",
+        "required_versions_verified": [
+          "v4.32.0"
+        ],
+        "proof_label": "congrarg_inferred",
+        "statement_ok": true,
+        "compiled": true,
+        "measured": {
+          "tokens": 551,
+          "heartbeats": 10403,
+          "objective_sum_pct": 122.47
+        }
+      },
+      "independent_run": 37985510361,
+      "compat": {
+        "v4.32.0": true
+      },
+      "measured_objective_sum_pct": 122.47
+    },
+    {
+      "name": "FieldSpecification.WickAlgebra.ι_timeOrderF_superCommuteF_eq_time",
+      "label": "warranted_wick_finish_apply_552",
+      "required_versions": [
+        "v4.32.0"
+      ],
+      "matches_pinned_public_full_test": false,
+      "public_hash": null,
+      "public_compat": null,
+      "evidence_status": "WARRANTED_INDEPENDENT_EXACT_REQUIRED_VERSION",
+      "independent_authority": {
+        "run": 37987841544,
+        "job": 114014174496,
+        "source_head": "518d5866d0f9e1c957f72b7a3fa2d8b9973f375a",
+        "source_label": "finish_apply",
+        "required_versions_verified": [
+          "v4.32.0"
+        ],
+        "replayed_all_versions": true,
+        "measured": {
+          "tokens": 552,
+          "heartbeats": 11678,
+          "objective_sum_pct": 127.1
+        }
+      },
+      "independent_run": 37987841544,
+      "compat": {
+        "v4.32.0": true
+      },
+      "measured_objective_sum_pct": 127.1
+    },
+    {
+      "name": "Cslib.LambdaCalculus.LocallyNameless.Fsub.Typing.progress",
+      "label": "warranted_typing_movable_tli_grind_308",
+      "required_versions": [
+        "v4.33.0-rc2",
+        "v4.32.0",
+        "v4.31.0"
+      ],
+      "matches_pinned_public_full_test": false,
+      "public_hash": null,
+      "public_compat": null,
+      "evidence_status": "WARRANTED_INDEPENDENT_EXACT_REQUIRED_VERSION",
+      "independent_run": 37973211833,
+      "compat": {
+        "v4.33.0-rc2": true,
+        "v4.32.0": true,
+        "v4.31.0": true
+      },
+      "measured_objective_sum_pct": 120.03,
+      "independent_authority": {
+        "run": 37973211833,
+        "required_versions_verified": [
+          "v4.33.0-rc2",
+          "v4.32.0",
+          "v4.31.0"
+        ]
+      }
+    },
+    {
+      "name": "Cslib.SKI.parallelReduction_diamond",
+      "label": "public_informed_derivation_278",
+      "required_versions": [
+        "v4.33.0-rc2",
+        "v4.32.0",
+        "v4.31.0",
+        "v4.30.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "183765ced868",
+      "public_compat": {
+        "v4.33.0-rc2": true,
+        "v4.32.0": true,
+        "v4.31.0": true,
+        "v4.30.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION"
+    },
+    {
+      "name": "Cslib.CCS.bisimilarity_congr_choice",
+      "label": "public_informed_derivation_85",
+      "required_versions": [
+        "v4.33.0-rc2",
+        "v4.32.0",
+        "v4.31.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "3b5c96c77fc7",
+      "public_compat": {
+        "v4.33.0-rc2": true,
+        "v4.32.0": true,
+        "v4.31.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION"
+    },
+    {
+      "name": "Binius.BinaryBasefold.fiberwise_dist_lt_imp_dist_lt_unique_decoding_radius",
+      "label": "public_informed_local_factor_439",
+      "required_versions": [
+        "v4.31.0",
+        "v4.30.0",
+        "v4.29.0",
+        "v4.28.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "6ff578bb6cee",
+      "public_compat": {
+        "v4.31.0": true,
+        "v4.30.0": true,
+        "v4.29.0": true,
+        "v4.28.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION"
+    },
+    {
+      "name": "Binius.BinaryBasefold.fold_advances_evaluation_poly",
+      "label": "public_informed_local_factor_388",
+      "required_versions": [
+        "v4.31.0",
+        "v4.30.0",
+        "v4.29.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "f5667fc1e5b9",
+      "public_compat": {
+        "v4.31.0": true,
+        "v4.30.0": true,
+        "v4.29.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION"
+    },
+    {
+      "name": "interleaved_affine_gaps_imply_tensor_gaps",
+      "label": "public_informed_recursive_form_173",
+      "required_versions": [
+        "v4.31.0",
+        "v4.30.0",
+        "v4.29.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "fe4c6fa1984f",
+      "public_compat": {
+        "v4.31.0": true,
+        "v4.30.0": true,
+        "v4.29.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION"
+    },
+    {
+      "name": "putnam_1964_a4",
+      "label": "public_informed_minimal_state_291",
+      "required_versions": [
+        "v4.25.0",
+        "v4.26.0",
+        "v4.27.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "6801603b11c9",
+      "public_compat": {
+        "v4.25.0": true,
+        "v4.26.0": true,
+        "v4.27.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION"
+    },
+    {
+      "name": "putnam_1964_b2",
+      "label": "public_all_versions_d9377ebbc1d6",
+      "required_versions": [
+        "v4.25.0",
+        "v4.26.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "d9377ebbc1d6",
+      "public_compat": {
+        "v4.25.0": true,
+        "v4.26.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION"
+    },
+    {
+      "name": "putnam_1995_a3",
+      "label": "public_informed_digit_replace_414",
+      "required_versions": [
+        "v4.25.0",
+        "v4.26.0",
+        "v4.27.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "70b336d1cc35",
+      "public_compat": {
+        "v4.25.0": true,
+        "v4.26.0": true,
+        "v4.27.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION"
+    }
+  ],
+  "current_portfolio_blob_sha": "027bca72945edc864d8b807062b17575105d9d18",
+  "current_packet": {
+    "path": "competitions/lean_refactor_arena/submissions/mathgraph_verified_15_warmup_20261009.jsonl",
+    "git_blob_sha": "ee8b4e6b6a3484fea7a43e0f09c17a41cee3174b",
+    "rows": 15,
+    "status": "BOUND_TO_EXACT_PROOFS__PENDING_V10_FRESH_QUALIFICATION",
+    "sha256": null
+  },
+  "active_verified_em_frontier": [
+    {
+      "label": "em_compose_hcross_terminal_v1",
+      "tokens": 566,
+      "heartbeats": 10499,
+      "objective": 121.04,
+      "selected": false,
+      "run": 37896523425
+    },
+    {
+      "label": "congrarg_typed",
+      "tokens": 556,
+      "heartbeats": 10409,
+      "objective": 122.09,
+      "selected": false,
+      "run": 37985510361
+    },
+    {
+      "label": "congrarg_inferred",
+      "tokens": 551,
+      "heartbeats": 10403,
+      "objective": 122.47,
+      "selected": true,
+      "run": 37985510361
+    }
+  ],
+  "dominated_historical_em_candidate": {
+    "label": "em_hcross_simp",
+    "tokens": 568,
+    "heartbeats": 10499,
+    "objective": 120.89,
+    "dominated_by": "em_compose_hcross_terminal_v1",
+    "verification_run": 37891035688,
+    "now_dominated_by": "congrarg_inferred"
+  },
+  "warranted_frontier": {
+    "Wick": {
+      "label": "warranted_wick_finish_apply_552",
+      "run": 37987841544,
+      "length": 552,
+      "heartbeats": 11678,
+      "objective": 127.1,
+      "source_label": "finish_apply"
+    },
+    "Typing": {
+      "label": "warranted_typing_movable_tli_grind_308",
+      "run": 37973211833,
+      "length": 308,
+      "heartbeats": 2697,
+      "objective": 120.03
+    },
+    "Strata": {
+      "label": "warranted_strata_tail_simp_grind_135",
+      "run": 37980654973,
+      "length": 135,
+      "heartbeats": 1890,
+      "objective": 120.41
+    },
+    "Electromagnetism": {
+      "label": "warranted_em_congrarg_inferred_551",
+      "run": 37985510361,
+      "required_versions": [
+        "v4.32.0"
+      ],
+      "length": 551,
+      "heartbeats": 10403,
+      "objective": 122.47
+    },
+    "Variational": {
+      "label": "warranted_variational_support_nonzero_170",
+      "run": 37987082422,
+      "required_versions": [
+        "v4.32.0"
+      ],
+      "length": 170,
+      "heartbeats": 2022,
+      "objective": 163.22
+    }
+  },
+  "targeted_reclosure_CI": {
+    "previous_v9_run": 37990217044,
+    "previous_main_upload": 37990553189,
+    "source_wick_run": 37987841544,
+    "fresh_packet_validation": "PENDING_V10",
+    "unchanged_rows": 14
+  },
+  "protected_future_invariant": "Exact theorem statement and v4.32 certified proof. The other fourteen V9 proof rows remain byte-identical, required version warrants 9 external+6 independent. No official submission.",
+  "current_version_alias": "V10 minimum applied observation of Wick bilinear equality",
+  "projected_score": {
+    "objective_sum_total": 2224.24,
+    "combined_pct_if_full_survival": 82.7609,
+    "recorded_leader": 89.38,
+    "combined_gap": 6.6191,
+    "objective_debt_to_tie": 297.86,
+    "status": "PROJECTED__NOT_OFFICIALLY_SUBMITTED"
+  },
+  "promotion_boundary": {
+    "status": "PENDING_FRESH_V10_PACKET_SOURCE_GATE",
+    "source_authority": {
+      "run": 37987841544,
+      "required_versions": [
+        "v4.32.0"
+      ],
+      "length": 552,
+      "heartbeats": 11678,
+      "objective": 127.1
+    },
+    "other_fourteen_exact": true,
+    "official_submission": false
+  }
+}
