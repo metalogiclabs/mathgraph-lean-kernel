@@ -193,7 +193,10 @@ class FrontierTests(unittest.TestCase):
         lines=packet.splitlines()
         idx=next(i for i,line in enumerate(lines) if json.loads(line)["name"]==benchmark)
         current=json.loads(lines[idx])
-        self.assertEqual(current["proof"],rows[1]["proof"])
+        composed_bank=root / "experiments" / "em_minimal_frontier_compose_v1.jsonl"
+        composed=next(r for r in (json.loads(s) for s in composed_bank.read_text().splitlines() if s.strip())
+            if r["label"] == "em_compose_hcross_terminal_v1")
+        self.assertEqual(current["proof"], composed["proof"])
         before=lines[:]
         current["proof"]=rows[0]["proof"]
         before[idx]=json.dumps(current,ensure_ascii=False)
@@ -205,6 +208,27 @@ class FrontierTests(unittest.TestCase):
         self.assertEqual(len(after),15)
         self.assertEqual(after[:idx]+after[idx+1:],before[:idx]+before[idx+1:])
         self.assertEqual(json.loads(after[idx])["proof"],rows[1]["proof"])
+
+    def test_retained_wick_and_typing_evidence_reclosed_into_packet(self):
+        from pathlib import Path
+        root=Path(__file__).resolve().parents[1]
+        portfolio=[json.loads(s) for s in (root/"portfolio"/"warmup_portfolio_v1.jsonl").read_text().splitlines() if s.strip()]
+        packet=[json.loads(s) for s in (root/"submissions"/"mathgraph_verified_15_warmup_20261009.jsonl").read_text().splitlines() if s.strip()]
+        self.assertEqual(len(portfolio),15)
+        self.assertEqual([(x["name"],x["proof"]) for x in portfolio],
+                         [(x["name"],x["proof"]) for x in packet])
+        self.assertEqual(len({x["name"] for x in packet}),15)
+        bank=next(json.loads(s) for s in
+            (root/"experiments"/"wick_bilinear_terminal_verified_v1.jsonl").read_text().splitlines()
+            if s.strip())
+        typing=next(json.loads(s) for s in
+            (root/"experiments"/"typing_pareto_crossover_v1.jsonl").read_text().splitlines()
+            if s.strip() and json.loads(s).get("label")=="typing_fast_cross_CLI")
+        active={row["name"]:row for row in portfolio}
+        self.assertEqual(active[bank["name"]]["proof"],bank["proof"])
+        self.assertEqual(active[typing["name"]]["proof"],typing["proof"])
+        self.assertEqual(active[bank["name"]]["label"],"warranted_wick_bilinear_terminal_555")
+        self.assertEqual(active[typing["name"]]["label"],"warranted_typing_pareto_CLI_338")
 
 
 if __name__ == "__main__":

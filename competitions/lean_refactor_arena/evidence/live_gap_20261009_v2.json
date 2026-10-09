@@ -543,5 +543,57 @@
       "remaining_objective_to_tie": 323.41
     },
     "supersession_notice": "The prior minimum_warranted_frontier_reclosure_20261009 reflects older EM 565 selection. This object supersedes only its active portfolio/packet/score references, retaining the historical record."
+  },
+  "minimum_warranted_frontier_latest_20261010": {
+    "state": "WARRANTED_COMPOSED_FULL_VERSION_CERTIFICATES__OFFICIALLY_NOT_SUBMITTED",
+    "source_pin": "aurasoph/lean-refactor@7f3a401470d04f70013d293db4253b088ec8a0ae",
+    "portfolio_blob_sha": "7a6594965c0d73d5e91409f838c81fa9553e02f2",
+    "packet_blob_sha": "610e579d231fce22a982ba473fd235708c27ff0c",
+    "changed_exact_proofs": [
+      {
+        "name": "FieldSpecification.WickAlgebra.ι_timeOrderF_superCommuteF_eq_time",
+        "label": "warranted_wick_bilinear_terminal_555",
+        "run": 37898753536,
+        "length": 555,
+        "heartbeats": 11678,
+        "objective": 126.86,
+        "required_versions": [
+          "v4.32.0"
+        ]
+      },
+      {
+        "name": "Cslib.LambdaCalculus.LocallyNameless.Fsub.Typing.progress",
+        "label": "warranted_typing_pareto_CLI_338",
+        "run": 37899030016,
+        "length": 338,
+        "heartbeats": 2198,
+        "objective": 113.51,
+        "required_versions": [
+          "v4.33.0-rc2",
+          "v4.32.0",
+          "v4.31.0"
+        ]
+      }
+    ],
+    "unchanged_other_13_proofs": true,
+    "source_wick_sha256": "e99ed1ddd30a6b7041d2268e5b686578fe116f364aed4970ca2d7bc4f7fbe43e",
+    "verified_authority": {
+      "wick": 37898753536,
+      "typing": 37899030016,
+      "core": 37889600290,
+      "em": 37896523425,
+      "other_11": "strict pinned exact public all_versions comparator audit"
+    },
+    "audit_path": "competitions/lean_refactor_arena/evidence/retained_exact_full_version_audit_20261010_v4.json",
+    "prospective_portfolio": {
+      "objective_sum_total": 2207.8,
+      "combined_pct_if_100_percent_survival": 82.3956,
+      "recorded_leader_oct9_pct": 89.38,
+      "gap_to_recorded_leader": 6.9844,
+      "objective_sum_debt_to_tie": 314.3,
+      "official_submitted": false
+    },
+    "constraint": "Only compatible fully attested proofs admitted; retain established EM crossover 566, Wick 555, Typing 338; no fresh official rank claim.",
+    "pending_current_commit_ci": "submission preflight and local frontier regression run must both pass before calling packet reclosed"
   }
 }
