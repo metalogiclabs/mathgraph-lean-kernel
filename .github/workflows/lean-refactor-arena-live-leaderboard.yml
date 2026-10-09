@@ -87,6 +87,43 @@ jobs:
           print('VERIFIED_LIVE_LEADERBOARD_FETCH')
           PY
 
+      - name: Extract dated Closed leader from read-only payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import datetime, html, json, re
+          p=json.load(open('/tmp/lra-leaderboard-payloads.json'))
+          def walk(o):
+              if isinstance(o,str):
+                  yield o
+              elif isinstance(o,list):
+                  for x in o: yield from walk(x)
+              elif isinstance(o,dict):
+                  for x in o.values(): yield from walk(x)
+          rows=[]
+          for s in walk(p):
+              for m in re.finditer(r"<tr data-rank=['\"](\d+)['\"]>(.*?)</tr>",s,re.S):
+                  body=m.group(2)
+                  name=re.search(r"<td class=['\"]who['\"][^>]*>(.*?)</td>",body,re.S)
+                  pct=re.search(r"<td data-col=['\"]combined['\"] data-sort=['\"]([\d.]+)",body)
+                  if name and pct:
+                      clean=html.unescape(re.sub(r'<[^>]*>','',name.group(1))).strip()
+                      rows.append({'rank':int(m.group(1)),'team':clean,'combined_pct':float(pct.group(1))})
+          dedup={r['rank']:r for r in rows}
+          ordered=[dedup[k] for k in sorted(dedup)]
+          if not ordered or ordered[0]['rank']!=1:
+              raise SystemExit('NO_RELIABLE_CLOSED_LEADER')
+          out={'schema':'mathgraph.lra.live-closed.readonly.v1',
+               'observed_at_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),
+               'status':'READ_ONLY_PUBLIC_LEADERBOARD',
+               'top_10':ordered[:10],
+               'leader':ordered[0],
+               'authority':'public Gradio leaderboard response; no submission or credential access'}
+          open('/tmp/lra-dated-closed-leader.json','w').write(json.dumps(out,indent=2,ensure_ascii=False)+'\n')
+          print('WARRANTED_READ_ONLY_CLOSED_LEADER=',json.dumps(out,ensure_ascii=False))
+          PY
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -98,6 +135,7 @@ jobs:
             /tmp/lra-leaderboard-call.json
             /tmp/lra-leaderboard.sse
             /tmp/lra-leaderboard-payloads.json
+            /tmp/lra-dated-closed-leader.json
 
 # Refresh the official Closed-track leader for 2026-10-10 score calibration.
 
