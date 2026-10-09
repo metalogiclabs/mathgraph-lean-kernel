@@ -153,5 +153,59 @@ class FrontierTests(unittest.TestCase):
                 incumbent_label="control")
 
 
+    def test_real_em_evidence_recloses_at_pareto_frontier(self):
+        """Real pinned EM objective geometry, not a synthetic proof-length example."""
+        from pathlib import Path
+        root=Path(__file__).resolve().parents[1]
+        bank=root / "experiments" / "em_terminal_normalization_v1.jsonl"
+        all_rows=[json.loads(s) for s in bank.read_text().splitlines() if s.strip()]
+        labels=("em_retained_567_control","em_terminal_field_simp_only","em_hcross_simp")
+        rows=[next(r for r in all_rows if r["label"]==label) for label in labels]
+        benchmark="Electromagnetism.ElectromagneticPotential.time_deriv_time_deriv_electricField_of_isExtrema"
+        measured={
+            "em_retained_567_control":(567,10557,120.75),
+            "em_terminal_field_simp_only":(565,10556,120.90),
+            "em_hcross_simp":(568,10499,120.89)
+        }
+        evidence_rows=[]
+        for row in rows:
+            length,heartbeat,objective=measured[row["label"]]
+            evidence_rows.append({
+                "name":benchmark,"candidate_label":row["label"],
+                "proof_sha256":hashlib.sha256(row["proof"].encode("utf-8")).hexdigest(),
+                "public_harness_sha":"7f3a401470d04f70013d293db4253b088ec8a0ae",
+                "all_versions":True,"compiled":True,"statement_ok":True,"eligible":True,
+                "compat":{"v4.32.0":True},
+                "per_version":[{"version":"v4.32.0","tested":True,"ok":True}],
+                "length":length,"heartbeats":heartbeat,
+                "reference_length":1372,"reference_heartbeats":27841,
+                "survival_pct":100,"objective_sum_pct":objective
+            })
+        result=decide(rows,evidence_rows,expected_name=benchmark,
+                      required_versions=["v4.32.0"],
+                      expected_public_sha="7f3a401470d04f70013d293db4253b088ec8a0ae",
+                      incumbent_label="em_retained_567_control")
+        self.assertEqual(result["selected_label"],"em_terminal_field_simp_only")
+        self.assertEqual(result["objective_gain"],0.15)
+        self.assertEqual(set(result["frontier_labels"]),{"em_terminal_field_simp_only","em_hcross_simp"})
+        packet_path=root / "submissions" / "mathgraph_verified_15_warmup_20261009.jsonl"
+        packet=packet_path.read_text()
+        lines=packet.splitlines()
+        idx=next(i for i,line in enumerate(lines) if json.loads(line)["name"]==benchmark)
+        current=json.loads(lines[idx])
+        self.assertEqual(current["proof"],rows[1]["proof"])
+        before=lines[:]
+        current["proof"]=rows[0]["proof"]
+        before[idx]=json.dumps(current,ensure_ascii=False)
+        updated,decision=reclose_packet("\n".join(before)+"\n",benchmark,rows,evidence_rows,
+            required_versions=["v4.32.0"],
+            expected_public_sha="7f3a401470d04f70013d293db4253b088ec8a0ae",
+            incumbent_label="em_retained_567_control")
+        after=updated.splitlines()
+        self.assertEqual(len(after),15)
+        self.assertEqual(after[:idx]+after[idx+1:],before[:idx]+before[idx+1:])
+        self.assertEqual(json.loads(after[idx])["proof"],rows[1]["proof"])
+
+
 if __name__ == "__main__":
     unittest.main()
