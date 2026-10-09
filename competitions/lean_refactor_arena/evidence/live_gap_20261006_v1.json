@@ -89,5 +89,21 @@
       "conclusion": "Do not promote: token gain is overwhelmed by heartbeat regression."
     }
   },
-  "next_action": "Beat the weak-six objective frontier. First repair low-heartbeat explicit Strata candidate and the public high-objective near-misses for Wick/Typing/EM/Fiber; retain only verified Pareto improvements."
+  "next_action": "Beat the weak-six objective frontier. First repair low-heartbeat explicit Strata candidate and the public high-objective near-misses for Wick/Typing/EM/Fiber; retain only verified Pareto improvements.",
+  "strata_comparator_20261009": {
+    "status": "REJECTED_DOMINATED",
+    "authority_run": 37874186039,
+    "workspace_commit": "451e5f047bafa010d178856db76c00029bfa4d7f",
+    "candidate": {
+      "label": "prospective_codomain_explicit_v4",
+      "tokens": 194,
+      "heartbeats": 1576
+    },
+    "public_comparator": {
+      "label": "external_public_incumbent_188",
+      "tokens": 188,
+      "heartbeats": 1447
+    },
+    "decision": "Do not promote v4; public comparator strictly dominates both measured dimensions."
+  }
 }
