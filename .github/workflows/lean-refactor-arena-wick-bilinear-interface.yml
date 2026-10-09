@@ -1,0 +1,248 @@
+name: Lean Refactor Arena Wick bilinear interface
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'competition/lean-refactor-arena-track1'
+    paths:
+      - '.github/workflows/lean-refactor-arena-wick-bilinear-interface.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lra-wick-bilinear-interface
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 85
+    env:
+      PUBLIC_REPO_SHA: 7f3a401470d04f70013d293db4253b088ec8a0ae
+      SOURCE_COMMIT: a15e78d843793e01d858cc52ca2731cd4c259150
+      CONTROL_SHA256: 1a9e24da00d85378e37e820bdbfcbc92666b62d62ce6b56ef4d5b50bdb5b4ee7
+      CANDIDATE_SHA256: c1469003ed4448d9bce3f6eba5038c624875f81e8995ee1e24052c2c16cbbe6c
+      TARGET_NAME: FieldSpecification.WickAlgebra.ι_timeOrderF_superCommuteF_eq_time
+    steps:
+      - uses: actions/checkout@v4
+      - name: Freeze the retained proof and generate one lawful candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --depth=1 origin "$SOURCE_COMMIT"
+          git show "$SOURCE_COMMIT:competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl" > /tmp/wick-frozen-portfolio.jsonl
+          git show "$SOURCE_COMMIT:competitions/lean_refactor_arena/public_harness_bridge.py" > /tmp/wick-frozen-bridge.py
+          python3 - <<'PY'
+          """One guarded representation change, not a general proof-equivalence engine."""
+          from __future__ import annotations
+
+
+          def derive(source: str) -> str:
+              start = '      let L :='
+              end = '\n    exact LinearMap.congr_fun ha a'
+              divider = ' := by\n'
+              if source.count(start) != 1 or source.count(end) != 1:
+                  raise ValueError('source is not the protected two-stage Wick proof')
+              if source.count(divider) < 1:
+                  raise ValueError('theorem statement boundary is missing')
+              statement, body = source.split(divider, 1)
+              c_lines = [line for line in body.splitlines() if line.startswith('  let C :=')]
+              if len(c_lines) != 1:
+                  raise ValueError('expected one fixed commutator')
+              i, j = source.index(start), source.index(end)
+              if j <= i:
+                  raise ValueError('reversed generator-core boundaries')
+              core = source[i:j]
+              if any(line and not line.startswith('      ') for line in core.splitlines()):
+                  raise ValueError('generator core changed indentation')
+              preserved = '\n'.join(line[2:] if line else line for line in core.splitlines())
+              result = statement + divider + c_lines[0] + '\n' + '''  let T : 𝓕.FieldOpFreeAlgebra →ₗ[ℂ] WickAlgebra 𝓕 :=
+              ι.toLinearMap ∘ₗ timeOrderF
+            have h : (mulLinearMap.compr₂ T) ∘ₗ mulLinearMap.flip C =
+                mulLinearMap.compr₂ (LinearMap.mulLeft ℂ (ι C) ∘ₗ T) := by
+              apply ofCrAnListFBasis.ext
+              intro l
+              apply ofCrAnListFBasis.ext
+              intro r
+              simp only [T, C, LinearMap.comp_apply, LinearMap.compr₂_apply,
+                LinearMap.flip_apply, mulLinearMap, LinearMap.coe_mk,
+                AddHom.coe_mk, ofListBasis_eq_ofList,
+                AlgHom.toLinearMap_apply, LinearMap.mulLeft_apply]
+              rw [← map_mul]
+          ''' + preserved + '''
+            rw [map_mul]
+            exact congrArg (fun f => f a b) h'''
+              if result.split(divider, 1)[0] != statement:
+                  raise ValueError('theorem statement changed')
+              return result
+
+
+          import hashlib, json, os
+          from pathlib import Path
+          out=Path('/tmp/wick-bilinear'); out.mkdir(exist_ok=True)
+          rows=[json.loads(s) for s in Path('/tmp/wick-frozen-portfolio.jsonl').read_text().splitlines() if s.strip()]
+          hit=[r for r in rows if r['name']==os.environ['TARGET_NAME']]
+          assert len(hit)==1, 'AMBIGUOUS_CONTROL'
+          source=hit[0]['proof']
+          sha=lambda s:hashlib.sha256(s.encode()).hexdigest()
+          assert sha(source)==os.environ['CONTROL_SHA256'], 'CONTROL_BYTES_CHANGED'
+          candidate=derive(source)
+          assert sha(candidate)==os.environ['CANDIDATE_SHA256'], 'CANDIDATE_BYTES_CHANGED'
+          start=source.index('      let L :='); end=source.index('\n    exact LinearMap.congr_fun ha a')
+          core='\n'.join(s[2:] if s else s for s in source[start:end].splitlines())
+          assert core==candidate[candidate.index('    let L :='):candidate.index('\n  rw [map_mul]\n')]
+          assert source.split(' := by\n',1)[0]==candidate.split(' := by\n',1)[0]
+          pair=[dict(name=hit[0]['name'],label=k,proof=s) for k,s in [('control',source),('bilinear',candidate)]]
+          (out/'candidates.jsonl').write_text(''.join(json.dumps(r,ensure_ascii=False)+chr(10) for r in pair))
+          for row in pair: (out/(row['label']+'.lean')).write_text(row['proof']+chr(10))
+          manifest={'state':'CANDIDATE_NOT_YET_LEAN_CHECKED','source_commit':os.environ['SOURCE_COMMIT'],
+            'harness_commit':os.environ['PUBLIC_REPO_SHA'],'control_sha256':sha(source),
+            'candidate_sha256':sha(candidate),'generator_core_sha256':sha(core),
+            'hard_contract':'same statement, same allowed axioms, all listed Lean versions; cost is separate',
+            'change':'two staged linear-map equalities -> one bilinear equality; generator proof unchanged',
+            'baseline_authority_run':37887798992,'retained_incumbent_objective':118.0}
+          (out/'manifest.json').write_text(json.dumps(manifest,indent=2)+chr(10))
+          print(json.dumps(manifest,indent=2))
+          PY
+      - name: Materialize only the pinned Wick environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.elan/bin:$PATH"
+          git clone --depth=1 --filter=blob:none --sparse https://github.com/aurasoph/lean-refactor.git /tmp/lean-refactor
+          git -C /tmp/lean-refactor fetch --depth=1 origin "$PUBLIC_REPO_SHA"
+          git -C /tmp/lean-refactor checkout --detach FETCH_HEAD
+          git -C /tmp/lean-refactor sparse-checkout set competition
+          test "$(git -C /tmp/lean-refactor rev-parse HEAD)" = "$PUBLIC_REPO_SHA"
+          cd /tmp/lean-refactor/competition
+          ./build-all.sh v4.32 || { cat build-logs/v4.32.log; exit 1; }
+      - name: Check the exact statement and required-version contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/lean-refactor/competition
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          import verify, local_score
+          name=os.environ['TARGET_NAME']
+          assert verify.versions_for(name)==['v4.32.0'], 'REQUIRED_VERSIONS_CHANGED'
+          rows=[json.loads(s) for s in Path('/tmp/wick-bilinear/candidates.jsonl').read_text().splitlines()]
+          for row in rows:
+              assert local_score.statements_match(verify.BENCHMARK[name]['statement'],row['proof'],name=name)
+              assert local_score.forbidden_hit(row['proof']) is None
+              assert len(local_score.count_toplevel_decls(row['proof']))==1
+              length=local_score.proof_length(row['proof'],verify.BENCHMARK[name]['statement'],name=name)
+              assert length=={'control':606,'bilinear':559}[row['label']], (row['label'],length)
+          print('VERIFIED_INPUT_CONTRACT_NOT_YET_PROOF')
+          PY
+      - name: Compile and score control-candidate-candidate-control
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > /tmp/wick-bilinear/scores.jsonl
+          index=0
+          for label in control bilinear bilinear control; do
+            index=$((index+1))
+            python3 /tmp/wick-frozen-bridge.py \
+              --competition /tmp/lean-refactor/competition --project v4.32 \
+              --name "$TARGET_NAME" --candidate /tmp/wick-bilinear/candidates.jsonl --label "$label"
+            (cd /tmp/lean-refactor/competition && python3 arena.py check --name "$TARGET_NAME" --all-versions --timeout 180) \
+              > "/tmp/wick-bilinear/score-$index.json"
+            jq -c --arg label "$label" '. + {candidate_label:$label}' "/tmp/wick-bilinear/score-$index.json" \
+              | tee -a /tmp/wick-bilinear/scores.jsonl
+          done
+      - name: Classify evidence without promoting a failed or costlier proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          """Fail-closed decision for the one pinned Wick bilinear experiment."""
+          import math
+
+
+          def classify(rows: list[dict]) -> dict:
+              if [r.get('candidate_label') for r in rows] != ['control', 'bilinear', 'bilinear', 'control']:
+                  raise ValueError('expected exactly the declared ABBA experiment')
+
+              def valid(r):
+                  per_version = r.get('per_version') or []
+                  return (
+                      all(r.get(key) is True for key in ('compiled', 'statement_ok', 'eligible'))
+                      and r.get('compat') == {'v4.32.0': True}
+                      and not r.get('untested') and not r.get('forbidden')
+                      and not r.get('extra_toplevel_decls') and len(per_version) == 1
+                      and per_version[0].get('version') == 'v4.32.0'
+                      and per_version[0].get('tested') is True and per_version[0].get('ok') is True
+                  )
+
+              control = [rows[0], rows[3]]
+              candidate = [rows[1], rows[2]]
+              if not all(valid(r) and r.get('length') == 606 for r in control):
+                  raise ValueError('the unchanged verified control did not requalify')
+              result = {'scope': 'pinned Wick theorem, v4.32.0 only; no leaderboard or portfolio promotion',
+                        'state': 'REJECTED_PROOF'}
+              if not all(valid(r) and r.get('length') == 559 for r in candidate):
+                  result['errors'] = [{'label': r['candidate_label'], 'per_version': r.get('per_version'),
+                                        'forbidden': r.get('forbidden'), 'extra': r.get('extra_toplevel_decls')}
+                                       for r in candidate]
+                  return result
+              denominators = {(r.get('reference_length'), r.get('reference_heartbeats')) for r in rows}
+              if len(denominators) != 1:
+                  raise ValueError('reference metrics differ inside the paired experiment')
+              ref_length, ref_hb = next(iter(denominators))
+              if not isinstance(ref_length, int) or not isinstance(ref_hb, int) or min(ref_length, ref_hb) <= 0:
+                  raise ValueError('invalid cost normalization')
+              for r in rows:
+                  if not isinstance(r.get('heartbeats'), int) or r['heartbeats'] <= 0:
+                      raise ValueError('invalid measured cost')
+                  if not isinstance(r.get('objective_sum_pct'), (int, float)) or not math.isfinite(r['objective_sum_pct']):
+                      raise ValueError('invalid objective')
+              exact_objective = lambda r: 200 - 100 * (r['length'] / ref_length + r['heartbeats'] / ref_hb)
+              worst_candidate = min(exact_objective(r) for r in candidate)
+              best_control = max(exact_objective(r) for r in control)
+              robust_gain = worst_candidate - best_control
+              published_gain = min(r['objective_sum_pct'] for r in candidate) - max(118.0, *(r['objective_sum_pct'] for r in control))
+              result.update(state='VERIFIED_TARGET_GAIN_PENDING_RETENTION' if robust_gain > 0 and published_gain > 0 else 'REJECTED_COST',
+                            worst_case_objective_gain=robust_gain, published_gain=published_gain,
+                            references={'length': ref_length, 'heartbeats': ref_hb},
+                            observations=[{k:r[k] for k in ('candidate_label','length','heartbeats','objective_sum_pct')} for r in rows])
+              return result
+
+
+          import json
+          from pathlib import Path
+          out=Path('/tmp/wick-bilinear')
+          rows=[json.loads(s) for s in (out/'scores.jsonl').read_text().splitlines() if s.strip()]
+          result=classify(rows)
+          result['source_manifest']=json.loads((out/'manifest.json').read_text())
+          (out/'summary.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+chr(10))
+          print(json.dumps(result,ensure_ascii=False,indent=2))
+          PY
+      - name: Preserve the exact failed goal when the challenger does not compile
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! jq -e '.compiled == true' /tmp/wick-bilinear/score-2.json > /dev/null; then
+            python3 /tmp/wick-frozen-bridge.py \
+              --competition /tmp/lean-refactor/competition --project v4.32 \
+              --name "$TARGET_NAME" --candidate /tmp/wick-bilinear/candidates.jsonl --label bilinear
+            set +e
+            (cd /tmp/lean-refactor/competition/projects/v4.32 && timeout 180 lake env lean Arena/FieldSpecification_WickAlgebra_timeOrderF_superCommuteF_eq_time.lean) \
+              > /tmp/wick-bilinear/exact-goal.log 2>&1
+            status=$?
+            set -e
+            echo "$status" > /tmp/wick-bilinear/exact-goal-exit-code.txt
+            tail -n 100 /tmp/wick-bilinear/exact-goal.log
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-wick-bilinear-interface
+          path: |
+            /tmp/wick-bilinear/
+            /tmp/lean-refactor/competition/build-logs/v4.32.log
