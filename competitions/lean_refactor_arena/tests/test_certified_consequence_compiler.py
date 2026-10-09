@@ -81,6 +81,31 @@ class ConsequenceCompilerTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "FORBIDDEN_GENERATED"):
                     compile_bank(self.sources, [op])
 
+    def test_strata_proof_is_recompiled_exactly_and_not_autopromoted(self):
+        source = jsonl(ROOT / "capabilities/reference_strata_subset_v6.jsonl")
+        bank, report = compile_bank(source, self.operators)
+        self.assertEqual(len(bank), 2)
+        self.assertEqual(bank[0]["status"], "EXACT_CONTROL_NO_NEW_WARRANT")
+        self.assertEqual(bank[1]["status"], "CANDIDATE_UNVERIFIED_FOR_NEW_ADMISSION")
+        self.assertEqual(bank[1]["proof_sha256"],
+                         "eebde3bca69669747ab6203723a222fc84c8a6554e188e5f86c00308635a5f13")
+        self.assertTrue(bank[1]["historical_exact_certificate_match"])
+        self.assertEqual(bank[1]["historical_run"], 37980654973)
+        self.assertEqual(bank[1]["required_versions"], ["v4.26.0"])
+        self.assertEqual(declaration(bank[0]["proof"]), declaration(bank[1]["proof"]))
+        self.assertEqual(report["exact_prior_certificate_matches"], 1)
+
+    def test_two_independent_consequence_families_protect_future_separately(self):
+        strata = jsonl(ROOT / "capabilities/reference_strata_subset_v6.jsonl")
+        bank, report = compile_bank(self.sources + strata, self.operators)
+        self.assertEqual(report["controls"], 2)
+        self.assertEqual(report["proposals"], 2)
+        self.assertEqual(report["exact_prior_certificate_matches"], 2)
+        self.assertEqual(len(bank), 4)
+        self.assertFalse(report["portfolio_mutated"])
+        self.assertTrue(all(x["status"] == "CANDIDATE_UNVERIFIED_FOR_NEW_ADMISSION"
+                            for x in bank if "operator_id" in x))
+
     def test_duplicate_operator_ids_fail_closed(self):
         with self.assertRaisesRegex(ValueError, "DUPLICATE_OPERATOR_ID"):
             compile_bank(self.sources, self.operators + self.operators)
