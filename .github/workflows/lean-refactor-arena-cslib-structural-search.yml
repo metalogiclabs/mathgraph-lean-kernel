@@ -1,0 +1,116 @@
+name: Lean Refactor Arena Cslib structural search
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'competition/lean-refactor-arena-track1'
+    paths:
+      - 'competitions/lean_refactor_arena/experiments/ski_critical_pair_crossover_v1.jsonl'
+      - 'competitions/lean_refactor_arena/experiments/typing_grind_residual_repair_v1.jsonl'
+      - '.github/workflows/lean-refactor-arena-cslib-structural-search.yml'
+
+concurrency:
+  group: lra-cslib-structural
+  cancel-in-progress: true
+
+jobs:
+  search:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      PUBLIC_REPO_SHA: 7f3a401470d04f70013d293db4253b088ec8a0ae
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build pinned Cslib v4.33
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.elan/bin:$PATH"
+          git clone --depth=1 --filter=blob:none --sparse https://github.com/aurasoph/lean-refactor.git /tmp/lean-refactor
+          git -C /tmp/lean-refactor fetch --depth=1 origin "$PUBLIC_REPO_SHA"
+          git -C /tmp/lean-refactor checkout --detach FETCH_HEAD
+          git -C /tmp/lean-refactor sparse-checkout set competition
+          test "$(git -C /tmp/lean-refactor rev-parse HEAD)" = "$PUBLIC_REPO_SHA"
+          (cd /tmp/lean-refactor/competition && ./build-all.sh v4.33)
+      - name: Verify 2 public controls and bounded Cslib candidates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' > /tmp/cslib-targets.tsv
+          import json
+          for name in ['ski_critical_pair_crossover_v1','typing_grind_residual_repair_v1']:
+              path='competitions/lean_refactor_arena/experiments/'+name+'.jsonl'
+              for line in open(path):
+                  if not line.strip(): continue
+                  row=json.loads(line)
+                  print(row['name']+'\t'+path+'\t'+row['label'])
+          PY
+          : > /tmp/cslib-scores.jsonl
+          while IFS=$'\t' read -r name path label; do
+            echo "CSLIB_CANDIDATE=$label"
+            python3 competitions/lean_refactor_arena/public_harness_bridge.py \
+              --competition /tmp/lean-refactor/competition \
+              --project v4.33 --name "$name" --candidate "$path" --label "$label"
+            (cd /tmp/lean-refactor/competition && python3 arena.py check --name "$name") > /tmp/cslib-one.json
+            jq -c --arg label "$label" '. + {candidate_label:$label}' /tmp/cslib-one.json >> /tmp/cslib-scores.jsonl
+          done < /tmp/cslib-targets.tsv
+      - name: Trace exact residuals of the compact Typing proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,pathlib
+          p=pathlib.Path('competitions/lean_refactor_arena/experiments/typing_grind_residual_repair_v1.jsonl')
+          row=next(x for x in map(json.loads,p.read_text().splitlines()) if x['label']=='typing_compact_failed_219')
+          token='  all_goals grind only ['
+          assert row['proof'].count(token)==1
+          row['proof']=row['proof'].replace(token,'  trace_state\n'+token,1)
+          pathlib.Path('/tmp/typing-goal.jsonl').write_text(json.dumps(row,ensure_ascii=False)+'\n')
+          PY
+          python3 competitions/lean_refactor_arena/public_harness_bridge.py \
+            --competition /tmp/lean-refactor/competition --project v4.33 \
+            --name 'Cslib.LambdaCalculus.LocallyNameless.Fsub.Typing.progress' \
+            --candidate /tmp/typing-goal.jsonl --label typing_compact_failed_219
+          (cd /tmp/lean-refactor/competition/projects/v4.33 && \
+           lake env lean Arena/Cslib_LambdaCalculus_LocallyNameless_Fsub_Typing_progress.lean) \
+           > /tmp/typing-goals.log 2>&1 || true
+          grep -E -A 55 '⊢ |unsolved goals|grind.*failed|error:' /tmp/typing-goals.log | head -n 300 || true
+      - name: Classify proof results without promoting failures
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,pathlib
+          rows=[json.loads(x) for x in pathlib.Path('/tmp/cslib-scores.jsonl').read_text().splitlines() if x.strip()]
+          assert len(rows)==19,len(rows)
+          groups={'ski':'Cslib.SKI.parallelReduction_diamond','typing':'Cslib.LambdaCalculus.LocallyNameless.Fsub.Typing.progress'}
+          baseline={'ski':100.94,'typing':113.26}
+          def valid(r):
+              return (bool(r.get('compiled')) and bool(r.get('statement_ok')) and
+                      bool(r.get('eligible')) and float(r.get('survival_pct') or 0)==100 and
+                      not r.get('forbidden') and not r.get('extra_toplevel_decls'))
+          result={'schema':'mathgraph.lra.cslib.structural-search.v1','source_pin':'7f3a401470d04f70013d293db4253b088ec8a0ae','results':{}}
+          for key,name in groups.items():
+              subset=[r for r in rows if r['name']==name]
+              good=[r for r in subset if valid(r)]
+              assert good and any('control' in r['candidate_label'] for r in good), 'CONTROL_INVALID_'+key
+              better=[r for r in good if float(r.get('objective_sum_pct') or 0)>baseline[key] and not ('control' in r['candidate_label'])]
+              result['results'][key]={
+                'qualified_primary_candidates':[{'label':r['candidate_label'],'tokens':r.get('length'),'heartbeats':r.get('heartbeats'),'objective':r.get('objective_sum_pct')} for r in good],
+                'verified_improvements':[{'label':r['candidate_label'],'objective':r['objective_sum_pct']} for r in better],
+                'failed':[{'label':r['candidate_label'],'errors':(r.get('per_version') or [{}])[0].get('errors',[])} for r in subset if not valid(r)]
+              }
+          pathlib.Path('/tmp/cslib-summary.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
+          print(json.dumps(result,ensure_ascii=False,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-cslib-structural-search
+          path: |
+            /tmp/cslib-scores.jsonl
+            /tmp/cslib-summary.json
+            /tmp/typing-goals.log
