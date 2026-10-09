@@ -1,0 +1,151 @@
+name: Lean Refactor Arena V13 decompile SKI Aesop proof search
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['competition/lra-ski-aesop-decompiler-v13']
+    paths:
+      - 'competitions/lean_refactor_arena/experiments/ski_aesop_decompile_v13.jsonl'
+      - '.github/workflows/lean-refactor-arena-ski-aesop-decompiler-v13.yml'
+
+concurrency:
+  group: lra-ski-v13-decompiler
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  proof-extraction:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      PUBLIC_SHA: 7f3a401470d04f70013d293db4253b088ec8a0ae
+      TARGET: Cslib.SKI.parallelReduction_diamond
+      BANK: competitions/lean_refactor_arena/experiments/ski_aesop_decompile_v13.jsonl
+    steps:
+      - uses: actions/checkout@v4
+      - name: Freeze verified external and exact active proof lineage
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 \
+            "https://raw.githubusercontent.com/aurasoph/lean-refactor/$PUBLIC_SHA/runs/trials/Cslib_SKI_parallelReduction_diamond.jsonl" \
+            -o /tmp/ski-public-trials.jsonl
+          curl -fsSL --retry 3 \
+            "https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/e45da05bfd05918049a413a22cede3c6326d588b/competitions/lean_refactor_arena/experiments/ski_critical_witness_quotient_v12.jsonl" \
+            -o /tmp/ski-v12-frozen.jsonl
+          python3 - <<'PY'
+          import json,os,pathlib,hashlib
+          load=lambda p:[json.loads(x) for x in p.read_text().splitlines() if x.strip()]
+          root=pathlib.Path("competitions/lean_refactor_arena")
+          xs=load(pathlib.Path(os.environ["BANK"]))
+          current=next(r for r in load(root/"portfolio/warmup_portfolio_v1.jsonl")
+            if r["name"]==os.environ["TARGET"])
+          public=next(r for r in load(pathlib.Path("/tmp/ski-public-trials.jsonl"))
+            if r.get("hash")=="1b4d1c012553" and r.get("compiled") is True)
+          v12=load(pathlib.Path("/tmp/ski-v12-frozen.jsonl"))
+          assert len(xs)==5 and len({x["label"] for x in xs})==5
+          assert xs[0]["proof"]==current["proof"]
+          assert xs[1]["proof"]==public["candidate"] and public["length"]==102
+          assert xs[2]["proof"]==xs[1]["proof"].replace(
+            "aesop (add unsafe constructors","aesop? (add unsafe constructors")
+          assert xs[3]["proof"]==next(r for r in v12 if r["label"]=="ski_witness_all_six")["proof"].replace(
+            "aesop (add unsafe constructors","aesop? (add unsafe constructors")
+          assert xs[4]["proof"]==next(r for r in v12 if r["label"]=="ski_witness_all_fast_reflexive")["proof"].replace(
+            "aesop (add unsafe constructors","aesop? (add unsafe constructors")
+          assert all(r["name"]==os.environ["TARGET"] for r in xs)
+          assert all(r["proof"].startswith(current["proof"].split(" := by\n")[0]+" := by\n") for r in xs)
+          print("FROZEN_V13_GENERATED_ADVICE_PROBES_FROM_EXACT_CHECKED_SOURCES")
+          PY
+      - name: Materialize pinned Lean SKI target module
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.elan/bin:$PATH"
+          git clone --depth=1 --filter=blob:none --sparse \
+            https://github.com/aurasoph/lean-refactor.git /tmp/lean-refactor
+          git -C /tmp/lean-refactor fetch --depth=1 origin "$PUBLIC_SHA"
+          git -C /tmp/lean-refactor checkout --detach FETCH_HEAD
+          git -C /tmp/lean-refactor sparse-checkout set competition
+          test "$(git -C /tmp/lean-refactor rev-parse HEAD)" = "$PUBLIC_SHA"
+          proj=/tmp/lean-refactor/competition/projects/v4.33
+          cd "$proj"
+          lake update >/tmp/ski-v13-lake-update.log 2>&1 || {
+            tail -n 100 /tmp/ski-v13-lake-update.log; exit 1;
+          }
+          lake exe cache get >/tmp/ski-v13-cache.log 2>&1 || echo CACHE_MISS_TARGET_BUILD
+          lake build Cslib.Languages.CombinatoryLogic.Confluence \
+            >/tmp/ski-v13-build.log 2>&1 || {
+            tail -n 120 /tmp/ski-v13-build.log; exit 1;
+          }
+          echo "VERIFIED_PINNED_V433_SKIMODULE"
+      - name: Ask Aesop for exact proof scripts and persist diagnostic messages
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/ski-v13-suggestions
+          for label in ski_v13_public_102_control ski_v13_public_102_aesop_advice ski_v13_all_six_aesop_advice ski_v13_fast_reflexive_aesop_advice; do
+            echo "PROOF_DECOMPILE=$label"
+            python3 competitions/lean_refactor_arena/public_harness_bridge.py \
+              --competition /tmp/lean-refactor/competition --project v4.33 \
+              --name "$TARGET" --candidate "$BANK" --label "$label" \
+              > "/tmp/ski-v13-suggestions/$label.inject.json"
+            set +e
+            (cd /tmp/lean-refactor/competition/projects/v4.33 && \
+              timeout 240 lake env lean Arena/Cslib_SKI_parallelReduction_diamond.lean) \
+              > "/tmp/ski-v13-suggestions/$label.lean.log" 2>&1
+            rc=$?
+            set -e
+            echo "$rc" > "/tmp/ski-v13-suggestions/$label.exitcode"
+            echo "LEAN_SOURCE_REPLAY=$label code=$rc"
+            grep -n -E 'Try this:|error:|warning:|aesop|goals accomplished' \
+              "/tmp/ski-v13-suggestions/$label.lean.log" | head -n 50 || true
+          done
+      - name: Classify proof advice without score promotion
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,pathlib,os,re
+          root=pathlib.Path('/tmp/ski-v13-suggestions')
+          labels=['ski_v13_public_102_control','ski_v13_public_102_aesop_advice',
+             'ski_v13_all_six_aesop_advice','ski_v13_fast_reflexive_aesop_advice']
+          outcomes=[]
+          for label in labels:
+              log=(root/(label+'.lean.log')).read_text(errors='replace')
+              exitcode=int((root/(label+'.exitcode')).read_text())
+              lines=log.splitlines()
+              matches=[i for i,l in enumerate(lines) if ('Try this:' in l or 'try this:' in l)]
+              snippets=['\n'.join(lines[max(0,i-2):min(len(lines),i+16)]) for i in matches]
+              result={'label':label,'lean_exitcode':exitcode,'advice_suggestion_count':len(matches),
+                 'error_lines':[x for x in lines if 'error:' in x][-15:],
+                 'suggestions':snippets[:50],
+                 'message_bytes':len(log.encode()),'head_sha':os.environ['GITHUB_SHA']}
+              outcomes.append(result)
+          original=outcomes[0]
+          candidate=outcomes[1]
+          out={'schema':'mathgraph.lra.ski.aesop-proof-decompilation.v13',
+            'state':'DIAGNOSTIC_ONLY__NOT_NEW_PROOF_WARRANT',
+            'public_verifier_sha':os.environ['PUBLIC_SHA'],
+            'original_primary_compiled':original['lean_exitcode']==0,
+            'advice_probe_compiled':candidate['lean_exitcode']==0,
+            'found_suggestions':sum(x['advice_suggestion_count'] for x in outcomes[1:]),
+            'outcomes':outcomes,
+            'portfolio_mutated':False,'official_submission':False,
+            'next_boundary':'Manually normalize generated Aesop scripts; verify exact standalone Lean proof and four protected versions before admission'}
+          (root/'summary.json').write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n')
+          print(json.dumps({k:v for k,v in out.items() if k!='outcomes'},indent=2))
+          print(json.dumps([{k:v for k,v in row.items() if k!='suggestions'} for row in outcomes],indent=2))
+          assert original['lean_exitcode']==0,'ORIGINAL_PUBLIC_SHORT_PROOF_DIAGNOSTIC_FAILED'
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-ski-v13-proof-suggestions
+          path: |
+            /tmp/ski-v13-suggestions
+            /tmp/ski-v13-lake-update.log
+            /tmp/ski-v13-cache.log
+            /tmp/ski-v13-build.log
