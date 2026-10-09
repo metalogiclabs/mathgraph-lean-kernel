@@ -7,6 +7,8 @@ on:
       - 'competitions/lean_refactor_arena/strategy_hints.py'
       - 'competitions/lean_refactor_arena/strategy_bank_v1.json'
       - 'competitions/lean_refactor_arena/tests/test_observational_consequence_router.py'
+      - 'competitions/lean_refactor_arena/frontier_reclose.py'
+      - 'competitions/lean_refactor_arena/tests/test_frontier_reclose.py'
       - 'competitions/lean_refactor_arena/evidence/observational_consequence_transport_v1.json'
       - '.github/workflows/lean-refactor-arena-observational-router.yml'
 permissions:
@@ -23,7 +25,10 @@ jobs:
           set -euo pipefail
           python3 -m unittest discover -s competitions/lean_refactor_arena/tests \
             -p test_observational_consequence_router.py -v
+          PYTHONPATH=competitions/lean_refactor_arena python3 -m unittest discover \
+            -s competitions/lean_refactor_arena/tests -p test_frontier_reclose.py -v
           python3 -m py_compile competitions/lean_refactor_arena/strategy_hints.py
+          python3 -m py_compile competitions/lean_refactor_arena/frontier_reclose.py
           python3 -m json.tool competitions/lean_refactor_arena/strategy_bank_v1.json > /dev/null
           python3 -m json.tool competitions/lean_refactor_arena/evidence/observational_consequence_transport_v1.json > /dev/null
       - name: Freeze and route public statements without including source-specific solutions
