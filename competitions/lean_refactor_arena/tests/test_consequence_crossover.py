@@ -38,6 +38,14 @@ class CrossoverTests(unittest.TestCase):
         self.assertIn("all_goals cases h'", p["chunks"]["alpha"])
         self.assertEqual(p["footer"], "  all_goals assumption\n")
 
+    def test_inline_case_tactics_are_not_misclassified_as_prelude(self):
+        inline = FIRST.replace("  case alpha =>\n    exact alpha_left\n",
+                               "  case alpha => exact alpha_left\n")
+        p = cc.parse(inline)
+        self.assertEqual(list(p["chunks"]), ["alpha", "beta"])
+        self.assertEqual(cc.render(p, {}), inline)
+        self.assertEqual(p["prefix"], cc.parse(FIRST)["prefix"])
+
     def test_joins_only_case_consequences_and_preserves_header(self):
         parents = [
             {"name": "demo", "label": "left", "proof": FIRST},
