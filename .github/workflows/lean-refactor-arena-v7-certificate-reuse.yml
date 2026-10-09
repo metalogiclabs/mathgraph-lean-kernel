@@ -32,6 +32,7 @@ jobs:
           curl -fsSL --retry 3 \
             https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/889bcaf5323cbbd049cbe424c3ae18102246e2e2/competitions/lean_refactor_arena/experiments/strata_structural_crossover_v2.jsonl \
             -o /tmp/v7-pinned-strata-candidates.jsonl
+          git fetch --depth=1 origin f52d35ac5d144ac63b55e4c58f186eee7fe19b67
           python3 - <<'PY'
           import hashlib,json,pathlib,subprocess
           run=json.load(open('/tmp/v7-pinned-source-run.json'))
