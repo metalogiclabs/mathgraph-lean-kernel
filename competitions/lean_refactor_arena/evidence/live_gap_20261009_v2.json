@@ -312,5 +312,58 @@
     "variants": 8,
     "compiled": 3,
     "objective_gain": 0
+  },
+  "latest_closed_leaderboard_recheck": {
+    "status": "WARRANTED_READ_ONLY",
+    "run": 37892489225,
+    "at_utc": "2026-10-09T06:14:27Z",
+    "leader": "EPFL-LARA",
+    "combined_pct": 89.38,
+    "runner_up_pct": 85.89,
+    "mathgraph_handle_not_present": true
+  },
+  "submission_package": {
+    "status": "VERIFIED_EXACT_15_PROOF_PACKET_NOT_SUBMITTED",
+    "source_commit": "4e2e484dd9ae7e000425620bc6f4c3a11ce31941",
+    "verification_run": 37892398255,
+    "file": "competitions/lean_refactor_arena/submissions/mathgraph_verified_15_warmup_20261009.jsonl",
+    "bytes": 28381,
+    "sha256": "23ccfa634d619f1a49bdf0204a99f29acfb90b0b7a81312f75a275951a8a76e5",
+    "proof_count": 15,
+    "caveat": "Official Arena entry is separate, requires username, registration key if not first submission, track, and file upload; do not expose key in public CI."
+  },
+  "latest_search_results": {
+    "wick_extensional_opening": {
+      "status": "REJECTED_BOUNDED",
+      "run": 37889920835,
+      "qualified_primary_gain": 0
+    },
+    "typing_cross_CLI": {
+      "status": "WARRANTED_PRIMARY_ONLY",
+      "run": 37890486198,
+      "objective": 113.51,
+      "baseline": 113.26,
+      "all_versions_check": 37890948417
+    },
+    "strata_compact": {
+      "status": "REJECTED_BOUNDED",
+      "run": 37890616991
+    },
+    "ski_structural": {
+      "status": "REJECTED_BOUNDED",
+      "run": 37890879974
+    },
+    "ski_delayed": {
+      "status": "REJECTED_BOUNDED",
+      "run": 37890767431
+    },
+    "ongoing": {
+      "fiber": 37891794040,
+      "em": 37891035688,
+      "strata_subset": 37892048313,
+      "primary_portfolio": 37889600265,
+      "retained_full_version": 37889600290,
+      "typing_full_version": 37890948417
+    }
   }
 }
