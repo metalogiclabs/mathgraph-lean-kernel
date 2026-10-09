@@ -1,0 +1,167 @@
+name: Lean Refactor Arena SKI V16 mirrored critical-pair quotient
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'competition/lra-ski-mirrored-join-v16'
+    paths:
+      - 'competitions/lean_refactor_arena/experiments/ski_mirrored_critical_v16.jsonl'
+      - '.github/workflows/lean-refactor-arena-ski-mirrored-v16.yml'
+
+concurrency:
+  group: lra-ski-mirrored-v16
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  primary-census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      PUBLIC_SHA: 7f3a401470d04f70013d293db4253b088ec8a0ae
+      TARGET: Cslib.SKI.parallelReduction_diamond
+      BANK: competitions/lean_refactor_arena/experiments/ski_mirrored_critical_v16.jsonl
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify exact retained control and source-exact mirrored critical-pair frontier
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib
+          root=pathlib.Path('competitions/lean_refactor_arena')
+          read=lambda p:[json.loads(t) for t in p.read_text().splitlines() if t.strip()]
+          bank=read(pathlib.Path(os.environ['BANK']))
+          active=read(root/'portfolio/warmup_portfolio_v1.jsonl')
+          name=os.environ['TARGET']
+          assert len(active)==15 and len(bank)==8 and len({x['label'] for x in bank})==8
+          orig=next(x['proof'] for x in active if x['name']==name)
+          assert bank[0]['label']=='ski_v16_exact_278_control'
+          assert bank[0]['proof']==orig
+          hdr=orig.split(' := by\n',1)[0]+' := by\n'
+          assert all(r['name']==name and r['proof'].startswith(hdr) for r in bank)
+          assert all('aesop' not in r['proof'] for r in bank[1:])
+          assert all(not any(k in r['proof'] for k in
+                ['sorry','sorryAx','admit','native_decide','run_elab','axiom ']) for r in bank)
+          summary={'schema':'mathgraph.lra.ski.frozen-mirrored-join.v16',
+            'status':'FROZEN_PROPOSALS_UNVERIFIED',
+            'source_sha':os.environ['PUBLIC_SHA'],'count':len(bank),
+            'incumbent_proof_sha256':hashlib.sha256(orig.encode()).hexdigest(),
+            'proof_sha256':[hashlib.sha256(r['proof'].encode()).hexdigest() for r in bank],
+            'objective_boundary':'Exact independent primary Lean then four required Lean versions on any winner',
+            'official_submission':False,'portfolio_mutated':False}
+          pathlib.Path('/tmp/ski-v16-origin.json').write_text(
+            json.dumps(summary,ensure_ascii=False,indent=2)+'\n')
+          print(json.dumps({k:v for k,v in summary.items() if k!='proof_sha256'},indent=2))
+          PY
+
+      - name: Materialize pinned Cslib SKI target module
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.elan/bin:$PATH"
+          git clone --depth=1 --filter=blob:none --sparse \
+            https://github.com/aurasoph/lean-refactor.git /tmp/lean-refactor
+          git -C /tmp/lean-refactor fetch --depth=1 origin "$PUBLIC_SHA"
+          git -C /tmp/lean-refactor checkout --detach FETCH_HEAD
+          git -C /tmp/lean-refactor sparse-checkout set competition
+          test "$(git -C /tmp/lean-refactor rev-parse HEAD)" = "$PUBLIC_SHA"
+          mkdir -p /tmp/ski-v16-module
+          project=/tmp/lean-refactor/competition/projects/v4.33
+          cd "$project"
+          lake update > /tmp/ski-v16-module/lake-update.log 2>&1 || {
+            tail -n 120 /tmp/ski-v16-module/lake-update.log; exit 1;
+          }
+          lake exe cache get > /tmp/ski-v16-module/cache.log 2>&1 || echo 'CACHE_MISS_FALLBACK'
+          lake build Cslib.Languages.CombinatoryLogic.Confluence \
+            > /tmp/ski-v16-module/target.log 2>&1 || {
+            tail -n 150 /tmp/ski-v16-module/target.log; exit 1;
+          }
+          echo 'VERIFIED_PINNED_SKIMODULE_IMPORT_CLOSURE'
+
+      - name: Score 8 future-mirrored I K S reduction-witness representations
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' > /tmp/ski-v16-labels.txt
+          import json,os
+          labels=[json.loads(t)['label'] for t in open(os.environ['BANK']) if t.strip()]
+          assert len(labels)==8 and len(set(labels))==8
+          for label in labels: print(label)
+          PY
+          : > /tmp/ski-v16-scores.jsonl
+          while IFS= read -r label; do
+            echo "SKI_V16_CANDIDATE=$label"
+            python3 competitions/lean_refactor_arena/public_harness_bridge.py \
+              --competition /tmp/lean-refactor/competition --project v4.33 \
+              --name "$TARGET" --candidate "$BANK" --label "$label"
+            (cd /tmp/lean-refactor/competition && \
+              python3 arena.py check --name "$TARGET" --timeout 1200) > /tmp/ski-v16-one.json
+            jq -c --arg label "$label" '. + {candidate_label:$label}' \
+              /tmp/ski-v16-one.json >> /tmp/ski-v16-scores.jsonl
+          done < /tmp/ski-v16-labels.txt
+
+      - name: Classify compiler failures, cost and exact primary frontier
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib
+          bank=[json.loads(x) for x in pathlib.Path(os.environ['BANK']).read_text().splitlines() if x.strip()]
+          rows=[json.loads(x) for x in pathlib.Path('/tmp/ski-v16-scores.jsonl').read_text().splitlines() if x.strip()]
+          assert len(bank)==len(rows)==8
+          assert len({r['candidate_label'] for r in rows})==8
+          def valid(r):
+              pv=r.get('per_version') or []
+              return (r.get('compiled') is True and r.get('statement_ok') is True and
+                r.get('eligible') is True and not r.get('forbidden') and
+                not r.get('extra_toplevel_decls') and not r.get('untested') and
+                r.get('compat')=={'v4.33.0-rc2':True} and
+                len(pv)==1 and pv[0].get('tested') is True and pv[0].get('ok') is True)
+          control=next(r for r in rows if r['candidate_label']=='ski_v16_exact_278_control')
+          assert valid(control),'SKI_VERIFIED_V10_INCUMBENT_REGRESSED'
+          qualified=[r for r in rows if valid(r)]
+          improved=[r for r in qualified if r is not control and
+                float(r['objective_sum_pct'])>float(control['objective_sum_pct'])]
+          improved.sort(key=lambda r:(-float(r['objective_sum_pct']),int(r['length']),int(r['heartbeats'])))
+          best=improved[0] if improved else None
+          out={'schema':'mathgraph.lra.ski.mirrored-join.v16',
+             'status':'CANDIDATE_PRIMARY_GAIN_REQUIRES_4_VERSIONS' if best else 'REJECTED_BOUNDED_NO_PRIMARY_GAIN',
+             'source_sha':os.environ['PUBLIC_SHA'],
+             'incumbent':{'tokens':control['length'],'heartbeats':control['heartbeats'],
+                 'objective':control['objective_sum_pct']},
+             'compiled':len(qualified),'failed':len(rows)-len(qualified),
+             'qualified':[{'label':r['candidate_label'],'length':r['length'],
+                 'heartbeats':r['heartbeats'],'objective':r['objective_sum_pct']}
+                 for r in qualified],
+             'rejections':[{'label':r['candidate_label'],
+                  'errors':(r.get('per_version') or [{}])[0].get('errors',[])}
+                  for r in rows if not valid(r)],
+             'best':None if best is None else
+               {'label':best['candidate_label'],'length':best['length'],
+                'heartbeats':best['heartbeats'],'objective':best['objective_sum_pct']},
+             'portfolio_mutated':False,'officially_submitted':False,
+             'promotion':'Requires independently pinned v4.33, v4.32, v4.31, v4.30 all-version check, proof-byte tie, exact 15-packet reclosure'}
+          pathlib.Path('/tmp/ski-v16-summary.json').write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n')
+          if best:
+              x=next(x for x in bank if x['label']==best['candidate_label'])
+              pathlib.Path('/tmp/ski-v16-winner.jsonl').write_text(json.dumps(x,ensure_ascii=False)+'\n')
+          print(json.dumps(out,ensure_ascii=False,indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-ski-v16-mirrored-join
+          path: |
+            /tmp/ski-v16-origin.json
+            /tmp/ski-v16-scores.jsonl
+            /tmp/ski-v16-summary.json
+            /tmp/ski-v16-winner.jsonl
+            /tmp/ski-v16-module
