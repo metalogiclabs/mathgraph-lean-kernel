@@ -1,0 +1,98 @@
+name: Lean Refactor Arena Wick structural crossover
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'competition/lean-refactor-arena-track1'
+    paths:
+      - 'competitions/lean_refactor_arena/probes/physlib_wick_structural_crossover_v1.jsonl'
+      - '.github/workflows/lean-refactor-arena-wick-crossover.yml'
+      - 'competitions/lean_refactor_arena/public_harness_bridge.py'
+
+concurrency:
+  group: wick-structural-crossover
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    env:
+      PUBLIC_REPO_SHA: 7f3a401470d04f70013d293db4253b088ec8a0ae
+      WICK_NAME: FieldSpecification.WickAlgebra.ι_timeOrderF_superCommuteF_eq_time
+    steps:
+      - uses: actions/checkout@v4
+      - name: Materialize pinned public Arena and Lean v4.32
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.elan/bin:$PATH"
+          rm -rf /tmp/lean-refactor
+          git clone --depth=1 --filter=blob:none --sparse https://github.com/aurasoph/lean-refactor.git /tmp/lean-refactor
+          git -C /tmp/lean-refactor fetch --depth=1 origin "$PUBLIC_REPO_SHA"
+          git -C /tmp/lean-refactor checkout --detach FETCH_HEAD
+          git -C /tmp/lean-refactor sparse-checkout set competition
+          test "$(git -C /tmp/lean-refactor rev-parse HEAD)" = "$PUBLIC_REPO_SHA"
+          cd /tmp/lean-refactor/competition
+          ./build-all.sh v4.32
+      - name: Verify controls and structural crossover
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > /tmp/wick-crossover-scores.jsonl
+          for label in external_verified_compact_568 external_verified_extensional_705 wick_extensional_compact_rw wick_extensional_compact_change; do
+            echo "::group::WICK $label"
+            python3 competitions/lean_refactor_arena/public_harness_bridge.py \
+              --competition /tmp/lean-refactor/competition --project v4.32 \
+              --name "$WICK_NAME" \
+              --candidate competitions/lean_refactor_arena/probes/physlib_wick_structural_crossover_v1.jsonl \
+              --label "$label"
+            (
+              cd /tmp/lean-refactor/competition
+              python3 arena.py check --name "$WICK_NAME"
+            ) > /tmp/wick-check.json
+            jq -c --arg label "$label" '. + {candidate_label:$label}' /tmp/wick-check.json \
+              >> /tmp/wick-crossover-scores.jsonl
+            jq -c '{candidate_label,compiled,statement_ok,eligible,objective_sum_pct,length,heartbeats,survival_pct,per_version}' \
+              --arg label "$label" /tmp/wick-check.json || true
+            echo "::endgroup::"
+          done
+      - name: Classify and retain evidence without false promotion
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          rows=[json.loads(line) for line in open('/tmp/wick-crossover-scores.jsonl') if line.strip()]
+          assert len(rows)==4, len(rows)
+          control=[r for r in rows if r['candidate_label']=='external_verified_compact_568'][0]
+          assert control.get('compiled') and control.get('statement_ok'), 'CONTROL_DID_NOT_REVERIFY'
+          good=lambda r: bool(r.get('compiled') and r.get('statement_ok') and r.get('eligible') and r.get('survival_pct')==100 and not r.get('forbidden') and not r.get('extra_toplevel_decls'))
+          viable=[r for r in rows if r['candidate_label'].startswith('wick_extensional_') and good(r)]
+          baseline=97.88
+          best=max(viable,key=lambda r:float(r.get('objective_sum_pct') or -1e9),default=None)
+          result={
+            'schema':'mathgraph.lra.wick-structural-crossover.v1',
+            'source_commit':'7f3a401470d04f70013d293db4253b088ec8a0ae',
+            'control_compiles':good(control),
+            'v432_verified_candidates':[{'label':r['candidate_label'],
+              'tokens':r.get('length'),'heartbeats':r.get('heartbeats'),
+              'objective':r.get('objective_sum_pct')} for r in viable],
+            'best':None if best is None else best['candidate_label'],
+            'primary_objective_gain':None if best is None else float(best['objective_sum_pct'])-baseline,
+            'promotion':'UNKNOWN_PENDING_ADMISSION' if best and float(best['objective_sum_pct'])>baseline else 'NO_GAIN_RETAIN_INCUMBENT',
+            'note':'Public control provenance; valid only on listed Wick v4.32 toolchain. Do not promote any failed/untested proof.'
+          }
+          open('/tmp/wick-crossover-summary.json','w').write(json.dumps(result,indent=2)+'\n')
+          print(json.dumps(result,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-wick-structural-crossover
+          path: |
+            /tmp/wick-crossover-scores.jsonl
+            /tmp/wick-crossover-summary.json
