@@ -1,0 +1,70 @@
+name: Lean Refactor Arena Strata compact residual trace
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'competition/lean-refactor-arena-track1'
+    paths:
+      - 'competitions/lean_refactor_arena/experiments/strata_compact_heartbeat_v1.jsonl'
+      - '.github/workflows/lean-refactor-arena-strata-compact-residual-trace.yml'
+
+concurrency:
+  group: lra-strata-compact-trace
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  trace:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 95
+    env:
+      PUBLIC_REPO_SHA: 7f3a401470d04f70013d293db4253b088ec8a0ae
+      TARGET_NAME: CallElimCorrect.substOldPostSubset
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build pinned Strata project
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.elan/bin:$PATH"
+          git clone --depth=1 --filter=blob:none --sparse https://github.com/aurasoph/lean-refactor.git /tmp/lean-refactor
+          git -C /tmp/lean-refactor fetch --depth=1 origin "$PUBLIC_REPO_SHA"
+          git -C /tmp/lean-refactor checkout --detach FETCH_HEAD
+          git -C /tmp/lean-refactor sparse-checkout set competition
+          test "$(git -C /tmp/lean-refactor rev-parse HEAD)" = "$PUBLIC_REPO_SHA"
+          (cd /tmp/lean-refactor/competition && ./build-all.sh v4.26)
+      - name: Extract goals before final compact proof closure
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/strata-compact-goals
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          rows=[json.loads(s) for s in Path('competitions/lean_refactor_arena/experiments/strata_compact_heartbeat_v1.jsonl').read_text().splitlines() if s.strip()]
+          row=next(x for x in rows if x['label']=='strata_compact_verified_44')
+          src=row['proof']; needle='    grind [List.Subset]'
+          assert src.count(needle)==1
+          row['proof']=src.replace(needle,'    trace_state <;>\n'+needle,1)
+          Path('/tmp/strata-compact-goals/injected.jsonl').write_text(json.dumps(row,ensure_ascii=False)+'\n')
+          PY
+          python3 competitions/lean_refactor_arena/public_harness_bridge.py \
+            --competition /tmp/lean-refactor/competition --project v4.26 \
+            --name "$TARGET_NAME" --candidate /tmp/strata-compact-goals/injected.jsonl \
+            --label strata_compact_verified_44
+          (
+            cd /tmp/lean-refactor/competition/projects/v4.26
+            lake env lean Arena/CallElimCorrect_substOldPostSubset.lean
+          ) > /tmp/strata-compact-goals/trace.log 2>&1 || true
+          test -s /tmp/strata-compact-goals/trace.log
+          sed -n '1,280p' /tmp/strata-compact-goals/trace.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-strata-compact-goals
+          path: /tmp/strata-compact-goals
