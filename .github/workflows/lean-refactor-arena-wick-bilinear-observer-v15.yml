@@ -1,0 +1,150 @@
+name: Lean Refactor Arena Wick V15 source-exact bilinear observer consequence
+on:
+  workflow_dispatch:
+  push:
+    branches: ['competition/lra-wick-bilinear-observer-v15']
+    paths:
+      - 'competitions/lean_refactor_arena/experiments/wick_bilinear_observer_v15.jsonl'
+      - '.github/workflows/lean-refactor-arena-wick-bilinear-observer-v15.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lra-wick-observer-v15
+  cancel-in-progress: true
+
+jobs:
+  primary-census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 125
+    env:
+      PIN: 7f3a401470d04f70013d293db4253b088ec8a0ae
+      ACTIVE_SHA: 10cb74f2890e5e0cd4eae6a48259fcd6e1d6f667
+      TARGET: FieldSpecification.WickAlgebra.ι_timeOrderF_superCommuteF_eq_time
+      BANK: competitions/lean_refactor_arena/experiments/wick_bilinear_observer_v15.jsonl
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bind thirteen source-exact Wick representations to merged V14 incumbent
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/lra-wick-v15
+          curl -fsSL --retry 3 \
+            "https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/$ACTIVE_SHA/competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl" \
+            -o /tmp/lra-wick-v15/retained.jsonl
+          python3 - <<'PY'
+          import hashlib,json,pathlib,re,os
+          read=lambda p:[json.loads(s) for s in pathlib.Path(p).read_text().splitlines() if s.strip()]
+          port=read('/tmp/lra-wick-v15/retained.jsonl')
+          bank=read(os.environ['BANK'])
+          assert len(port)==15 and len({x['name'] for x in port})==15
+          assert len(bank)==len({x['label'] for x in bank})==len({x['proof'] for x in bank})==13
+          frozen=next(x for x in port if x['name']==os.environ['TARGET'])
+          control=bank[0]
+          assert frozen['label']=='warranted_wick_finish_apply_552'
+          assert control['label']=='wick_v15_current_552_control' and control['proof']==frozen['proof']
+          hdr=control['proof'].split(' := by\n',1)[0]+' := by\n'
+          forbidden=re.compile(r'\b(?:sorry|sorryAx|admit|axiom|unsafe|run_cmd|run_elab|native_decide)\b')
+          assert all(x['name']==os.environ['TARGET'] and x['proof'].startswith(hdr) and not forbidden.search(x['proof']) for x in bank)
+          result={'schema':'mathgraph.lra.wick.observer-v15.frozen',
+            'state':'UNVERIFIED_CANDIDATES','harness_pin':os.environ['PIN'],
+            'active_proof_sha256':hashlib.sha256(control['proof'].encode()).hexdigest(),
+            'candidates':{x['label']:hashlib.sha256(x['proof'].encode()).hexdigest() for x in bank},
+            'protected_versions':['v4.32.0'],
+            'portfolio_mutated':False,'official_submission':False}
+          pathlib.Path('/tmp/lra-wick-v15/source.json').write_text(json.dumps(result,indent=2)+'\n')
+          print('VERIFIED_WICK_SOURCE_EXACT_THIRTEEN_CANDIDATES')
+          PY
+      - name: Build only pinned Physlib Wick TimeOrder import closure
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.elan/bin:$PATH"
+          git clone --depth=1 --filter=blob:none --sparse https://github.com/aurasoph/lean-refactor.git /tmp/lean-refactor
+          git -C /tmp/lean-refactor fetch --depth=1 origin "$PIN"
+          git -C /tmp/lean-refactor checkout --detach FETCH_HEAD
+          git -C /tmp/lean-refactor sparse-checkout set competition
+          test "$(git -C /tmp/lean-refactor rev-parse HEAD)" = "$PIN"
+          (
+            cd /tmp/lean-refactor/competition/projects/v4.32
+            lake update > /tmp/lra-wick-v15/update.log 2>&1
+            lake exe cache get > /tmp/lra-wick-v15/cache.log 2>&1 || echo CACHE_MISS_FALLBACK
+            lake build Physlib.QFT.PerturbationTheory.WickAlgebra.TimeOrder \
+              > /tmp/lra-wick-v15/build.log 2>&1
+          ) || { tail -n 140 /tmp/lra-wick-v15/build.log; exit 1; }
+          echo VERIFIED_WICK_V15_PINNED_IMPORT_CLOSURE
+      - name: Score thirteen exact Wick bilinear observer representations under official harness
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' > /tmp/lra-wick-v15/labels.txt
+          import json,os
+          xs=[json.loads(s) for s in open(os.environ['BANK']) if s.strip()]
+          assert len(xs)==13
+          for r in xs: print(r['label'])
+          PY
+          : > /tmp/lra-wick-v15/scores.jsonl
+          while IFS= read -r label; do
+            echo "WICK_CANDIDATE=$label"
+            python3 competitions/lean_refactor_arena/public_harness_bridge.py \
+              --competition /tmp/lean-refactor/competition --project v4.32 \
+              --name "$TARGET" --candidate "$BANK" --label "$label"
+            (cd /tmp/lean-refactor/competition && python3 arena.py check --name "$TARGET" --timeout 1200) \
+              > /tmp/lra-wick-v15/one.json
+            jq -c --arg label "$label" '. + {candidate_label:$label}' \
+              /tmp/lra-wick-v15/one.json >> /tmp/lra-wick-v15/scores.jsonl
+          done < /tmp/lra-wick-v15/labels.txt
+      - name: Preserve all failure residuals and score strictly against current 552-token incumbent
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,hashlib,pathlib,os
+          root=pathlib.Path('/tmp/lra-wick-v15')
+          rows=[json.loads(s) for s in (root/'scores.jsonl').read_text().splitlines() if s.strip()]
+          bank=[json.loads(s) for s in pathlib.Path(os.environ['BANK']).read_text().splitlines() if s.strip()]
+          assert len(rows)==len(bank)==13
+          assert {r['candidate_label'] for r in rows}=={x['label'] for x in bank}
+          def valid(r):
+            per=r.get('per_version') or []
+            return (r.get('compiled') is True and r.get('statement_ok') is True and
+              r.get('eligible') is True and not r.get('forbidden') and
+              not r.get('extra_toplevel_decls') and not r.get('untested') and
+              r.get('compat')=={'v4.32.0':True} and
+              len(per)==1 and per[0].get('tested') is True and per[0].get('ok') is True)
+          control=next(r for r in rows if r['candidate_label']=='wick_v15_current_552_control')
+          assert valid(control),'PROTECTED_WICK_V14_CONTROL_FAIL'
+          assert int(control['length'])==552 and abs(int(control['heartbeats'])-11678)<=2
+          assert round(float(control['objective_sum_pct']),2)>=127.08
+          verified=[r for r in rows if valid(r)]
+          improved=sorted((r for r in verified if r is not control and
+                float(r['objective_sum_pct'])>float(control['objective_sum_pct'])),
+            key=lambda r:(-float(r['objective_sum_pct']),int(r['length']),int(r['heartbeats'])))
+          best=improved[0] if improved else None
+          out={'schema':'mathgraph.lra.wick.bilinear-observer.v15',
+            'state':'CANDIDATE_PRIMARY_GAIN_REQUIRES_EXACT_V4_32_REPLAY' if best else 'REJECTED_BOUNDED_NO_PRIMARY_GAIN',
+            'control':{'tokens':control['length'],'heartbeats':control['heartbeats'],'objective':control['objective_sum_pct']},
+            'tested':len(rows),'compiled':len(verified),
+            'qualified':[{'label':r['candidate_label'],'tokens':r['length'],
+              'heartbeats':r['heartbeats'],'objective':r['objective_sum_pct']} for r in verified],
+            'failures':[{'label':r['candidate_label'],'errors':(r.get('per_version') or [{}])[0].get('errors',[])} for r in rows if not valid(r)],
+            'best':None if best is None else {'label':best['candidate_label'],
+              'tokens':best['length'],'heartbeats':best['heartbeats'],
+              'objective':best['objective_sum_pct'],
+              'sha256':hashlib.sha256(next(x['proof'] for x in bank if x['label']==best['candidate_label']).encode()).hexdigest()},
+            'required_future':['v4.32.0','exact 15-proof packet'],
+            'portfolio_mutated':False,'official_submission':False}
+          (root/'result.json').write_text(json.dumps(out,indent=2,ensure_ascii=False)+'\n')
+          if best:
+            winner=next(x for x in bank if x['label']==best['candidate_label'])
+            (root/'winner.jsonl').write_text(json.dumps(winner,ensure_ascii=False)+'\n')
+          print(json.dumps({k:v for k,v in out.items() if k!='failures'},indent=2,ensure_ascii=False))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-wick-observer-v15
+          path: /tmp/lra-wick-v15
