@@ -1,0 +1,58 @@
+name: MathGraph transparent serial leader plus Flash fallback
+
+on:
+  push:
+    branches: [arena-serial-hybrid-v1]
+    paths:
+      - 'experiments/arena_serial_hybrid_v1.*'
+      - '.github/workflows/arena-serial-hybrid-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mathgraph-serial-hybrid-v1
+  cancel-in-progress: true
+
+jobs:
+  portable:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build exact independently attributed checkers
+        run: |
+          set -euo pipefail
+          git worktree add --detach /tmp/msi-flash 78c7502bac8a5ba000057b3f083bc0595ac65750
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/msi-soko
+          git -C /tmp/msi-soko checkout --detach 7645b1e1fcacfe410c99141f1234381d995b325d
+          CARGO_TARGET_DIR=/tmp/msi-flash-target RUSTFLAGS="-C target-cpu=native" cargo build --release --locked --manifest-path /tmp/msi-flash/Cargo.toml
+          CARGO_TARGET_DIR=/tmp/msi-soko-target RUSTFLAGS="-C target-cpu=native" cargo build --release --locked --manifest-path /tmp/msi-soko/Cargo.toml
+          cp /tmp/msi-flash-target/release/sokonanoda /tmp/msi-before.bin
+          cp /tmp/msi-soko-target/release/sokonanoda /tmp/msi-leader.bin
+          printf '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}\n' >/tmp/flash-msi-config1.json
+          sha256sum /tmp/msi-{before,leader}.bin
+      - name: Fetch exact portable Lean4export positives and adversarial negatives
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/msi-portable-artifact /tmp/msi-portable /tmp/msi-hybrid-evidence
+          gh api "repos/leanprover/lean-kernel-arena/actions/artifacts/11505862349/zip" >/tmp/msi-test-export.zip
+          unzip -q /tmp/msi-test-export.zip -d /tmp/msi-portable-artifact
+          tar --no-same-owner -xzf /tmp/msi-portable-artifact/lean-arena-tests.tar.gz -C /tmp/msi-portable
+      - name: Verify exact composite decision contract on entire portable corpus
+        run: |
+          set -euo pipefail
+          python3 experiments/arena_serial_hybrid_v1.py /tmp/msi-portable /tmp/msi-hybrid-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mathgraph-serial-hybrid-${{ github.sha }}
+          path: /tmp/msi-hybrid-evidence/
+          if-no-files-found: warn
