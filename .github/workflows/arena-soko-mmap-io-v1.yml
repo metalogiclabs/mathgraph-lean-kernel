@@ -31,7 +31,7 @@ jobs:
           set -euo pipefail
           git clone -q https://github.com/intgrah/sokonanoda /tmp/soko-mmap-source
           git -C /tmp/soko-mmap-source checkout --detach 7645b1e1fcacfe410c99141f1234381d995b325d
-          CARGO_TARGET_DIR=/tmp/soko-mmap-target RUSTFLAGS="-C target-cpu=native" \
+          CARGO_TARGET_DIR=/tmp/soko-mmap-target RUSTFLAGS="-C target-cpu=x86-64" \
             cargo build --release --locked --manifest-path /tmp/soko-mmap-source/Cargo.toml
           cp /tmp/soko-mmap-target/release/sokonanoda /tmp/soko-mmap-binary
           sha256sum /tmp/soko-mmap-binary
