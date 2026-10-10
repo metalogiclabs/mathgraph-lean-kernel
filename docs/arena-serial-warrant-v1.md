@@ -68,6 +68,7 @@ either constituent checker universally sound.
   small cases. This does **not** refute an instruction reduction on full
   Mathlib, where declaration scheduling/cache boundaries differ. Callgrind
   guest Ir is not the Arena's hardware-retired-instruction authority.
+- **Independent leader fast-path micro-test:** [CI 38093330137](https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/38093330137) SUCCESS at exact isolated [research branch](https://github.com/metalogiclabs/mathgraph-lean-kernel/tree/arena-soko-defeq-fastpath-v1); adds a pointer-identity short circuit to pinned Soko `def_eq_at`, without changing any 196 portable verdicts (125 ACCEPT, 69 REJECT, 2 DECLINE). Callgrind Ir changes on Grind/deep Magma/pair/fueled were respectively **-0.018%, +0.032%, +0.038%, +0.164%**, inconsistent/too small to promote. Preserve separate branch and never claim full Mathlib benefit without measurement.
 - Official exact-Mathlib artifact: Soko@7645b1e Mathlib=488,929,128,936
   retired instructions, Flash@78c7502=776,658,054,121; about 37.0% reduction
   from Flash's published score is needed to match Soko. Source:
