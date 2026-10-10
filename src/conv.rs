@@ -53,8 +53,12 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         std::ptr::eq(a, b) || self.unbudgeted(|s| s.unify::<true>(depth, a, b))
     }
 
+    #[inline]
     pub(crate) fn def_eq_at(&mut self, depth: u32, vx: V<'t>, vy: V<'t>) -> bool {
-        self.unbudgeted(|s| s.try_proof_irrel_at(depth, vx, vy) || s.unify::<true>(depth, vx, vy))
+        // Reusing an identical checked value is definitionally sound even
+        // before the proof-irrelevance or normalization search.
+        std::ptr::eq(vx, vy)
+            || self.unbudgeted(|s| s.try_proof_irrel_at(depth, vx, vy) || s.unify::<true>(depth, vx, vy))
     }
 
     #[inline]
