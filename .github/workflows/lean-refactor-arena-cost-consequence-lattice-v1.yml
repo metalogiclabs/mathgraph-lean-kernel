@@ -1,0 +1,103 @@
+name: Lean Refactor Arena finite witness consequence cost lattice
+on:
+  workflow_dispatch:
+  push:
+    branches: ['competition/lra-cost-lattice-v1']
+    paths:
+      - 'competitions/lean_refactor_arena/score_consequence_lattice_v1.py'
+      - '.github/workflows/lean-refactor-arena-cost-consequence-lattice-v1.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  measured-interaction:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch frozen primary measurements from successful Lean runs
+        uses: actions/download-artifact@v4
+        with:
+          name: lra-typing-consequence-v20
+          run-id: 38004209274
+          repository: metalogiclabs/mathgraph-lean-kernel
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: /tmp/lra-cost-lattice/typing
+      - uses: actions/download-artifact@v4
+        with:
+          name: lra-ski-IS-grouped-v18
+          run-id: 38008324035
+          repository: metalogiclabs/mathgraph-lean-kernel
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: /tmp/lra-cost-lattice/ski
+      - name: Verify GitHub run identity and pinned primary verdict authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          for spec in "38004209274 022bacae843b6ef532a550e380247d232d42ff25" \
+                      "38008324035 50facd603ae24d01d672b0df76c6c7dfd6145b05"; do
+            set -- $spec
+            curl -fsSL --retry 3 -H 'Accept: application/vnd.github+json' \
+              "https://api.github.com/repos/metalogiclabs/mathgraph-lean-kernel/actions/runs/$1" \
+              -o "/tmp/lra-cost-lattice/run-$1.json"
+            python3 - "$1" "$2" <<'PY'
+          import json,sys
+          r=json.load(open('/tmp/lra-cost-lattice/run-'+sys.argv[1]+'.json'))
+          assert r['id']==int(sys.argv[1]) and r['head_sha']==sys.argv[2]
+          assert r['status']=='completed' and r['conclusion']=='success'
+          print('WARRANTED_FROZEN_PRIMARY_RUN', r['id'])
+          PY
+          done
+      - name: Reproduce exact measured factor effects and heldout nonadditivity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 competitions/lean_refactor_arena/score_consequence_lattice_v1.py \
+            --typing /tmp/lra-cost-lattice/typing/typing-v20-scores.jsonl \
+            --ski /tmp/lra-cost-lattice/ski/scores.jsonl \
+            --out /tmp/lra-cost-lattice/manifest.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/lra-cost-lattice/manifest.json'))
+          assert d['state']=='WARRANTED_FINITE_PRIMARY_MEASUREMENTS__NO_GENERALIZATION'
+          assert len(d['typing']['measured_composites'])==16
+          assert d['typing']['maximum_observed_abs_interaction_centipoints']==2
+          assert d['ski']['IS_signed_interaction_centipoints']==-6
+          assert d['held_out_interaction_exceeds_typing_envelope'] is True
+          assert d['officially_submitted'] is False and d['portfolio_mutated'] is False
+          print('WARRANTED_FINITE_TYPING_SKI_SCORE_INTERACTIONS_NOT_A_LEAN_PROOF')
+          PY
+      - name: Fail closed on missing/failed primary witness or mutated factor table
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import copy,importlib.util,pathlib
+          p=pathlib.Path('competitions/lean_refactor_arena/score_consequence_lattice_v1.py')
+          spec=importlib.util.spec_from_file_location('score_consequence_lattice_v1',p)
+          mod=importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+          t=mod.rows(pathlib.Path('/tmp/lra-cost-lattice/typing/typing-v20-scores.jsonl'))
+          control='typing_v20_exact_308_control'
+          bad=copy.deepcopy(t)
+          bad[control]['compiled']=False
+          try: mod.typing_census(bad)
+          except AssertionError: pass
+          else: raise AssertionError('ACCEPTED_NONCOMPILING_CONTROL')
+          bad=copy.deepcopy(t); del bad['typing_v20_compound_TCLR']
+          try: mod.typing_census(bad)
+          except AssertionError: pass
+          else: raise AssertionError('ACCEPTED_MISSING_COMPOSITE')
+          bad=copy.deepcopy(t)
+          bad['typing_v20_compound_TCLR']['objective_sum_pct']=124.00
+          try: mod.typing_census(bad)
+          except AssertionError: pass
+          else: raise AssertionError('ACCEPTED_UNWARRANTED_OBJECTIVE')
+          print('VERIFIED_NEGATIVE_EVIDENCE_GATES')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-finite-cost-consequence-lattice-v1
+          path: /tmp/lra-cost-lattice/manifest.json
