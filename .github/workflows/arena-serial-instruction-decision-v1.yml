@@ -1,0 +1,52 @@
+name: Arena serial versus parallel instruction decision
+on:
+  push:
+    branches: [arena-serial-instruction-decision-v1]
+    paths:
+      - 'experiments/arena_serial_instruction_decision_v1.py'
+      - '.github/workflows/arena-serial-instruction-decision-v1.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: arena-serial-instruction-decision-v1
+  cancel-in-progress: true
+jobs:
+  crossover:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install instruction meter
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq valgrind
+      - name: Build one immutable portable-ISA checker and unpack pinned corpus
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/soko-serial-decision-src
+          git -C /tmp/soko-serial-decision-src checkout --detach 7645b1e1fcacfe410c99141f1234381d995b325d
+          CARGO_TARGET_DIR=/tmp/soko-serial-decision-target RUSTFLAGS="-C target-cpu=x86-64" \
+            cargo build --release --locked --manifest-path /tmp/soko-serial-decision-src/Cargo.toml
+          cp /tmp/soko-serial-decision-target/release/sokonanoda /tmp/soko-serial-decision
+          mkdir -p /tmp/soko-serial-zip /tmp/soko-serial-corpus /tmp/soko-serial-evidence
+          gh api "repos/leanprover/lean-kernel-arena/actions/artifacts/11505862349/zip" >/tmp/soko-serial.zip
+          unzip -q /tmp/soko-serial.zip -d /tmp/soko-serial-zip
+          tar --no-same-owner -xzf /tmp/soko-serial-zip/lean-arena-tests.tar.gz -C /tmp/soko-serial-corpus
+          sha256sum /tmp/soko-serial-decision | tee /tmp/soko-serial-evidence/binary.sha256
+      - name: Six-arm verdict parity and full-process guest-instruction tournament
+        run: |
+          set -euo pipefail
+          python3 experiments/arena_serial_instruction_decision_v1.py \
+            /tmp/soko-serial-corpus /tmp/soko-serial-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: arena-serial-instruction-decision-${{ github.sha }}
+          path: /tmp/soko-serial-evidence/
+          if-no-files-found: warn
