@@ -1,0 +1,199 @@
+name: Lean Refactor Arena V15 Wick exact proof and 15-row packet reclosure
+on:
+  workflow_dispatch:
+  push:
+    branches: ['competition/lra-v15-wick-observer-admission']
+    paths:
+      - 'competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl'
+      - 'competitions/lean_refactor_arena/submissions/mathgraph_verified_15_warmup_20261009.jsonl'
+      - 'competitions/lean_refactor_arena/evidence/retained_exact_full_version_audit_20261010_v15.json'
+      - '.github/workflows/lean-refactor-arena-v15-wick-observer-reclosure.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: lra-v15-wick-exact-reclosure
+  cancel-in-progress: true
+
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      BASE_SHA: 4677c53615e7a282b26aa24fb5bad1f510bbaa93
+      PUBLIC_PIN: 7f3a401470d04f70013d293db4253b088ec8a0ae
+      PROOF_RUN: '38010738161'
+      PROOF_HEAD: 678c317ada47ca7fb20a3ae1cc71ff7c867fab6c
+      NAME: FieldSpecification.WickAlgebra.ι_timeOrderF_superCommuteF_eq_time
+    steps:
+      - uses: actions/checkout@v4
+      - name: Recover completed exact single-required-version Lean evidence without recompilation
+        uses: actions/download-artifact@v4
+        with:
+          name: lra-wick-observer-v15
+          run-id: 38010738161
+          repository: metalogiclabs/mathgraph-lean-kernel
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: /tmp/lra-v15/wick
+      - name: Retrieve exact source and public frozen theorem authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/lra-v15
+          git fetch --depth=1 origin "$BASE_SHA"
+          curl -fsSL --retry 3 -H 'Accept: application/vnd.github+json' \
+            "https://api.github.com/repos/metalogiclabs/mathgraph-lean-kernel/actions/runs/$PROOF_RUN" \
+            -o /tmp/lra-v15/run.json
+          curl -fsSL --retry 3 \
+            "https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/$PROOF_HEAD/competitions/lean_refactor_arena/experiments/wick_bilinear_observer_v15.jsonl" \
+            -o /tmp/lra-v15/bank.jsonl
+      - name: Seal exact changed Wick proof, required v4.32 check, and fourteen unchanged V14 proofs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,hashlib,os,pathlib,subprocess
+          target=os.environ['NAME']
+          root=pathlib.Path('competitions/lean_refactor_arena')
+          evidence=pathlib.Path('/tmp/lra-v15')
+          read=lambda p:[json.loads(l) for l in pathlib.Path(p).read_text().splitlines() if l.strip()]
+          sha=lambda p:hashlib.sha256(p.encode('utf-8')).hexdigest()
+          run=json.loads((evidence/'run.json').read_text())
+          assert run['id']==int(os.environ['PROOF_RUN'])
+          assert run['head_sha']==os.environ['PROOF_HEAD']
+          assert run['status']=='completed' and run['conclusion']=='success'
+          bank=read(evidence/'bank.jsonl')
+          control=next(x for x in bank if x['label']=='wick_v15_current_552_control')
+          winner=next(x for x in bank if x['label']=='wick_v15_hc_simp')
+          assert len(bank)==13 and len({x['label'] for x in bank})==13
+          assert control['name']==winner['name']==target
+          assert control['proof'].split(' := by\n')[0]==winner['proof'].split(' := by\n')[0]
+          port=root/'portfolio/warmup_portfolio_v1.jsonl'
+          submission=root/'submissions/mathgraph_verified_15_warmup_20261009.jsonl'
+          base=subprocess.check_output(['git','show',os.environ['BASE_SHA']+':'+str(port)],text=True)
+          before={x['name']:x for x in (json.loads(s) for s in base.splitlines() if s.strip())}
+          after={x['name']:x for x in read(port)}
+          packet={x['name']:x['proof'] for x in read(submission)}
+          assert len(before)==len(after)==len(packet)==15
+          assert set(before)==set(after)==set(packet)
+          assert {name for name in before if before[name]['proof']!=after[name]['proof']}=={target}
+          assert all(before[name]==after[name] for name in before if name!=target),'UNRELATED_PROOF_CHANGED'
+          assert before[target]['proof']==control['proof']
+          assert after[target]['proof']==winner['proof']
+          assert after[target]['label']=='warranted_wick_v15_commutator_observer_542'
+          assert packet=={name:x['proof'] for name,x in after.items()}
+          scores=read(evidence/'wick/scores.jsonl')
+          candidates={x['candidate_label']:x for x in scores}
+          assert len(scores)==len(candidates)==13
+          x=candidates['wick_v15_hc_simp']
+          pv=x.get('per_version') or []
+          assert x.get('compiled') is True and x.get('statement_ok') is True
+          assert x.get('eligible') is True and float(x.get('survival_pct') or 0)==100
+          assert not x.get('forbidden') and not x.get('extra_toplevel_decls') and not x.get('untested')
+          assert x.get('compat')=={'v4.32.0':True}
+          assert len(pv)==1 and pv[0].get('version')=='v4.32.0'
+          assert pv[0].get('tested') is True and pv[0].get('ok') is True
+          assert not pv[0].get('errors')
+          assert (x['length'],x['heartbeats'])==(542,11751)
+          assert round(float(x['objective_sum_pct']),2)==127.75
+          prior=candidates['wick_v15_current_552_control']
+          assert prior['compiled'] is True and (prior['length'],prior['heartbeats'])==(552,11678)
+          assert round(float(prior['objective_sum_pct']),2)==127.10
+          summary=json.loads((evidence/'wick/result.json').read_text())
+          assert summary['state']=='CANDIDATE_PRIMARY_GAIN_REQUIRES_EXACT_V4_32_REPLAY'
+          assert summary['best']['label']=='wick_v15_hc_simp'
+          assert summary['best']['sha256']==sha(winner['proof'])
+          manifest={'schema':'mathgraph.lra.wick.v15.reused-required-version-certificate.v1',
+            'state':'WARRANTED_EXACT_SINGLE_REQUIRED_VERSION_AND_FOURTEEN_UNCHANGED',
+            'proof_run':run['id'],'proof_sha256':sha(winner['proof']),
+            'required_versions':['v4.32.0'],'length':542,'heartbeats':11751,
+            'objective':127.75,'other_proofs_unchanged':14,
+            'current_active_branch_mutated':False,'official_submission':False}
+          (evidence/'source-closure.json').write_text(json.dumps(manifest,indent=2)+'\n')
+          print(json.dumps(manifest,indent=2))
+          PY
+      - name: Reconstruct exact fifteen legal organizer upload rows
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 \
+            "https://raw.githubusercontent.com/aurasoph/lean-refactor/$PUBLIC_PIN/competition/benchmark_data_warmup.jsonl" \
+            -o /tmp/lra-v15/benchmark.jsonl
+          python3 competitions/lean_refactor_arena/official_jsonl.py \
+            /tmp/lra-v15/benchmark.jsonl --summary-out /tmp/lra-v15/benchmark-summary.json
+          python3 competitions/lean_refactor_arena/arena_upload.py build \
+            --benchmark /tmp/lra-v15/benchmark.jsonl \
+            --candidates competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl \
+            --out /tmp/lra-v15/exact-15.jsonl --report /tmp/lra-v15/build-report.json
+          python3 competitions/lean_refactor_arena/arena_upload.py validate \
+            --benchmark /tmp/lra-v15/benchmark.jsonl \
+            --upload /tmp/lra-v15/exact-15.jsonl
+      - name: Verify V15 current packet blobs and 7+8 protected Lean-version certificates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,hashlib,pathlib,subprocess
+          root=pathlib.Path('competitions/lean_refactor_arena')
+          read=lambda p:[json.loads(x) for x in pathlib.Path(p).read_text().splitlines() if x.strip()]
+          port=root/'portfolio/warmup_portfolio_v1.jsonl'
+          packet=root/'submissions/mathgraph_verified_15_warmup_20261009.jsonl'
+          audit=root/'evidence/retained_exact_full_version_audit_20261010_v15.json'
+          a=json.loads(audit.read_text())
+          blob=lambda p:subprocess.check_output(['git','hash-object',str(p)],text=True).strip()
+          assert a['schema']=='mathgraph.lra.retained-proof-exact-version-audit.v15'
+          assert a['state']=='WARRANTED_COMPOSED_PINNED_VERSIONS__NOT_OFFICIAL_ARENA_SUBMISSION'
+          assert a['source_sha']=='7f3a401470d04f70013d293db4253b088ec8a0ae'
+          assert a['portfolio_blob_sha']==a['current_portfolio_blob_sha']==blob(port)
+          assert a['current_packet']['git_blob_sha']==blob(packet)
+          p=read(port)
+          q=read(packet)
+          built=read('/tmp/lra-v15/exact-15.jsonl')
+          frozen=read('/tmp/lra-v15/benchmark.jsonl')
+          names=[x['name'] for x in frozen]
+          assert len(names)==len(set(names))==15
+          assert len(p)==len(q)==len(built)==15
+          assert [x['name'] for x in built]==names and built==q
+          assert all(set(x)=={'name','proof'} for x in q)
+          assert {x['name']:x['proof'] for x in p}=={x['name']:x['proof'] for x in q}
+          records=a['records']
+          assert len(records)==15 and {r['name'] for r in records}==set(names)
+          external=0
+          for rec in records:
+            assert rec['label']==next(x['label'] for x in p if x['name']==rec['name'])
+            req=rec['required_versions']
+            assert req and len(req)==len(set(req))
+            if rec['matches_pinned_public_full_test'] is True:
+              external+=1
+              assert rec['evidence_status']=='WARRANTED_EXTERNAL_EXACT_FULL_VERSION'
+              assert rec['public_hash'] and rec['public_compat']=={v:True for v in req}
+            else:
+              assert rec['evidence_status']=='WARRANTED_INDEPENDENT_EXACT_REQUIRED_VERSION'
+              authority=rec.get('independent_authority') or {}
+              run=rec.get('independent_run') or authority.get('run')
+              assert isinstance(run,int) and run>0
+              assert set(authority.get('required_versions_verified') or (rec.get('compat') or {}).keys())==set(req)
+          assert external==a['comparator_full_version_exact_count']==7
+          assert a['independently_qualified_count']==8 and a['total_authorized_by_prior_evidence']==15
+          assert a['change_fingerprint']['preserved_proof_rows_from_v14']==14
+          assert round(a['projected_score']['objective_sum_total'],2)==2231.23
+          assert round(a['projected_score']['combined_pct_if_full_survival'],4)==82.9162
+          out={'schema':'mathgraph.lra.v15.exact-15-upload.v1',
+            'state':'WARRANTED_EXACT_15_ROW_PACKET__NOT_OFFICIAL_SCORE',
+            'source_run':38010738161,'unchanged_prior_proofs':14,
+            'public_warrants':7,'independent_warrants':8,
+            'portfolio_blob':blob(port),'packet_blob':blob(packet),
+            'upload_sha256':hashlib.sha256(pathlib.Path('/tmp/lra-v15/exact-15.jsonl').read_bytes()).hexdigest(),
+            'objective_total_projection':2231.23,'combined_projection_pct':82.9162,
+            'official_submission':False}
+          pathlib.Path('/tmp/lra-v15/packet-seal.json').write_text(json.dumps(out,indent=2)+'\n')
+          print(json.dumps(out,indent=2))
+          print('WARRANTED_V15_WICK_EXACT_RETAINED_FIFTEEN_PROOF_UPLOAD')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-v15-exact-wick-15-packet
+          path: /tmp/lra-v15
