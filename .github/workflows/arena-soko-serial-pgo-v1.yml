@@ -27,6 +27,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: llvm-tools-preview
+      # Valgrind does not emulate every AVX-512 instruction from CI host CPUs;
+      # use the same portable x86-64 target for both deterministic instruction arms.
       - name: Install deterministic guest-instruction meter
         run: |
           set -euo pipefail
@@ -52,13 +54,13 @@ jobs:
             profile_dir="/tmp/soko-pgo-profile-$workers"
             target_dir="/tmp/soko-pgo-target-$workers"
             mkdir -p "$profile_dir"
-            CARGO_TARGET_DIR="$target_dir" RUSTFLAGS="-C target-cpu=native -Cprofile-generate=$profile_dir" \
+            CARGO_TARGET_DIR="$target_dir" RUSTFLAGS="-C target-cpu=x86-64 -Cprofile-generate=$profile_dir" \
               cargo build --release --locked --manifest-path /tmp/soko-pgo-source/Cargo.toml
             "$target_dir/release/sokonanoda" --stdin --nat-extension --string-extension --axiom-allow-all \
               --threads "$workers" </tmp/soko-pgo-tests/good/init-prelude.ndjson >/dev/null
             "$LLVM_PROFDATA" merge -o "$profile_dir/merged.profdata" "$profile_dir"
             test -s "$profile_dir/merged.profdata"
-            CARGO_TARGET_DIR="$target_dir" RUSTFLAGS="-C target-cpu=native -Cprofile-use=$profile_dir/merged.profdata" \
+            CARGO_TARGET_DIR="$target_dir" RUSTFLAGS="-C target-cpu=x86-64 -Cprofile-use=$profile_dir/merged.profdata" \
               cargo build --release --locked --manifest-path /tmp/soko-pgo-source/Cargo.toml
             cp "$target_dir/release/sokonanoda" "/tmp/soko-pgo-${workers}t"
           done
