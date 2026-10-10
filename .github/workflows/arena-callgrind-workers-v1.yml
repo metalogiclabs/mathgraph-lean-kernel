@@ -1,0 +1,56 @@
+name: Current sokonanoda 1/2/4 worker Callgrind experiment
+
+on:
+  push:
+    branches: [arena-serial-hybrid-v1]
+    paths:
+      - 'experiments/arena_callgrind_workers_v1.py'
+      - '.github/workflows/arena-callgrind-workers-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mathgraph-current-serial-callgrind-v1
+  cancel-in-progress: true
+
+jobs:
+  instructions:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install deterministic guest-instruction counter
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -qq -y valgrind
+          valgrind --version
+      - name: Build pinned current leader once for all worker comparisons
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/msi-current-soko
+          git -C /tmp/msi-current-soko checkout --detach 7645b1e1fcacfe410c99141f1234381d995b325d
+          CARGO_TARGET_DIR=/tmp/msi-callgrind-target cargo build --release --locked --manifest-path /tmp/msi-current-soko/Cargo.toml
+          cp /tmp/msi-callgrind-target/release/sokonanoda /tmp/msi-leader.bin
+      - name: Download exact frozen Lean4export examples
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/msi-cg-zip /tmp/msi-cg-tests /tmp/msi-ir
+          gh api "repos/leanprover/lean-kernel-arena/actions/artifacts/11505862349/zip" >/tmp/msi-cg-artifact.zip
+          unzip -q /tmp/msi-cg-artifact.zip -d /tmp/msi-cg-zip
+          tar --no-same-owner -xzf /tmp/msi-cg-zip/lean-arena-tests.tar.gz -C /tmp/msi-cg-tests
+      - name: Count full process guest instructions for 1/2/4 threads
+        run: |
+          set -euo pipefail
+          python3 experiments/arena_callgrind_workers_v1.py /tmp/msi-cg-tests /tmp/msi-ir
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mathgraph-serial-instruction-proxy-${{ github.sha }}
+          path: /tmp/msi-ir/summary.json
+          if-no-files-found: warn
