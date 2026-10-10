@@ -1,0 +1,148 @@
+name: Lean Refactor Arena SKI V18 I/S critical-pair witness quotient
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['competition/lra-ski-IS-grouped-v18']
+    paths:
+      - 'competitions/lean_refactor_arena/experiments/ski_IS_witness_group_v18.jsonl'
+      - '.github/workflows/lean-refactor-arena-ski-IS-grouped-v18.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lra-ski-IS-grouped-v18
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      PUBLIC_SHA: 7f3a401470d04f70013d293db4253b088ec8a0ae
+      V13_SHA: 4b78ac4cc1ef5356c0caab351a658e069be5203b
+      TARGET: Cslib.SKI.parallelReduction_diamond
+      BANK: competitions/lean_refactor_arena/experiments/ski_IS_witness_group_v18.jsonl
+    steps:
+      - uses: actions/checkout@v4
+      - name: Freeze exact V13 SKI control and ten new semantic witness representations
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/lra-ski-v18
+          curl -fsSL --retry 3 "https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/$V13_SHA/competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl" -o /tmp/lra-ski-v18/source.jsonl
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib,re
+          read=lambda p:[json.loads(x) for x in pathlib.Path(p).read_text().splitlines() if x.strip()]
+          active=read('/tmp/lra-ski-v18/source.jsonl')
+          bank=read(os.environ['BANK'])
+          name=os.environ['TARGET']
+          assert len(active)==15 and len({x['name'] for x in active})==15
+          assert len(bank)==len({x['label'] for x in bank})==len({x['proof'] for x in bank})==10
+          incumbent=next(x for x in active if x['name']==name)
+          control=bank[0]
+          assert incumbent['label']=='warranted_ski_directed_k_262'
+          assert control['label']=='ski_v18_exact_v13_control' and control['proof']==incumbent['proof']
+          header=control['proof'].split(' := by\n',1)[0]+' := by\n'
+          forbidden=re.compile(r'\b(?:sorry|sorryAx|admit|axiom|native_decide|run_cmd|run_elab|unsafe)\b|#\s*(?:eval|reduce|exit)\b')
+          assert all(x['name']==name and x['proof'].startswith(header) and not forbidden.search(x['proof']) for x in bank)
+          result={'schema':'mathgraph.lra.ski.IS-group.v18.frozen',
+            'state':'UNVERIFIED_PROPOSALS','pinned_source':os.environ['PUBLIC_SHA'],
+            'v13_source_sha':os.environ['V13_SHA'],'count':len(bank),
+            'source_proof_sha256':hashlib.sha256(control['proof'].encode()).hexdigest(),
+            'proposals_sha256':{x['label']:hashlib.sha256(x['proof'].encode()).hexdigest() for x in bank},
+            'protected_lean_versions':['v4.33.0-rc2','v4.32.0','v4.31.0','v4.30.0'],
+            'portfolio_mutated':False,'official_submission':False}
+          pathlib.Path('/tmp/lra-ski-v18/frozen.json').write_text(json.dumps(result,indent=2)+'\n')
+          print('VERIFIED_EXACT_V13_SKI_FROZEN_SOURCE_AND_TEN_UNIQUE_CANDIDATES')
+          PY
+      - name: Prepare pinned primary Cslib combinatory logic module
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.elan/bin:$PATH"
+          git clone --depth=1 --filter=blob:none --sparse https://github.com/aurasoph/lean-refactor.git /tmp/lean-refactor
+          git -C /tmp/lean-refactor fetch --depth=1 origin "$PUBLIC_SHA"
+          git -C /tmp/lean-refactor checkout --detach FETCH_HEAD
+          git -C /tmp/lean-refactor sparse-checkout set competition
+          test "$(git -C /tmp/lean-refactor rev-parse HEAD)" = "$PUBLIC_SHA"
+          cd /tmp/lean-refactor/competition/projects/v4.33
+          lake update > /tmp/lra-ski-v18/update.log 2>&1 || { tail -n 150 /tmp/lra-ski-v18/update.log; exit 1; }
+          lake exe cache get > /tmp/lra-ski-v18/cache.log 2>&1 || echo CACHE_MISS_FALLBACK
+          lake build Cslib.Languages.CombinatoryLogic.Confluence > /tmp/lra-ski-v18/build.log 2>&1 || {
+            tail -n 150 /tmp/lra-ski-v18/build.log; exit 1;
+          }
+          echo 'VERIFIED_PINNED_COMBINATORY_LOGIC_SOURCE_MODULE'
+      - name: Score ten exact local I/S critical-pair witness representations
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' > /tmp/lra-ski-v18/labels
+          import json,os
+          xs=[json.loads(x) for x in open(os.environ['BANK']) if x.strip()]
+          assert len(xs)==10
+          for x in xs: print(x['label'])
+          PY
+          : > /tmp/lra-ski-v18/scores.jsonl
+          while IFS= read -r label; do
+            echo "SKI_V18_CANDIDATE=$label"
+            python3 competitions/lean_refactor_arena/public_harness_bridge.py \
+              --competition /tmp/lean-refactor/competition --project v4.33 \
+              --name "$TARGET" --candidate "$BANK" --label "$label"
+            (cd /tmp/lean-refactor/competition && python3 arena.py check --name "$TARGET" --timeout 1200) > /tmp/lra-ski-v18/one.json
+            jq -c --arg label "$label" '. + {candidate_label:$label}' \
+              /tmp/lra-ski-v18/one.json >> /tmp/lra-ski-v18/scores.jsonl
+          done < /tmp/lra-ski-v18/labels
+      - name: Certify bounded winner only when objective strictly exceeds active SKI 102.91
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,hashlib
+          root=pathlib.Path('/tmp/lra-ski-v18')
+          rows=[json.loads(x) for x in (root/'scores.jsonl').read_text().splitlines() if x.strip()]
+          bank=[json.loads(x) for x in pathlib.Path(os.environ['BANK']).read_text().splitlines() if x.strip()]
+          assert len(rows)==len(bank)==10
+          assert {r['candidate_label'] for r in rows}=={x['label'] for x in bank}
+          def good(r):
+            pv=r.get('per_version') or []
+            return (r.get('compiled') is True and r.get('statement_ok') is True and
+              r.get('eligible') is True and not r.get('forbidden') and
+              not r.get('extra_toplevel_decls') and not r.get('untested') and
+              r.get('compat')=={'v4.33.0-rc2':True} and len(pv)==1 and
+              pv[0].get('tested') is True and pv[0].get('ok') is True)
+          control=next(x for x in rows if x['candidate_label']=='ski_v18_exact_v13_control')
+          assert good(control)
+          assert (int(control['length']),int(control['heartbeats']))==(262,533)
+          assert round(float(control['objective_sum_pct']),2)==102.91
+          passing=[x for x in rows if good(x)]
+          gains=sorted((x for x in passing if x is not control and float(x['objective_sum_pct'])>float(control['objective_sum_pct'])),
+            key=lambda x:(-float(x['objective_sum_pct']),int(x['length']),int(x['heartbeats'])))
+          best=gains[0] if gains else None
+          manifest={'schema':'mathgraph.lra.ski.IS-group.v18.primary',
+            'state':'CANDIDATE_PRIMARY_GAIN_REQUIRES_FOUR_VERSIONS' if best else 'REJECTED_BOUNDED_NO_PRIMARY_GAIN',
+            'incumbent':{'tokens':control['length'],'heartbeats':control['heartbeats'],'objective':control['objective_sum_pct']},
+            'tested':len(rows),'compiled':len(passing),
+            'qualified':[{'label':r['candidate_label'],'tokens':r['length'],'heartbeats':r['heartbeats'],
+              'objective':r['objective_sum_pct']} for r in passing],
+            'failures':[{'label':r['candidate_label'],'errors':(r.get('per_version') or [{}])[0].get('errors',[])} for r in rows if not good(r)],
+            'best':None if best is None else
+              {'label':best['candidate_label'],'tokens':best['length'],'heartbeats':best['heartbeats'],
+               'objective':best['objective_sum_pct'],'proof_sha256':hashlib.sha256(next(y['proof'] for y in bank if y['label']==best['candidate_label']).encode()).hexdigest()},
+            'required_future':['v4.33.0-rc2','v4.32.0','v4.31.0','v4.30.0'],
+            'promotion':'Four-version proof-byte verification and exact V13 15-proof packet reclosure',
+            'portfolio_mutated':False,'official_submission':False}
+          (root/'summary.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n')
+          if best:
+            row=next(x for x in bank if x['label']==best['candidate_label'])
+            (root/'winner.jsonl').write_text(json.dumps(row,ensure_ascii=False)+'\n')
+          print(json.dumps({k:v for k,v in manifest.items() if k!='failures'},ensure_ascii=False,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-ski-IS-grouped-v18
+          path: /tmp/lra-ski-v18
