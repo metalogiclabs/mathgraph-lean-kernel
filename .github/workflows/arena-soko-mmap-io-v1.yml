@@ -1,0 +1,55 @@
+name: Soko identical-checker mapped-file versus streaming input A/B
+on:
+  push:
+    branches: [arena-soko-mmap-io-v1]
+    paths:
+      - "experiments/arena_soko_mmap_io_v1.py"
+      - ".github/workflows/arena-soko-mmap-io-v1.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: arena-soko-mmap-io-v1
+  cancel-in-progress: true
+jobs:
+  input-mode-duel:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install full-process deterministic guest-instruction meter
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq valgrind
+      - name: Pin current Arena leader and make one identical binary
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/soko-mmap-source
+          git -C /tmp/soko-mmap-source checkout --detach 7645b1e1fcacfe410c99141f1234381d995b325d
+          CARGO_TARGET_DIR=/tmp/soko-mmap-target RUSTFLAGS="-C target-cpu=native" \
+            cargo build --release --locked --manifest-path /tmp/soko-mmap-source/Cargo.toml
+          cp /tmp/soko-mmap-target/release/sokonanoda /tmp/soko-mmap-binary
+          sha256sum /tmp/soko-mmap-binary
+      - name: Unpack exact 196 positive and negative Lean4export controls
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/soko-mmap-artifact /tmp/soko-mmap-corpus /tmp/soko-mmap-evidence
+          gh api "repos/leanprover/lean-kernel-arena/actions/artifacts/11505862349/zip" >/tmp/soko-mmap-corpus.zip
+          unzip -q /tmp/soko-mmap-corpus.zip -d /tmp/soko-mmap-artifact
+          tar --no-same-owner -xzf /tmp/soko-mmap-artifact/lean-arena-tests.tar.gz -C /tmp/soko-mmap-corpus
+          test -s /tmp/soko-mmap-corpus/good/init-prelude.ndjson
+      - name: Recheck every verdict and deterministic instruction count for mmap versus stdin
+        run: |
+          set -euo pipefail
+          python3 experiments/arena_soko_mmap_io_v1.py /tmp/soko-mmap-corpus /tmp/soko-mmap-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: arena-soko-mmap-io-${{ github.sha }}
+          path: /tmp/soko-mmap-evidence/
+          if-no-files-found: warn
