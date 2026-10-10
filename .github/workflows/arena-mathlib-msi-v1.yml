@@ -1,0 +1,63 @@
+name: MathGraph Arena MSI V1 correctness and instruction-candidate tournament
+
+on:
+  push:
+    branches: [arena-mathlib-msi-v1]
+    paths:
+      - 'src/**'
+      - 'experiments/arena_msi_portable_v1.py'
+      - '.github/workflows/arena-mathlib-msi-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mathgraph-arena-msi-v1-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  portable-correctness:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      MSI_BASE_SHA: 78c7502bac8a5ba000057b3f083bc0595ac65750
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Check the source change against the immutable Arena incumbent
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor "$MSI_BASE_SHA" HEAD
+          git diff --stat "$MSI_BASE_SHA"..HEAD -- src/
+          cargo test --release --locked
+          git worktree add --detach /tmp/flash-msi-base-source "$MSI_BASE_SHA"
+          CARGO_TARGET_DIR=/tmp/flash-msi-base-target RUSTFLAGS="-C target-cpu=native" cargo build --release --locked --manifest-path /tmp/flash-msi-base-source/Cargo.toml
+          CARGO_TARGET_DIR=/tmp/flash-msi-cand-target RUSTFLAGS="-C target-cpu=native" cargo build --release --locked
+          cp /tmp/flash-msi-base-target/release/sokonanoda /tmp/flash-msi-baseline
+          cp /tmp/flash-msi-cand-target/release/sokonanoda /tmp/flash-msi-candidate
+          sha256sum /tmp/flash-msi-{baseline,candidate}
+          printf '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2,"print_success_message":false}\n' >/tmp/flash-msi-config2.json
+          printf '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}\n' >/tmp/flash-msi-config4.json
+      - name: Retrieve current pinned Arena portable test corpus
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/arena-msi-zip /tmp/arena-msi-tests /tmp/flash-msi-evidence
+          gh api "repos/leanprover/lean-kernel-arena/actions/artifacts/11505862349/zip" >/tmp/arena-msi.zip
+          unzip -q /tmp/arena-msi.zip -d /tmp/arena-msi-zip
+          tar --no-same-owner -xzf /tmp/arena-msi-zip/lean-arena-tests.tar.gz -C /tmp/arena-msi-tests
+          echo "VALID_TESTS=$(find /tmp/arena-msi-tests/good -name '*.ndjson' | wc -l)"
+          echo "INVALID_TESTS=$(find /tmp/arena-msi-tests/bad -name '*.ndjson' | wc -l)"
+      - name: Verify all outcomes and measure three-arm CPU/wall A/B
+        run: |
+          set -euo pipefail
+          python3 experiments/arena_msi_portable_v1.py /tmp/arena-msi-tests /tmp/flash-msi-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mathgraph-arena-msi-portable-${{ github.sha }}
+          path: /tmp/flash-msi-evidence/
+          if-no-files-found: warn
