@@ -1,0 +1,83 @@
+name: Soko exact Mathlib memory-mapped input heldout experiment
+
+on:
+  push:
+    branches: [arena-mathlib-mmap-heldout-v1]
+    paths:
+      - "experiments/arena_soko_mmap_mathlib_v1.py"
+      - ".github/workflows/arena-mathlib-mmap-heldout-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: arena-soko-mmap-mathlib-v1
+  cancel-in-progress: true
+
+jobs:
+  mathlib:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+      - name: Pin current Arena and sokonanoda source independently
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/msi-mathlib-mmap-arena
+          git -C /tmp/msi-mathlib-mmap-arena checkout --detach b83254de5146ef34147ab82a48edbe1856b0edcc
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/msi-mathlib-mmap-source
+          git -C /tmp/msi-mathlib-mmap-source checkout --detach 7645b1e1fcacfe410c99141f1234381d995b325d
+      - name: Build exact current full Mathlib export
+        run: |
+          set -euo pipefail
+          cd /tmp/msi-mathlib-mmap-arena
+          nix develop -c ./lka.py build-test mathlib
+          test -s _build/tests/mathlib.ndjson
+          du -h _build/tests/mathlib.ndjson
+      - name: Recover identical frozen init-prelude PGO training input
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/msi-mmap-zip /tmp/msi-mmap-training /tmp/msi-mmap-heldout
+          gh api "repos/leanprover/lean-kernel-arena/actions/artifacts/11505862349/zip" >/tmp/msi-mmap-training.zip
+          unzip -q /tmp/msi-mmap-training.zip -d /tmp/msi-mmap-zip
+          tar --no-same-owner -xzf /tmp/msi-mmap-zip/lean-arena-tests.tar.gz -C /tmp/msi-mmap-training
+          test -s /tmp/msi-mmap-training/good/init-prelude.ndjson
+      - name: Build one PGO binary from official four-thread stdin training
+        run: |
+          set -euo pipefail
+          HOST=$(rustc -vV | awk '/^host:/ {print $2}')
+          LLVM_PROFDATA="$(rustc --print sysroot)/lib/rustlib/$HOST/bin/llvm-profdata"
+          test -x "$LLVM_PROFDATA"
+          mkdir -p /tmp/msi-mmap-prof
+          CARGO_TARGET_DIR=/tmp/msi-mmap-target \
+            RUSTFLAGS="-C target-cpu=native -Cprofile-generate=/tmp/msi-mmap-prof" \
+            cargo build --release --locked --manifest-path /tmp/msi-mathlib-mmap-source/Cargo.toml
+          /tmp/msi-mmap-target/release/sokonanoda --stdin --nat-extension \
+            --string-extension --axiom-allow-all --threads 4 \
+            </tmp/msi-mmap-training/good/init-prelude.ndjson >/dev/null
+          "$LLVM_PROFDATA" merge -o /tmp/msi-mmap-prof/merged.profdata /tmp/msi-mmap-prof
+          test -s /tmp/msi-mmap-prof/merged.profdata
+          CARGO_TARGET_DIR=/tmp/msi-mmap-target \
+            RUSTFLAGS="-C target-cpu=native -Cprofile-use=/tmp/msi-mmap-prof/merged.profdata" \
+            cargo build --release --locked --manifest-path /tmp/msi-mathlib-mmap-source/Cargo.toml
+          cp /tmp/msi-mmap-target/release/sokonanoda /tmp/msi-mathlib-mmap-soko
+          sha256sum /tmp/msi-mathlib-mmap-soko | tee /tmp/msi-mmap-heldout/binary.sha256
+      - name: Exact held-out complete Mathlib verdict and two-round CPU/wall tournament
+        run: |
+          set -euo pipefail
+          python3 experiments/arena_soko_mmap_mathlib_v1.py \
+            /tmp/msi-mathlib-mmap-arena/_build/tests/mathlib.ndjson /tmp/msi-mmap-heldout
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: arena-mmap-full-mathlib-${{ github.sha }}
+          path: /tmp/msi-mmap-heldout/
+          if-no-files-found: warn
