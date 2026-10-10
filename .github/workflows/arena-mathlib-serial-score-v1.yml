@@ -63,7 +63,12 @@ jobs:
       - name: Build Flash baseline, pointer candidate and pinned leader with equivalent PGO
         run: |
           set -euo pipefail
-          LLVM_PROFDATA=$(nix shell nixpkgs#llvmPackages_21.llvm -c sh -c 'command -v llvm-profdata')
+          # Use LLVM profile merger from the exact rustc toolchain.
+          # Rust's raw profile v11 is incompatible with nix LLVM21's v10 reader.
+          rustup component add llvm-tools-preview
+          HOST=$(rustc -vV | awk '/^host:/ {print $2}')
+          LLVM_PROFDATA="$(rustc --print sysroot)/lib/rustlib/$HOST/bin/llvm-profdata"
+          test -x "$LLVM_PROFDATA"
           "$LLVM_PROFDATA" --version
           for arm in before after leader; do
             case "$arm" in
