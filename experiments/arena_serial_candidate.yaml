@@ -1,0 +1,39 @@
+# RESEARCH CANDIDATE ONLY. Not submitted to the official Arena.
+# This is an explicitly attributed composition of independent existing kernels.
+description: |
+  Research candidate: MathGraph Serial Warrant.
+  Uses Jeremy Chen's sokonanoda kernel at an exact revision, serially,
+  for valid accept and definite reject verdicts. On explicit decline or
+  internal error, rechecks from first principles using pinned MathGraph Flash.
+  Neither a standalone Nucleus kernel nor an original Soko rewrite.
+  The composition is correct on the portable pinned 125/71 cases.
+  Arena-wide Mathlib correctness and instruction-rank qualification remain pending.
+version: "serial-warrant-research"
+url: https://github.com/metalogiclabs/mathgraph-lean-kernel
+ref: arena-serial-hybrid-v1
+rev: 78ca9a018d5f81d026988b08a19d5b4eb29b5c0f
+build: |
+  set -euo pipefail
+  ROOT=$(cd ../../../.. && pwd)
+  "$ROOT/lka.py" build-test init-prelude
+  # Source-independent fallback checker. No guessed proof is ever accepted.
+  RUSTFLAGS="-C target-cpu=native" cargo build --release --locked
+  printf '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}\n' > flash-serial-config.json
+  git clone -q https://github.com/intgrah/sokonanoda .arena-soko
+  git -C .arena-soko checkout --detach 7645b1e1fcacfe410c99141f1234381d995b325d
+  mkdir -p .arena-soko-pgo
+  (
+    cd .arena-soko
+    RUSTFLAGS="-C target-cpu=native -Cprofile-generate=$PWD/../.arena-soko-pgo" cargo build --release --locked
+    target/release/sokonanoda --stdin --nat-extension --string-extension --axiom-allow-all --threads 1 < "$ROOT/_build/tests/init-prelude.ndjson" >/dev/null
+  )
+  llvm-profdata merge -o .arena-soko-pgo/merged.profdata .arena-soko-pgo
+  (
+    cd .arena-soko
+    RUSTFLAGS="-C target-cpu=native -Cprofile-use=$PWD/../.arena-soko-pgo/merged.profdata" cargo build --release --locked
+  )
+run: |
+  SOKO_BIN="$PWD/.arena-soko/target/release/sokonanoda" \
+  FLASH_BIN="$PWD/target/release/sokonanoda" \
+  FLASH_CONFIG="$PWD/flash-serial-config.json" \
+  bash experiments/arena_serial_hybrid_v1.sh "$IN"
