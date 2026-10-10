@@ -1,0 +1,109 @@
+name: MathGraph exact Arena Mathlib PGO duel
+
+on:
+  push:
+    branches: [arena-mathlib-pgo-duel-v1]
+    paths:
+      - 'src/**'
+      - 'experiments/arena_msi_mathlib_v1.py'
+      - '.github/workflows/arena-mathlib-pgo-duel-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mathgraph-mathlib-pgo-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  full-mathlib:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 210
+    env:
+      MSI_BASE_SHA: 78c7502bac8a5ba000057b3f083bc0595ac65750
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Pin independent checker authorities and exact current Arena
+        run: |
+          set -euo pipefail
+          git worktree add --detach /tmp/msi-before "$MSI_BASE_SHA"
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/msi-leader
+          git -C /tmp/msi-leader checkout --detach 7645b1e1fcacfe410c99141f1234381d995b325d
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/msi-arena
+          git -C /tmp/msi-arena checkout --detach b83254de5146ef34147ab82a48edbe1856b0edcc
+          echo "CPU=$(lscpu | grep 'Model name:' | head -1)"
+          echo "MEMORY=$(free -h | grep Mem:)"
+          df -h .
+      - name: Build current pinned Lean 4.34.1 full Mathlib export
+        run: |
+          set -euo pipefail
+          cd /tmp/msi-arena
+          nix develop -c ./lka.py build-test mathlib
+          test -s _build/tests/mathlib.ndjson
+          du -h _build/tests/mathlib.ndjson
+          df -h .
+      - name: Prepare exact same init-prelude PGO training authority
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/msi-test-zip /tmp/msi-training /tmp/msi-pgo-evidence
+          gh api "repos/leanprover/lean-kernel-arena/actions/artifacts/11505862349/zip" >/tmp/msi-tests.zip
+          unzip -q /tmp/msi-tests.zip -d /tmp/msi-test-zip
+          tar --no-same-owner -xzf /tmp/msi-test-zip/lean-arena-tests.tar.gz -C /tmp/msi-training
+          test -s /tmp/msi-training/good/init-prelude.ndjson
+          printf '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2,"print_success_message":false}\n' >/tmp/flash-msi-config2.json
+          printf '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}\n' >/tmp/flash-msi-config4.json
+      - name: Build Flash baseline, pointer candidate and pinned leader with equivalent PGO
+        run: |
+          set -euo pipefail
+          LLVM_PROFDATA=$(nix shell nixpkgs#llvmPackages_21.llvm -c sh -c 'command -v llvm-profdata')
+          "$LLVM_PROFDATA" --version
+          for arm in before after leader; do
+            case "$arm" in
+              before) SOURCE=/tmp/msi-before ;;
+              after) SOURCE="$GITHUB_WORKSPACE" ;;
+              leader) SOURCE=/tmp/msi-leader ;;
+            esac
+            mkdir -p "/tmp/msi-pgo-$arm"
+            (
+              cd "$SOURCE"
+              CARGO_TARGET_DIR="/tmp/msi-target-$arm" \
+                RUSTFLAGS="-C target-cpu=native -Cprofile-generate=/tmp/msi-pgo-$arm" \
+                cargo build --release --locked
+            )
+            if [ "$arm" = leader ]; then
+              "/tmp/msi-target-$arm/release/sokonanoda" --stdin --nat-extension \
+                --string-extension --axiom-allow-all --threads 4 \
+                </tmp/msi-training/good/init-prelude.ndjson >/dev/null
+            else
+              "/tmp/msi-target-$arm/release/sokonanoda" /tmp/flash-msi-config2.json \
+                </tmp/msi-training/good/init-prelude.ndjson >/dev/null
+            fi
+            "$LLVM_PROFDATA" merge -o "/tmp/msi-pgo-$arm/merged.profdata" "/tmp/msi-pgo-$arm"
+            test -s "/tmp/msi-pgo-$arm/merged.profdata"
+            (
+              cd "$SOURCE"
+              CARGO_TARGET_DIR="/tmp/msi-target-$arm" \
+                RUSTFLAGS="-C target-cpu=native -Cprofile-use=/tmp/msi-pgo-$arm/merged.profdata" \
+                cargo build --release --locked
+            )
+            cp "/tmp/msi-target-$arm/release/sokonanoda" "/tmp/msi-$arm.bin"
+          done
+          sha256sum /tmp/msi-{before,after,leader}.bin | tee /tmp/msi-pgo-evidence/binaries.sha256
+      - name: Exact Mathlib correctness and alternate-order performance
+        run: |
+          set -euo pipefail
+          python3 experiments/arena_msi_mathlib_v1.py \
+            /tmp/msi-arena/_build/tests/mathlib.ndjson /tmp/msi-pgo-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mathgraph-arena-mathlib-pgo-${{ github.sha }}
+          path: /tmp/msi-pgo-evidence/
+          if-no-files-found: warn
