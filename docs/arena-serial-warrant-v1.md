@@ -60,6 +60,24 @@ either constituent checker universally sound.
   fastest at four workers. This was an **older MathGraph source**, not the
   current pinned leader, and is a hypothesis generator rather than a
   current leaderboard performance claim.
+- **Independent negative separator:** latest-Soko exact-source
+  [Callgrind 38092741906](https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/38092741906)
+  SUCCESS. On Grind Ring 5, deep Magma n21, pair n7 and fueled-chain,
+  worker counts 1,2,4 execute almost the same guest Ir (within ~0.11%);
+  serial does *not* produce a meaningful per-export instruction win on these
+  small cases. This does **not** refute an instruction reduction on full
+  Mathlib, where declaration scheduling/cache boundaries differ. Callgrind
+  guest Ir is not the Arena's hardware-retired-instruction authority.
+- Official exact-Mathlib artifact: Soko@7645b1e Mathlib=488,929,128,936
+  retired instructions, Flash@78c7502=776,658,054,121; about 37.0% reduction
+  from Flash's published score is needed to match Soko. Source:
+  [official Arena results](https://github.com/leanprover/lean-kernel-arena/actions/runs/37523481421),
+  archived result artifacts 11445428225 and 11445794784.
+- The actual [Arena sort key](https://github.com/leanprover/lean-kernel-arena/blob/b83254de5146ef34147ab82a48edbe1856b0edcc/lka.py)
+  is (invalid tests not rejected, valid tests not accepted,
+  Mathlib instructions, declined count). With a Mathlib instruction tie,
+  this candidate's two extra invalid rejections could win the final tie
+  breaker; a higher instruction count loses regardless of declines.
 
 ## Promotion / rollback policy
 
