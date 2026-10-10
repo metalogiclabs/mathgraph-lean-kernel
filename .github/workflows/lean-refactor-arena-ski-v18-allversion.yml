@@ -1,0 +1,147 @@
+name: Lean Refactor Arena SKI V18 S-critical-pair four-version admission
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['competition/lra-ski-v18-allversion']
+    paths:
+      - '.github/workflows/lean-refactor-arena-ski-v18-allversion.yml'
+      - 'competitions/lean_refactor_arena/experiments/ski_IS_witness_group_v18.jsonl'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lra-ski-v18-allversion
+  cancel-in-progress: true
+
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 175
+    env:
+      PUBLIC_SHA: 7f3a401470d04f70013d293db4253b088ec8a0ae
+      PRIMARY_RUN: '38008324035'
+      PRIMARY_SHA: 50facd603ae24d01d672b0df76c6c7dfd6145b05
+      TARGET: Cslib.SKI.parallelReduction_diamond
+      BANK: competitions/lean_refactor_arena/experiments/ski_IS_witness_group_v18.jsonl
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bind frozen V13 SKI control, S-group witness, and successful V18 primary evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/lra-ski-v18-all
+          curl -fsSL --retry 3 -H 'Accept: application/vnd.github+json' \
+            "https://api.github.com/repos/metalogiclabs/mathgraph-lean-kernel/actions/runs/$PRIMARY_RUN" \
+            -o /tmp/lra-ski-v18-all/primary.json
+          python3 - <<'PY'
+          import json,pathlib,os,hashlib,re
+          root=pathlib.Path('competitions/lean_refactor_arena')
+          read=lambda p:[json.loads(s) for s in pathlib.Path(p).read_text().splitlines() if s.strip()]
+          run=json.loads(pathlib.Path('/tmp/lra-ski-v18-all/primary.json').read_text())
+          assert run['id']==int(os.environ['PRIMARY_RUN'])
+          assert run['head_sha']==os.environ['PRIMARY_SHA']
+          assert run['status']=='completed' and run['conclusion']=='success'
+          bank=read(os.environ['BANK'])
+          portfolio=read(root/'portfolio/warmup_portfolio_v1.jsonl')
+          assert len(portfolio)==15 and len(bank)==10
+          assert len({x['label'] for x in bank})==10 and len({x['proof'] for x in bank})==10
+          name=os.environ['TARGET']
+          retained=next(x for x in portfolio if x['name']==name)
+          base=next(x for x in bank if x['label']=='ski_v18_exact_v13_control')
+          winner=next(x for x in bank if x['label']=='ski_v18_group_S')
+          assert retained['label']=='warranted_ski_directed_k_262'
+          assert retained['proof']==base['proof']
+          assert base['name']==winner['name']==name
+          assert base['proof']!=winner['proof']
+          assert base['proof'].split(' := by\n')[0]==winner['proof'].split(' := by\n')[0]
+          bad=re.compile(r'\b(?:sorry|sorryAx|admit|axiom|unsafe|native_decide|run_elab|run_cmd)\b')
+          assert not bad.search(winner['proof'])
+          sha=lambda x:hashlib.sha256(x.encode()).hexdigest()
+          out={'schema':'mathgraph.lra.ski-v18.exact-source-witness.v1',
+            'state':'SUCCESSFUL_PRIMARY_WINNER_PENDING_FOUR_VERSION_PROOF',
+            'pinned_harness':os.environ['PUBLIC_SHA'],'source_run':run['id'],
+            'source_head':run['head_sha'],'reference_sha256':sha(base['proof']),
+            'winner_sha256':sha(winner['proof']),'winner_label':winner['label'],
+            'required_versions':['v4.33.0-rc2','v4.32.0','v4.31.0','v4.30.0'],
+            'portfolio_mutated':False,'official_submission':False}
+          pathlib.Path('/tmp/lra-ski-v18-all/source.json').write_text(json.dumps(out,indent=2)+'\n')
+          print(json.dumps(out,indent=2))
+          PY
+
+      - name: Build exact CSLib SKI source dependency closure on all four required toolchains
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.elan/bin:$PATH"
+          git clone --depth=1 --filter=blob:none --sparse https://github.com/aurasoph/lean-refactor.git /tmp/lean-refactor
+          git -C /tmp/lean-refactor fetch --depth=1 origin "$PUBLIC_SHA"
+          git -C /tmp/lean-refactor checkout --detach FETCH_HEAD
+          git -C /tmp/lean-refactor sparse-checkout set competition
+          test "$(git -C /tmp/lean-refactor rev-parse HEAD)" = "$PUBLIC_SHA"
+          for v in v4.33 v4.32 v4.31 v4.30; do
+            echo "SKI_V18_REQUIRED_VERSION=$v"
+            (
+              cd "/tmp/lean-refactor/competition/projects/$v"
+              lake update > "/tmp/lra-ski-v18-all/$v-update.log" 2>&1
+              lake exe cache get > "/tmp/lra-ski-v18-all/$v-cache.log" 2>&1 || true
+              lake build Cslib.Languages.CombinatoryLogic.Confluence \
+                > "/tmp/lra-ski-v18-all/$v-build.log" 2>&1
+            ) || { tail -n 150 "/tmp/lra-ski-v18-all/$v-build.log" || true; exit 1; }
+          done
+          echo 'VERIFIED_FOUR_REQUIRED_SKI_IMPORT_CLOSURES'
+      - name: Check frozen S-group winner against exact four Lean toolchains
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.elan/bin:$PATH"
+          python3 competitions/lean_refactor_arena/public_harness_bridge.py \
+            --competition /tmp/lean-refactor/competition --project v4.33 \
+            --name "$TARGET" --candidate "$BANK" --label ski_v18_group_S
+          (
+            cd /tmp/lean-refactor/competition
+            python3 arena.py check --name "$TARGET" --all-versions --timeout 1800
+          ) > /tmp/lra-ski-v18-all/winner.json
+      - name: Qualify actual proof and cost under all required versions, preserving cost tradeoff
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib,json
+          root=pathlib.Path('/tmp/lra-ski-v18-all')
+          x=json.loads((root/'winner.json').read_text())
+          req={'v4.33.0-rc2','v4.32.0','v4.31.0','v4.30.0'}
+          assert x.get('compiled') is True and x.get('statement_ok') is True
+          assert x.get('eligible') is True and not x.get('forbidden')
+          assert not x.get('extra_toplevel_decls') and not x.get('untested')
+          assert float(x.get('survival_pct') or 0)==100
+          comp=x.get('compat') or {}
+          assert set(comp)==req and all(comp[v] is True for v in req)
+          per=x.get('per_version') or []
+          assert len(per)==4 and {v.get('version') for v in per}==req
+          assert all(v.get('tested') is True and v.get('ok') is True and not v.get('errors') for v in per)
+          assert int(x['length'])==251 and abs(int(x['heartbeats'])-572)<=2
+          assert float(x['objective_sum_pct'])>102.91
+          assert round(float(x['objective_sum_pct']),2)>=103.20
+          out={'schema':'mathgraph.lra.ski-v18.four-version-admission.v1',
+            'state':'WARRANTED_EXACT_FOUR_VERSIONS_PENDING_15_ROW_PACKET',
+            'primary_run':38008324035,
+            'source':json.loads((root/'source.json').read_text()),
+            'reference':{'tokens':262,'heartbeats':533,'objective':102.91},
+            'winner':{'tokens':x['length'],'heartbeats':x['heartbeats'],'objective':x['objective_sum_pct']},
+            'marginal_primary_objective':round(float(x['objective_sum_pct'])-102.91,2),
+            'required_versions':sorted(req),
+            'next_boundary':'Combine independently qualified SKI and Typing single-row changes into one exact retained 15-proof packet',
+            'portfolio_mutated':False,'official_submission':False}
+          (root/'qualification.json').write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n')
+          print(json.dumps(out,ensure_ascii=False,indent=2))
+          print('WARRANTED_SKI_V18_FOUR_VERSION_S_GROUP_CERTIFICATE')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-ski-v18-all-version
+          path: /tmp/lra-ski-v18-all
