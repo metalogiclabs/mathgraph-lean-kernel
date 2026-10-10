@@ -36,7 +36,7 @@ for case in cases:
         if result.returncode!=0:
             raise RuntimeError((case,threads,result.returncode,result.stderr[-1200:]))
         text=report.read_text()
-        m=re.search(r"^summary:\\s*(\\d+)\\s*$",text,re.MULTILINE)
+        m=re.search(r"^summary:\s*(\d+)\s*$",text,re.MULTILINE)
         if not m:
             raise AssertionError((report,text[-700:]))
         measurements[str(threads)]=int(m.group(1))
