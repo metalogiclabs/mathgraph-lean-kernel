@@ -45,8 +45,12 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         r
     }
 
+    #[inline]
     pub(crate) fn conv_types_at(&mut self, depth: u32, a: V<'t>, b: V<'t>) -> bool {
-        self.unbudgeted(|s| s.unify::<true>(depth, a, b))
+        // Referential identity of two kernel values is a sufficient
+        // conversion witness. No forcing or memo lookup is necessary.
+        // Adapted from sokonanoda's checked pointer-identity fast path.
+        std::ptr::eq(a, b) || self.unbudgeted(|s| s.unify::<true>(depth, a, b))
     }
 
     pub(crate) fn def_eq_at(&mut self, depth: u32, vx: V<'t>, vy: V<'t>) -> bool {
