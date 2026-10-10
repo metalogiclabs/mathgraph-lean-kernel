@@ -1,0 +1,63 @@
+name: Soko exact-source defeq pointer-identity arena A/B
+
+on:
+  push:
+    branches: [arena-soko-defeq-fastpath-v1]
+    paths:
+      - "experiments/arena_soko_defeq_*.py"
+      - ".github/workflows/arena-soko-defeq-fastpath-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: soko-defeq-fastpath-v1
+  cancel-in-progress: true
+
+jobs:
+  source-ab:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install deterministic instruction-proxy authority
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq valgrind
+      - name: Freeze upstream source and apply exactly one checked patch
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/soko-defeq-baseline
+          git -C /tmp/soko-defeq-baseline checkout --detach 7645b1e1fcacfe410c99141f1234381d995b325d
+          git -C /tmp/soko-defeq-baseline worktree add --detach /tmp/soko-defeq-candidate 7645b1e1fcacfe410c99141f1234381d995b325d
+          python3 experiments/arena_soko_defeq_candidate_v1.py /tmp/soko-defeq-candidate
+          CARGO_TARGET_DIR=/tmp/soko-defeq-target-a cargo build --release --locked \
+            --manifest-path /tmp/soko-defeq-baseline/Cargo.toml
+          CARGO_TARGET_DIR=/tmp/soko-defeq-target-b cargo build --release --locked \
+            --manifest-path /tmp/soko-defeq-candidate/Cargo.toml
+          cp /tmp/soko-defeq-target-a/release/sokonanoda /tmp/soko-defeq-original
+          cp /tmp/soko-defeq-target-b/release/sokonanoda /tmp/soko-defeq-patched
+          sha256sum /tmp/soko-defeq-{original,patched}
+      - name: Freeze Arena portable source evidence
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/msi-soko-zip /tmp/msi-soko-tests /tmp/msi-soko-evidence
+          gh api "repos/leanprover/lean-kernel-arena/actions/artifacts/11505862349/zip" >/tmp/msi-soko-export.zip
+          unzip -q /tmp/msi-soko-export.zip -d /tmp/msi-soko-zip
+          tar --no-same-owner -xzf /tmp/msi-soko-zip/lean-arena-tests.tar.gz -C /tmp/msi-soko-tests
+      - name: Recheck all valid and invalid, then count exact guest instructions
+        run: |
+          set -euo pipefail
+          python3 experiments/arena_soko_defeq_duel_v1.py /tmp/msi-soko-tests /tmp/msi-soko-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: soko-defeq-fastpath-${{ github.sha }}
+          path: /tmp/msi-soko-evidence/summary.json
+          if-no-files-found: warn
