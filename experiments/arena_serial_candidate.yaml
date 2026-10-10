@@ -27,7 +27,16 @@ build: |
     RUSTFLAGS="-C target-cpu=native -Cprofile-generate=$PWD/../.arena-soko-pgo" cargo build --release --locked
     target/release/sokonanoda --stdin --nat-extension --string-extension --axiom-allow-all --threads 1 < "$ROOT/_build/tests/init-prelude.ndjson" >/dev/null
   )
-  llvm-profdata merge -o .arena-soko-pgo/merged.profdata .arena-soko-pgo
+  # Match the profile reader to the compiler that generated the raw profile.
+  HOST=$(rustc -vV | awk '/^host:/ {print $2}')
+  LLVM_TOOL="$(rustc --print sysroot)/lib/rustlib/$HOST/bin/llvm-profdata"
+  if [ ! -x "$LLVM_TOOL" ] && command -v rustup >/dev/null 2>&1; then
+    rustup component add llvm-tools-preview || true
+  fi
+  if [ ! -x "$LLVM_TOOL" ]; then
+    LLVM_TOOL=$(command -v llvm-profdata)
+  fi
+  "$LLVM_TOOL" merge -o .arena-soko-pgo/merged.profdata .arena-soko-pgo
   (
     cd .arena-soko
     RUSTFLAGS="-C target-cpu=native -Cprofile-use=$PWD/../.arena-soko-pgo/merged.profdata" cargo build --release --locked
