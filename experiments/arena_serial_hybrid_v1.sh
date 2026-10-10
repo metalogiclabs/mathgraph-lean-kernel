@@ -8,8 +8,10 @@ input="${1:?pass the exact lean4export NDJSON path}"
 soko="${SOKO_BIN:-/tmp/msi-leader.bin}"
 flash="${FLASH_BIN:-/tmp/msi-before.bin}"
 flash_config="${FLASH_CONFIG:-/tmp/flash-msi-config1.json}"
-"$soko" --stdin --nat-extension --string-extension \
-  --axiom-allow-all --threads 1 < "$input"
+# Source-identical Soko entry: mmap the trusted export file directly,
+# avoiding streaming block copies and the reader thread. No test-name routing.
+"$soko" "$input" --nat-extension --string-extension \
+  --axiom-allow-all --threads 1
 verdict=$?
 case "$verdict" in
   0|1)
