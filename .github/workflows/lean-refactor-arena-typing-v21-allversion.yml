@@ -1,0 +1,152 @@
+name: Lean Refactor Arena V21 exact three-version witness sufficiency admission
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['competition/lra-typing-v21-allversion']
+    paths:
+      - '.github/workflows/lean-refactor-arena-typing-v21-allversion.yml'
+      - 'competitions/lean_refactor_arena/experiments/typing_v21_witness_sufficiency.jsonl'
+
+concurrency:
+  group: lra-typing-v21-allversion
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 160
+    env:
+      PUBLIC_SHA: 7f3a401470d04f70013d293db4253b088ec8a0ae
+      PRIMARY_SHA: 9fc3a37895f2d5b532422bedb1ca2317b6ee3757
+      PRIMARY_RUN: '38008137539'
+      TARGET: Cslib.LambdaCalculus.LocallyNameless.Fsub.Typing.progress
+      BANK: competitions/lean_refactor_arena/experiments/typing_v21_witness_sufficiency.jsonl
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Bind current V13 Typing proof and V21 winner to exact successful primary evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/lra-v21-all
+          curl -fsSL --retry 3 -H 'Accept: application/vnd.github+json' \
+            "https://api.github.com/repos/metalogiclabs/mathgraph-lean-kernel/actions/runs/$PRIMARY_RUN" \
+            -o /tmp/lra-v21-all/primary.json
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib,re
+          root=pathlib.Path('competitions/lean_refactor_arena')
+          read=lambda p:[json.loads(t) for t in pathlib.Path(p).read_text().splitlines() if t.strip()]
+          run=json.loads(pathlib.Path('/tmp/lra-v21-all/primary.json').read_text())
+          assert run['id']==int(os.environ['PRIMARY_RUN'])
+          assert run['head_sha']==os.environ['PRIMARY_SHA']
+          assert run['status']=='completed' and run['conclusion']=='success'
+          portfolio=read(root/'portfolio/warmup_portfolio_v1.jsonl')
+          bank=read(os.environ['BANK'])
+          name=os.environ['TARGET']
+          assert len(portfolio)==15 and len(bank)==17
+          assert len({x['name'] for x in portfolio})==15 and len({x['label'] for x in bank})==17
+          incumbent=next(x for x in portfolio if x['name']==name)
+          control=next(x for x in bank if x['label']=='typing_v21_exact_v13_control')
+          winner=next(x for x in bank if x['label']=='typing_v21_inl_minus_both_value')
+          assert incumbent['label']=='warranted_typing_v20_compounded_obligation_297'
+          assert incumbent['proof']==control['proof']
+          assert control['name']==winner['name']==name
+          assert control['proof']!=winner['proof']
+          head=lambda x:x.split(' := by\n',1)[0]
+          assert head(control['proof'])==head(winner['proof'])
+          forbidden=re.compile(r'\b(?:sorry|sorryAx|admit|axiom|native_decide|run_cmd|run_elab|unsafe)\b')
+          assert not forbidden.search(winner['proof'])
+          digest=lambda x:hashlib.sha256(x.encode('utf-8')).hexdigest()
+          manifest={'schema':'mathgraph.lra.typing-v21.exact-source-seal.v1',
+            'state':'SOURCE_EXACT_PRIMARY_GAIN_PENDING_ALL_VERSIONS',
+            'primary_run':run['id'],'primary_head_sha':run['head_sha'],
+            'pinned_harness_sha':os.environ['PUBLIC_SHA'],
+            'control_proof_sha256':digest(control['proof']),
+            'winner_proof_sha256':digest(winner['proof']),
+            'winner_label':winner['label'],
+            'required_versions':['v4.33.0-rc2','v4.32.0','v4.31.0'],
+            'protected_retained_rows':14,
+            'portfolio_mutated':False,'official_submission':False}
+          pathlib.Path('/tmp/lra-v21-all/source.json').write_text(json.dumps(manifest,indent=2)+'\n')
+          print(json.dumps(manifest,indent=2))
+          PY
+      - name: Build only required Cslib Typing target under three exact toolchains
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.elan/bin:$PATH"
+          git clone --depth=1 --filter=blob:none --sparse https://github.com/aurasoph/lean-refactor.git /tmp/lean-refactor
+          git -C /tmp/lean-refactor fetch --depth=1 origin "$PUBLIC_SHA"
+          git -C /tmp/lean-refactor checkout --detach FETCH_HEAD
+          git -C /tmp/lean-refactor sparse-checkout set competition
+          test "$(git -C /tmp/lean-refactor rev-parse HEAD)" = "$PUBLIC_SHA"
+          for v in v4.33 v4.32 v4.31; do
+            echo "TYPING_V21_PROTECTED_TOOLCHAIN=$v"
+            (
+              cd "/tmp/lean-refactor/competition/projects/$v"
+              lake update > "/tmp/lra-v21-all/$v-update.log" 2>&1
+              lake exe cache get > "/tmp/lra-v21-all/$v-cache.log" 2>&1 || true
+              lake build Cslib.Languages.LambdaCalculus.LocallyNameless.Fsub.Safety \
+                > "/tmp/lra-v21-all/$v-build.log" 2>&1
+            ) || { tail -n 130 "/tmp/lra-v21-all/$v-build.log" || true; exit 1; }
+          done
+          echo 'VERIFIED_EXACT_V21_THREE_VERSION_IMPORT_CLOSURE'
+      - name: Replay exact V21 candidate independently across all three protected toolchains
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.elan/bin:$PATH"
+          python3 competitions/lean_refactor_arena/public_harness_bridge.py \
+            --competition /tmp/lean-refactor/competition --project v4.33 \
+            --name "$TARGET" --candidate "$BANK" --label typing_v21_inl_minus_both_value
+          (
+            cd /tmp/lean-refactor/competition
+            python3 arena.py check --name "$TARGET" --all-versions --timeout 1800
+          ) > /tmp/lra-v21-all/winner.json
+      - name: Seal all-version compatibility and primary-objective improvement without fragile control-HB equality
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,pathlib
+          root=pathlib.Path('/tmp/lra-v21-all')
+          x=json.loads((root/'winner.json').read_text())
+          required={'v4.33.0-rc2','v4.32.0','v4.31.0'}
+          assert x.get('compiled') is True and x.get('statement_ok') is True
+          assert x.get('eligible') is True and not x.get('forbidden')
+          assert not x.get('extra_toplevel_decls') and not x.get('untested')
+          assert float(x.get('survival_pct') or 0)==100
+          compat=x.get('compat') or {}
+          assert set(compat)==required and all(compat[v] is True for v in required)
+          ver=x.get('per_version') or []
+          assert len(ver)==3 and {v.get('version') for v in ver}==required
+          assert all(v.get('tested') is True and v.get('ok') is True and not v.get('errors') for v in ver)
+          assert int(x['length'])==293
+          assert abs(int(x['heartbeats'])-2684)<=2
+          assert float(x['objective_sum_pct'])>122.51
+          assert round(float(x['objective_sum_pct']),2)>=123.72
+          out={'schema':'mathgraph.lra.typing-v21.all-version-admission.v1',
+            'state':'WARRANTED_EXACT_THREE_VERSIONS_PENDING_15_ROW_PACKET',
+            'primary_run':38008137539,
+            'source':json.loads((root/'source.json').read_text()),
+            'winner':{'tokens':x['length'],'heartbeats':x['heartbeats'],'objective':x['objective_sum_pct']},
+            'active_V13_control':{'tokens':297,'primary_heartbeats':2832,'objective':122.51},
+            'positive_primary_objective_gain':round(float(x['objective_sum_pct'])-122.51,2),
+            'verified_versions':sorted(required),
+            'next_boundary':'exact 14-unchanged V13 15-proof packet and new current audit',
+            'portfolio_mutated':False,'official_submission':False}
+          (root/'qualification.json').write_text(json.dumps(out,indent=2)+'\n')
+          print(json.dumps(out,indent=2))
+          print('WARRANTED_TYPING_V21_REQUIRED_THREE_VERSION_PROOF')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-typing-v21-full-version
+          path: /tmp/lra-v21-all
