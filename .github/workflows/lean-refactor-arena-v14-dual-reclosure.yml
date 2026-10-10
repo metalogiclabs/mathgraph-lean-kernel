@@ -1,0 +1,224 @@
+name: Lean Refactor Arena V14 dual-witness exact packet reclosure
+on:
+  workflow_dispatch:
+  push:
+    branches: ['competition/lra-v14-compound-dual-admission']
+    paths:
+      - 'competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl'
+      - 'competitions/lean_refactor_arena/submissions/mathgraph_verified_15_warmup_20261009.jsonl'
+      - 'competitions/lean_refactor_arena/evidence/retained_exact_full_version_audit_20261010_v14.json'
+      - '.github/workflows/lean-refactor-arena-v14-dual-reclosure.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: lra-v14-dual-source-reclosure
+  cancel-in-progress: true
+
+jobs:
+  exact-packet:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      BASE_SHA: 4b78ac4cc1ef5356c0caab351a658e069be5203b
+      SOURCE_PIN: 7f3a401470d04f70013d293db4253b088ec8a0ae
+      TYPE_BANK_SHA: 9fc3a37895f2d5b532422bedb1ca2317b6ee3757
+      SKI_BANK_SHA: 50facd603ae24d01d672b0df76c6c7dfd6145b05
+    steps:
+      - uses: actions/checkout@v4
+      - name: Retrieve independent version certificates without new Lean search
+        uses: actions/download-artifact@v4
+        with:
+          pattern: lra-typing-v21-full-version
+          run-id: 38008548208
+          repository: metalogiclabs/mathgraph-lean-kernel
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: /tmp/lra-v14/typing
+          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: lra-ski-v18-all-version
+          run-id: 38008633401
+          repository: metalogiclabs/mathgraph-lean-kernel
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: /tmp/lra-v14/ski
+      - name: Fetch exact source banks and immutable proof run authorities
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/lra-v14
+          git fetch --depth=1 origin "$BASE_SHA"
+          for pair in "38008137539 type-primary" "38008548208 type-versions" "38008324035 ski-primary" "38008633401 ski-versions"; do
+            set -- $pair
+            curl -fsSL --retry 3 -H 'Accept: application/vnd.github+json' \
+              "https://api.github.com/repos/metalogiclabs/mathgraph-lean-kernel/actions/runs/$1" \
+              -o "/tmp/lra-v14/$2.json"
+          done
+          curl -fsSL --retry 3 \
+            "https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/$TYPE_BANK_SHA/competitions/lean_refactor_arena/experiments/typing_v21_witness_sufficiency.jsonl" \
+            -o /tmp/lra-v14/typing-bank.jsonl
+          curl -fsSL --retry 3 \
+            "https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/$SKI_BANK_SHA/competitions/lean_refactor_arena/experiments/ski_IS_witness_group_v18.jsonl" \
+            -o /tmp/lra-v14/ski-bank.jsonl
+      - name: Verify two source-exact winners, all protected Lean versions, thirteen untouched rows
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib,subprocess
+          root=pathlib.Path('/tmp/lra-v14')
+          targetroot=pathlib.Path('competitions/lean_refactor_arena')
+          read=lambda path:[json.loads(x) for x in pathlib.Path(path).read_text(encoding='utf-8').splitlines() if x.strip()]
+          sha=lambda proof:hashlib.sha256(proof.encode('utf-8')).hexdigest()
+          types='Cslib.LambdaCalculus.LocallyNameless.Fsub.Typing.progress'
+          ski='Cslib.SKI.parallelReduction_diamond'
+          specs=[
+            {'name':types,'bank':'typing-bank.jsonl','control':'typing_v21_exact_v13_control',
+             'winner':'typing_v21_inl_minus_both_value','new_label':'warranted_typing_v21_minimum_value_witness_293',
+             'primary':38008137539,'primary_head':os.environ['TYPE_BANK_SHA'],
+             'versions':38008548208,'versions_head':'090255eef7c80a9e53a43e037e1d7430932fb659',
+             'artifact':'typing','req':{'v4.33.0-rc2','v4.32.0','v4.31.0'},
+             'tokens':293,'heartbeats':2684,'objective':123.74},
+            {'name':ski,'bank':'ski-bank.jsonl','control':'ski_v18_exact_v13_control',
+             'winner':'ski_v18_group_S','new_label':'warranted_ski_v18_shared_S_251',
+             'primary':38008324035,'primary_head':os.environ['SKI_BANK_SHA'],
+             'versions':38008633401,'versions_head':'fc68eeb21bb950aa3bf964f28eebfa9f0a6d862b',
+             'artifact':'ski','req':{'v4.33.0-rc2','v4.32.0','v4.31.0','v4.30.0'},
+             'tokens':251,'heartbeats':572,'objective':103.22}
+          ]
+          portfolio=targetroot/'portfolio/warmup_portfolio_v1.jsonl'
+          packet=targetroot/'submissions/mathgraph_verified_15_warmup_20261009.jsonl'
+          prev=subprocess.check_output(['git','show',os.environ['BASE_SHA']+':'+str(portfolio)],text=True)
+          before={r['name']:r for r in (json.loads(x) for x in prev.splitlines() if x.strip())}
+          after={r['name']:r for r in read(portfolio)}
+          final=read(packet)
+          assert len(before)==len(after)==len(final)==15
+          assert set(before)==set(after)=={x['name'] for x in final}
+          assert {n for n in before if before[n]['proof']!=after[n]['proof']}=={types,ski}
+          assert all(before[n]==after[n] for n in before if n not in {types,ski}), 'CHANGED_UNRELATED_SOURCE_ROW'
+          assert all(set(row)=={'name','proof'} for row in final)
+          assert {r['name']:r['proof'] for r in final}=={n:x['proof'] for n,x in after.items()}
+          warrants=[]
+          for sp in specs:
+            bank=read(root/sp['bank'])
+            control=next(x for x in bank if x['label']==sp['control'])
+            winner=next(x for x in bank if x['label']==sp['winner'])
+            assert control['name']==winner['name']==sp['name']
+            assert control['proof']==before[sp['name']]['proof']
+            assert winner['proof']==after[sp['name']]['proof']
+            assert after[sp['name']]['label']==sp['new_label']
+            assert control['proof'].split(' := by\n')[0]==winner['proof'].split(' := by\n')[0]
+            for kind,id,head in [('primary',sp['primary'],sp['primary_head']),('versions',sp['versions'],sp['versions_head'])]:
+              p='type' if sp['name']==types else 'ski'
+              run=json.loads((root/(p+'-'+kind+'.json')).read_text())
+              assert run['id']==id and run['head_sha']==head
+              assert run['status']=='completed' and run['conclusion']=='success'
+            folder=root/sp['artifact']
+            manifest=json.loads((folder/'source.json').read_text())
+            qual=json.loads((folder/'qualification.json').read_text())
+            assert manifest['winner_sha256']==sha(winner['proof']) if sp['name']==ski else manifest['winner_proof_sha256']==sha(winner['proof'])
+            assert manifest['reference_sha256']==sha(control['proof']) if sp['name']==ski else manifest['control_proof_sha256']==sha(control['proof'])
+            assert qual['state'] in ('WARRANTED_EXACT_THREE_VERSIONS_PENDING_15_ROW_PACKET',
+                                    'WARRANTED_EXACT_FOUR_VERSIONS_PENDING_15_ROW_PACKET')
+            versions=qual.get('verified_versions') or qual.get('required_versions')
+            assert set(versions)==sp['req']
+            proved=qual['winner']
+            assert int(proved['tokens'])==sp['tokens']
+            assert abs(int(proved['heartbeats'])-sp['heartbeats'])<=2
+            assert round(float(proved['objective']),2)==sp['objective']
+            assert qual.get('portfolio_mutated') is False and qual.get('official_submission') is False
+            warrants.append({'name':sp['name'],'proof_sha256':sha(winner['proof']),
+              'full_version_run':sp['versions'],'required_versions':sorted(sp['req']),
+              'tokens':sp['tokens'],'heartbeats':sp['heartbeats'],'objective':sp['objective']})
+          manifest={'schema':'mathgraph.lra.v14.exact-source-protected-lineage.v1',
+            'state':'WARRANTED_TWO_EXACT_FULL_VERSION_PROOFS_AND_13_UNCHANGED',
+            'source_pin':os.environ['SOURCE_PIN'],'baseline_commit':os.environ['BASE_SHA'],
+            'unchanged_rows':13,'changed_rows':warrants,
+            'officially_submitted':False}
+          (root/'source-closure.json').write_text(json.dumps(manifest,indent=2,ensure_ascii=False)+'\n')
+          print(json.dumps(manifest,indent=2,ensure_ascii=False))
+          PY
+      - name: Build exactly fifteen legal organizer records, no fallback
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 \
+            "https://raw.githubusercontent.com/aurasoph/lean-refactor/$SOURCE_PIN/competition/benchmark_data_warmup.jsonl" \
+            -o /tmp/lra-v14/benchmark.jsonl
+          python3 competitions/lean_refactor_arena/official_jsonl.py \
+            /tmp/lra-v14/benchmark.jsonl --summary-out /tmp/lra-v14/benchmark-summary.json
+          python3 competitions/lean_refactor_arena/arena_upload.py build \
+            --benchmark /tmp/lra-v14/benchmark.jsonl \
+            --candidates competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl \
+            --out /tmp/lra-v14/exact-15.jsonl --report /tmp/lra-v14/build-report.json
+          python3 competitions/lean_refactor_arena/arena_upload.py validate \
+            --benchmark /tmp/lra-v14/benchmark.jsonl \
+            --upload /tmp/lra-v14/exact-15.jsonl
+      - name: Enforce exact audit Git blob, prior 13 proof authorities, projected score boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,pathlib,hashlib,subprocess
+          root=pathlib.Path('competitions/lean_refactor_arena')
+          read=lambda path:[json.loads(s) for s in pathlib.Path(path).read_text().splitlines() if s.strip()]
+          p=root/'portfolio/warmup_portfolio_v1.jsonl'
+          q=root/'submissions/mathgraph_verified_15_warmup_20261009.jsonl'
+          a=json.loads((root/'evidence/retained_exact_full_version_audit_20261010_v14.json').read_text())
+          blob=lambda path:subprocess.check_output(['git','hash-object',str(path)],text=True).strip()
+          assert a['schema']=='mathgraph.lra.retained-proof-exact-version-audit.v14'
+          assert a['state']=='WARRANTED_COMPOSED_PINNED_VERSIONS__NOT_OFFICIAL_ARENA_SUBMISSION'
+          assert a['source_sha']=='7f3a401470d04f70013d293db4253b088ec8a0ae'
+          assert a['portfolio_blob_sha']==a['current_portfolio_blob_sha']==blob(p)
+          assert a['current_packet']['git_blob_sha']==blob(q)
+          frozen=read('/tmp/lra-v14/benchmark.jsonl')
+          built=read('/tmp/lra-v14/exact-15.jsonl')
+          committed=read(q)
+          portfolio=read(p)
+          names=[r['name'] for r in frozen]
+          assert len(names)==len(set(names))==15
+          assert len(built)==len(committed)==len(portfolio)==15
+          assert [r['name'] for r in built]==names and built==committed
+          assert all(set(r)=={'name','proof'} for r in committed)
+          assert {r['name']:r['proof'] for r in portfolio}=={r['name']:r['proof'] for r in committed}
+          records=a['records']
+          assert len(records)==15 and {r['name'] for r in records}==set(names)
+          external=0
+          for r in records:
+            assert r['label']==next(x['label'] for x in portfolio if x['name']==r['name'])
+            req=r['required_versions']
+            assert req and len(req)==len(set(req))
+            if r['matches_pinned_public_full_test'] is True:
+              external+=1
+              assert r['evidence_status']=='WARRANTED_EXTERNAL_EXACT_FULL_VERSION'
+              assert r['public_hash'] and r['public_compat']=={v:True for v in req}
+            else:
+              assert r['evidence_status']=='WARRANTED_INDEPENDENT_EXACT_REQUIRED_VERSION'
+              authority=r.get('independent_authority') or {}
+              run=r.get('independent_run') or authority.get('run')
+              assert isinstance(run,int) and run>0
+              assert set(authority.get('required_versions_verified') or (r.get('compat') or {}).keys())==set(req)
+          assert external==a['comparator_full_version_exact_count']==7
+          assert a['independently_qualified_count']==8 and a['total_authorized_by_prior_evidence']==15
+          assert a['change_fingerprint']['preserved_proof_rows_from_v13']==13
+          assert a['projected_score']['status']=='PROJECTED__NOT_OFFICIALLY_SUBMITTED'
+          assert round(a['projected_score']['objective_sum_total'],2)==2230.58
+          assert round(a['projected_score']['combined_pct_if_full_survival'],4)==82.9018
+          result={'schema':'mathgraph.lra.v14.frozen-15-upload.v1',
+            'state':'WARRANTED_EXACT_V14_15_ROW_PACKET__NOT_OFFICIAL_SCORE',
+            'unchanged_rows':13,'independent_warrants':8,'public_warrants':7,
+            'portfolio_blob_sha':blob(p),'packet_blob_sha':blob(q),
+            'upload_sha256':hashlib.sha256(pathlib.Path('/tmp/lra-v14/exact-15.jsonl').read_bytes()).hexdigest(),
+            'total_objective':2230.58,'projected_combined_percent':82.9018,
+            'external_submission':False}
+          pathlib.Path('/tmp/lra-v14/packet-seal.json').write_text(json.dumps(result,indent=2)+'\n')
+          print(json.dumps(result,indent=2))
+          print('WARRANTED_V14_DUAL_WITNESS_EXACT_FIFTEEN_PROOF_PACKET')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-v14-exact-two-change-packet
+          path: /tmp/lra-v14
