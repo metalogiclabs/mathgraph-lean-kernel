@@ -1,0 +1,154 @@
+name: Lean Refactor Arena Binius quotient witness V12 exact four-version admission
+on:
+  workflow_dispatch:
+  push:
+    branches: ['competition/lra-fiber-v12-allversion']
+    paths:
+      - '.github/workflows/lean-refactor-arena-fiber-v12-four-version.yml'
+      - 'competitions/lean_refactor_arena/experiments/fiber_quotient_observer_v12.jsonl'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lra-fiber-v12-allversion
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    env:
+      PIN: 7f3a401470d04f70013d293db4253b088ec8a0ae
+      PRIMARY_RUN: '38010223751'
+      PRIMARY_SHA: a34063aa007ed40c4191de1d49dbfa9365423df2
+      ACTIVE_V15_SHA: 9930906c8aba578cd4e1a08c67d023fdfcb7aa59
+      TARGET: Binius.BinaryBasefold.fiberwise_dist_lt_imp_dist_lt_unique_decoding_radius
+      BANK: competitions/lean_refactor_arena/experiments/fiber_quotient_observer_v12.jsonl
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bind source-exact Binius proof bytes to primary positive verifier and active incumbent
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/lra-fiber-v12-all
+          curl -fsSL --retry 3 -H 'Accept: application/vnd.github+json' \
+            "https://api.github.com/repos/metalogiclabs/mathgraph-lean-kernel/actions/runs/$PRIMARY_RUN" \
+            -o /tmp/lra-fiber-v12-all/primary.json
+          curl -fsSL --retry 3 \
+            "https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/$ACTIVE_V15_SHA/competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl" \
+            -o /tmp/lra-fiber-v12-all/active.jsonl
+          python3 - <<'PY'
+          import json,pathlib,hashlib,os,re
+          read=lambda p:[json.loads(s) for s in pathlib.Path(p).read_text().splitlines() if s.strip()]
+          run=json.load(open('/tmp/lra-fiber-v12-all/primary.json'))
+          assert run['id']==int(os.environ['PRIMARY_RUN']) and run['head_sha']==os.environ['PRIMARY_SHA']
+          assert run['status']=='completed' and run['conclusion']=='success'
+          active=read('/tmp/lra-fiber-v12-all/active.jsonl')
+          bank=read(os.environ['BANK'])
+          assert len(active)==15 and len(bank)==8
+          assert len({r['name'] for r in active})==15 and len({r['proof'] for r in bank})==8
+          incumbent=next(x for x in active if x['name']==os.environ['TARGET'])
+          control=next(x for x in bank if x['label']=='fiber_v12_exact_439_control')
+          winner=next(x for x in bank if x['label']=='fiber_v12_closeness_observer')
+          assert incumbent['label']=='public_informed_local_factor_439'
+          assert incumbent['proof']==control['proof']
+          assert winner['name']==control['name']==os.environ['TARGET']
+          assert winner['proof']!=control['proof']
+          head=lambda s:s.split(' := by\n')[0]
+          assert head(winner['proof'])==head(control['proof'])
+          bad=re.compile(r'\b(?:sorry|sorryAx|admit|axiom|native_decide|run_cmd|run_elab|unsafe)\b')
+          assert not bad.search(winner['proof'])
+          sha=lambda s:hashlib.sha256(s.encode('utf-8')).hexdigest()
+          assert sha(winner['proof'])=='c6b953c0027a8d3e9b44889951dbb8177a3841187004684f7104d0d7d30f1c8e'
+          source={'schema':'mathgraph.lra.fiber-v12.strict-source-binding.v1',
+            'state':'PRIMARY_WARRANTED_PENDING_ALL_VERSION',
+            'source_run':run['id'],'source_head':run['head_sha'],
+            'reference_sha256':sha(control['proof']),
+            'winner_label':winner['label'],'winner_sha256':sha(winner['proof']),
+            'pinned_harness':os.environ['PIN'],
+            'required_versions':['v4.31.0','v4.30.0','v4.29.0','v4.28.0'],
+            'active_retained_changed':False,'official_submission':False}
+          pathlib.Path('/tmp/lra-fiber-v12-all/source.json').write_text(json.dumps(source,indent=2)+'\n')
+          print(json.dumps(source,indent=2))
+          PY
+      - name: Build only frozen ArkLib BinaryBasefold proof modules on all four protected versions
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.elan/bin:$PATH"
+          git clone --depth=1 --filter=blob:none --sparse https://github.com/aurasoph/lean-refactor.git /tmp/lean-refactor
+          git -C /tmp/lean-refactor fetch --depth=1 origin "$PIN"
+          git -C /tmp/lean-refactor checkout --detach FETCH_HEAD
+          git -C /tmp/lean-refactor sparse-checkout set competition
+          test "$(git -C /tmp/lean-refactor rev-parse HEAD)" = "$PIN"
+          for v in v4.31 v4.30 v4.29 v4.28; do
+            echo "FIBER_WITNESS_PROTECTED_VERSION=$v"
+            (
+              cd "/tmp/lean-refactor/competition/projects/$v"
+              lake update > "/tmp/lra-fiber-v12-all/$v-update.log" 2>&1
+              lake exe cache get > "/tmp/lra-fiber-v12-all/$v-cache.log" 2>&1 || echo CACHE_MISS_FALLBACK
+              lake build ArkLib.ProofSystem.Binius.BinaryBasefold.Prelude \
+                > "/tmp/lra-fiber-v12-all/$v-module.log" 2>&1
+            ) || {
+              tail -n 180 "/tmp/lra-fiber-v12-all/$v-module.log" || true
+              echo "INFRA_OR_SOURCE_IMPORT_BLOCKER_NOT_PROOF_VERDICT_$v"
+              exit 1
+            }
+          done
+          echo VERIFIED_ALL_FOUR_PINNED_BINARYBASEFOLD_IMPORT_CLOSURES
+      - name: Independently check exact winner against all four required Lean versions
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.elan/bin:$PATH"
+          python3 competitions/lean_refactor_arena/public_harness_bridge.py \
+            --competition /tmp/lean-refactor/competition --project v4.31 \
+            --name "$TARGET" --candidate "$BANK" --label fiber_v12_closeness_observer
+          (
+            cd /tmp/lean-refactor/competition
+            python3 arena.py check --name "$TARGET" --all-versions --timeout 1800
+          ) > /tmp/lra-fiber-v12-all/winner.json
+      - name: Seal actual four-version proof compatibility and objective strictly above incumbent
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,pathlib
+          root=pathlib.Path('/tmp/lra-fiber-v12-all')
+          x=json.loads((root/'winner.json').read_text())
+          req={'v4.31.0','v4.30.0','v4.29.0','v4.28.0'}
+          assert x.get('compiled') is True and x.get('statement_ok') is True
+          assert x.get('eligible') is True and not x.get('forbidden')
+          assert not x.get('extra_toplevel_decls') and not x.get('untested')
+          assert float(x.get('survival_pct') or 0)==100
+          compat=x.get('compat') or {}
+          assert set(compat)==req and all(compat[v] is True for v in req)
+          per=x.get('per_version') or []
+          assert len(per)==4 and {r.get('version') for r in per}==req
+          assert all(r.get('tested') is True and r.get('ok') is True and not r.get('errors') for r in per)
+          assert int(x['length'])==424
+          assert abs(int(x['heartbeats'])-7004)<=2
+          assert float(x['objective_sum_pct'])>129.55
+          assert round(float(x['objective_sum_pct']),2)>=130.84
+          out={'schema':'mathgraph.lra.fiber-v12.four-version-admission.v1',
+            'state':'WARRANTED_EXACT_FOUR_REQUIRED_VERSIONS_PENDING_15_ROW_PACKET',
+            'source':json.loads((root/'source.json').read_text()),
+            'primary_run':38010223751,
+            'active_incumbent':{'tokens':439,'heartbeats':7052,'objective':129.55},
+            'winner':{'tokens':x['length'],'heartbeats':x['heartbeats'],'objective':x['objective_sum_pct']},
+            'primary_objective_improvement':round(float(x['objective_sum_pct'])-129.55,2),
+            'required_versions':sorted(req),
+            'next_gate':'Source-exact V15 single Binius proof replacement with 14 unchanged rows and current audit',
+            'portfolio_mutated':False,'official_submission':False}
+          (root/'qualification.json').write_text(json.dumps(out,indent=2)+'\n')
+          print(json.dumps(out,indent=2))
+          print('WARRANTED_FIBERWISE_V12_FOUR_VERSION_FINITE_QUOTIENT_WITNESS')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-fiber-v12-all-version
+          path: /tmp/lra-fiber-v12-all
