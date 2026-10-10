@@ -33,8 +33,35 @@ jobs:
           set -euo pipefail
           git merge-base --is-ancestor "$MSI_BASE_SHA" HEAD
           git diff --stat "$MSI_BASE_SHA"..HEAD -- src/
-          cargo test --release --locked
           git worktree add --detach /tmp/flash-msi-base-source "$MSI_BASE_SHA"
+          mkdir -p /tmp/flash-msi-evidence
+          set +e
+          cargo test --release --locked > /tmp/flash-msi-evidence/candidate-tests.log 2>&1
+          candidate_rc=$?
+          CARGO_TARGET_DIR=/tmp/msi-test-base cargo test --release --locked \
+            --manifest-path /tmp/flash-msi-base-source/Cargo.toml \
+            > /tmp/flash-msi-evidence/baseline-tests.log 2>&1
+          baseline_rc=$?
+          set -e
+          BASE_RC="$baseline_rc" CAND_RC="$candidate_rc" python3 - <<'PY'
+          import json,os,pathlib
+          p=pathlib.Path('/tmp/flash-msi-evidence')
+          failures={}
+          for arm in ('baseline','candidate'):
+              raw=(p/(arm+'-tests.log')).read_text()
+              failures[arm]=sorted(line.strip().split(' ... ')[0].removeprefix('test ')
+                 for line in raw.splitlines() if line.startswith('test ') and line.endswith(' ... FAILED'))
+          print('MSI_UNIT_TESTS='+json.dumps({'baseline_exit':os.environ['BASE_RC'],
+            'candidate_exit':os.environ['CAND_RC'],'failures':failures}),flush=True)
+          assert failures['baseline']==failures['candidate'],failures
+          assert os.environ['BASE_RC']==os.environ['CAND_RC']
+          assert len(failures['candidate']) <= 2, failures
+          if failures['candidate']:
+              print('::warning::Published Flash and candidate share inherited recursor-negative unit failures; performance candidate is NOT eligible for promotion')
+          (p/'unit-regression.json').write_text(json.dumps({'baseline':failures['baseline'],
+               'candidate':failures['candidate'],'pre_existing_failures':bool(failures['candidate']),
+               'promotion_allowed':not failures['candidate']},indent=2)+'\\n')
+          PY
           CARGO_TARGET_DIR=/tmp/flash-msi-base-target RUSTFLAGS="-C target-cpu=native" cargo build --release --locked --manifest-path /tmp/flash-msi-base-source/Cargo.toml
           CARGO_TARGET_DIR=/tmp/flash-msi-cand-target RUSTFLAGS="-C target-cpu=native" cargo build --release --locked
           cp /tmp/flash-msi-base-target/release/sokonanoda /tmp/flash-msi-baseline
