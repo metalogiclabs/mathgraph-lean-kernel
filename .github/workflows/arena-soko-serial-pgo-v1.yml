@@ -1,0 +1,75 @@
+name: Soko one-thread trained PGO versus four-thread trained PGO
+
+on:
+  push:
+    branches: [arena-soko-serial-pgo-v1]
+    paths:
+      - 'experiments/arena_soko_serial_pgo_v1.py'
+      - '.github/workflows/arena-soko-serial-pgo-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: arena-soko-serial-pgo-v1
+  cancel-in-progress: true
+
+jobs:
+  crossover:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+      - name: Install deterministic guest-instruction meter
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq valgrind
+      - name: Check out exact upstream source and pinned Arena portable exports
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/soko-pgo-source
+          git -C /tmp/soko-pgo-source checkout --detach 7645b1e1fcacfe410c99141f1234381d995b325d
+          mkdir -p /tmp/soko-pgo-zip /tmp/soko-pgo-tests /tmp/soko-pgo-results
+          gh api "repos/leanprover/lean-kernel-arena/actions/artifacts/11505862349/zip" >/tmp/soko-pgo-export.zip
+          unzip -q /tmp/soko-pgo-export.zip -d /tmp/soko-pgo-zip
+          tar --no-same-owner -xzf /tmp/soko-pgo-zip/lean-arena-tests.tar.gz -C /tmp/soko-pgo-tests
+          test -s /tmp/soko-pgo-tests/good/init-prelude.ndjson
+      - name: Build exact same checker twice with only the PGO training worker count changed
+        run: |
+          set -euo pipefail
+          HOST=$(rustc -vV | awk '/^host:/ {print $2}')
+          LLVM_PROFDATA="$(rustc --print sysroot)/lib/rustlib/$HOST/bin/llvm-profdata"
+          test -x "$LLVM_PROFDATA"
+          for workers in 4 1; do
+            profile_dir="/tmp/soko-pgo-profile-$workers"
+            target_dir="/tmp/soko-pgo-target-$workers"
+            mkdir -p "$profile_dir"
+            CARGO_TARGET_DIR="$target_dir" RUSTFLAGS="-C target-cpu=native -Cprofile-generate=$profile_dir" \
+              cargo build --release --locked --manifest-path /tmp/soko-pgo-source/Cargo.toml
+            "$target_dir/release/sokonanoda" --stdin --nat-extension --string-extension --axiom-allow-all \
+              --threads "$workers" </tmp/soko-pgo-tests/good/init-prelude.ndjson >/dev/null
+            "$LLVM_PROFDATA" merge -o "$profile_dir/merged.profdata" "$profile_dir"
+            test -s "$profile_dir/merged.profdata"
+            CARGO_TARGET_DIR="$target_dir" RUSTFLAGS="-C target-cpu=native -Cprofile-use=$profile_dir/merged.profdata" \
+              cargo build --release --locked --manifest-path /tmp/soko-pgo-source/Cargo.toml
+            cp "$target_dir/release/sokonanoda" "/tmp/soko-pgo-${workers}t"
+          done
+          sha256sum /tmp/soko-pgo-{1t,4t} | tee /tmp/soko-pgo-results/binaries.sha256
+      - name: Protected 196-case verdicts and Callgrind full-process instruction proxy
+        run: |
+          set -euo pipefail
+          python3 experiments/arena_soko_serial_pgo_v1.py /tmp/soko-pgo-tests /tmp/soko-pgo-results
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: soko-serial-pgo-${{ github.sha }}
+          path: /tmp/soko-pgo-results/
+          if-no-files-found: warn
