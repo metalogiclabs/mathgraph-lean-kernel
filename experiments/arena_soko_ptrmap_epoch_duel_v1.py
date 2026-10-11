@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify full-4x versus large-table-only 4x in exact pinned source."""
+"""Verify epoch-stamped PtrMap resets against same compound baseline."""
 import json,math,os,pathlib,re,subprocess,sys
 
 root=pathlib.Path(sys.argv[1])
@@ -50,7 +50,8 @@ print("SOKO_EPOCH_GEOMEAN="+json.dumps({"speedup":geomean_speedup,
 (dest/"summary.json").write_text(json.dumps({
   "source":"7645b1e1fcacfe410c99141f1234381d995b325d",
   "new_source":os.environ["GITHUB_SHA"],
-  "metric":"Valgrind Callgrind guest Ir; not Arena hardware retired instructions",\n  "baseline":"sparse + full4x", "candidate":"sparse + full4x + epoch-mapped reset",
+  "metric":"Valgrind Callgrind guest Ir; not Arena hardware retired instructions",
+  "baseline":"sparse + full4x", "candidate":"sparse + full4x + epoch-mapped reset",
   "source_patch":"Sparse prune reset in both; full4x vs full4x + epoch-stamped resets after 16384 slots",
   "cases":census,"verdicts":results,
   "geomean_speedup":geomean_speedup,"material_proxy_win":geomean_speedup>=1.01,
