@@ -1,8 +1,8 @@
-name: Soko exact Mathlib memory-mapped input heldout experiment
+name: Soko full Mathlib phase atlas (parse-only control, not scoring)
 
 on:
   push:
-    branches: [arena-mathlib-mmap-heldout-v1]
+    branches: [arena-instruction-phase-atlas-v1]
     paths:
       - "experiments/arena_soko_mmap_mathlib_v1.py"
       - ".github/workflows/arena-mathlib-mmap-heldout-v1.yml"
@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: arena-soko-mmap-mathlib-v1
+  group: arena-instruction-phase-atlas-v1
   cancel-in-progress: true
 
 jobs:
@@ -70,7 +70,7 @@ jobs:
             cargo build --release --locked --manifest-path /tmp/msi-mathlib-mmap-source/Cargo.toml
           cp /tmp/msi-mmap-target/release/sokonanoda /tmp/msi-mathlib-mmap-soko
           sha256sum /tmp/msi-mathlib-mmap-soko | tee /tmp/msi-mmap-heldout/binary.sha256
-      - name: Exact held-out complete Mathlib verdict and two-round CPU/wall tournament
+      - name: Exact full Mathlib acceptance plus balanced parse-only phase controls
         run: |
           set -euo pipefail
           python3 experiments/arena_soko_mmap_mathlib_v1.py \
@@ -78,6 +78,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: arena-mmap-full-mathlib-${{ github.sha }}
+          name: arena-mathlib-phase-atlas-${{ github.sha }}
           path: /tmp/msi-mmap-heldout/
           if-no-files-found: warn
