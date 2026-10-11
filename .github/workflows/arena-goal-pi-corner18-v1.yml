@@ -1,0 +1,59 @@
+name: Exact 18 Arena corner cases goal-directed Pi parity
+on:
+  push:
+    branches: [arena-goal-pi-corner18-v1]
+    paths:
+      - 'experiments/arena_goal_pi_corner18_v1.py'
+      - '.github/workflows/arena-goal-pi-corner18-v1.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: arena-goal-pi-corner18-v1
+  cancel-in-progress: true
+jobs:
+  corners:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      CARGO_INCREMENTAL: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Pin both checker sources and original Arena test constructor
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/goal-corner-upstream
+          git -C /tmp/goal-corner-upstream checkout --detach 7645b1e1fcacfe410c99141f1234381d995b325d
+          git -C /tmp/goal-corner-upstream worktree add --detach /tmp/goal-corner-candidate-src 7645b1e1fcacfe410c99141f1234381d995b325d
+          for arm in baseline candidate; do
+            if [ "$arm" = baseline ]; then src=/tmp/goal-corner-upstream; else src=/tmp/goal-corner-candidate-src; fi
+            python3 experiments/arena_soko_sparse_patch_v1.py "$src"
+            python3 experiments/arena_soko_growth_patch_v1.py "$src"
+          done
+          python3 experiments/arena_soko_expected_pi_slice_patch_v1.py /tmp/goal-corner-candidate-src
+          git -C /tmp/goal-corner-candidate-src diff --check
+          mkdir -p /tmp/goal-corner-evidence
+          git -C /tmp/goal-corner-candidate-src diff -- src/checker/infer.rs src/lib.rs src/main.rs > /tmp/goal-corner-evidence/checked-Pi.patch
+          for arm in baseline candidate; do
+            if [ "$arm" = baseline ]; then src=/tmp/goal-corner-upstream; else src=/tmp/goal-corner-candidate-src; fi
+            CARGO_TARGET_DIR="/tmp/goal-corner-target-$arm" RUSTFLAGS='-C target-cpu=x86-64' cargo build --release --locked --manifest-path "$src/Cargo.toml"
+            cp "/tmp/goal-corner-target-$arm/release/sokonanoda" "/tmp/goal-corner-$arm.bin"
+          done
+          sha256sum /tmp/goal-corner-{baseline,candidate}.bin | tee /tmp/goal-corner-evidence/binaries.sha256
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/goal-corner-arena
+          git -C /tmp/goal-corner-arena checkout --detach b83254de5146ef34147ab82a48edbe1856b0edcc
+      - name: Reconstruct all 18 original source-locked corner cases and compare exact verdicts
+        run: |
+          set -euo pipefail
+          for name in corner-cases/alg-conv-trans-acc-left corner-cases/alg-conv-trans-acc-right corner-cases/alg-conv-trans-acc corner-cases/alg-conv-trans-quot-left-def corner-cases/alg-conv-trans-quot-left corner-cases/alg-conv-trans-quot-right corner-cases/alg-conv-trans-quot corner-cases/eta-ctor corner-cases/eta-rule-k corner-cases/imax-right-successor corner-cases/let-value-type-mismatch corner-cases/positivity-whnf corner-cases/nested-nonuniform-param corner-cases/proj-maybe-prop-past corner-cases/proj-maybe-prop corner-cases/proof-param-swap corner-cases/subject-reduction-redex corner-cases/subject-reduction-reduct; do
+            (cd /tmp/goal-corner-arena && nix develop -c ./lka.py build-test "$name")
+            python3 experiments/arena_goal_pi_corner18_v1.py /tmp/goal-corner-arena/_build/tests /tmp/goal-corner-evidence --single "$name"
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: goal-pi-corners-source-exact-${{ github.sha }}
+          path: /tmp/goal-corner-evidence/
+          if-no-files-found: warn
