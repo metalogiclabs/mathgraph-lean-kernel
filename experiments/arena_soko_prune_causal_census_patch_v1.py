@@ -35,6 +35,11 @@ struct PruneCausalCensus {
     source_cache_supermask: u64,
     source_cache_submask: u64,
     source_cache_incomparable: u64,
+    source_overlap_bits: u64,
+    source_missing_bits: u64,
+    source_overlap_positive: u64,
+    source_overlap_ge2: u64,
+    source_missing_one: u64,
     direct_memo_hits: u64,
     cold: u64,
     far_requests: u64,
@@ -84,6 +89,11 @@ impl Drop for PruneCausalCensus {
             "source_cache_supermask": self.source_cache_supermask,
             "source_cache_submask": self.source_cache_submask,
             "source_cache_incomparable": self.source_cache_incomparable,
+            "source_overlap_bits": self.source_overlap_bits,
+            "source_missing_bits": self.source_missing_bits,
+            "source_overlap_positive": self.source_overlap_positive,
+            "source_overlap_ge2": self.source_overlap_ge2,
+            "source_missing_one": self.source_missing_one,
             "direct_memo_hits": self.direct_memo_hits,
             "cold": self.cold,
             "far_requests": self.far_requests,
@@ -145,7 +155,7 @@ a=a.replace("if *m & mask == *m {\n                    return e;",
             "if *m & mask == *m {\n                    count_prune(|c| c.frame_covers += 1);\n                    return e;")
 assert a.count("                let (m, r) = prune.get();")==2
 a=a.replace("                let (m, r) = prune.get();",
-            "                let (m, r) = prune.get();\n                if r.is_some() && m != mask {\n                    count_prune(|c| {\n                        c.source_cell_conflicts += 1;\n                        // A smaller requested support can be projected\n                        // from the cached larger support without new authority.\n                        if (mask & m) == mask {\n                            c.source_cache_supermask += 1;\n                        } else if (mask & m) == m {\n                            c.source_cache_submask += 1;\n                        } else {\n                            c.source_cache_incomparable += 1;\n                        }\n                    });\n                }")
+            "                let (m, r) = prune.get();\n                if r.is_some() && m != mask {\n                    count_prune(|c| {\n                        c.source_cell_conflicts += 1;\n                        let overlap = (mask & m & !value::FAR).count_ones();\n                        let missing = (mask & !m & !value::FAR).count_ones();\n                        c.source_overlap_bits += u64::from(overlap);\n                        c.source_missing_bits += u64::from(missing);\n                        if overlap > 0 { c.source_overlap_positive += 1; }\n                        if overlap >= 2 { c.source_overlap_ge2 += 1; }\n                        if missing == 1 { c.source_missing_one += 1; }\n                        // A smaller requested support can be projected\n                        // from the cached larger support without new authority.\n                        if (mask & m) == mask {\n                            c.source_cache_supermask += 1;\n                        } else if (mask & m) == m {\n                            c.source_cache_submask += 1;\n                        } else {\n                            c.source_cache_incomparable += 1;\n                        }\n                    });\n                }")
 same="""                {
                     return r;
                 }"""
