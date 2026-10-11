@@ -1,0 +1,61 @@
+name: Source-pinned environment interner profiler repeatability
+on:
+  push:
+    branches: [arena-soko-env-repeatability-v1]
+    paths:
+      - 'experiments/arena_soko_env_aslr_repeatability_v1.py'
+      - '.github/workflows/arena-soko-env-repeatability-v1.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: arena-soko-env-repeatability-v1
+  cancel-in-progress: true
+jobs:
+  repeatability:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install portable guest instruction meter
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq valgrind
+      - name: Pin, patch and build two exact source checker binaries
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/soko-repeat-base
+          git -C /tmp/soko-repeat-base checkout --detach 7645b1e1fcacfe410c99141f1234381d995b325d
+          git -C /tmp/soko-repeat-base worktree add --detach /tmp/soko-repeat-candidate 7645b1e1fcacfe410c99141f1234381d995b325d
+          for arm in compound compound_env; do
+            if [ "$arm" = compound ]; then SRC=/tmp/soko-repeat-base; else SRC=/tmp/soko-repeat-candidate; fi
+            python3 experiments/arena_soko_sparse_patch_v1.py "$SRC"
+            python3 experiments/arena_soko_growth_patch_v1.py "$SRC"
+            if [ "$arm" = compound_env ]; then python3 experiments/arena_soko_env_extend_singleprobe_patch_v1.py "$SRC"; fi
+            git -C "$SRC" diff --check
+            CARGO_TARGET_DIR="/tmp/soko-repeat-target-$arm" RUSTFLAGS='-C target-cpu=x86-64' cargo build --release --locked --manifest-path "$SRC/Cargo.toml"
+            cp "/tmp/soko-repeat-target-$arm/release/sokonanoda" "/tmp/soko-repeat-$arm"
+          done
+      - name: Freeze exact Arena sample and independent process address layouts
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/soko-repeat-zip /tmp/soko-repeat-tests /tmp/soko-repeat-evidence
+          gh api 'repos/leanprover/lean-kernel-arena/actions/artifacts/11505862349/zip' > /tmp/soko-repeat-export.zip
+          unzip -q /tmp/soko-repeat-export.zip -d /tmp/soko-repeat-zip
+          tar --no-same-owner -xzf /tmp/soko-repeat-zip/lean-arena-tests.tar.gz -C /tmp/soko-repeat-tests
+          cat /proc/sys/kernel/randomize_va_space > /tmp/soko-repeat-evidence/kernel-randomize-va-space.txt
+      - name: Alternate eight fresh whole-process Callgrind replays per arm
+        run: |
+          set -euo pipefail
+          python3 experiments/arena_soko_env_aslr_repeatability_v1.py /tmp/soko-repeat-tests /tmp/soko-repeat-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: env-interner-eight-process-repeatability-${{ github.sha }}
+          path: /tmp/soko-repeat-evidence/
+          if-no-files-found: warn
