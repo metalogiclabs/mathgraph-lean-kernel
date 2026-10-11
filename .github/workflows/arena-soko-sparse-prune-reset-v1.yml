@@ -4,7 +4,7 @@ on:
   push:
     branches: [arena-soko-sparse-prune-reset-v1]
     paths:
-      - "experiments/arena_soko_growth_*.py"
+      - "experiments/arena_soko_sparse_*.py"
       - ".github/workflows/arena-soko-sparse-prune-reset-v1.yml"
   workflow_dispatch:
 
@@ -36,7 +36,7 @@ jobs:
           git clone -q https://github.com/intgrah/sokonanoda /tmp/soko-sparse-baseline
           git -C /tmp/soko-sparse-baseline checkout --detach 7645b1e1fcacfe410c99141f1234381d995b325d
           git -C /tmp/soko-sparse-baseline worktree add --detach /tmp/soko-sparse-candidate 7645b1e1fcacfe410c99141f1234381d995b325d
-          python3 experiments/arena_soko_growth_patch_v1.py /tmp/soko-sparse-candidate
+          python3 experiments/arena_soko_sparse_patch_v1.py /tmp/soko-sparse-candidate
           CARGO_TARGET_DIR=/tmp/soko-sparse-target-a cargo build --release --locked \
             --manifest-path /tmp/soko-sparse-baseline/Cargo.toml
           CARGO_TARGET_DIR=/tmp/soko-sparse-target-b cargo build --release --locked \
@@ -54,7 +54,7 @@ jobs:
       - name: Recheck all valid and invalid, then count exact guest instructions
         run: |
           set -euo pipefail
-          python3 experiments/arena_soko_growth_duel_v1.py /tmp/msi-soko-tests /tmp/msi-soko-evidence
+          python3 experiments/arena_soko_sparse_duel_v1.py /tmp/msi-soko-tests /tmp/msi-soko-evidence
       - uses: actions/upload-artifact@v4
         if: always()
         with:
