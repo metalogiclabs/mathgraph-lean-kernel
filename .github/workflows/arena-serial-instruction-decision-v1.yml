@@ -1,7 +1,7 @@
-name: Arena serial versus parallel instruction decision
+name: Arena frozen checker guest-Ir function hotspot atlas
 on:
   push:
-    branches: [arena-serial-instruction-decision-v1]
+    branches: [arena-instruction-hotspot-atlas-v1]
     paths:
       - 'experiments/arena_serial_instruction_decision_v1.py'
       - '.github/workflows/arena-serial-instruction-decision-v1.yml'
@@ -9,7 +9,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: arena-serial-instruction-decision-v1
+  group: arena-instruction-hotspot-atlas-v1
   cancel-in-progress: true
 jobs:
   crossover:
@@ -39,7 +39,7 @@ jobs:
           unzip -q /tmp/soko-serial.zip -d /tmp/soko-serial-zip
           tar --no-same-owner -xzf /tmp/soko-serial-zip/lean-arena-tests.tar.gz -C /tmp/soko-serial-corpus
           sha256sum /tmp/soko-serial-decision | tee /tmp/soko-serial-evidence/binary.sha256
-      - name: Six-arm verdict parity and full-process guest-instruction tournament
+      - name: Verify frozen verdicts and profile parse versus check function hotspots
         run: |
           set -euo pipefail
           python3 experiments/arena_serial_instruction_decision_v1.py \
@@ -47,6 +47,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: arena-serial-instruction-decision-${{ github.sha }}
+          name: arena-function-hotspot-atlas-${{ github.sha }}
           path: /tmp/soko-serial-evidence/
           if-no-files-found: warn
