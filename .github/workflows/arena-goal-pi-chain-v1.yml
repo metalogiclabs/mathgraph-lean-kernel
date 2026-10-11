@@ -1,0 +1,71 @@
+name: Arena recursive dependent Pi checking source-exact shadow A/B
+on:
+  push:
+    branches: [arena-goal-chain-chain-v1]
+    paths:
+      - 'experiments/arena_soko_expected_pi_chain_patch_v1.py'
+      - 'experiments/arena_soko_expected_pi_chain_duel_v1.py'
+      - '.github/workflows/arena-goal-chain-chain-v1.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: arena-goal-chain-chain-v1
+  cancel-in-progress: true
+jobs:
+  protected-pi-ab:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install deterministic guest instruction reference
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -qq -y valgrind
+      - name: Pin original complete checker and create exact source-shared experimental arm
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/goal-chain-upstream
+          git -C /tmp/goal-chain-upstream checkout --detach 7645b1e1fcacfe410c99141f1234381d995b325d
+          git -C /tmp/goal-chain-upstream worktree add --detach /tmp/goal-chain-candidate 7645b1e1fcacfe410c99141f1234381d995b325d
+          mkdir -p /tmp/goal-chain-evidence
+          for arm in baseline candidate; do
+            if [ "$arm" = baseline ]; then src=/tmp/goal-chain-upstream; else src=/tmp/goal-chain-candidate; fi
+            python3 experiments/arena_soko_sparse_patch_v1.py "$src"
+            python3 experiments/arena_soko_growth_patch_v1.py "$src"
+          done
+          python3 experiments/arena_soko_expected_pi_chain_patch_v1.py /tmp/goal-chain-candidate
+          git -C /tmp/goal-chain-candidate diff --check
+          git -C /tmp/goal-chain-candidate diff -- src/checker/infer.rs src/main.rs src/lib.rs > /tmp/goal-chain-evidence/goal-judgment-typed-delta.patch
+      - name: Independently compile and run complete Rust tests on candidate
+        run: |
+          set -euo pipefail
+          for arm in baseline candidate; do
+            if [ "$arm" = baseline ]; then src=/tmp/goal-chain-upstream; else src=/tmp/goal-chain-candidate; fi
+            CARGO_TARGET_DIR="/tmp/goal-chain-target-$arm" RUSTFLAGS='-C target-cpu=x86-64' cargo build --release --locked --manifest-path "$src/Cargo.toml"
+            cp "/tmp/goal-chain-target-$arm/release/sokonanoda" "/tmp/soko-goal-chain-$arm.bin"
+          done
+          CARGO_TARGET_DIR=/tmp/goal-chain-target-candidate RUSTFLAGS='-C target-cpu=x86-64' cargo test --release --locked --manifest-path /tmp/goal-chain-candidate/Cargo.toml
+          sha256sum /tmp/soko-goal-chain-{baseline,candidate}.bin | tee /tmp/goal-chain-evidence/binaries.sha256
+      - name: Recover original protected Arena test artifact
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/goal-chain-zip /tmp/goal-chain-tests
+          gh api 'repos/leanprover/lean-kernel-arena/actions/artifacts/11505862349/zip' > /tmp/goal-pi.zip
+          unzip -q /tmp/goal-pi.zip -d /tmp/goal-chain-zip
+          tar --no-same-owner -xzf /tmp/goal-chain-zip/lean-arena-tests.tar.gz -C /tmp/goal-chain-tests
+      - name: Check all 196 plus original-check shadow for every new judgment; five causal Ir and RSS pairs
+        run: |
+          set -euo pipefail
+          python3 experiments/arena_soko_expected_pi_chain_duel_v1.py /tmp/goal-chain-tests /tmp/goal-chain-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: goal-chain-source-pinned-${{ github.sha }}
+          path: /tmp/goal-chain-evidence/
+          if-no-files-found: warn
