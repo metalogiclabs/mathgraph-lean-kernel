@@ -21,14 +21,22 @@ modes={
     "stdin4":("stdin",4),"mmap4":("mmap",4)
 }
 events={name:[] for name in modes}
+# Separate parsing phase controls: never count as a checked proof.
+parse_events={name:[] for name in ('stdin1','mmap1')}
 for repetition in range(2):
     order=["stdin1","mmap1","stdin4","mmap4"] if repetition==0 else [
         "mmap4","stdin4","mmap1","stdin1"]
-    for name in order:
+    parse_arms=[(name,'parse') for name in order if name in ('stdin1','mmap1')]
+    full_arms=[(name,'full') for name in order]
+    # Balance cache warming: parse controls follow full in round 0,
+    # precede full in round 1. Do not infer a direct CPU instruction count.
+    for name,phase in (full_arms+parse_arms if repetition==0 else parse_arms+full_arms):
         method,threads=modes[name]
         cmd=([binary,"--stdin",*args,"--threads",str(threads)]
             if method=="stdin" else [binary,str(source),*args,"--threads",str(threads)])
-        meter=out/f"time-{name}-{repetition}.txt"
+        if phase=='parse':
+            cmd.append('--parse-only')
+        meter=out/f"time-{name}-{phase}-{repetition}.txt"
         stdout=out/f"stdout-{name}-{repetition}.txt"
         stderr=out/f"stderr-{name}-{repetition}.txt"
         stream=source.open("rb") if method=="stdin" else subprocess.DEVNULL
@@ -47,8 +55,8 @@ for repetition in range(2):
         row={"repetition":repetition,"verdict":p.returncode,
             "wall_seconds":elapsed,"cpu_seconds":user+system,"rss_kb":int(rss),
             "stdout_sha256":hashlib.sha256(stdout.read_bytes()).hexdigest()}
-        events[name].append(row)
-        print("MSI_MMAP_MATHLIB_CASE="+json.dumps({"mode":name,**row}),flush=True)
+        (events if phase=='full' else parse_events)[name].append(row)
+        print("MSI_MMAP_MATHLIB_CASE="+json.dumps({"mode":name,"phase":phase,**row}),flush=True)
         assert p.returncode==0,(name,row,stderr.read_text(errors="replace")[-1800:])
 
 assert len({v["stdout_sha256"] for values in events.values() for v in values})==1,events
@@ -64,7 +72,18 @@ for workers in (1,4):
        "mmap_over_stdin_wall":summary[f"mmap{workers}"]["median_wall_seconds"]/
           summary[f"stdin{workers}"]["median_wall_seconds"],
     }
+parse_medians={key:{"median_wall_seconds":statistics.median(x["wall_seconds"] for x in val),
+                    "median_cpu_seconds":statistics.median(x["cpu_seconds"] for x in val),
+                    "max_rss_kb":max(x["rss_kb"] for x in val)}
+               for key,val in parse_events.items()}
+phase_ratios={key:{"parse_over_full_cpu":parse_medians[key]["median_cpu_seconds"]/summary[key]["median_cpu_seconds"],
+                   "parse_over_full_wall":parse_medians[key]["median_wall_seconds"]/summary[key]["median_wall_seconds"],
+                   "approx_full_minus_parse_cpu":summary[key]["median_cpu_seconds"]-parse_medians[key]["median_cpu_seconds"]}
+              for key in parse_events}
+assert all(0 < p['parse_over_full_cpu'] < 1 for p in phase_ratios.values()),phase_ratios
 print("MSI_MMAP_MATHLIB_SUMMARY="+json.dumps({"medians":summary,"pairings":pairings}),flush=True)
+print("MSI_PHASE_ATLAS_SUMMARY="+json.dumps({"parse_medians":parse_medians,"phase_ratios":phase_ratios,
+    "boundary":"CPU/wall whole-process parse-only proxy, NOT PMU instructions or isolated internal phase cost"}),flush=True)
 result={"source_revision":"7645b1e1fcacfe410c99141f1234381d995b325d",
         "arena_revision":"b83254de5146ef34147ab82a48edbe1856b0edcc",
         "experiment_revision":os.environ["GITHUB_SHA"],
@@ -72,5 +91,7 @@ result={"source_revision":"7645b1e1fcacfe410c99141f1234381d995b325d",
         "metric":"CPU + wall on exact full Mathlib export, NOT Arena retired instructions",
         "qualified_full_mathlib":True,
         "official_rank_qualified":False,
-        "runs":events,"medians":summary,"pairings":pairings}
+        "runs":events,"medians":summary,"pairings":pairings,
+        "parse_runs":parse_events,"parse_medians":parse_medians,"phase_ratios":phase_ratios,
+        "phase_subtraction_is_approximate":True,"official_rank_qualified":False}
 (out/"heldout.json").write_text(json.dumps(result,indent=2,sort_keys=True)+"\n")
