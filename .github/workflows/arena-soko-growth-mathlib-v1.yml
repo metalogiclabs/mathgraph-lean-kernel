@@ -1,0 +1,83 @@
+name: Arena growth-factor exact native PGO full Mathlib A/B
+on:
+  push:
+    branches: [arena-soko-growth-mathlib-v1]
+    paths:
+      - 'experiments/arena_soko_growth_mathlib_v1.py'
+      - '.github/workflows/arena-soko-growth-mathlib-v1.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: arena-soko-growth-mathlib-v1
+  cancel-in-progress: true
+jobs:
+  full-mathlib:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+      - name: Freeze source and official Arena, no submission
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/soko-growth-base-src
+          git -C /tmp/soko-growth-base-src checkout --detach 7645b1e1fcacfe410c99141f1234381d995b325d
+          git -C /tmp/soko-growth-base-src worktree add --detach /tmp/soko-growth-patch-src 7645b1e1fcacfe410c99141f1234381d995b325d
+          python3 experiments/arena_soko_growth_patch_v1.py /tmp/soko-growth-patch-src
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/soko-growth-arena
+          git -C /tmp/soko-growth-arena checkout --detach b83254de5146ef34147ab82a48edbe1856b0edcc
+      - name: Export same full current Mathlib for both checkers
+        run: |
+          set -euo pipefail
+          cd /tmp/soko-growth-arena
+          nix develop -c ./lka.py build-test mathlib
+          test -s _build/tests/mathlib.ndjson
+          du -h _build/tests/mathlib.ndjson
+      - name: Recover immutable identical PGO training material
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/soko-growth-zip /tmp/soko-growth-train /tmp/soko-growth-evidence
+          gh api "repos/leanprover/lean-kernel-arena/actions/artifacts/11505862349/zip" >/tmp/soko-growth-tests.zip
+          unzip -q /tmp/soko-growth-tests.zip -d /tmp/soko-growth-zip
+          tar --no-same-owner -xzf /tmp/soko-growth-zip/lean-arena-tests.tar.gz -C /tmp/soko-growth-train
+          test -s /tmp/soko-growth-train/good/init-prelude.ndjson
+      - name: Equivalently train and build both native PGO binaries
+        run: |
+          set -euo pipefail
+          HOST=$(rustc -vV | awk '/^host:/ {print $2}')
+          LLVM_PROFDATA="$(rustc --print sysroot)/lib/rustlib/$HOST/bin/llvm-profdata"
+          test -x "$LLVM_PROFDATA"
+          for arm in base patch; do
+            mkdir -p "/tmp/soko-growth-pgo-$arm"
+            CARGO_TARGET_DIR="/tmp/soko-growth-target-$arm" \
+              RUSTFLAGS="-C target-cpu=native -Cprofile-generate=/tmp/soko-growth-pgo-$arm" \
+              cargo build --release --locked --manifest-path "/tmp/soko-growth-$arm-src/Cargo.toml"
+            "/tmp/soko-growth-target-$arm/release/sokonanoda" --stdin --nat-extension \
+              --string-extension --axiom-allow-all --threads 4 \
+              </tmp/soko-growth-train/good/init-prelude.ndjson >/dev/null
+            "$LLVM_PROFDATA" merge -o "/tmp/soko-growth-pgo-$arm/merged.profdata" "/tmp/soko-growth-pgo-$arm"
+            test -s "/tmp/soko-growth-pgo-$arm/merged.profdata"
+            CARGO_TARGET_DIR="/tmp/soko-growth-target-$arm" \
+              RUSTFLAGS="-C target-cpu=native -Cprofile-use=/tmp/soko-growth-pgo-$arm/merged.profdata" \
+              cargo build --release --locked --manifest-path "/tmp/soko-growth-$arm-src/Cargo.toml"
+            cp "/tmp/soko-growth-target-$arm/release/sokonanoda" "/tmp/soko-growth-$arm-pgo"
+          done
+          sha256sum /tmp/soko-growth-{base,patch}-pgo | tee /tmp/soko-growth-evidence/binaries.sha256
+      - name: Require complete Mathlib ACCEPT and balanced CPU wall RSS
+        run: |
+          set -euo pipefail
+          python3 experiments/arena_soko_growth_mathlib_v1.py \
+            /tmp/soko-growth-arena/_build/tests/mathlib.ndjson /tmp/soko-growth-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: arena-growth-full-mathlib-${{ github.sha }}
+          path: /tmp/soko-growth-evidence/
+          if-no-files-found: warn
