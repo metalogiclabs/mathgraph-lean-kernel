@@ -1,0 +1,68 @@
+name: Arena source-exact environment interning single-probe A/B
+on:
+  push:
+    branches: [arena-soko-env-extend-singleprobe-v1]
+    paths:
+      - 'experiments/arena_soko_env_extend_singleprobe_patch_v1.py'
+      - 'experiments/arena_soko_env_extend_singleprobe_duel_v1.py'
+      - '.github/workflows/arena-soko-env-extend-singleprobe-v1.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: arena-soko-env-extend-singleprobe-v1
+  cancel-in-progress: true
+jobs:
+  protected-ab:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install independent deterministic guest-instruction meter
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq valgrind
+      - name: Pin upstream, build both exact parent binaries and test candidate cache meaning
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/soko-env-extend-base
+          git -C /tmp/soko-env-extend-base checkout --detach 7645b1e1fcacfe410c99141f1234381d995b325d
+          git -C /tmp/soko-env-extend-base worktree add --detach /tmp/soko-env-extend-candidate 7645b1e1fcacfe410c99141f1234381d995b325d
+          mkdir -p /tmp/env-extend-evidence
+          for arm in baseline candidate; do
+            if [ "$arm" = baseline ]; then src=/tmp/soko-env-extend-base; else src=/tmp/soko-env-extend-candidate; fi
+            python3 experiments/arena_soko_sparse_patch_v1.py "$src"
+            python3 experiments/arena_soko_growth_patch_v1.py "$src"
+            if [ "$arm" = candidate ]; then
+              python3 experiments/arena_soko_env_extend_singleprobe_patch_v1.py "$src"
+            fi
+            git -C "$src" diff --check
+            CARGO_TARGET_DIR="/tmp/soko-env-extend-target-$arm" RUSTFLAGS='-C target-cpu=x86-64' cargo build --release --locked --manifest-path "$src/Cargo.toml"
+            cp "/tmp/soko-env-extend-target-$arm/release/sokonanoda" "/tmp/soko-env-extend-$arm.bin"
+          done
+          CARGO_TARGET_DIR=/tmp/soko-env-extend-target-candidate RUSTFLAGS='-C target-cpu=x86-64' cargo test --release --locked --manifest-path /tmp/soko-env-extend-candidate/Cargo.toml
+          git -C /tmp/soko-env-extend-base diff -- src/checker/cache.rs src/checker/eval/environment.rs src/checker/ptrmap.rs > /tmp/env-extend-evidence/parent.patch
+          git -C /tmp/soko-env-extend-candidate diff -- src/checker/cache.rs src/checker/eval/environment.rs src/checker/ptrmap.rs > /tmp/env-extend-evidence/candidate.patch
+          sha256sum /tmp/soko-env-extend-{baseline,candidate}.bin | tee /tmp/env-extend-evidence/binaries.sha256
+      - name: Freeze exact 196 valid and invalid official Arena inputs
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/env-extend-zip /tmp/env-extend-tests
+          gh api 'repos/leanprover/lean-kernel-arena/actions/artifacts/11505862349/zip' > /tmp/env-extend-export.zip
+          unzip -q /tmp/env-extend-export.zip -d /tmp/env-extend-zip
+          tar --no-same-owner -xzf /tmp/env-extend-zip/lean-arena-tests.tar.gz -C /tmp/env-extend-tests
+      - name: Exact 196 verdicts, five guest-Ir pairs and memory cost
+        run: |
+          set -euo pipefail
+          python3 experiments/arena_soko_env_extend_singleprobe_duel_v1.py /tmp/env-extend-tests /tmp/env-extend-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: soko-env-extend-fastpath-${{ github.sha }}
+          path: /tmp/env-extend-evidence/
+          if-no-files-found: warn
