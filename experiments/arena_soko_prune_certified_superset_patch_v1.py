@@ -132,7 +132,7 @@ candidate = r"""        // An actual cached Framed superset has the same de Brui
                 }
             }
             // Keep the original source's exact cache semantics and eviction.
-            self.tc_cache.prune_dm[slot] = (Some(Id::of(e)), mask, Some(fast));
+            self.tc_cache.prune_dm.put(slot, Id::of(e), mask, fast);
             match e {
                 value::Env::Cons { prune, .. } | value::Env::Framed { prune, .. } => {
                     prune.set((mask, Some(fast)));
