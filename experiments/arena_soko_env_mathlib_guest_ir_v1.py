@@ -45,7 +45,9 @@ report={"source":"intgrah/sokonanoda@7645b1e1fcacfe410c99141f1234381d995b325d",
         "metric":"Full-process Valgrind Callgrind guest Ir NOT hardware instructions",
         "input_mode":"official four-worker stdin invocation",
         "records":results,"compound_env_over_compound_guest_ir":ratio,
-        "instruction_saving_fraction":1-ratio,\n        "baseline_patch":"sparse reset plus 4x PtrMap growth",\n        "candidate_patch":"same baseline plus source-exact env_extend single-pass insertion",
+        "instruction_saving_fraction":1-ratio,
+        "baseline_patch":"sparse reset plus 4x PtrMap growth",
+        "candidate_patch":"same baseline plus source-exact env_extend single-pass insertion",
         "official_rank_qualified":False}
 (out/"report.json").write_text(json.dumps(report,indent=2,sort_keys=True)+"\n")
 print("ENV_MATHLIB_GUEST_IR_SUMMARY="+json.dumps({"ratio":ratio,
