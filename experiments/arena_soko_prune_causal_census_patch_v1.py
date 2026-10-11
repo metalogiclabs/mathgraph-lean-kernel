@@ -32,6 +32,9 @@ struct PruneCausalCensus {
     frame_covers: u64,
     source_cell_hits: u64,
     source_cell_conflicts: u64,
+    source_cache_supermask: u64,
+    source_cache_submask: u64,
+    source_cache_incomparable: u64,
     direct_memo_hits: u64,
     cold: u64,
     far_requests: u64,
@@ -78,6 +81,9 @@ impl Drop for PruneCausalCensus {
             "frame_covers": self.frame_covers,
             "source_cell_hits": self.source_cell_hits,
             "source_cell_conflicts": self.source_cell_conflicts,
+            "source_cache_supermask": self.source_cache_supermask,
+            "source_cache_submask": self.source_cache_submask,
+            "source_cache_incomparable": self.source_cache_incomparable,
             "direct_memo_hits": self.direct_memo_hits,
             "cold": self.cold,
             "far_requests": self.far_requests,
@@ -139,7 +145,20 @@ a=a.replace("if *m & mask == *m {\n                    return e;",
             "if *m & mask == *m {\n                    count_prune(|c| c.frame_covers += 1);\n                    return e;")
 assert a.count("                let (m, r) = prune.get();")==2
 a=a.replace("                let (m, r) = prune.get();",
-            "                let (m, r) = prune.get();\n                if r.is_some() && m != mask { count_prune(|c| c.source_cell_conflicts += 1); }")
+            "                let (m, r) = prune.get();\n                if r.is_some() && m != mask {
+                    count_prune(|c| {
+                        c.source_cell_conflicts += 1;
+                        // A smaller requested support can be projected
+                        // from the cached larger support without new authority.
+                        if (mask & m) == mask {
+                            c.source_cache_supermask += 1;
+                        } else if (mask & m) == m {
+                            c.source_cache_submask += 1;
+                        } else {
+                            c.source_cache_incomparable += 1;
+                        }
+                    });
+                }")
 same="""                {
                     return r;
                 }"""
