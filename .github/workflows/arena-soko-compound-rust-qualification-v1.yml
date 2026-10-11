@@ -1,0 +1,37 @@
+name: Soko exact-source compound Rust unit and regression tests
+on:
+  push:
+    branches: [arena-soko-compound-rust-qualification-v1]
+    paths:
+      - '.github/workflows/arena-soko-compound-rust-qualification-v1.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  protected-rust:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Independently pin and patch source without changing proof rules
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/soko-compound-rust-source
+          git -C /tmp/soko-compound-rust-source checkout --detach 7645b1e1fcacfe410c99141f1234381d995b325d
+          python3 experiments/arena_soko_sparse_patch_v1.py /tmp/soko-compound-rust-source
+          python3 experiments/arena_soko_growth_patch_v1.py /tmp/soko-compound-rust-source
+          git -C /tmp/soko-compound-rust-source diff --check
+          git -C /tmp/soko-compound-rust-source diff -- src/checker/cache.rs src/checker/eval/environment.rs src/checker/ptrmap.rs | sha256sum
+      - name: Run pinned native checker unit tests on compound source
+        run: |
+          set -euo pipefail
+          cargo test --release --locked --manifest-path /tmp/soko-compound-rust-source/Cargo.toml -- --nocapture
+      - name: Compile unit test target and release binary with unchanged configuration
+        run: |
+          set -euo pipefail
+          RUSTFLAGS="-C target-cpu=x86-64" cargo build --release --locked --manifest-path /tmp/soko-compound-rust-source/Cargo.toml
+          test -x /tmp/soko-compound-rust-source/target/release/sokonanoda
+          sha256sum /tmp/soko-compound-rust-source/target/release/sokonanoda
