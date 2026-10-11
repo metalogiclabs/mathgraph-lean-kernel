@@ -2,10 +2,10 @@ name: Soko sparse plus selective vs full4x hash growth A/B
 
 on:
   push:
-    branches: [arena-soko-selective-factor-v1]
+    branches: [arena-soko-selective-growth-v1]
     paths:
       - "experiments/arena_soko_selective_growth_*.py"
-      - ".github/workflows/arena-soko-selective-factor-v1.yml"
+      - ".github/workflows/arena-soko-selective-growth-v1.yml"
   workflow_dispatch:
 
 permissions:
