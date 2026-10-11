@@ -1,0 +1,71 @@
+name: Arena goal-directed dependent Pi checker vertical slice
+on:
+  push:
+    branches: [arena-goal-expected-pi-slice-v1]
+    paths:
+      - 'experiments/arena_soko_expected_pi_slice_patch_v1.py'
+      - 'experiments/arena_soko_expected_pi_slice_duel_v1.py'
+      - '.github/workflows/arena-goal-expected-pi-slice-v1.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: arena-goal-expected-pi-slice-v1
+  cancel-in-progress: true
+jobs:
+  protected-pi-ab:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install deterministic guest instruction reference
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -qq -y valgrind
+      - name: Pin original complete checker and create exact source-shared experimental arm
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/goal-pi-upstream
+          git -C /tmp/goal-pi-upstream checkout --detach 7645b1e1fcacfe410c99141f1234381d995b325d
+          git -C /tmp/goal-pi-upstream worktree add --detach /tmp/goal-pi-candidate 7645b1e1fcacfe410c99141f1234381d995b325d
+          mkdir -p /tmp/goal-pi-evidence
+          for arm in baseline candidate; do
+            if [ "$arm" = baseline ]; then src=/tmp/goal-pi-upstream; else src=/tmp/goal-pi-candidate; fi
+            python3 experiments/arena_soko_sparse_patch_v1.py "$src"
+            python3 experiments/arena_soko_growth_patch_v1.py "$src"
+          done
+          python3 experiments/arena_soko_expected_pi_slice_patch_v1.py /tmp/goal-pi-candidate
+          git -C /tmp/goal-pi-candidate diff --check
+          git -C /tmp/goal-pi-candidate diff -- src/checker/infer.rs src/main.rs src/lib.rs > /tmp/goal-pi-evidence/goal-judgment-typed-delta.patch
+      - name: Independently compile and run complete Rust tests on candidate
+        run: |
+          set -euo pipefail
+          for arm in baseline candidate; do
+            if [ "$arm" = baseline ]; then src=/tmp/goal-pi-upstream; else src=/tmp/goal-pi-candidate; fi
+            CARGO_TARGET_DIR="/tmp/goal-pi-target-$arm" RUSTFLAGS='-C target-cpu=x86-64' cargo build --release --locked --manifest-path "$src/Cargo.toml"
+            cp "/tmp/goal-pi-target-$arm/release/sokonanoda" "/tmp/soko-goal-pi-$arm.bin"
+          done
+          CARGO_TARGET_DIR=/tmp/goal-pi-target-candidate RUSTFLAGS='-C target-cpu=x86-64' cargo test --release --locked --manifest-path /tmp/goal-pi-candidate/Cargo.toml
+          sha256sum /tmp/soko-goal-pi-{baseline,candidate}.bin | tee /tmp/goal-pi-evidence/binaries.sha256
+      - name: Recover original protected Arena test artifact
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/goal-pi-zip /tmp/goal-pi-tests
+          gh api 'repos/leanprover/lean-kernel-arena/actions/artifacts/11505862349/zip' > /tmp/goal-pi.zip
+          unzip -q /tmp/goal-pi.zip -d /tmp/goal-pi-zip
+          tar --no-same-owner -xzf /tmp/goal-pi-zip/lean-arena-tests.tar.gz -C /tmp/goal-pi-tests
+      - name: Check all 196 plus original-check shadow for every new judgment; five causal Ir and RSS pairs
+        run: |
+          set -euo pipefail
+          python3 experiments/arena_soko_expected_pi_slice_duel_v1.py /tmp/goal-pi-tests /tmp/goal-pi-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: goal-pi-source-pinned-${{ github.sha }}
+          path: /tmp/goal-pi-evidence/
+          if-no-files-found: warn
