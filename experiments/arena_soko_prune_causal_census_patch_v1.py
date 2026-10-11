@@ -145,20 +145,7 @@ a=a.replace("if *m & mask == *m {\n                    return e;",
             "if *m & mask == *m {\n                    count_prune(|c| c.frame_covers += 1);\n                    return e;")
 assert a.count("                let (m, r) = prune.get();")==2
 a=a.replace("                let (m, r) = prune.get();",
-            "                let (m, r) = prune.get();\n                if r.is_some() && m != mask {
-                    count_prune(|c| {
-                        c.source_cell_conflicts += 1;
-                        // A smaller requested support can be projected
-                        // from the cached larger support without new authority.
-                        if (mask & m) == mask {
-                            c.source_cache_supermask += 1;
-                        } else if (mask & m) == m {
-                            c.source_cache_submask += 1;
-                        } else {
-                            c.source_cache_incomparable += 1;
-                        }
-                    });
-                }")
+            "                let (m, r) = prune.get();\n                if r.is_some() && m != mask {\n                    count_prune(|c| {\n                        c.source_cell_conflicts += 1;\n                        // A smaller requested support can be projected\n                        // from the cached larger support without new authority.\n                        if (mask & m) == mask {\n                            c.source_cache_supermask += 1;\n                        } else if (mask & m) == m {\n                            c.source_cache_submask += 1;\n                        } else {\n                            c.source_cache_incomparable += 1;\n                        }\n                    });\n                }")
 same="""                {
                     return r;
                 }"""
