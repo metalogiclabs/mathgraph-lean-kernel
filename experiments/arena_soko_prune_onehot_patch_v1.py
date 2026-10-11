@@ -16,7 +16,7 @@ s=p.read_text()
 anchor="""        let lsub = e.lsub();
         let mut slots_hash = lsub.map_or(0, |l| Id::of(l).addr() as u64);"""
 assert s.count(anchor)==1,"Exact source cold prune body changed"
-assert "self.tc_cache.prune_dm[slot] = (Some(Id::of(e)), mask, Some(r));" in s
+assert "self.tc_cache.prune_dm.put(slot, Id::of(e), mask, r);" in s
 assert "pub fn lookup(&self, idx: u16)" not in s  # signature belongs to value.rs
 injected="""        let lsub = e.lsub();
         // Exact one-local support: reusing a single available slot produces
@@ -33,7 +33,7 @@ injected="""        let lsub = e.lsub();
                 let r = self.intern_frame(
                     slots_hash, mask, &only_slot, value::NEAR, None, lsub,
                 );
-                self.tc_cache.prune_dm[slot] = (Some(Id::of(e)), mask, Some(r));
+                self.tc_cache.prune_dm.put(slot, Id::of(e), mask, r);
                 match e {
                     value::Env::Cons { prune, .. } | value::Env::Framed { prune, .. } => {
                         prune.set((mask, Some(r)));
