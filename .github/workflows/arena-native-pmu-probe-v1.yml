@@ -1,0 +1,50 @@
+name: Arena native retired-instruction PMU capability probe
+on:
+  push:
+    branches: [arena-native-pmu-probe-v1]
+    paths:
+      - '.github/workflows/arena-native-pmu-probe-v1.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  pmu-capability:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test user and root native instruction counters (no proof or scoring claims)
+        run: |
+          set -uo pipefail
+          mkdir -p /tmp/arena-native-pmu
+          {
+            echo "kernel=$(uname -r)"
+            echo "cpu=$(lscpu | grep -m 1 'Model name:')"
+            echo "paranoid=$(cat /proc/sys/kernel/perf_event_paranoid 2>/dev/null || true)"
+            echo "perf=$(command -v perf || true)"
+            echo "github_sha=$GITHUB_SHA"
+          } | tee /tmp/arena-native-pmu/system.txt
+          if ! command -v perf >/dev/null 2>&1; then
+            echo 'PMU_GATE=UNAVAILABLE:no-perf' | tee /tmp/arena-native-pmu/decision.txt
+            exit 0
+          fi
+          PERF=$(command -v perf)
+          if "$PERF" stat -e instructions -- /bin/true > /tmp/arena-native-pmu/user.log 2>&1; then
+            echo 'PMU_UNPRIVILEGED=SUPPORTED' | tee -a /tmp/arena-native-pmu/decision.txt
+          else
+            echo 'PMU_UNPRIVILEGED=UNAVAILABLE' | tee -a /tmp/arena-native-pmu/decision.txt
+          fi
+          if sudo -n "$PERF" stat -e instructions -- /bin/true > /tmp/arena-native-pmu/root.log 2>&1; then
+            echo 'PMU_ROOT=SUPPORTED' | tee -a /tmp/arena-native-pmu/decision.txt
+          else
+            echo 'PMU_ROOT=UNAVAILABLE' | tee -a /tmp/arena-native-pmu/decision.txt
+          fi
+          sed -n '1,10p' /tmp/arena-native-pmu/user.log || true
+          sed -n '1,10p' /tmp/arena-native-pmu/root.log || true
+          echo 'Official Mathlib instruction superiority remains UNKNOWN.'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-pmu-access-${{ github.sha }}
+          path: /tmp/arena-native-pmu/
+          if-no-files-found: warn
