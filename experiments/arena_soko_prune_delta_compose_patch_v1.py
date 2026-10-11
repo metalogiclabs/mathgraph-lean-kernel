@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Source-locked, proof-preserving incremental semantic pruning from verified overlap.
+r"""Source-locked, proof-preserving incremental semantic pruning from verified overlap.
 
 For original environment E, previous support N and requested support M,
 project_M(E) = merge(project_(M∩N)(project_N(E)), project_(M\N)(E))
