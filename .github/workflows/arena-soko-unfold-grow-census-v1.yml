@@ -1,0 +1,48 @@
+name: Soko pinned unfolding map growth census
+on:
+  push:
+    branches: [arena-soko-unfold-grow-census-v1]
+    paths:
+      - '.github/workflows/arena-soko-unfold-grow-census-v1.yml'
+      - 'experiments/arena_soko_grow_*.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Apply trace-only patch to exactly pinned source
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/soko-grow-census-src
+          git -C /tmp/soko-grow-census-src checkout --detach 7645b1e1fcacfe410c99141f1234381d995b325d
+          python3 experiments/arena_soko_grow_patch_v1.py /tmp/soko-grow-census-src
+          CARGO_TARGET_DIR=/tmp/soko-grow-census-target RUSTFLAGS="-C target-cpu=x86-64" \
+            cargo build --release --locked --manifest-path /tmp/soko-grow-census-src/Cargo.toml
+          cp /tmp/soko-grow-census-target/release/sokonanoda /tmp/soko-grow-census-checker
+          sha256sum /tmp/soko-grow-census-checker
+      - name: Unpack frozen exact export authority
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/soko-grow-census-zip /tmp/soko-grow-census-corpus /tmp/soko-grow-census-evidence
+          gh api "repos/leanprover/lean-kernel-arena/actions/artifacts/11505862349/zip" >/tmp/soko-grow-census.zip
+          unzip -q /tmp/soko-grow-census.zip -d /tmp/soko-grow-census-zip
+          tar --no-same-owner -xzf /tmp/soko-grow-census-zip/lean-arena-tests.tar.gz -C /tmp/soko-grow-census-corpus
+      - name: Count exact unfolding-table resize events on four sources
+        run: |
+          set -euo pipefail
+          python3 experiments/arena_soko_grow_census_v1.py \
+            /tmp/soko-grow-census-corpus /tmp/soko-grow-census-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: arena-unfold-grow-census-${{ github.sha }}
+          path: /tmp/soko-grow-census-evidence/
+          if-no-files-found: warn
