@@ -40,8 +40,13 @@ def run(path, arm, shadow=False):
     count=None
     if arm=="candidate":
         m=re.findall(r"^MG_PI_GOAL_APPLIED=(\d+)$",stderr,re.M)
-        assert len(m)==1,("missing pi count",str(path),stderr[-500:])
-        count=int(m[0])
+        # A parser/structural-admission rejection can finish before
+        # check_all_declars prints any diagnostic count.
+        if len(m)==1:
+            count=int(m[0])
+        else:
+            assert not m and p.returncode in (1,2), ("missing pi count on checked input",str(path),stderr[-500:])
+            count=0
     return {"returncode":p.returncode,"pi_goals":count,
             "error_tail":stderr[-850:] if p.returncode else ""}
 
