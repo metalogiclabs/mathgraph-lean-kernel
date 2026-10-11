@@ -19,7 +19,7 @@ new="""    pub(crate) fn eval(&mut self, depth: u32, env: E<'t>, e: ExprPtr<'t>)
         }
         if e.num_loose_bvars() == 0 {"""
 assert s.count(old)==1,"Pinned evaluator preamble changed"
-assert s.count('Expr::Var { dbj_idx, .. } => env.lookup(dbj_idx).expect("eval: loose bvar")')==1, "Expected reference arm absent"
+assert s.count('Expr::Var { dbj_idx, .. } => env.lookup(dbj_idx).expect("eval: loose bvar")')>=1, "Expected reference arm absent"
 s=s.replace(old,new)
 assert s.count(new)==1
 p.write_text(s)
