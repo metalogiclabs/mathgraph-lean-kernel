@@ -4,6 +4,7 @@ on:
     branches: [arena-soko-prune-onehot-v1]
     paths:
       - 'experiments/arena_soko_env_extend_singleprobe_patch_v1.py'
+      - 'experiments/arena_soko_prune_onehot_patch_v1.py'
       - 'experiments/arena_soko_prune_onehot_duel_v1.py'
       - '.github/workflows/arena-soko-prune-onehot-v1.yml'
   workflow_dispatch:
