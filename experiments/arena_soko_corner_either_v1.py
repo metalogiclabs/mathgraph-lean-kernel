@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Source-pinned Arena corner-case outcome parity gate for two candidate checkers.
+"""Source-pinned Arena corner-case outcome parity gate for pinned baseline and two candidates.
 
 The official October 2026 test-stats artifact 11506336524 fixes each export
 name, size and SHA256. No test input is skipped on checker behavior, and
@@ -77,7 +77,7 @@ for name in selection:
     print("ARENA_PINNED_CORNER_EITHER="+json.dumps(row),flush=True)
     # Explicitly reclaim multi-gigabyte export space before next test.
     path.unlink()
-assert len(rows)<=8
+assert len(rows)<=18
 if len(rows)==18:
     print("ARENA_CORNER_EITHER_SUMMARY="+json.dumps({
       "passed":len(rows),"expected":18,
