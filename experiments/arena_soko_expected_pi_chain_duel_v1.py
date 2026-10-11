@@ -18,8 +18,8 @@ import sys
 root = Path(sys.argv[1])
 out = Path(sys.argv[2])
 out.mkdir(parents=True, exist_ok=True)
-paths = {"baseline":"/tmp/soko-goal-pi-baseline.bin",
-         "candidate":"/tmp/soko-goal-pi-candidate.bin"}
+paths = {"baseline":"/tmp/soko-goal-chain-baseline.bin",
+         "candidate":"/tmp/soko-goal-chain-candidate.bin"}
 opts = ["--stdin", "--nat-extension", "--string-extension",
         "--axiom-allow-all", "--threads", "4"]
 positive = sorted((root/"good").rglob("*.ndjson"))
