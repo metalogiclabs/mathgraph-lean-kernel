@@ -1,0 +1,68 @@
+name: Arena eight large rebuilt-positive independent acceptance
+on:
+  push:
+    branches: [arena-soko-large-rebuild-evidence-v1]
+    paths:
+      - 'experiments/arena_soko_large_accept_v1.py'
+      - '.github/workflows/arena-soko-large-rebuild-evidence-v1.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: arena-soko-large-rebuild-evidence-v1
+  cancel-in-progress: true
+jobs:
+  large-accept:
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include:
+          - {id: cedar, testcase: cedar}
+          - {id: con-leche, testcase: con-leche}
+          - {id: cslib, testcase: cslib}
+          - {id: init, testcase: init}
+          - {id: navier, testcase: navier-stokes-euler}
+          - {id: std, testcase: std}
+          - {id: magma-n4, testcase: perf/magma-string-n4}
+          - {id: magma-pair-n9, testcase: perf/magma-string-pair-n9}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    env:
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Freeze and build exact source patch pair; no official submission
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/soko-large-source
+          git -C /tmp/soko-large-source checkout --detach 7645b1e1fcacfe410c99141f1234381d995b325d
+          for arm in sparse compound; do
+            git -C /tmp/soko-large-source worktree add --detach "/tmp/soko-large-$arm-src" 7645b1e1fcacfe410c99141f1234381d995b325d
+            python3 experiments/arena_soko_sparse_patch_v1.py "/tmp/soko-large-$arm-src"
+            if [ "$arm" = compound ]; then
+              python3 experiments/arena_soko_growth_patch_v1.py "/tmp/soko-large-$arm-src"
+            fi
+            CARGO_TARGET_DIR="/tmp/soko-large-$arm-target" RUSTFLAGS="-C target-cpu=native" \
+              cargo build --release --locked --manifest-path "/tmp/soko-large-$arm-src/Cargo.toml"
+            cp "/tmp/soko-large-$arm-target/release/sokonanoda" "/tmp/soko-large-$arm.bin"
+          done
+          mkdir -p /tmp/soko-large-evidence
+          sha256sum /tmp/soko-large-{sparse,compound}.bin | tee /tmp/soko-large-evidence/binaries.sha256
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/soko-large-arena
+          git -C /tmp/soko-large-arena checkout --detach b83254de5146ef34147ab82a48edbe1856b0edcc
+      - name: Independently reproduce and check eight exact omitted positive exports
+        run: |
+          set -euo pipefail
+          name="${{ matrix.testcase }}"
+          echo "ARENA_REBUILT_LARGE_BUILD=$name"
+          (cd /tmp/soko-large-arena && nix develop -c ./lka.py build-test "$name")
+          python3 experiments/arena_soko_large_accept_v1.py /tmp/soko-large-arena/_build/tests /tmp/soko-large-evidence --single "$name"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rebuilt-large-positive-${{ matrix.id }}-${{ github.sha }}
+          path: /tmp/soko-large-evidence/
+          if-no-files-found: warn
