@@ -1,0 +1,84 @@
+name: Exact full Mathlib goal-directed Pi vs complete source A/B
+on:
+  push:
+    branches: [arena-goal-mathlib-gate-v1]
+    paths:
+      - 'experiments/arena_goal_mathlib_cost_v1.py'
+      - '.github/workflows/arena-goal-mathlib-gate-v1.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: arena-goal-mathlib-gate-v1
+  cancel-in-progress: true
+jobs:
+  full-mathlib:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+      - name: Install independent deterministic guest-Ir meter
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq valgrind
+      - name: Pin source, copy complete checker baseline and apply only checked goal-directed Pi patch
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/goal-final-arena
+          git -C /tmp/goal-final-arena checkout --detach b83254de5146ef34147ab82a48edbe1856b0edcc
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/goal-final-upstream
+          git -C /tmp/goal-final-upstream checkout --detach 7645b1e1fcacfe410c99141f1234381d995b325d
+          git -C /tmp/goal-final-upstream worktree add --detach /tmp/goal-final-root 7645b1e1fcacfe410c99141f1234381d995b325d
+          for arm in baseline root; do
+            if [ "$arm" = baseline ]; then src=/tmp/goal-final-upstream; else src=/tmp/goal-final-root; fi
+            python3 experiments/arena_soko_sparse_patch_v1.py "$src"
+            python3 experiments/arena_soko_growth_patch_v1.py "$src"
+          done
+          python3 experiments/arena_soko_expected_pi_slice_patch_v1.py /tmp/goal-final-root
+          git -C /tmp/goal-final-root diff --check
+          mkdir -p /tmp/goal-final-evidence
+          git -C /tmp/goal-final-root diff -- src/checker/infer.rs src/main.rs src/lib.rs > /tmp/goal-final-evidence/checked-dependent-Pi.patch
+      - name: Materialize immutable Mathlib and official PGO training input
+        run: |
+          set -euo pipefail
+          (cd /tmp/goal-final-arena && nix develop -c ./lka.py build-test mathlib)
+          test $(stat -c '%s' /tmp/goal-final-arena/_build/tests/mathlib.ndjson) = 6184415052
+          mkdir -p /tmp/goal-final-zip /tmp/goal-final-train
+          gh api 'repos/leanprover/lean-kernel-arena/actions/artifacts/11505862349/zip' > /tmp/goal-final-train.zip
+          unzip -q /tmp/goal-final-train.zip -d /tmp/goal-final-zip
+          tar --no-same-owner -xzf /tmp/goal-final-zip/lean-arena-tests.tar.gz -C /tmp/goal-final-train
+          test -s /tmp/goal-final-train/good/init-prelude.ndjson
+      - name: PGO-build both exact complete-checker arms with identical ISA/training conditions
+        run: |
+          set -euo pipefail
+          HOST=$(rustc -vV | awk '/^host:/ {print $2}')
+          LLVM_PROFDATA="$(rustc --print sysroot)/lib/rustlib/$HOST/bin/llvm-profdata"
+          test -x "$LLVM_PROFDATA"
+          for arm in baseline root; do
+            if [ "$arm" = baseline ]; then src=/tmp/goal-final-upstream; else src=/tmp/goal-final-root; fi
+            mkdir -p "/tmp/goal-final-pgo-$arm"
+            CARGO_TARGET_DIR="/tmp/goal-final-target-$arm" RUSTFLAGS="-C target-cpu=x86-64 -Cprofile-generate=/tmp/goal-final-pgo-$arm" cargo build --release --locked --manifest-path "$src/Cargo.toml"
+            "/tmp/goal-final-target-$arm/release/sokonanoda" --stdin --nat-extension --string-extension --axiom-allow-all --threads 4 </tmp/goal-final-train/good/init-prelude.ndjson >/dev/null
+            "$LLVM_PROFDATA" merge -o "/tmp/goal-final-pgo-$arm/merged.profdata" "/tmp/goal-final-pgo-$arm"
+            CARGO_TARGET_DIR="/tmp/goal-final-target-$arm" RUSTFLAGS="-C target-cpu=x86-64 -Cprofile-use=/tmp/goal-final-pgo-$arm/merged.profdata" cargo build --release --locked --manifest-path "$src/Cargo.toml"
+            cp "/tmp/goal-final-target-$arm/release/sokonanoda" "/tmp/goal-mathlib-$arm.bin"
+          done
+          sha256sum /tmp/goal-mathlib-{baseline,root}.bin | tee /tmp/goal-final-evidence/binaries.sha256
+      - name: Full Mathlib ACCEPT on every native trial and exact full-process Callgrind A/B
+        run: |
+          set -euo pipefail
+          python3 experiments/arena_goal_mathlib_cost_v1.py /tmp/goal-final-arena/_build/tests/mathlib.ndjson /tmp/goal-final-evidence baseline,root
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: goal-pi-fullmathlib-${{ github.sha }}
+          path: /tmp/goal-final-evidence/
+          if-no-files-found: warn
