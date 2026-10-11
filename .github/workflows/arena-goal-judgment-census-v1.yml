@@ -1,0 +1,108 @@
+name: Arena complete-checker goal judgment census
+on:
+  push:
+    branches: [arena-goal-judgment-census-v1]
+    paths:
+      - 'experiments/arena_goal_judgment_census_patch_v1.py'
+      - 'experiments/arena_goal_judgment_census_v1.py'
+      - '.github/workflows/arena-goal-judgment-census-v1.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: arena-goal-judgment-census-v1
+  cancel-in-progress: true
+jobs:
+  portable196:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Pin two copies of exact upstream Soko and apply identical compound cache baseline
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/goal-soko-source
+          git -C /tmp/goal-soko-source checkout --detach 7645b1e1fcacfe410c99141f1234381d995b325d
+          git -C /tmp/goal-soko-source worktree add --detach /tmp/goal-soko-instrumented 7645b1e1fcacfe410c99141f1234381d995b325d
+          for arm in baseline instrumented; do
+            if [ "$arm" = baseline ]; then src=/tmp/goal-soko-source; else src=/tmp/goal-soko-instrumented; fi
+            python3 experiments/arena_soko_sparse_patch_v1.py "$src"
+            python3 experiments/arena_soko_growth_patch_v1.py "$src"
+          done
+          python3 experiments/arena_goal_judgment_census_patch_v1.py /tmp/goal-soko-instrumented
+          git -C /tmp/goal-soko-instrumented diff --check
+          mkdir -p /tmp/goal-evidence
+          git -C /tmp/goal-soko-instrumented diff -- src/checker/infer.rs src/main.rs src/lib.rs > /tmp/goal-evidence/instrumentation-only.patch
+      - name: Build and test source-identical complete checker variants
+        run: |
+          set -euo pipefail
+          for arm in baseline instrumented; do
+            if [ "$arm" = baseline ]; then src=/tmp/goal-soko-source; else src=/tmp/goal-soko-instrumented; fi
+            CARGO_TARGET_DIR="/tmp/goal-target-$arm" RUSTFLAGS='-C target-cpu=x86-64' cargo build --release --locked --manifest-path "$src/Cargo.toml"
+            cp "/tmp/goal-target-$arm/release/sokonanoda" "/tmp/goal-census-$arm.bin"
+          done
+          CARGO_TARGET_DIR=/tmp/goal-target-instrumented RUSTFLAGS='-C target-cpu=x86-64' cargo test --release --locked --manifest-path /tmp/goal-soko-instrumented/Cargo.toml
+          sha256sum /tmp/goal-census-{baseline,instrumented}.bin | tee /tmp/goal-evidence/binaries.sha256
+      - name: Recover pinned official Arena positive and negative corpus
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/goal-zip /tmp/goal-tests
+          gh api 'repos/leanprover/lean-kernel-arena/actions/artifacts/11505862349/zip' > /tmp/goal-export.zip
+          unzip -q /tmp/goal-export.zip -d /tmp/goal-zip
+          tar --no-same-owner -xzf /tmp/goal-zip/lean-arena-tests.tar.gz -C /tmp/goal-tests
+      - name: Independently compare protected196 before trusting a single census
+        run: |
+          set -euo pipefail
+          python3 experiments/arena_goal_judgment_census_v1.py portable /tmp/goal-tests /tmp/goal-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: goal-census-portable-${{ github.sha }}
+          path: /tmp/goal-evidence/
+          if-no-files-found: warn
+  original-mathlib:
+    needs: [portable196]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Pin exact Arena and materialize original full 6GB Mathlib export
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/goal-arena
+          git -C /tmp/goal-arena checkout --detach b83254de5146ef34147ab82a48edbe1856b0edcc
+          (cd /tmp/goal-arena && nix develop -c ./lka.py build-test mathlib)
+          test $(stat -c '%s' /tmp/goal-arena/_build/tests/mathlib.ndjson) = 6184415052
+      - name: Build exact pinned Soko plus verified compound and diagnostic-only census
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/goal-mathlib-soko
+          git -C /tmp/goal-mathlib-soko checkout --detach 7645b1e1fcacfe410c99141f1234381d995b325d
+          python3 experiments/arena_soko_sparse_patch_v1.py /tmp/goal-mathlib-soko
+          python3 experiments/arena_soko_growth_patch_v1.py /tmp/goal-mathlib-soko
+          python3 experiments/arena_goal_judgment_census_patch_v1.py /tmp/goal-mathlib-soko
+          git -C /tmp/goal-mathlib-soko diff --check
+          CARGO_TARGET_DIR=/tmp/goal-mathlib-target RUSTFLAGS='-C target-cpu=x86-64' cargo build --release --locked --manifest-path /tmp/goal-mathlib-soko/Cargo.toml
+          cp /tmp/goal-mathlib-target/release/sokonanoda /tmp/goal-census-instrumented.bin
+          mkdir -p /tmp/goal-mathlib-evidence
+          git -C /tmp/goal-mathlib-soko diff -- src/checker/infer.rs src/main.rs src/lib.rs > /tmp/goal-mathlib-evidence/instrumentation-only.patch
+          sha256sum /tmp/goal-census-instrumented.bin | tee /tmp/goal-mathlib-evidence/binary.sha256
+      - name: Count exact goal judgments on complete original Mathlib; retain ACCEPT boundary
+        run: |
+          set -euo pipefail
+          python3 experiments/arena_goal_judgment_census_v1.py mathlib /tmp/goal-arena/_build/tests/mathlib.ndjson /tmp/goal-mathlib-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: goal-census-complete-mathlib-${{ github.sha }}
+          path: /tmp/goal-mathlib-evidence/
+          if-no-files-found: warn
