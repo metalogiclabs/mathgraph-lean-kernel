@@ -2,9 +2,15 @@
 """Diagnose Mathlib declaration-level time using upstream reporting fork.
 This is an instrumentation-only cost atlas, not an Arena instruction score.
 """
-import json,os,pathlib,re,subprocess,sys,time
+import hashlib,json,os,pathlib,re,subprocess,sys,time
 source=pathlib.Path(sys.argv[1]);out=pathlib.Path(sys.argv[2]);out.mkdir(parents=True,exist_ok=True)
 assert source.is_file() and source.stat().st_size==6184415052,"Require exact-size Mathlib"
+expected="22c5de83469408950005589a3bc5ef5157c65549b5a802f85d567c29151306a6"
+h=hashlib.sha256()
+with source.open("rb") as fin:
+    while block:=fin.read(8*1024*1024):
+        h.update(block)
+assert h.hexdigest()==expected,("MATHLIB_EXPORT_SHA_MISMATCH",h.hexdigest())
 command=["/tmp/soko-decl-hotspot","--stdin","--nat-extension","--string-extension",
          "--axiom-allow-all","--threads","1","--verbose"]
 logs=out/"declarations.txt"
@@ -32,6 +38,7 @@ report={
  "arena":"leanprover/lean-kernel-arena@b83254de5146ef34147ab82a48edbe1856b0edcc",
  "experimental_instrumentation":"upstream --verbose per-declaration time, single worker",
  "not_scoring_authority":True,"output_verdict":"ACCEPT","wall_seconds":wall,
+ "exact_export_sha256":expected,
  "count":len(rows),"reported_sum_ms":total,
  "by_kind":{kind:{"count":count_by_kind[kind],"ms":sum_by_kind[kind]} for kind in count_by_kind},
  "top_100":rows[:100],
