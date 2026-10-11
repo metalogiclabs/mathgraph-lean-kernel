@@ -63,7 +63,7 @@ for case in ["init-prelude", "perf/grind-ring-5",
                 stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, timeout=650)
         assert measured.returncode == 0, (case, arm, "callgrind", measured.returncode,
                                            measured.stderr[-800:])
-        m = re.search(r"^summary:\\s*(\\d+)\\s*$", profile.read_text(), re.M)
+        m = re.search(r"^summary:\s*(\d+)\s*$", profile.read_text(), re.M)
         assert m, (case, arm, "no Callgrind Ir")
         row[arm + "_guest_Ir"] = int(m.group(1))
         profile.unlink()
