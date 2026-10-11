@@ -29,15 +29,15 @@ jobs:
             exit 0
           fi
           PERF=$(command -v perf)
-          if "$PERF" stat -e instructions -- /bin/true > /tmp/arena-native-pmu/user.log 2>&1; then
+          if "$PERF" stat -e instructions -- /bin/true > /tmp/arena-native-pmu/user.log 2>&1 && grep -Eq "^[[:space:]]*[1-9][0-9,]*[[:space:]]+instructions" /tmp/arena-native-pmu/user.log; then
             echo 'PMU_UNPRIVILEGED=SUPPORTED' | tee -a /tmp/arena-native-pmu/decision.txt
           else
             echo 'PMU_UNPRIVILEGED=UNAVAILABLE' | tee -a /tmp/arena-native-pmu/decision.txt
           fi
-          if sudo -n "$PERF" stat -e instructions -- /bin/true > /tmp/arena-native-pmu/root.log 2>&1; then
+          if sudo -n "$PERF" stat -e instructions -- /bin/true > /tmp/arena-native-pmu/root.log 2>&1 && grep -Eq "^[[:space:]]*[1-9][0-9,]*[[:space:]]+instructions" /tmp/arena-native-pmu/root.log; then
             echo 'PMU_ROOT=SUPPORTED' | tee -a /tmp/arena-native-pmu/decision.txt
           else
-            echo 'PMU_ROOT=UNAVAILABLE' | tee -a /tmp/arena-native-pmu/decision.txt
+            echo 'PMU_ROOT=UNAVAILABLE:non-numeric-or-unsupported-event' | tee -a /tmp/arena-native-pmu/decision.txt
           fi
           sed -n '1,10p' /tmp/arena-native-pmu/user.log || true
           sed -n '1,10p' /tmp/arena-native-pmu/root.log || true
