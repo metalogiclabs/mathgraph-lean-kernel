@@ -1,0 +1,63 @@
+name: Soko exact-source hash table growth factor A/B
+
+on:
+  push:
+    branches: [arena-soko-growth-factor-v1]
+    paths:
+      - "experiments/arena_soko_growth_*.py"
+      - ".github/workflows/arena-soko-growth-factor-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: soko-growth-factor-v1
+  cancel-in-progress: true
+
+jobs:
+  source-ab:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install deterministic instruction-proxy authority
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq valgrind
+      - name: Freeze upstream source and apply exactly one checked patch
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/soko-growth-baseline
+          git -C /tmp/soko-growth-baseline checkout --detach 7645b1e1fcacfe410c99141f1234381d995b325d
+          git -C /tmp/soko-growth-baseline worktree add --detach /tmp/soko-growth-candidate 7645b1e1fcacfe410c99141f1234381d995b325d
+          python3 experiments/arena_soko_growth_patch_v1.py /tmp/soko-growth-candidate
+          CARGO_TARGET_DIR=/tmp/soko-growth-target-a cargo build --release --locked \
+            --manifest-path /tmp/soko-growth-baseline/Cargo.toml
+          CARGO_TARGET_DIR=/tmp/soko-growth-target-b cargo build --release --locked \
+            --manifest-path /tmp/soko-growth-candidate/Cargo.toml
+          cp /tmp/soko-growth-target-a/release/sokonanoda /tmp/soko-growth-original
+          cp /tmp/soko-growth-target-b/release/sokonanoda /tmp/soko-growth-patched
+          sha256sum /tmp/soko-growth-{original,patched}
+      - name: Freeze Arena portable source evidence
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/msi-soko-zip /tmp/msi-soko-tests /tmp/msi-soko-evidence
+          gh api "repos/leanprover/lean-kernel-arena/actions/artifacts/11505862349/zip" >/tmp/msi-soko-export.zip
+          unzip -q /tmp/msi-soko-export.zip -d /tmp/msi-soko-zip
+          tar --no-same-owner -xzf /tmp/msi-soko-zip/lean-arena-tests.tar.gz -C /tmp/msi-soko-tests
+      - name: Recheck all valid and invalid, then count exact guest instructions
+        run: |
+          set -euo pipefail
+          python3 experiments/arena_soko_growth_duel_v1.py /tmp/msi-soko-tests /tmp/msi-soko-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: soko-growth-fastpath-${{ github.sha }}
+          path: /tmp/msi-soko-evidence/summary.json
+          if-no-files-found: warn
