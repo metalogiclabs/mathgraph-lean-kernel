@@ -1,0 +1,61 @@
+name: Source-locked dependent Pi adversarial negative gate
+on:
+  push:
+    branches: [arena-goal-pi-adversarial-v1]
+    paths:
+      - 'experiments/arena_goal_pi_adversarial_v1.py'
+      - '.github/workflows/arena-goal-pi-adversarial-v1.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-adversarial:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Recover source-pinned checker and exact dependent Pi candidate
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/goal-negative-upstream
+          git -C /tmp/goal-negative-upstream checkout --detach 7645b1e1fcacfe410c99141f1234381d995b325d
+          git -C /tmp/goal-negative-upstream worktree add --detach /tmp/goal-negative-source 7645b1e1fcacfe410c99141f1234381d995b325d
+          mkdir -p /tmp/goal-negative-evidence
+          for arm in baseline candidate; do
+            if [ "$arm" = baseline ]; then src=/tmp/goal-negative-upstream; else src=/tmp/goal-negative-source; fi
+            python3 experiments/arena_soko_sparse_patch_v1.py "$src"
+            python3 experiments/arena_soko_growth_patch_v1.py "$src"
+          done
+          python3 experiments/arena_soko_expected_pi_slice_patch_v1.py /tmp/goal-negative-source
+          git -C /tmp/goal-negative-source diff --check
+      - name: Build source-matched binaries and independently test source
+        run: |
+          set -euo pipefail
+          for arm in baseline candidate; do
+            if [ "$arm" = baseline ]; then src=/tmp/goal-negative-upstream; else src=/tmp/goal-negative-source; fi
+            CARGO_TARGET_DIR="/tmp/goal-negative-build-$arm" RUSTFLAGS='-C target-cpu=x86-64' cargo build --release --locked --manifest-path "$src/Cargo.toml"
+            cp "/tmp/goal-negative-build-$arm/release/sokonanoda" "/tmp/goal-negative-$arm.bin"
+          done
+          CARGO_TARGET_DIR=/tmp/goal-negative-build-candidate RUSTFLAGS='-C target-cpu=x86-64' cargo test --release --locked --manifest-path /tmp/goal-negative-source/Cargo.toml
+          sha256sum /tmp/goal-negative-{baseline,candidate}.bin | tee /tmp/goal-negative-evidence/binaries.sha256
+      - name: Freeze exact original Arena valid exports for anti-forgery mutations
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/goal-negative-zip /tmp/goal-negative-tests
+          gh api 'repos/leanprover/lean-kernel-arena/actions/artifacts/11505862349/zip' > /tmp/goal-negative.zip
+          unzip -q /tmp/goal-negative.zip -d /tmp/goal-negative-zip
+          tar --no-same-owner -xzf /tmp/goal-negative-zip/lean-arena-tests.tar.gz -C /tmp/goal-negative-tests
+      - name: Reject exact wrong-domain and dependent-body mutants under original/fast/shadow checkers
+        run: |
+          set -euo pipefail
+          python3 experiments/arena_goal_pi_adversarial_v1.py /tmp/goal-negative-tests /tmp/goal-negative-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: goal-pi-adversarial-${{ github.sha }}
+          path: /tmp/goal-negative-evidence/
+          if-no-files-found: warn
