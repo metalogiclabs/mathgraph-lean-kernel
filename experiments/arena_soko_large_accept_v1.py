@@ -9,6 +9,8 @@ import hashlib,json,os,pathlib,subprocess,sys,time
 
 root=pathlib.Path(sys.argv[1])
 out=pathlib.Path(sys.argv[2]);out.mkdir(parents=True,exist_ok=True)
+single=(sys.argv[4] if len(sys.argv)==5 and sys.argv[3]=='--single' else None)
+assert len(sys.argv)==3 or (single is not None),sys.argv
 # Official lean-kernel-arena@b83254de test-stats artifact #11506336524.
 # Excludes already-qualified complete Mathlib and 125 small good cases.
 CASES={
@@ -37,8 +39,13 @@ def save(rows):
        "experiment":os.environ.get("GITHUB_SHA"),"rows":rows,
        "complete_large_positive_qualifier":len(rows)==len(CASES),
        "official_rank_qualified":False},indent=2,sort_keys=True)+"\n")
-rows=[]
-for name,(expected_hash,expected_bytes) in CASES.items():
+evidence=out/"large-positive.json"
+rows=json.loads(evidence.read_text())["rows"] if evidence.is_file() else []
+selection=[single] if single is not None else list(CASES)
+assert all(name in CASES for name in selection),selection
+for name in selection:
+    assert name not in {r["case"] for r in rows},("DUPLICATE_CASE",name)
+    expected_hash,expected_bytes=CASES[name]
     path=root/(name+".ndjson")
     assert path.is_file(),("MISSING_EXACT_EXPORT",name,path)
     assert path.stat().st_size==expected_bytes,("SIZE_MISMATCH",name,path.stat().st_size,expected_bytes)
@@ -58,8 +65,11 @@ for name,(expected_hash,expected_bytes) in CASES.items():
     print("ARENA_PINNED_LARGE_POSITIVE="+json.dumps(row),flush=True)
     # Explicitly reclaim multi-gigabyte export space before next test.
     path.unlink()
-assert len(rows)==8
-print("ARENA_LARGE_POSITIVE_SUMMARY="+json.dumps({
-    "passed":len(rows),"expected":8,
-    "all_sparse_accept":True,"all_compound_accept":True,
-    "same_official_sha256":True,"official_rank_qualified":False}),flush=True)
+assert len(rows)<=8
+if len(rows)==8:
+    print("ARENA_LARGE_POSITIVE_SUMMARY="+json.dumps({
+      "passed":len(rows),"expected":8,
+      "all_sparse_accept":True,"all_compound_accept":True,
+      "same_official_sha256":True,"official_rank_qualified":False}),flush=True)
+else:
+    print("ARENA_LARGE_POSITIVE_PROGRESS="+json.dumps({"passed":len(rows),"expected":8}),flush=True)
