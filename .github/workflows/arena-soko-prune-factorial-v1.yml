@@ -1,0 +1,71 @@
+name: Source-pinned sparse-reset by pruning-table-size factorial
+on:
+  push:
+    branches: [arena-soko-prune-factorial-v1]
+    paths:
+      - 'experiments/arena_soko_prune_factorial_v1.py'
+      - 'experiments/arena_soko_prune_wide_patch_v1.py'
+      - '.github/workflows/arena-soko-prune-factorial-v1.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: arena-soko-prune-factorial-v1
+  cancel-in-progress: true
+jobs:
+  factorial:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install Callgrind deterministic guest-Ir comparator
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -qq -y valgrind
+      - name: Build exact same source with 2x2 patches, one baseline
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/soko-prune-factorial-base
+          git -C /tmp/soko-prune-factorial-base checkout --detach 7645b1e1fcacfe410c99141f1234381d995b325d
+          for arm in baseline sparse wide wide_sparse; do
+            if [ "$arm" != baseline ]; then
+              git -C /tmp/soko-prune-factorial-base worktree add --detach "/tmp/soko-prune-factorial-$arm" 7645b1e1fcacfe410c99141f1234381d995b325d
+            fi
+            case "$arm" in
+              baseline) SOURCE=/tmp/soko-prune-factorial-base ;;
+              *) SOURCE="/tmp/soko-prune-factorial-$arm" ;;
+            esac
+            if [[ "$arm" == sparse || "$arm" == wide_sparse ]]; then
+              python3 experiments/arena_soko_sparse_patch_v1.py "$SOURCE"
+            fi
+            if [[ "$arm" == wide || "$arm" == wide_sparse ]]; then
+              python3 experiments/arena_soko_prune_wide_patch_v1.py "$SOURCE"
+            fi
+            CARGO_TARGET_DIR="/tmp/soko-prune-factorial-target-$arm" RUSTFLAGS="-C target-cpu=x86-64" \
+              cargo build --release --locked --manifest-path "$SOURCE/Cargo.toml"
+            cp "/tmp/soko-prune-factorial-target-$arm/release/sokonanoda" "/tmp/soko-prune-factorial-$arm.bin"
+          done
+          mkdir -p /tmp/prune-factorial-evidence
+          sha256sum /tmp/soko-prune-factorial-*.bin | tee /tmp/prune-factorial-evidence/binaries.sha256
+      - name: Recover immutable Arena portable196 positive and negative corpus
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/prune-factorial-zip /tmp/prune-factorial-tests
+          gh api "repos/leanprover/lean-kernel-arena/actions/artifacts/11505862349/zip" >/tmp/prune-factorial.zip
+          unzip -q /tmp/prune-factorial.zip -d /tmp/prune-factorial-zip
+          tar --no-same-owner -xzf /tmp/prune-factorial-zip/lean-arena-tests.tar.gz -C /tmp/prune-factorial-tests
+      - name: Exact portable196 parity and five-case causal Callgrind interaction
+        run: |
+          set -euo pipefail
+          python3 experiments/arena_soko_prune_factorial_v1.py /tmp/prune-factorial-tests /tmp/prune-factorial-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pruning-cache-factorial-${{ github.sha }}
+          path: /tmp/prune-factorial-evidence/
+          if-no-files-found: warn
