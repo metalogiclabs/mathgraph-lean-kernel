@@ -1,0 +1,81 @@
+name: Full Mathlib source-pinned guest-instruction A/B
+on:
+  push:
+    branches: [arena-soko-mathlib-instruction-proxy-v1]
+    paths:
+      - 'experiments/arena_soko_mathlib_guest_ir_v1.py'
+      - '.github/workflows/arena-soko-mathlib-guest-ir-v1.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: arena-soko-mathlib-instruction-proxy-v1
+  cancel-in-progress: true
+jobs:
+  full-proxy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+      - name: Install deterministic guest instruction meter
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq valgrind
+      - name: Pin exact Lean Arena and two checker source trees
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/ir-arena
+          git -C /tmp/ir-arena checkout --detach b83254de5146ef34147ab82a48edbe1856b0edcc
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/ir-soko-source
+          git -C /tmp/ir-soko-source checkout --detach 7645b1e1fcacfe410c99141f1234381d995b325d
+          git -C /tmp/ir-soko-source worktree add --detach /tmp/ir-compound-source 7645b1e1fcacfe410c99141f1234381d995b325d
+          python3 experiments/arena_soko_sparse_patch_v1.py /tmp/ir-compound-source
+          python3 experiments/arena_soko_growth_patch_v1.py /tmp/ir-compound-source
+          git -C /tmp/ir-compound-source diff --check
+      - name: Build exact original complete Mathlib and PGO training input
+        run: |
+          set -euo pipefail
+          cd /tmp/ir-arena
+          nix develop -c ./lka.py build-test mathlib
+          mkdir -p /tmp/ir-tar /tmp/ir-training /tmp/ir-evidence
+          gh api "repos/leanprover/lean-kernel-arena/actions/artifacts/11505862349/zip" >/tmp/ir-tests.zip
+          unzip -q /tmp/ir-tests.zip -d /tmp/ir-tar
+          tar --no-same-owner -xzf /tmp/ir-tar/lean-arena-tests.tar.gz -C /tmp/ir-training
+          test -s /tmp/ir-training/good/init-prelude.ndjson
+      - name: Build both binaries with identical portable ISA and official PGO training
+        run: |
+          set -euo pipefail
+          HOST=$(rustc -vV | awk '/^host:/ {print $2}')
+          LLVM_PROFDATA="$(rustc --print sysroot)/lib/rustlib/$HOST/bin/llvm-profdata"
+          test -x "$LLVM_PROFDATA"
+          for arm in baseline compound; do
+            if [ "$arm" = baseline ]; then SRC=/tmp/ir-soko-source; else SRC=/tmp/ir-compound-source; fi
+            mkdir -p "/tmp/ir-prof-$arm"
+            CARGO_TARGET_DIR="/tmp/ir-target-$arm" RUSTFLAGS="-C target-cpu=x86-64 -Cprofile-generate=/tmp/ir-prof-$arm" \
+              cargo build --release --locked --manifest-path "$SRC/Cargo.toml"
+            "/tmp/ir-target-$arm/release/sokonanoda" --stdin --nat-extension --string-extension \
+              --axiom-allow-all --threads 4 </tmp/ir-training/good/init-prelude.ndjson >/dev/null
+            "$LLVM_PROFDATA" merge -o "/tmp/ir-prof-$arm/merged.profdata" "/tmp/ir-prof-$arm"
+            CARGO_TARGET_DIR="/tmp/ir-target-$arm" RUSTFLAGS="-C target-cpu=x86-64 -Cprofile-use=/tmp/ir-prof-$arm/merged.profdata" \
+              cargo build --release --locked --manifest-path "$SRC/Cargo.toml"
+            cp "/tmp/ir-target-$arm/release/sokonanoda" "/tmp/ir-mathlib-$arm"
+          done
+          sha256sum /tmp/ir-mathlib-{baseline,compound} | tee /tmp/ir-evidence/binaries.sha256
+      - name: Measure and compare complete Mathlib Callgrind guest instructions
+        run: |
+          set -euo pipefail
+          python3 experiments/arena_soko_mathlib_guest_ir_v1.py /tmp/ir-arena/_build/tests/mathlib.ndjson /tmp/ir-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: complete-mathlib-guest-ir-${{ github.sha }}
+          path: /tmp/ir-evidence/
+          if-no-files-found: warn
