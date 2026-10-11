@@ -2,10 +2,10 @@ name: Soko PtrMap epoch reset versus compound baseline
 
 on:
   push:
-    branches: [arena-soko-epoch-growth-v1]
+    branches: [arena-soko-ptrmap-epoch-v1]
     paths:
       - "experiments/arena_soko_ptrmap_epoch_*.py"
-      - ".github/workflows/arena-soko-epoch-growth-v1.yml"
+      - ".github/workflows/arena-soko-ptrmap-epoch-v1.yml"
   workflow_dispatch:
 
 permissions:
