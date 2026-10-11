@@ -1,16 +1,16 @@
 name: Arena recursive dependent Pi checking source-exact shadow A/B
 on:
   push:
-    branches: [arena-goal-chain-chain-v1]
+    branches: [arena-goal-pi-chain-v1]
     paths:
       - 'experiments/arena_soko_expected_pi_chain_patch_v1.py'
       - 'experiments/arena_soko_expected_pi_chain_duel_v1.py'
-      - '.github/workflows/arena-goal-chain-chain-v1.yml'
+      - '.github/workflows/arena-goal-pi-chain-v1.yml'
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: arena-goal-chain-chain-v1
+  group: arena-goal-pi-chain-v1
   cancel-in-progress: true
 jobs:
   protected-pi-ab:
