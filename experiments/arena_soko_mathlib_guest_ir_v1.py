@@ -11,17 +11,17 @@ h=hashlib.sha256()
 with data.open("rb") as f:
     while b:=f.read(8*1024*1024):h.update(b)
 assert h.hexdigest()==expected_sha,("MATHLIB_HASH_CHANGED",h.hexdigest())
-opts=["--nat-extension","--string-extension","--axiom-allow-all","--threads","4"]
+opts=["--stdin","--nat-extension","--string-extension","--axiom-allow-all","--threads","4"]
 results={}
 for arm in ("baseline","compound"):
     binary=f"/tmp/ir-mathlib-{arm}"
     outfile=out/f"{arm}.callgrind"
     cmd=["valgrind","--tool=callgrind","--cache-sim=no","--branch-sim=no",
-         "--callgrind-out-file="+str(outfile),binary,str(data),*opts]
+         "--callgrind-out-file="+str(outfile),binary,*opts]
     start=time.monotonic()
     stderr=out/f"{arm}.stderr"
-    with stderr.open("wb") as serr:
-        p=subprocess.run(["timeout","6800s",*cmd],stdout=subprocess.DEVNULL,
+    with data.open("rb") as fin, stderr.open("wb") as serr:
+        p=subprocess.run(["timeout","6800s",*cmd],stdin=fin,stdout=subprocess.DEVNULL,
                          stderr=serr,timeout=6950)
     assert p.returncode==0,(arm,"FULL_MATHLIB_NOT_ACCEPTED",p.returncode,
                             stderr.read_bytes()[-1200:].decode(errors="replace"))
@@ -43,6 +43,7 @@ report={"source":"intgrah/sokonanoda@7645b1e1fcacfe410c99141f1234381d995b325d",
         "arena":"leanprover/lean-kernel-arena@b83254de5146ef34147ab82a48edbe1856b0edcc",
         "export_sha256":expected_sha,"experiment":os.environ.get("GITHUB_SHA"),
         "metric":"Full-process Valgrind Callgrind guest Ir NOT hardware instructions",
+        "input_mode":"official four-worker stdin invocation",
         "records":results,"compound_over_baseline_guest_ir":ratio,
         "instruction_saving_fraction":1-ratio,
         "official_rank_qualified":False}
