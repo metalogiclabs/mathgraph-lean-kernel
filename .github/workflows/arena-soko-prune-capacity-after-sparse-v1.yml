@@ -1,0 +1,70 @@
+name: Soko sparse prune-capacity factorial (protected instructions)
+on:
+  push:
+    branches: [arena-soko-prune-capacity-after-sparse-v1]
+    paths:
+      - 'experiments/arena_soko_prune_sparse_capacity_patch_v1.py'
+      - 'experiments/arena_soko_prune_sparse_capacity_duel_v1.py'
+      - '.github/workflows/arena-soko-prune-capacity-after-sparse-v1.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: arena-soko-prune-capacity-after-sparse-v1
+  cancel-in-progress: true
+jobs:
+  protected-factorial:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install independent guest-instruction reference
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq valgrind
+      - name: Build and Rust-test three source-pinned parent and memo capacities
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/soko-prune-sparse-base
+          git -C /tmp/soko-prune-sparse-base checkout --detach 7645b1e1fcacfe410c99141f1234381d995b325d
+          for arm in baseline prune4096 prune16384; do
+            if [ "$arm" != baseline ]; then
+              git -C /tmp/soko-prune-sparse-base worktree add --detach "/tmp/soko-prune-sparse-source-$arm" 7645b1e1fcacfe410c99141f1234381d995b325d
+            fi
+            if [ "$arm" = baseline ]; then src=/tmp/soko-prune-sparse-base; else src="/tmp/soko-prune-sparse-source-$arm"; fi
+            python3 experiments/arena_soko_sparse_patch_v1.py "$src"
+            python3 experiments/arena_soko_growth_patch_v1.py "$src"
+            if [ "$arm" = prune4096 ]; then python3 experiments/arena_soko_prune_sparse_capacity_patch_v1.py "$src" 12; fi
+            if [ "$arm" = prune16384 ]; then python3 experiments/arena_soko_prune_sparse_capacity_patch_v1.py "$src" 14; fi
+            git -C "$src" diff --check
+            CARGO_TARGET_DIR="/tmp/soko-prune-sparse-target-$arm" RUSTFLAGS='-C target-cpu=x86-64' cargo build --release --locked --manifest-path "$src/Cargo.toml"
+            cp "/tmp/soko-prune-sparse-target-$arm/release/sokonanoda" "/tmp/soko-prune-sparse-$arm.bin"
+            if [ "$arm" != baseline ]; then
+              CARGO_TARGET_DIR="/tmp/soko-prune-sparse-target-$arm" RUSTFLAGS='-C target-cpu=x86-64' cargo test --release --locked --manifest-path "$src/Cargo.toml"
+            fi
+          done
+          mkdir -p /tmp/prune-sparse-evidence
+          sha256sum /tmp/soko-prune-sparse-{baseline,prune4096,prune16384}.bin | tee /tmp/prune-sparse-evidence/binaries.sha256
+          git -C /tmp/soko-prune-sparse-base diff -- src/checker/cache.rs src/checker/eval/environment.rs src/checker/ptrmap.rs > /tmp/prune-sparse-evidence/common-parent.patch
+      - name: Recover protected official 196 positives and negatives
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/prune-sparse-artifact /tmp/prune-sparse-tests
+          gh api 'repos/leanprover/lean-kernel-arena/actions/artifacts/11505862349/zip' > /tmp/prune-sparse.zip
+          unzip -q /tmp/prune-sparse.zip -d /tmp/prune-sparse-artifact
+          tar --no-same-owner -xzf /tmp/prune-sparse-artifact/lean-arena-tests.tar.gz -C /tmp/prune-sparse-tests
+      - name: Protected 196 verdicts and five-case causal Callgrind and memory factorial
+        run: |
+          set -euo pipefail
+          python3 experiments/arena_soko_prune_sparse_capacity_duel_v1.py /tmp/prune-sparse-tests /tmp/prune-sparse-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: soko-prune-sparse-capacity-${{ github.sha }}
+          path: /tmp/prune-sparse-evidence/
+          if-no-files-found: warn
