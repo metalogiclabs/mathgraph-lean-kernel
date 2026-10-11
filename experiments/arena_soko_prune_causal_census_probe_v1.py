@@ -66,6 +66,7 @@ def parse_census(stderr: bytes):
         else:
             nums[key] = sum(row[key] for row in parts)
     assert nums["cold"] == sum(nums["cold_mask_pop"]), nums
+    assert nums["source_cell_conflicts"] == (nums["source_cache_supermask"] + nums["source_cache_submask"] + nums["source_cache_incomparable"]), nums
     assert nums["requests"] == sum(nums[k] for k in
         ("mask_zero", "from_nil", "frame_covers", "source_cell_hits",
          "direct_memo_hits", "cold")), nums
@@ -90,6 +91,8 @@ for name in names:
             "cold_far_fraction": c["far_cold"] / c["cold"],
             "cold_1near_fraction": c["cold_mask_pop"][1] / c["cold"],
             "cold_2near_fraction": c["cold_mask_pop"][2] / c["cold"],
+            "supermask_fraction_of_cell_conflicts": c["source_cache_supermask"] / max(1, c["source_cell_conflicts"]),
+            "submask_fraction_of_cell_conflicts": c["source_cache_submask"] / max(1, c["source_cell_conflicts"]),
             "average_cons_nodes_per_cold": c["nodes_cons"] / c["cold"],
             "average_frame_nodes_per_cold": c["nodes_frame"] / c["cold"],
             "average_skipped_cons_per_cold": c["skipped_cons"] / c["cold"],
