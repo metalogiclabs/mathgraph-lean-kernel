@@ -1,0 +1,63 @@
+name: Upstream reporter exact Mathlib declaration hotspot atlas
+on:
+  push:
+    branches: [arena-soko-declaration-hotspot-v1]
+    paths:
+      - 'experiments/arena_soko_declaration_hotspot_v1.py'
+      - '.github/workflows/arena-soko-declaration-hotspot-v1.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  diagnostic:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+      - name: Independently pin Arena and upstream reporting source
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/decl-arena
+          git -C /tmp/decl-arena checkout --detach b83254de5146ef34147ab82a48edbe1856b0edcc
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/decl-upstream
+          git -C /tmp/decl-upstream checkout --detach e648a9f7dfafd0fae67ba087007fcd8d6157a365
+      - name: Build exact current complete Mathlib and immutable PGO input
+        run: |
+          set -euo pipefail
+          (cd /tmp/decl-arena && nix develop -c ./lka.py build-test mathlib)
+          mkdir -p /tmp/decl-train-zip /tmp/decl-train /tmp/decl-evidence
+          gh api "repos/leanprover/lean-kernel-arena/actions/artifacts/11505862349/zip" > /tmp/decl-train.zip
+          unzip -q /tmp/decl-train.zip -d /tmp/decl-train-zip
+          tar --no-same-owner -xzf /tmp/decl-train-zip/lean-arena-tests.tar.gz -C /tmp/decl-train
+      - name: Build upstream reporting checker with official-style PGO
+        run: |
+          set -euo pipefail
+          HOST=$(rustc -vV | awk '/^host:/ {print $2}')
+          LLVM_PROFDATA="$(rustc --print sysroot)/lib/rustlib/$HOST/bin/llvm-profdata"
+          mkdir -p /tmp/decl-pgo
+          CARGO_TARGET_DIR=/tmp/decl-target RUSTFLAGS="-C target-cpu=native -Cprofile-generate=/tmp/decl-pgo" \
+            cargo build --release --locked --manifest-path /tmp/decl-upstream/Cargo.toml
+          /tmp/decl-target/release/sokonanoda --stdin --nat-extension --string-extension --axiom-allow-all --threads 4 --quiet \
+            </tmp/decl-train/good/init-prelude.ndjson >/dev/null
+          "$LLVM_PROFDATA" merge -o /tmp/decl-pgo/merged.profdata /tmp/decl-pgo
+          CARGO_TARGET_DIR=/tmp/decl-target RUSTFLAGS="-C target-cpu=native -Cprofile-use=/tmp/decl-pgo/merged.profdata" \
+            cargo build --release --locked --manifest-path /tmp/decl-upstream/Cargo.toml
+          cp /tmp/decl-target/release/sokonanoda /tmp/soko-decl-hotspot
+          sha256sum /tmp/soko-decl-hotspot | tee /tmp/decl-evidence/binary.sha256
+      - name: Check full Mathlib and publish declaration-level cost concentration
+        run: |
+          set -euo pipefail
+          python3 experiments/arena_soko_declaration_hotspot_v1.py /tmp/decl-arena/_build/tests/mathlib.ndjson /tmp/decl-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: declaration-atlas-${{ github.sha }}
+          path: /tmp/decl-evidence/
+          if-no-files-found: warn
