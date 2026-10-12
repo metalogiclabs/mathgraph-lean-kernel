@@ -103,10 +103,23 @@ impl<'p> ExportFile<'p> {
         }
         match d {
             Constructor(ctor_data) => assert!(self.declars.get(&ctor_data.inductive_name).is_some()),
-            Recursor(recursor_data) =>
+            Recursor(recursor_data) => {
+                let recursor_idx = self.declars.get_index_of(&recursor_data.info.name).unwrap();
+                let first = recursor_data.all_inductives.first().unwrap_or_else(|| {
+                    panic!("recursors must be derived from an associated inductive declaration")
+                });
+                assert!(matches!(self.declars.get(first), Some(Declar::Inductive(..))),
+                    "recursor is not associated with an inductive declaration");
                 for ind_name in recursor_data.all_inductives.iter() {
-                    assert!(self.declars.get(ind_name).is_some())
-                },
+                    let ind_idx = self.declars.get_index_of(ind_name).unwrap_or_else(|| {
+                        panic!("recursor references an inductive declaration that does not exist")
+                    });
+                    assert!(matches!(self.declars.get(ind_name), Some(Declar::Inductive(..))),
+                        "recursor references a non-inductive declaration");
+                    assert!(ind_idx < recursor_idx,
+                        "inductive declarations must precede their derived recursors");
+                }
+            },
             _ => {}
         }
     }
