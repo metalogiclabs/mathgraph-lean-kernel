@@ -1,114 +1,93 @@
 from pathlib import Path
+import subprocess
 import sys
 
-root = Path(sys.argv[1])
+cand = Path(sys.argv[1])
+base = Path('/tmp/base-src')
+repo = Path(__file__).resolve().parent.parent
 
-# Phase-change candidate: preserve key semantics while replacing repeated
-# env.lookup(i) walks (quadratic on Cons chains) with one linear traversal.
+# Build the admitted V2 baseline in both arms: soundness repair + beta fusion
+# + eval-side projection fusion. The active separator workflow supplies exact V1
+# worktrees at /tmp/base-src and /tmp/linear-src.
+for root in (base, cand):
+    subprocess.run([sys.executable, str(repo / 'scripts/apply_extra_rec_soundness.py'), str(root)], check=True)
+    subprocess.run([sys.executable, str(repo / 'scripts/apply_infer_beta_fusion.py'), str(root)], check=True)
 
-vp = root / "src/value.rs"
-vs = vp.read_text()
-old_value = '''fn env_slots_key(env: E<'_>, count: u16) -> (u64, bool) {
-    let mut d = lsub_key(env.lsub());
-    let mut closed = true;
-    for i in 0..count {
-        if let Some(v) = env.lookup(i) {
-            d = kmix(kmix(d, u64::from(i)), v.digest());
-            closed &= v.is_closed();
+    p = root / 'src/eval.rs'
+    s = p.read_text()
+    old_lam = '''            Expr::Lambda { binder_name, binder_style, binder_type, body, .. } =>
+                {
+                let ce = self.key_env(env, e);
+                value::mk_lam(self.arena, binder_name, binder_style, binder_type, Closure::mk_eval(ce, body))
+            }'''
+    new_lam = '''            Expr::Lambda { binder_name, binder_style, binder_type, body, .. } =>
+                value::mk_lam(self.arena, binder_name, binder_style, binder_type, Closure::mk_eval(env, body)),'''
+    old_pi = '''                {
+                    let ce = self.key_env(env, e);
+                    value::mk_pi(self.arena, binder_name, binder_style, dom, Closure::mk_eval(ce, body))
+                }'''
+    new_pi = '''                value::mk_pi(self.arena, binder_name, binder_style, dom, Closure::mk_eval(env, body))'''
+    assert old_lam in s, 'eval lambda producer shape changed'
+    assert old_pi in s, 'eval pi producer shape changed'
+    p.write_text(s.replace(old_lam, new_lam, 1).replace(old_pi, new_pi, 1))
+
+# Candidate only: preserve an already-minimal framed environment across a binder
+# extension instead of rebuilding a Cons node that key_env/prune_env must project
+# again downstream. This directly targets the measured cold pattern: ~0.96 Cons
+# steps per cold prune followed by a tiny frame (~2.76 selected values).
+p = cand / 'src/value.rs'
+s = p.read_text()
+old = '''pub fn env_extend<'a>(arena: &'a Bump, parent: E<'a>, v: V<'a>) -> E<'a> {
+    let v_hash = v as *const Value<'a> as usize as u64;
+    let parent_hash = parent.get_hash();
+    let hash = parent_hash.wrapping_mul(0x9E3779B97F4A7C15).wrapping_add(v_hash);
+    arena.alloc(Env::Cons {
+        v,
+        parent,
+        lsub: parent.lsub(),
+        hash,
+        len: parent.len() + 1,
+        prune: Cell::new((0, None)),
+    })
+}'''
+new = '''pub fn env_extend<'a>(arena: &'a Bump, parent: E<'a>, v: V<'a>) -> E<'a> {
+    // Preserve compact captures directly when extending a small framed env.
+    // Index 0 is the new value; all parent coordinates shift by one.
+    if let Env::Framed { mask, slots, lsub, len, .. } = parent {
+        if *len < 63 && slots.len() < 8 {
+            let new_mask = (*mask << 1) | 1;
+            let mut buf = smallvec::SmallVec::<[V<'a>; 8]>::new();
+            buf.push(v);
+            buf.extend_from_slice(*slots);
+            let mut slots_hash = (*lsub).map_or(0, |l| l as *const LevelSub<'a> as usize as u64);
+            for sv in &buf {
+                slots_hash = slots_hash
+                    .wrapping_mul(0x9E3779B97F4A7C15)
+                    .wrapping_add(*sv as *const Value<'a> as usize as u64);
+            }
+            let hash = new_mask.wrapping_mul(0x9E3779B97F4A7C15).wrapping_add(slots_hash);
+            return arena.alloc(Env::Framed {
+                mask: new_mask,
+                slots: arena.alloc_slice_copy(&buf),
+                lsub: *lsub,
+                hash,
+                len: *len + 1,
+                prune: Cell::new((0, None)),
+            });
         }
     }
-    (d, closed)
+    let v_hash = v as *const Value<'a> as usize as u64;
+    let parent_hash = parent.get_hash();
+    let hash = parent_hash.wrapping_mul(0x9E3779B97F4A7C15).wrapping_add(v_hash);
+    arena.alloc(Env::Cons {
+        v,
+        parent,
+        lsub: parent.lsub(),
+        hash,
+        len: parent.len() + 1,
+        prune: Cell::new((0, None)),
+    })
 }'''
-new_value = '''fn env_slots_key(env: E<'_>, count: u16) -> (u64, bool) {
-    let mut d = lsub_key(env.lsub());
-    let mut closed = true;
-    let mut cur = env;
-    let mut base = 0u16;
-    while base < count {
-        match cur {
-            Env::Nil { .. } => break,
-            Env::Cons { v, parent, .. } => {
-                d = kmix(kmix(d, u64::from(base)), v.digest());
-                closed &= v.is_closed();
-                base += 1;
-                cur = parent;
-            }
-            Env::Framed { mask, slots, .. } => {
-                let rem = u32::from(count - base);
-                let bound = if rem >= 64 { u64::MAX } else { (1u64 << rem) - 1 };
-                let mut selected = *mask & bound;
-                while selected != 0 {
-                    let rel = selected.trailing_zeros();
-                    selected &= selected - 1;
-                    let below = *mask & if rel == 0 { 0 } else { (1u64 << rel) - 1 };
-                    let v = slots[below.count_ones() as usize];
-                    let i = base + rel as u16;
-                    d = kmix(kmix(d, u64::from(i)), v.digest());
-                    closed &= v.is_closed();
-                }
-                break;
-            }
-        }
-    }
-    (d, closed)
-}'''
-assert old_value in vs, "value.rs env_slots_key shape changed"
-vp.write_text(vs.replace(old_value, new_value, 1))
-
-ep = root / "src/eval.rs"
-es = ep.read_text()
-old_eval = '''    fn env_key(&mut self, acc: u128, closed: bool, env: E<'t>, depth: u32, count: u16) -> Result<(u128, bool), u8> {
-        let mut acc = acc;
-        let mut closed = closed;
-        if let Some(ls) = env.lsub() {
-            acc = mix(mix(acc, u128::from(ls.ks.get_hash())), u128::from(ls.vs.get_hash()));
-        }
-        for i in 0..count {
-            if let Some(slot) = env.lookup(i) {
-                let (k, c) = self.global_key(slot, depth)?;
-                acc = mix(mix(acc, u128::from(i)), k);
-                closed &= c;
-            }
-        }
-        Ok((acc, closed))
-    }'''
-new_eval = '''    fn env_key(&mut self, acc: u128, closed: bool, env: E<'t>, depth: u32, count: u16) -> Result<(u128, bool), u8> {
-        let mut acc = acc;
-        let mut closed = closed;
-        if let Some(ls) = env.lsub() {
-            acc = mix(mix(acc, u128::from(ls.ks.get_hash())), u128::from(ls.vs.get_hash()));
-        }
-        let mut cur = env;
-        let mut base = 0u16;
-        while base < count {
-            match cur {
-                value::Env::Nil { .. } => break,
-                value::Env::Cons { v, parent, .. } => {
-                    let (k, c) = self.global_key(*v, depth)?;
-                    acc = mix(mix(acc, u128::from(base)), k);
-                    closed &= c;
-                    base += 1;
-                    cur = parent;
-                }
-                value::Env::Framed { mask, slots, .. } => {
-                    let rem = u32::from(count - base);
-                    let bound = if rem >= 64 { u64::MAX } else { (1u64 << rem) - 1 };
-                    let mut selected = *mask & bound;
-                    while selected != 0 {
-                        let rel = selected.trailing_zeros();
-                        selected &= selected - 1;
-                        let below = *mask & if rel == 0 { 0 } else { (1u64 << rel) - 1 };
-                        let slot = slots[below.count_ones() as usize];
-                        let i = base + rel as u16;
-                        let (k, c) = self.global_key(slot, depth)?;
-                        acc = mix(mix(acc, u128::from(i)), k);
-                        closed &= c;
-                    }
-                    break;
-                }
-            }
-        }
-        Ok((acc, closed))
-    }'''
-assert old_eval in es, "eval.rs env_key shape changed"
-ep.write_text(es.replace(old_eval, new_eval, 1))
+assert old in s, 'env_extend shape changed'
+p.write_text(s.replace(old, new, 1))
+print('applied V2 baseline to both arms + direct minimal framed capture to candidate')
