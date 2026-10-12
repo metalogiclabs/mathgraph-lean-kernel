@@ -1,0 +1,148 @@
+name: Carried env identity full gate
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'experiments/carried-env-identity-full.trigger'
+      - 'scripts/apply_carried_env_identity.py'
+      - '.github/workflows/carried-env-identity-full-gate.yml'
+  workflow_dispatch:
+
+jobs:
+  full-gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build exact V2 baseline and carried-identity candidate
+        run: |
+          set -euxo pipefail
+          V2=3d7585c21242f29fdaa48ae9a16e16c6afe42238
+          git worktree add /tmp/base "$V2"
+          git worktree add /tmp/cand "$V2"
+          python3 scripts/apply_carried_env_identity.py /tmp/cand
+          git -C /tmp/cand diff --check
+          git -C /tmp/cand diff > /tmp/carried-env.patch
+          for arm in base cand; do
+            cd /tmp/$arm
+            cargo test --release --locked
+            CARGO_TARGET_DIR=/tmp/${arm}-target cargo build --release --locked
+            cp /tmp/${arm}-target/release/sokonanoda /tmp/${arm}-checker-unpgo
+          done
+          cat >/tmp/checker.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}
+          EOF
+
+      - name: Generate full Arena corpus
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test
+
+      - name: Full semantic equivalence against scored V2
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY' | tee /tmp/semantic-summary.txt
+          from pathlib import Path
+          import subprocess, sys, time
+          root=Path('/tmp/arena/_build/tests')
+          files=sorted(root.rglob('*.ndjson'))
+          print('FILES',len(files))
+          mismatches=[]
+          accepted=declined=0
+          for i,p in enumerate(files,1):
+              rel=p.relative_to(root)
+              rs=[]
+              for arm in ('base','cand'):
+                  cmd=[f'/tmp/{arm}-checker-unpgo','/tmp/checker.json']
+                  try:
+                      with p.open('rb') as f:
+                          q=subprocess.run(cmd,stdin=f,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=900)
+                      rs.append(q.returncode)
+                  except subprocess.TimeoutExpired:
+                      rs.append(124)
+              if (rs[0]==0)!=(rs[1]==0):
+                  mismatches.append((str(rel),*rs))
+                  print('MISMATCH',rel,rs,flush=True)
+              else:
+                  accepted += int(rs[0]==0)
+                  declined += int(rs[0]!=0)
+              if i%25==0 or i==len(files): print('PROGRESS',i,'/',len(files),flush=True)
+          print('ACCEPTED',accepted,'DECLINED',declined,'MISMATCHES',len(mismatches))
+          for x in mismatches: print('MISMATCH_DETAIL',*x)
+          if mismatches: sys.exit(1)
+          PY
+
+      - name: Build exact Arena-PGO binaries
+        run: |
+          set -euxo pipefail
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test init-prelude
+          PROFDATA=$(nix develop -c bash -lc 'command -v llvm-profdata')
+          test -x "$PROFDATA"
+          for arm in base cand; do
+            cd /tmp/$arm
+            rm -rf pgo /tmp/${arm}-pgo-target
+            CARGO_TARGET_DIR=/tmp/${arm}-pgo-target RUSTFLAGS="-C target-cpu=native -Cprofile-generate=$PWD/pgo" cargo build --release --locked
+            /tmp/${arm}-pgo-target/release/sokonanoda /tmp/checker.json < /tmp/arena/_build/tests/init-prelude.ndjson >/dev/null
+            "$PROFDATA" merge -o "$PWD/pgo/merged.profdata" "$PWD/pgo"
+            CARGO_TARGET_DIR=/tmp/${arm}-pgo-target RUSTFLAGS="-C target-cpu=native -Cprofile-use=$PWD/pgo/merged.profdata" cargo build --release --locked
+            cp /tmp/${arm}-pgo-target/release/sokonanoda /tmp/${arm}-checker
+          done
+
+      - name: Full Mathlib alternating wall-time A/B
+        run: |
+          set -euxo pipefail
+          file=/tmp/arena/_build/tests/mathlib.ndjson
+          printf 'rep,arm,seconds\n' >/tmp/mathlib-times.csv
+          for rep in 1 2 3 4 5; do
+            if [ $((rep % 2)) -eq 1 ]; then arms='base cand'; else arms='cand base'; fi
+            for arm in $arms; do
+              t0=$(python3 - <<'PY'
+          import time; print(time.perf_counter())
+          PY
+              )
+              timeout 900 /tmp/${arm}-checker /tmp/checker.json < "$file" >/dev/null
+              t1=$(python3 - <<'PY'
+          import time; print(time.perf_counter())
+          PY
+              )
+              python3 - "$rep" "$arm" "$t0" "$t1" >>/tmp/mathlib-times.csv <<'PY'
+          import sys
+          rep,arm,t0,t1=sys.argv[1:]
+          print(f'{rep},{arm},{float(t1)-float(t0):.6f}')
+          PY
+            done
+          done
+          python3 - <<'PY' | tee /tmp/perf-summary.txt
+          import csv, statistics
+          rows=list(csv.DictReader(open('/tmp/mathlib-times.csv')))
+          vals={a:[float(r['seconds']) for r in rows if r['arm']==a] for a in ('base','cand')}
+          for a in vals:
+              print(a,'runs=',','.join(f'{x:.3f}' for x in vals[a]),'median=',f'{statistics.median(vals[a]):.3f}')
+          b=statistics.median(vals['base']); c=statistics.median(vals['cand']); q=c/b
+          print('MATHLIB_RATIO',f'{q:.6f}')
+          print('DELTA_PERCENT',f'{(q-1)*100:+.3f}%')
+          if q <= .70: d='PHASE_CHANGE__PROMOTE_TO_ARENA_PMU_FULL_SCORE'
+          elif q <= .85: d='MASSIVE_GAIN__PROMOTE_TO_ARENA_PMU_FULL_SCORE'
+          elif q <= .95: d='REAL_GAIN__PROMOTE_AND_PROFILE_REMAINING_RESIDUAL'
+          elif q <= 1.02: d='CAPABILITY_VALID_BUT_PERF_FLAT__CENSUS_NEXT_RESIDUAL'
+          else: d='REGRESSION__REJECT_CARRIED_IDENTITY_FORM'
+          print('DECISION='+d)
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: carried-env-identity-full-gate
+          path: |
+            /tmp/carried-env.patch
+            /tmp/semantic-summary.txt
+            /tmp/mathlib-times.csv
+            /tmp/perf-summary.txt
