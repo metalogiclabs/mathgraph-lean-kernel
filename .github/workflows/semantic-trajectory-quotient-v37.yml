@@ -1,0 +1,29 @@
+name: Semantic trajectory quotient census v37
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'experiments/run_semantic_trajectory_quotient_census_v37.sh'
+  workflow_dispatch:
+
+jobs:
+  census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: cachix/install-nix-action@v31
+      - name: Execute v37 semantic trajectory quotient census
+        shell: bash
+        run: bash experiments/run_semantic_trajectory_quotient_census_v37.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: semantic-trajectory-quotient-v37
+          path: |
+            /tmp/v37-census.txt
+            /tmp/v37-decision.txt
+            /tmp/v37-base.err
+            /tmp/v37-census.err
