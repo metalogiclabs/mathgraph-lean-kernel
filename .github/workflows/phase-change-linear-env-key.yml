@@ -8,137 +8,102 @@ on:
 jobs:
   separator:
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
 
-      - name: Install Nix
-        uses: cachix/install-nix-action@v31
-
-      - name: Build exact V1 and candidate
+      - name: Build exact V1 and inference projection candidate
         run: |
           set -euxo pipefail
           V1=1e209dad266d59b4d43cdea189876bc6ea551339
-          git cat-file -e "$V1^{commit}"
-          git worktree add /tmp/v1 "$V1"
-          cp -a /tmp/v1 /tmp/base-src
-          cp -a /tmp/v1 /tmp/linear-src
-          python3 scripts/apply_linear_env_key.py /tmp/linear-src
-          for arm in base linear; do
-            cd /tmp/${arm}-src
+          git worktree add /tmp/base "$V1"
+          git worktree add /tmp/cand "$V1"
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/cand/src/infer.rs')
+          s=p.read_text()
+          old="""        let key = (self.key_env(env, e) as *const value::Env<'t> as usize, e);"""
+          new="""        let key_env = self.key_env(env, e);
+        let key = (key_env as *const value::Env<'t> as usize, e);"""
+          assert s.count(old) == 1
+          s=s.replace(old,new,1)
+          old2="""                let clo = Closure::mk_infer(self.key_env(env, e), ctx, body);"""
+          new2="""                let clo = Closure::mk_infer(key_env, ctx, body);"""
+          assert s.count(old2) == 1
+          s=s.replace(old2,new2,1)
+          p.write_text(s)
+          PY
+          for A in base cand; do
+            cd /tmp/$A
             cargo test --locked
-            RUSTFLAGS='-C target-cpu=native' cargo build --release --locked
-            cp target/release/sokonanoda /tmp/${arm}-checker
-            CARGO_TARGET_DIR=/tmp/${arm}-cg-target RUSTFLAGS='-C target-cpu=x86-64' cargo build --release --locked
-            cp /tmp/${arm}-cg-target/release/sokonanoda /tmp/${arm}-cg-checker
+            cargo build --release --locked
+            cp target/release/sokonanoda /tmp/$A-bin
           done
           cat >/tmp/checker.json <<'EOF'
           {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
           EOF
 
-      - name: Build compact deciding Arena exports
+      - name: Build focused Arena tests
         run: |
-          set -euxo pipefail
           git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
           cd /tmp/arena
-          cp tests/perf/beta-ladder.lean tests/perf/beta-ladder-8000.lean
-          sed -i 's/let n := 2000/let n := 8000/' tests/perf/beta-ladder-8000.lean
-          printf 'description: beta ladder linear env key N=8000\nleanfile: tests/perf/beta-ladder-8000.lean\nexport-decls: ["beta_ladder"]\noutcome: accept\ncompare-perf: true\n' > tests/perf/beta-ladder-8000.yaml
-          for t in perf/beta-ladder perf/beta-ladder-8000 perf/grind-ring-5 perf/app-lam; do
-            nix develop -c ./lka.py build-test "$t"
+          for T in perf/grind-ring-5 perf/app-lam perf/beta-ladder perf/let-ladder; do
+            nix develop -c ./lka.py build-test "$T"
           done
 
-      - name: Semantic equality smoke
+      - name: Semantic equality gate
         run: |
           set -euxo pipefail
           cd /tmp/arena
-          for file in \
-            _build/tests/perf/beta-ladder.ndjson \
-            _build/tests/perf/beta-ladder-8000.ndjson \
-            _build/tests/perf/grind-ring-5.ndjson \
-            _build/tests/perf/app-lam.ndjson; do
-            /tmp/base-checker /tmp/checker.json < "$file" >/tmp/base.out
-            /tmp/linear-checker /tmp/checker.json < "$file" >/tmp/linear.out
-            cmp /tmp/base.out /tmp/linear.out
+          for T in grind-ring-5 app-lam beta-ladder let-ladder; do
+            /tmp/base-bin /tmp/checker.json < _build/tests/perf/$T.ndjson > /tmp/base-$T.out 2>/tmp/base-$T.err
+            /tmp/cand-bin /tmp/checker.json < _build/tests/perf/$T.ndjson > /tmp/cand-$T.out 2>/tmp/cand-$T.err
+            cmp /tmp/base-$T.out /tmp/cand-$T.out
           done
 
-      - name: Callgrind first
+      - name: Callgrind instruction separator
         run: |
           set -euxo pipefail
-          sudo apt-get update
-          sudo apt-get install -y valgrind
-          printf 'test,arm,Ir\n' >/tmp/callgrind.csv
           cd /tmp/arena
-          profile () {
-            test="$1"; file="$2"; arm="$3"
-            out="/tmp/cg-${test}-${arm}.out"
-            timeout 900 valgrind --tool=callgrind --callgrind-out-file="$out" /tmp/${arm}-cg-checker /tmp/checker.json < "$file" >/dev/null 2>/dev/null
-            ir=$(awk '/^summary:/ {print $2}' "$out")
-            test -n "$ir"
-            printf '%s,%s,%s\n' "$test" "$arm" "$ir" >>/tmp/callgrind.csv
-          }
-          for arm in base linear; do
-            profile beta2000 _build/tests/perf/beta-ladder.ndjson "$arm"
-            profile beta8000 _build/tests/perf/beta-ladder-8000.ndjson "$arm"
-            profile app-lam _build/tests/perf/app-lam.ndjson "$arm"
-            profile grind _build/tests/perf/grind-ring-5.ndjson "$arm"
-          done
-
-      - name: Wall scaling
-        run: |
-          set -euxo pipefail
-          printf 'test,rep,arm,wall\n' >/tmp/timings.csv
-          cd /tmp/arena
-          for test in beta2000 beta8000 grind app; do
-            case "$test" in
-              beta2000) file=_build/tests/perf/beta-ladder.ndjson ;;
-              beta8000) file=_build/tests/perf/beta-ladder-8000.ndjson ;;
-              grind) file=_build/tests/perf/grind-ring-5.ndjson ;;
-              app) file=_build/tests/perf/app-lam.ndjson ;;
-            esac
-            for rep in 1 2 3; do
-              if (( rep % 2 )); then arms='base linear'; else arms='linear base'; fi
-              for arm in $arms; do
-                /usr/bin/time -f '%e' -o /tmp/t timeout 300 /tmp/${arm}-checker /tmp/checker.json < "$file" >/dev/null 2>/dev/null
-                printf '%s,%s,%s,%s\n' "$test" "$rep" "$arm" "$(cat /tmp/t)" >>/tmp/timings.csv
-              done
+          nix shell nixpkgs#valgrind -c bash -lc '
+            for T in grind-ring-5 app-lam beta-ladder let-ladder; do
+              valgrind --tool=callgrind --callgrind-out-file=/tmp/base-$T.cg /tmp/base-bin /tmp/checker.json < _build/tests/perf/$T.ndjson >/dev/null 2>/tmp/base-$T.vg
+              valgrind --tool=callgrind --callgrind-out-file=/tmp/cand-$T.cg /tmp/cand-bin /tmp/checker.json < _build/tests/perf/$T.ndjson >/dev/null 2>/tmp/cand-$T.vg
             done
-          done
-
-      - name: Decide
-        run: |
+          '
           python3 - <<'PY' | tee /tmp/summary.txt
-          import csv, statistics, math
-          C={}
-          for r in csv.DictReader(open('/tmp/callgrind.csv')): C[(r['test'],r['arm'])]=int(r['Ir'])
-          ratios=[]
-          for t in ['beta2000','beta8000','app-lam','grind']:
-              q=C[(t,'linear')]/C[(t,'base')]
-              ratios.append(q)
-              print('IR',t,f'{q:.6f}',f'{(q-1)*100:+.2f}%')
-          rows=list(csv.DictReader(open('/tmp/timings.csv')))
-          for t in ['beta2000','beta8000','grind','app']:
-              b=statistics.median(float(r['wall']) for r in rows if r['test']==t and r['arm']=='base')
-              x=statistics.median(float(r['wall']) for r in rows if r['test']==t and r['arm']=='linear')
-              print('WALL',t,b,x,f'{x/b:.6f}',f'{(x/b-1)*100:+.2f}%')
-          b2=C[('beta2000','linear')]/C[('beta2000','base')]
-          b8=C[('beta8000','linear')]/C[('beta8000','base')]
-          app=C[('app-lam','linear')]/C[('app-lam','base')]
-          grind=C[('grind','linear')]/C[('grind','base')]
-          protected=max(app,grind)
-          scaling=b8 < b2
-          decision=b8 < 0.90 and protected <= 1.01 and scaling
-          print('SCALING_IMPROVES=', scaling)
-          print('DECISION=' + ('PHASE_CHANGE_CANDIDATE' if decision else 'NOT_PHASE_CHANGE'))
+          from pathlib import Path
+          def ir(path):
+              for line in Path(path).read_text(errors='ignore').splitlines():
+                  if line.startswith('summary:'):
+                      return int(line.split()[1])
+              raise RuntimeError(path)
+          ratios={}
+          for t in ['grind-ring-5','app-lam','beta-ladder','let-ladder']:
+              b=ir(f'/tmp/base-{t}.cg'); c=ir(f'/tmp/cand-{t}.cg')
+              d=(c-b)/b
+              ratios[t]=d
+              print(f'{t} base={b} cand={c} delta={d:.6%}')
+          target=min(ratios['grind-ring-5'], ratios['app-lam'])
+          protected=max(ratios['beta-ladder'], ratios['let-ladder'])
+          if target <= -0.05 and protected <= 0.01:
+              decision='PROMOTE__INFER_PROJECTION_DUPLICATION_DELETED'
+          elif target <= -0.01 and protected <= 0.01:
+              decision='REAL_GAIN__ESCALATE_REALWORLD'
+          else:
+              decision='KILL__INFER_DUPLICATE_PROJECTION_NOT_MATERIAL'
+          print('DECISION='+decision)
           PY
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: phase-change-linear-env-key
+          name: infer-projection-fusion
           path: |
-            /tmp/callgrind.csv
-            /tmp/timings.csv
             /tmp/summary.txt
+            /tmp/*.cg
+            /tmp/*.vg
+            /tmp/*.err
