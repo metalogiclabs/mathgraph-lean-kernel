@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MathGraph developmental conversion decision record",
+  "type": "object",
+  "required": ["state", "actions"],
+  "properties": {
+    "state": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "left_shorter": {"type": "boolean"},
+        "right_shorter": {"type": "boolean"},
+        "one_spine_is_one": {"type": "boolean"},
+        "heads_match": {"type": "boolean"},
+        "left_unfoldable": {"type": "boolean"},
+        "right_unfoldable": {"type": "boolean"},
+        "proof_valued": {"type": "boolean"},
+        "forced_mismatch": {"type": "boolean"},
+        "shared_subproblem": {"type": "boolean"}
+      }
+    },
+    "actions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["correct", "cost"],
+        "properties": {
+          "correct": {"type": "boolean"},
+          "cost": {"type": "number", "minimum": 0}
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Optional provenance. Never admitted as a policy feature."
+    }
+  }
+}

@@ -1,0 +1,44 @@
+name: Developmental Conversion Trace V1
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - developmental-conv-policy-v1-clean
+    paths:
+      - 'experiments/developmental_conv_policy/**'
+      - '.github/workflows/developmental-conv-trace-v1.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  trace-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Inject tracing into working tree only
+        run: python experiments/developmental_conv_policy/instrument_conv.py
+      - name: Verify instrumented checker compiles and tests
+        env:
+          MATHGRAPH_CONV_TRACE: '1'
+        run: |
+          set -o pipefail
+          cargo test --release -- --nocapture 2>&1 | tee conv-trace.log
+      - name: Extract structural census
+        run: python experiments/developmental_conv_policy/extract_trace.py conv-trace.log conv-trace.jsonl
+      - name: Verify production source remained uncommitted
+        run: git diff -- src/conv.rs | head -200
+      - uses: actions/upload-artifact@v4
+        with:
+          name: developmental-conv-trace-v1
+          path: |
+            conv-trace.log
+            conv-trace.jsonl
+            conv-trace-summary.json
+          if-no-files-found: error
+          retention-days: 30
+
+# Fresh-head trigger: the previous manual rerun was pinned to the original pre-fix SHA.

@@ -1,0 +1,26 @@
+name: Developmental Conversion Policy V1
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - developmental-conv-policy-v1-clean
+    paths:
+      - 'experiments/developmental_conv_policy/**'
+      - '.github/workflows/developmental-conv-policy-v1.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  policy-selftest:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run bounded developmental compiler gate
+        working-directory: experiments/developmental_conv_policy
+        run: python selftest.py
