@@ -1,0 +1,31 @@
+name: Adaptive conversion scheduler ablation
+
+on:
+  pull_request:
+    branches: [mathgraph]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ablation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Run corrected causal scheduler ablation
+        run: bash scripts/run_adaptive_conv_scheduler_ablation_fixed.sh
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: adaptive-conv-scheduler-ablation
+          path: |
+            adaptive-times.tsv
+            adaptive-decision.txt
+            semantic-gate.txt
+          if-no-files-found: warn
