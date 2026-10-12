@@ -1,115 +1,110 @@
-name: Infer projection fusion separator
+name: Differential NDJSON disagreement census
 
 on:
   pull_request:
     branches: [master]
     paths:
-      - 'experiments/infer-projection-fusion.trigger'
       - '.github/workflows/infer-projection-fusion.yml'
+      - 'experiments/diff-census/**'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  separator:
+  census:
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           fetch-depth: 0
-      - uses: cachix/install-nix-action@v31
+          persist-credentials: false
 
-      - name: Build exact V1 baseline and isolated candidate
+      - name: Generate the two orphan-recursor boundary variants
         run: |
-          set -euxo pipefail
-          V1=1e209dad266d59b4d43cdea189876bc6ea551339
-          git worktree add /tmp/base "$V1"
-          git worktree add /tmp/cand "$V1"
-
+          set -euo pipefail
+          mkdir -p /tmp/seeds
+          cp experiments/diff-census/*.ndjson /tmp/seeds/
           python3 - <<'PY'
+          import json
           from pathlib import Path
-          p=Path('/tmp/cand/src/infer.rs')
-          s=p.read_text()
-          old="""        let key = (self.key_env(env, e) as *const value::Env<'t> as usize, e);"""
-          new="""        let key_env = self.key_env(env, e);
-        let key = (key_env as *const value::Env<'t> as usize, e);"""
-          assert s.count(old) == 1
-          s=s.replace(old,new,1)
-          old2="""                let clo = Closure::mk_infer(self.key_env(env, e), ctx, body);"""
-          new2="""                let clo = Closure::mk_infer(key_env, ctx, body);"""
-          assert s.count(old2) == 1
-          s=s.replace(old2,new2,1)
-          p.write_text(s)
+          src=Path('/tmp/seeds/03-control.ndjson')
+          rows=[json.loads(x) for x in src.read_text().splitlines()]
+          for label, allv in [('03-case', []), ('03-decoy', [1])]:
+              out=[]
+              for row in rows:
+                  if 'inductive' in row:
+                      r={"all":allv,"isUnsafe":False,"k":False,"levelParams":[],"name":7,
+                         "numIndices":0,"numMinors":0,"numMotives":0,"numParams":0,"rules":[],"type":2}
+                      row['inductive']['recs'].append(r)
+                  if 'axiom' in row and row['axiom'].get('name') == 7:
+                      continue
+                  out.append(row)
+              Path(f'/tmp/seeds/{label}.ndjson').write_text('\n'.join(json.dumps(x,separators=(',',':')) for x in out)+'\n')
           PY
+          sha256sum /tmp/seeds/*
 
-          for A in base cand; do
-            cd /tmp/$A
-            cargo test --locked
-            cargo build --release --locked
-            cp target/release/sokonanoda /tmp/$A-bin
-          done
-
-          cat >/tmp/checker.json <<'EOF'
-          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1,"print_success_message":false}
-          EOF
-
-      - name: Build focused Arena tests
+      - name: Build pinned nanoda and frozen MathGraph
         run: |
-          git clone --depth 1 https://github.com/leanprover/lean-kernel-arena /tmp/arena
-          cd /tmp/arena
-          for T in perf/grind-ring-5 perf/app-lam perf/beta-ladder perf/let-ladder; do
-            nix develop -c ./lka.py build-test "$T"
-          done
+          set -euo pipefail
+          git clone https://github.com/robsimmons/nanoda_lib.git /tmp/nanoda
+          git -C /tmp/nanoda checkout --detach 6ae1f0cd962f081f6c423454c5da729d841236a7
+          cargo build --release --locked --manifest-path /tmp/nanoda/Cargo.toml
+          git worktree add /tmp/mathgraph 3d7585c21242f29fdaa48ae9a16e16c6afe42238
+          cargo build --release --locked --manifest-path /tmp/mathgraph/Cargo.toml
+          cp /tmp/nanoda/target/release/nanoda_bin /tmp/nanoda-bin
+          cp /tmp/mathgraph/target/release/sokonanoda /tmp/mathgraph-bin
 
-      - name: Semantic equality gate
+      - name: Run outcome-vector census
         run: |
-          set -euxo pipefail
-          cd /tmp/arena
-          for T in grind-ring-5 app-lam beta-ladder let-ladder; do
-            /tmp/base-bin /tmp/checker.json < _build/tests/perf/$T.ndjson > /tmp/base-$T.out 2>/tmp/base-$T.err
-            /tmp/cand-bin /tmp/checker.json < _build/tests/perf/$T.ndjson > /tmp/cand-$T.out 2>/tmp/cand-$T.err
-            cmp /tmp/base-$T.out /tmp/cand-$T.out
-          done
-
-      - name: Callgrind instruction separator
-        run: |
-          set -euxo pipefail
-          cd /tmp/arena
-          nix shell nixpkgs#valgrind -c bash -lc '
-            for T in grind-ring-5 app-lam beta-ladder let-ladder; do
-              valgrind --tool=callgrind --callgrind-out-file=/tmp/base-$T.cg /tmp/base-bin /tmp/checker.json < _build/tests/perf/$T.ndjson >/dev/null 2>/tmp/base-$T.vg
-              valgrind --tool=callgrind --callgrind-out-file=/tmp/cand-$T.cg /tmp/cand-bin /tmp/checker.json < _build/tests/perf/$T.ndjson >/dev/null 2>/tmp/cand-$T.vg
+          set -u
+          printf 'policy\tseed\tnanoda\tmathgraph\n' > /tmp/census.tsv
+          classify() {
+            rc="$1"; err="$2"
+            if [ "$rc" -eq 0 ]; then echo accept
+            elif grep -qiE 'panicked at|thread .* panicked|Option::unwrap|assertion failed' "$err"; then echo panic
+            else echo reject
+            fi
+          }
+          run_nanoda() {
+            seed="$1"; policy="$2"; err="$3"
+            if [ "$policy" = permissive ]; then extra='"unsafe_permit_all_axioms":true,"unpermitted_axiom_hard_error":false';
+            else extra='"unpermitted_axiom_hard_error":true,"permitted_axioms":[]'; fi
+            cfg=$(mktemp)
+            printf '{"export_file_path":"%s",%s,"nat_extension":true,"string_extension":true,"print_success_message":false,"print_axioms":false,"pp_to_stdout":false}\n' "$seed" "$extra" > "$cfg"
+            /tmp/nanoda-bin "$cfg" >/dev/null 2>"$err"; rc=$?
+            rm -f "$cfg"; classify "$rc" "$err"
+          }
+          run_mathgraph() {
+            seed="$1"; policy="$2"; err="$3"
+            if [ "$policy" = permissive ]; then extra='"unsafe_permit_all_axioms":true,"unpermitted_axiom_hard_error":false';
+            else extra='"unpermitted_axiom_hard_error":true,"permitted_axioms":[]'; fi
+            cfg=$(mktemp)
+            printf '{"use_stdin":true,%s,"nat_extension":true,"string_extension":true,"num_threads":1,"print_success_message":false}\n' "$extra" > "$cfg"
+            /tmp/mathgraph-bin "$cfg" < "$seed" >/dev/null 2>"$err"; rc=$?
+            rm -f "$cfg"; classify "$rc" "$err"
+          }
+          for policy in permissive strict; do
+            for seed in /tmp/seeds/*.ndjson; do
+              name=$(basename "$seed" .ndjson)
+              nerr=/tmp/nanoda-${policy}-${name}.err
+              merr=/tmp/mathgraph-${policy}-${name}.err
+              n=$(run_nanoda "$seed" "$policy" "$nerr")
+              m=$(run_mathgraph "$seed" "$policy" "$merr")
+              printf '%s\t%s\t%s\t%s\n' "$policy" "$name" "$n" "$m" | tee -a /tmp/census.tsv
+              echo "--- nanoda $policy $name ---"; tail -n 4 "$nerr" || true
+              echo "--- mathgraph $policy $name ---"; tail -n 4 "$merr" || true
             done
-          '
-          python3 - <<'PY' | tee /tmp/decision.txt
-          from pathlib import Path
-          def ir(path):
-              for line in Path(path).read_text(errors='ignore').splitlines():
-                  if line.startswith('summary:'):
-                      return int(line.split()[1])
-              raise RuntimeError(path)
-          ratios={}
-          for t in ['grind-ring-5','app-lam','beta-ladder','let-ladder']:
-              b=ir(f'/tmp/base-{t}.cg'); c=ir(f'/tmp/cand-{t}.cg')
-              d=(c-b)/b
-              ratios[t]=d
-              print(f'{t} base={b} cand={c} delta={d:.6%}')
-          target=min(ratios['grind-ring-5'], ratios['app-lam'])
-          protected=max(ratios['beta-ladder'], ratios['let-ladder'])
-          if target <= -0.05 and protected <= 0.01:
-              decision='PROMOTE__INFER_PROJECTION_DUPLICATION_DELETED'
-          elif target <= -0.01 and protected <= 0.01:
-              decision='REAL_GAIN__ESCALATE_REALWORLD'
-          else:
-              decision='KILL__INFER_DUPLICATE_PROJECTION_NOT_MATERIAL'
-          print('DECISION='+decision)
+          done
+          echo '=== DISAGREEMENT CLASSES ==='
+          python3 - <<'PY'
+          import csv, collections
+          rows=list(csv.DictReader(open('/tmp/census.tsv'), delimiter='\t'))
+          classes=collections.defaultdict(list)
+          for r in rows: classes[(r['nanoda'],r['mathgraph'])].append((r['policy'],r['seed']))
+          for vec,members in sorted(classes.items()): print(f'{vec[0]} / {vec[1]}: {len(members)} -> {members}')
+          print(f'distinct_vectors={len(classes)}')
           PY
-
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: infer-projection-fusion
-          path: |
-            /tmp/decision.txt
-            /tmp/*.cg
-            /tmp/*.vg
-            /tmp/*.err
+          echo '=== CENSUS TSV ==='
+          cat /tmp/census.tsv
