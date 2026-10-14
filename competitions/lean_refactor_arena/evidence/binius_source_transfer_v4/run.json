@@ -1,0 +1,31 @@
+{
+  "schema": "mathgraph.lra.binius-source-transfer-v4.v1",
+  "status": "NATIVE_PRIMARY_RUNNING",
+  "baseline": "V17",
+  "baseline_commit": "2b6010d70daba376eab87d83775ab4cc1e16fda7",
+  "source_commit": "0e510afad3dbff777bb79bc74f554cc50b14b65c",
+  "run_id": 38643866166,
+  "public_harness_sha": "7f3a401470d04f70013d293db4253b088ec8a0ae",
+  "bank_sha256": "3b07f838eff35a78ae8c31798d18a4bd77bef4920b007bb51ff4c69401a00566",
+  "controls": 2,
+  "candidates": 8,
+  "primary_version": "v4.31.0",
+  "measurement_scope": "primary_only",
+  "required_versions": {
+    "Binius.BinaryBasefold.fiberwise_dist_lt_imp_dist_lt_unique_decoding_radius": [
+      "v4.31.0",
+      "v4.30.0",
+      "v4.29.0",
+      "v4.28.0"
+    ],
+    "Binius.BinaryBasefold.fold_advances_evaluation_poly": [
+      "v4.31.0",
+      "v4.30.0",
+      "v4.29.0"
+    ]
+  },
+  "generation": "Existing finite source-local-sharing-v2 grammar, unchanged. No theorem-specific replacement proof. Estimated lexical savings are proposals only.",
+  "next_gate": "Inspect native compile diagnostics; reuse source-native-closure-v3 only for eligible, source-bound unsolved-goal failures. Qualify any improvement on every required version before portfolio admission.",
+  "active_portfolio_changed": false,
+  "official_submission": false
+}
