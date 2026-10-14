@@ -3,8 +3,8 @@ from reconcile_discovery_v17 import run
 from reconcile_v16 import qualify
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 class DiscoveryAdmissionTests(unittest.TestCase):
- def test_current_packet_reproduces_from_immutable_native_evidence(self):
-  with contextlib.redirect_stdout(io.StringIO()):run(check=True)
+ def test_historical_v17_packet_reproduces_from_immutable_native_evidence(self):
+  with contextlib.redirect_stdout(io.StringIO()):run(check=True,historical=True)
  def test_both_admitted_proofs_have_complete_native_authority(self):
   audit=json.loads((ROOT/'evidence/retained_exact_full_version_audit_20261015_v17.json').read_text())
   bank=[json.loads(x) for x in (ROOT/'experiments/source_native_closure_v3.jsonl').read_text().splitlines()]

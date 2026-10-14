@@ -20,7 +20,8 @@ def blob(s):return subprocess.check_output(['git','hash-object','--stdin'],input
 def prior(p):return subprocess.check_output(['git','show',BASE+':'+str(p.relative_to(REPO))],text=True)
 def rows(s):return [json.loads(x) for x in s.splitlines() if x.strip()]
 def read(p):return json.loads(p.read_text())
-def run(check=False):
+def run(check=False,historical=False):
+    if historical and not check:raise ValueError("historical mode is read-only")
     meta=read(EV/'run.json');acq=read(EV/'acquisition.json')
     assert meta['id']==38638063495 and meta['head_sha']==HEAD
     assert meta['status']=='completed' and meta['conclusion']=='success'
@@ -85,12 +86,15 @@ def run(check=False):
         final_competition_eligibility='UNKNOWN',operator_transfer='FEEDBACK_ASSISTED_PREVIOUSLY_INSPECTED_WARMUPS'))
     pointer=dict(schema='mathgraph.lra.current-audit-pointer.v1',audit_path=str(AUDIT.relative_to(ROOT)),version='V17')
     if check:
-        assert PORT.read_text()==portfolio and PACKET.read_text()==packet and read(AUDIT)==audit
-        assert read(ROOT/'evidence/retained_current_audit.json')==pointer
+        def expected(p):
+            if not historical:return p.read_text()
+            return subprocess.check_output(['git','show','2b6010d70daba376eab87d83775ab4cc1e16fda7:'+str(p.relative_to(REPO))],text=True)
+        assert expected(PORT)==portfolio and expected(PACKET)==packet and json.loads(expected(AUDIT))==audit
+        assert json.loads(expected(ROOT/'evidence/retained_current_audit.json'))==pointer
     else:
         PORT.write_text(portfolio);PACKET.write_text(packet)
         AUDIT.write_text(json.dumps(audit,ensure_ascii=False,indent=2)+'\n')
         (ROOT/'evidence/retained_current_audit.json').write_text(json.dumps(pointer,indent=2)+'\n')
     print(json.dumps(dict(status='V17_QUALIFIED_RECLOSED',changed=2,unchanged=13,packet_sha256=sha(packet),native_objective_gain=gain,projection=audit['projected_score']),indent=2))
 if __name__=='__main__':
-    p=argparse.ArgumentParser();p.add_argument('--check',action='store_true');run(p.parse_args().check)
+    p=argparse.ArgumentParser();p.add_argument('--check',action='store_true');p.add_argument('--historical',action='store_true');a=p.parse_args();run(a.check,a.historical)
