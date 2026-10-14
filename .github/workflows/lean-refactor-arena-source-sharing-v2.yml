@@ -1,0 +1,81 @@
+name: Lean Refactor Arena source local sharing v2
+on:
+  workflow_dispatch:
+  push:
+    branches: ['competition/lra-source-local-sharing-v2']
+    paths:
+      - '.github/workflows/lean-refactor-arena-source-sharing-v2.yml'
+      - 'competitions/lean_refactor_arena/source_macro_discovery.py'
+      - 'competitions/lean_refactor_arena/experiments/source_macro_discovery_v2.jsonl'
+permissions:
+  contents: read
+jobs:
+  measure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    env:
+      PUBLIC_REPO_SHA: 7f3a401470d04f70013d293db4253b088ec8a0ae
+      BANK: competitions/lean_refactor_arena/experiments/source_macro_discovery_v2.jsonl
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check frozen generator and exact bank
+        run: |
+          python3 -m unittest discover -s competitions/lean_refactor_arena/tests
+          python3 competitions/lean_refactor_arena/source_macro_discovery.py \
+            --portfolio competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl \
+            --out /tmp/regenerated.jsonl \
+            --name Electromagnetism.ElectromagneticPotential.time_deriv_time_deriv_electricField_of_isExtrema \
+            --name FieldSpecification.WickAlgebra.ι_timeOrderF_superCommuteF_eq_time
+          cmp "$BANK" /tmp/regenerated.jsonl
+      - name: Build pinned Lean context
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.elan/bin:$PATH"
+          git clone --depth=1 --filter=blob:none --sparse https://github.com/aurasoph/lean-refactor.git /tmp/lean-refactor
+          git -C /tmp/lean-refactor fetch --depth=1 origin "$PUBLIC_REPO_SHA"
+          git -C /tmp/lean-refactor checkout --detach FETCH_HEAD
+          git -C /tmp/lean-refactor sparse-checkout set competition
+          test "$(git -C /tmp/lean-refactor rev-parse HEAD)" = "$PUBLIC_REPO_SHA"
+          mkdir -p /tmp/source-discovery
+          (
+            cd /tmp/lean-refactor/competition/projects/v4.32
+            lake update
+            lake exe cache get
+            lake build Physlib.Electromagnetism.Dynamics.IsExtrema Physlib.QFT.PerturbationTheory.WickAlgebra.TimeOrder
+          ) > /tmp/source-discovery/targeted-build.log 2>&1
+      - name: Measure every candidate and baseline with public harness
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/source-discovery
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          bank=os.environ['BANK'];out=pathlib.Path('/tmp/source-discovery/results.jsonl')
+          with out.open('w') as f:
+            for row in map(json.loads,pathlib.Path(bank).read_text().splitlines()):
+              subprocess.run(['python3','competitions/lean_refactor_arena/public_harness_bridge.py',
+                '--competition','/tmp/lean-refactor/competition','--project','v4.32','--name',row['name'],
+                '--candidate',bank,'--label',row['label']],check=True)
+              p=subprocess.run(['python3','arena.py','check','--name',row['name'],'--all-versions','--timeout','1800'],
+                cwd='/tmp/lean-refactor/competition',text=True,capture_output=True)
+              pathlib.Path('/tmp/source-discovery/'+row['label']+'_'+str(len(row['name']))+'.log').write_text(p.stdout+'\n'+p.stderr)
+              result=json.loads(p.stdout)
+              if not result.get('compiled'):
+                import re
+                slug=re.sub(r'[^A-Za-z0-9]+','_',row['name']).strip('_')
+                diagnostic=subprocess.run(['lake','env','lean','Arena/'+slug+'.lean'],
+                  cwd='/tmp/lean-refactor/competition/projects/v4.32',capture_output=True,text=True,timeout=240)
+                pathlib.Path('/tmp/source-discovery/'+row['label']+'.lean.log').write_text(diagnostic.stdout+'\n'+diagnostic.stderr)
+              result.update(name=row['name'],candidate_label=row['label'],proof_sha256=row.get('proof_sha256'),operator=row['operator'])
+              f.write(json.dumps(result,ensure_ascii=False)+'\n');f.flush()
+              print(json.dumps(result,ensure_ascii=False),flush=True)
+          PY
+          python3 competitions/lean_refactor_arena/source_interface_select.py /tmp/source-discovery/results.jsonl --out /tmp/source-discovery/selection.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-source-local-sharing-v2
+          path: /tmp/source-discovery/

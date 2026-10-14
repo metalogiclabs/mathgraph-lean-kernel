@@ -44,3 +44,17 @@ gain, status NO_SOURCE_GAIN; if selected operator has no Wick application, repor
 NO_APPLICABLE_TRANSFER. Baseline is the physical operator-deletion ablation.
 Three regression tests observed missing-function failures then passed; full
 suite71/71. This refines analysis only, leaving all six native checks unchanged.
+
+V1 native run38631024706 completed SUCCESS: controls2/2 compiled, candidates0/4.
+No source gain or transfer. Raw failed-attempt objective numbers are invalid.
+Evidence includes exact run/head, artifact11927478196 SHA256 and native rows.
+
+V2 justified by failure: preserve explicit types/observers and directed rewrites;
+acquire repeated source expressions as local executable let constructors instead.
+Grammar mines parenthesized terms and bounded partial-application prefixes, excludes
+locally bound dependencies and ranks estimated lexical savings, capped4macros per
+source. Native verifier remains authority; parsing is conservative and incomplete.
+Source-only transfer policy is unchanged. 75 Python tests pass. Seven frozen rows:
+two V16 controls, three EM macros, one ordered-rw fusion, one Wick predicate macro.
+Targeted builds restrict dependencies to the two benchmark source modules. This is
+an experimental continuation, not a mathematical witness or new cost warrant.

@@ -1,0 +1,72 @@
+{
+  "schema": "mathgraph.lra.source-local-sharing.v2",
+  "frozen_at_utc": "2026-10-14T20:54:24.141497+00:00",
+  "prior_native_run": 38631024706,
+  "prior_outcome": "0/4 candidates compiled; both controls passed",
+  "baseline_commit": "6a942a2af66ae585bb91da60b0fa291309f81e13",
+  "selection_policy_commit": "ffa693dfbe3de3d3dfefe213ab5e29f3cda85fb6",
+  "bank_sha256": "3a138deff5be922e7bce9dd1d2a84703f7fd2c3f9b426e42469dbdcd952e83c8",
+  "generator_sha256": "d4b3a81085194afffdb37f1f400a008ef0c61bfa8c88b7690d496defc235cc75",
+  "candidates": [
+    {
+      "name": "Electromagnetism.ElectromagneticPotential.time_deriv_time_deriv_electricField_of_isExtrema",
+      "label": "local_expression_sharing_69f9b32f96b3",
+      "proof_sha256": "69f9b32f96b3305d719f68d55dd81ee7b31b61a5d8be6b831b19a49f302e7369",
+      "operator": "local_expression_sharing",
+      "discovered": {
+        "expression": "(hA.of_le (right_eq_inf.mp rfl))",
+        "occurrences": 3,
+        "estimated_lexical_saving": 7
+      }
+    },
+    {
+      "name": "Electromagnetism.ElectromagneticPotential.time_deriv_time_deriv_electricField_of_isExtrema",
+      "label": "local_expression_sharing_f681e128cc45",
+      "proof_sha256": "f681e128cc45742dedad890c5b505cee8256ce7e935e1e2c92fb07ce358582fe",
+      "operator": "local_expression_sharing",
+      "discovered": {
+        "expression": "A.electricField 𝓕.c t",
+        "occurrences": 5,
+        "estimated_lexical_saving": 3
+      }
+    },
+    {
+      "name": "Electromagnetism.ElectromagneticPotential.time_deriv_time_deriv_electricField_of_isExtrema",
+      "label": "local_expression_sharing_ab582930c506",
+      "proof_sha256": "ab582930c5066484ed14901f0dae3c5b88eb93fcdb8f8d43865b53735804ea69",
+      "operator": "local_expression_sharing",
+      "discovered": {
+        "expression": "(right_eq_inf.mp rfl)",
+        "occurrences": 3,
+        "estimated_lexical_saving": 1
+      }
+    },
+    {
+      "name": "Electromagnetism.ElectromagneticPotential.time_deriv_time_deriv_electricField_of_isExtrema",
+      "label": "merge_directed_rewrites_be8eb067d005",
+      "proof_sha256": "be8eb067d00540f29702919bd6acdf20a9e077568a3327c1ba75b55d235f7201",
+      "operator": "merge_directed_rewrites",
+      "discovered": {
+        "witness": "he",
+        "ordered_normalizers": [
+          "Space.deriv_eq, fderiv_fun_sum fun j _ => (hEd j j).differentiableAt,\n      _root_.sum_apply",
+          "Space.deriv_eq, fderiv_const_mul\n      (LorentzCurrentDensity.chargeDensity_differentiable_space\n            (hJ.differentiable (by simp)) t).differentiableAt"
+        ]
+      }
+    },
+    {
+      "name": "FieldSpecification.WickAlgebra.ι_timeOrderF_superCommuteF_eq_time",
+      "label": "local_expression_sharing_d9e8c0eacbcc",
+      "proof_sha256": "d9e8c0eacbcc1b168e1e406c8fe6d279a171c64a6df018c471be89b48d90076e",
+      "operator": "local_expression_sharing",
+      "discovered": {
+        "expression": "(fun c => crAnTimeOrderRel φ c ∧ crAnTimeOrderRel c φ)",
+        "occurrences": 2,
+        "estimated_lexical_saving": 7
+      }
+    }
+  ],
+  "native_status": "PENDING",
+  "blind_heldout": false,
+  "portfolio_changed": false
+}
