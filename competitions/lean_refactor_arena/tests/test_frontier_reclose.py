@@ -264,7 +264,8 @@ class FrontierTests(unittest.TestCase):
         self.assertEqual([(x["name"],x["proof"]) for x in portfolio],
                          [(x["name"],x["proof"]) for x in packet])
         self.assertEqual(len({x["name"] for x in packet}),15)
-        audit=json.loads((root/"evidence"/"retained_exact_full_version_audit_20261015_v16.json").read_text())
+        pointer=json.loads((root/"evidence"/"retained_current_audit.json").read_text())
+        audit=json.loads((root/pointer["audit_path"]).read_text())
         active={row["name"]:row for row in portfolio}
         for record in audit["records"]:
             row=active[record["name"]]

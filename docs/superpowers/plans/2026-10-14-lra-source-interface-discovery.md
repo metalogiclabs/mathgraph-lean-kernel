@@ -87,3 +87,14 @@ V3 reviewer confirmed exact parent/hash/scope placement and no frozen-bank block
 Tightened diagnostic filename binding after reviewing the general limitation:
 wrong-file regression failed before guard, passes afterward;82/82suite. Both
 frozen repair proofs and metadata regenerate byte-identically; no native restart.
+
+V3 run38638063495 SUCCESS at5860c364. Both generated repairs compile on complete
+required v4.32.0. EM549tokens/7993HB vs551/10403; joint+8.81points. Wick525/11993
+vs530/11919; joint+0.24points. Source-selected native_definitional_closure also
+improves Wick, with prior target native feedback explicitly included. All other
+thirteen retained rows byte-identical. V17 exact reconciliation uses the existing
+frontier admission gate, checks native source/head/bank hashes, and reproduces the
+packet from immutable V16 bytes. Current audit pointer replaces stale hardcoded
+V16 regression binding (observed failure→fixed);84tests pass. Full15-row upload
+preflight passes,15overrides,0fallbacks. Local prospective combined gain0.201111
+points;83.1596localprojection is not hosted scoring. Official evaluation next.

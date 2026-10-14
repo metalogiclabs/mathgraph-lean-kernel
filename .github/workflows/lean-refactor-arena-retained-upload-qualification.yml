@@ -6,10 +6,11 @@ on:
     branches:
       - 'competition/lean-refactor-arena-track1'
       - 'competition/lra-v16-reconcile-20261015'
+      - 'competition/lra-v17-source-discovery-20261015'
     paths:
       - 'competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl'
       - 'competitions/lean_refactor_arena/arena_upload.py'
-      - 'competitions/lean_refactor_arena/evidence/retained_exact_full_version_audit_20261015_v16.json'
+      - 'competitions/lean_refactor_arena/evidence/retained_exact_full_version_audit_20261015_v17.json'
       - 'competitions/lean_refactor_arena/submissions/mathgraph_verified_15_warmup_20261009.jsonl'
       - '.github/workflows/lean-refactor-arena-retained-upload-qualification.yml'
 
@@ -32,10 +33,10 @@ jobs:
             -o /tmp/benchmark_data_warmup.jsonl
           python3 competitions/lean_refactor_arena/official_jsonl.py /tmp/benchmark_data_warmup.jsonl \
             --summary-out /tmp/benchmark-summary.json
-      - name: Reclose V16 against archived source-bound Lean certificates
+      - name: Reclose V17 against completed native source-discovery certificates
         run: |
-          git fetch --depth=1 origin 9930906c8aba578cd4e1a08c67d023fdfcb7aa59
-          python3 competitions/lean_refactor_arena/reconcile_v16.py --check
+          git fetch --depth=1 origin 6a942a2af66ae585bb91da60b0fa291309f81e13
+          python3 competitions/lean_refactor_arena/reconcile_discovery_v17.py --check
           PYTHONPATH=competitions/lean_refactor_arena python3 -m unittest discover -s competitions/lean_refactor_arena/tests -q
       - name: Build exact retained Arena submission and validate
         shell: bash
@@ -54,7 +55,7 @@ jobs:
           upload=pathlib.Path('/tmp/lra-closed-retained-15.jsonl')
           portfolio=pathlib.Path('competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl')
           bench=pathlib.Path('/tmp/benchmark_data_warmup.jsonl')
-          audit=pathlib.Path('competitions/lean_refactor_arena/evidence/retained_exact_full_version_audit_20261015_v16.json')
+          audit=pathlib.Path('competitions/lean_refactor_arena/evidence/retained_exact_full_version_audit_20261015_v17.json')
           committed=pathlib.Path('competitions/lean_refactor_arena/submissions/mathgraph_verified_15_warmup_20261009.jsonl')
           raw=lambda p:[json.loads(x) for x in p.read_text(encoding='utf-8').splitlines() if x.strip()]
           rows,source,frozen=raw(upload),raw(portfolio),raw(bench)
@@ -70,7 +71,7 @@ jobs:
           a=json.loads(audit.read_text(encoding='utf-8'))
           git_blob=lambda p: subprocess.check_output(
             ['git','hash-object',str(p)], text=True).strip()
-          assert a.get('state') == 'WARRANTED_COMPOSED_PINNED_VERSIONS__NOT_OFFICIAL_ARENA_SUBMISSION', a.get('state')
+          assert a.get('state') == 'EXACT_NATIVE_QUALIFIED_PACKET', a.get('state')
           assert a.get('source_sha') == '7f3a401470d04f70013d293db4253b088ec8a0ae'
           assert a.get('portfolio_blob_sha') == git_blob(portfolio), 'STALE_AUDIT_PROOF_BYTES'
           assert a.get('current_portfolio_blob_sha') == git_blob(portfolio)
@@ -79,6 +80,7 @@ jobs:
           records=a.get('records') or []
           assert len(records)==15 and {r['name'] for r in records}==bench_names
           for r in records:
+            assert r['proof_sha256']==hashlib.sha256(source_map[r['name']].encode()).hexdigest()
             assert r.get('label')==next(p['label'] for p in source if p['name']==r['name'])
             required=r.get('required_versions')
             assert isinstance(required,list) and len(required)>0 and len(required)==len(set(required))
@@ -107,7 +109,7 @@ jobs:
             'audit_path':str(audit),'audit_portfolio_git_blob':git_blob(portfolio),
             'external_exact_full_version_witnesses':externally_warranted,
             'independent_required_version_witnesses':independently_warranted,
-            'promotion_boundary':'Proof format and exact recorded version lineage checked against current v16 audit; no new Lean replay. Official ranking requires user-authorized upload and scoring; no keys accessed.'}
+            'promotion_boundary':'Proof format and exact recorded version lineage checked against current V17 audit; completed native Lean evidence reused. Official ranking requires user-authorized upload and scoring; no keys accessed.'}
           pathlib.Path('/tmp/lra-retained-manifest.json').write_text(json.dumps(out,indent=2)+'\n')
           print(json.dumps(out,indent=2))
           print('VERIFIED_EXACT_RETAINED_15_ROW_UPLOAD')
