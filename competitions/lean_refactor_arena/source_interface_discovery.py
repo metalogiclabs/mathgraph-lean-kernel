@@ -29,6 +29,7 @@ def discover(row, limit=24):
     source=row['proof']
     if ':= by' not in source or re.search(r'\b(sorry|admit|axiom)\b|--|/\*|/\-|"',source): return []
     header=source.split(':= by',1)[0]
+    body_start=len(header)+len(':= by')
     out=[];seen={digest(source)}
     def emit(proof,operator,site):
         sha=digest(proof)
@@ -40,7 +41,7 @@ def discover(row, limit=24):
             'operator':operator,'rule_version':RULE_VERSION,'discovered':site,
             'status':'CANDIDATE_UNVERIFIED'})
     # Infer the observer from Lean's expected equality rather than naming one.
-    for match in re.finditer(r'\bcongrArg +',source):
+    for match in re.compile(r'\bcongrArg +').finditer(source,body_start):
         obs=observer_at(source,match.end())
         if obs:
             term,end=obs
@@ -49,7 +50,7 @@ def discover(row, limit=24):
     # Acquire an equality/observer/normalizer triple directly from a terminal
     # local observation block. Exact indentation and end-of-block guard scope.
     pattern=re.compile(r'(?m)^( +)have (\w+) := (congrArg [^\n]+)\n')
-    for match in pattern.finditer(source):
+    for match in pattern.finditer(source,body_start):
         indent,name,expr=match.groups();pos=match.end();rules=[]
         while True:
             rw=re.match(re.escape(indent)+r'rw \[([\s\S]*?)\] at '+re.escape(name)+r'\n',source[pos:])

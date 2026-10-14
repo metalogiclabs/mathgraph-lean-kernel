@@ -16,8 +16,11 @@ class DiscoveryTests(unittest.TestCase):
         self.assertEqual(source.split(':= by')[0],fused['proof'].split(':= by')[0])
     def test_rejects_nonterminal_or_mixed_scope(self):
         for tail in ['  exact other\n','  exact out\n  exact out\n']:
-            s='theorem t : True := by\n  have out := congrArg f h\n  rw [r] at out\n'+tail
+            s='theorem t : True := by\n  have out := congrArg (fun z => f z) h\n  rw [r] at out\n'+tail
             self.assertFalse(any(r['operator'].startswith('fuse') for r in m.discover({'name':'t','proof':s})))
+    def test_header_observer_is_not_a_candidate_site(self):
+        p='theorem t {x y : Nat} (h : x = y) (_ : congrArg (fun z => z) h = h) : x = y := by\n  exact h\n'
+        self.assertEqual(m.discover({'name':'t','proof':p}),[])
     def test_preserves_parent_and_deduplicates(self):
         row={'name':'t','proof':'theorem t (h : x = y) : f x = f y := by\n  exact congrArg (fun z => f z) h\n'}
         before=dict(row);a=m.discover(row);b=m.discover(row)

@@ -1,0 +1,72 @@
+{
+  "schema": "mathgraph.lra.source-interface-acquisition.v1",
+  "baseline_commit": "6a942a2af66ae585bb91da60b0fa291309f81e13",
+  "generator_commit": "c1bc1232f666373fa17462beb0683f232a59ad2f",
+  "native_run_id": 38631024706,
+  "bank_sha256": "f39ded34fd2945c399f89a3bb9b7bdbd3b8897dab71a51d69c6eecf2c340750a",
+  "rule_frozen_before_native_measurement": true,
+  "historical_jsonl_files_scanned": 16,
+  "candidates": [
+    {
+      "name": "Electromagnetism.ElectromagneticPotential.time_deriv_time_deriv_electricField_of_isExtrema",
+      "label": "infer_observer_da3686f25e64",
+      "proof_sha256": "da3686f25e643d0fdaaf57ba55cd57048edf5c4aa69f6fda9ed96cb4d881fb86",
+      "parent_sha256": "cc643e34cf4fa940686b85018ef05099ba1f4f712d9212f4c98c08ef5abab60b",
+      "operator": "infer_observer",
+      "discovered": {
+        "observer": "(fun g => (∂[i] g) x)",
+        "offset": 1944
+      },
+      "historical_exact_matches": []
+    },
+    {
+      "name": "Electromagnetism.ElectromagneticPotential.time_deriv_time_deriv_electricField_of_isExtrema",
+      "label": "fuse_observation_only_21b728ebd243",
+      "proof_sha256": "21b728ebd243d9308d161361204e9e057cba26940f5841f8525e962c59b16dfa",
+      "parent_sha256": "cc643e34cf4fa940686b85018ef05099ba1f4f712d9212f4c98c08ef5abab60b",
+      "operator": "fuse_observation_only",
+      "discovered": {
+        "observer": "(fun g => (∂[i] g) x)",
+        "witness": "hdiv",
+        "normalizers": [
+          "Space.deriv_eq, fderiv_fun_sum fun j _ => (hEd j j).differentiableAt,\n      _root_.sum_apply",
+          "Space.deriv_eq, fderiv_const_mul\n      (LorentzCurrentDensity.chargeDensity_differentiable_space\n            (hJ.differentiable (by simp)) t).differentiableAt"
+        ],
+        "offset": 1929
+      },
+      "historical_exact_matches": []
+    },
+    {
+      "name": "Electromagnetism.ElectromagneticPotential.time_deriv_time_deriv_electricField_of_isExtrema",
+      "label": "fuse_observation_simp_3cfea905ed4d",
+      "proof_sha256": "3cfea905ed4d1efce771934c5b61cfa330661ffc87ef36b62f783ae1b0375a6d",
+      "parent_sha256": "cc643e34cf4fa940686b85018ef05099ba1f4f712d9212f4c98c08ef5abab60b",
+      "operator": "fuse_observation_simp",
+      "discovered": {
+        "observer": "(fun g => (∂[i] g) x)",
+        "witness": "hdiv",
+        "normalizers": [
+          "Space.deriv_eq, fderiv_fun_sum fun j _ => (hEd j j).differentiableAt,\n      _root_.sum_apply",
+          "Space.deriv_eq, fderiv_const_mul\n      (LorentzCurrentDensity.chargeDensity_differentiable_space\n            (hJ.differentiable (by simp)) t).differentiableAt"
+        ],
+        "offset": 1929
+      },
+      "historical_exact_matches": []
+    },
+    {
+      "name": "FieldSpecification.WickAlgebra.ι_timeOrderF_superCommuteF_eq_time",
+      "label": "infer_observer_ce586e5e4778",
+      "proof_sha256": "ce586e5e47787d14058180fffd80630a4004dd8413b2b1a4e1c97b321ec916c0",
+      "parent_sha256": "0311a7be0df0fbbc727ff635c0dffabed4ead756c5a7bfbbc64157fcc0915a64",
+      "operator": "infer_observer",
+      "discovered": {
+        "observer": "(· a b)",
+        "offset": 3065
+      },
+      "historical_exact_matches": []
+    }
+  ],
+  "blind_heldout": false,
+  "native_cost_status": "PENDING",
+  "portfolio_modified": false
+}

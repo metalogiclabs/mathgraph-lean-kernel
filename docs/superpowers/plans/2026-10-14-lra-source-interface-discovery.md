@@ -28,3 +28,10 @@ and programmer. Actual new mathematical witness discovery remains unresolved.
 Validation: test-first missing-module failure followed by four passing discovery
 checks; full suite67tests after adding four selection guard tests. Native cost and
 cross-family transfer remain UNKNOWN until the workflow completes.
+
+Fresh whole-branch reviewer found a header-scanning crash on declarations whose
+statement contains a parenthesized congrArg. Fixed by restricting both scans to
+the proof body while retaining absolute offsets; regression failed with observed
+ValueError before fix and passes afterward. Strengthened terminal-scope test to
+use an actually acquirable parenthesized observer. Full suite68/68; regenerated
+EM/Wick bank byte-identical, so native experiment need not restart.
