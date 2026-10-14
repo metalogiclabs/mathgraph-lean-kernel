@@ -35,3 +35,12 @@ the proof body while retaining absolute offsets; regression failed with observed
 ValueError before fix and passes afterward. Strengthened terminal-scope test to
 use an actually acquirable parenthesized observer. Full suite68/68; regenerated
 EM/Wick bank byte-identical, so native experiment need not restart.
+
+Pre-outcome protocol clarification: independent per-theorem selection alone does
+not demonstrate acquired-policy transfer. Added a separate transfer gate before
+any native outcome was visible: fit operator on EM results only; apply that exact
+operator to Wick in frozen bank order, without choosing by Wick score. If no EM
+gain, status NO_SOURCE_GAIN; if selected operator has no Wick application, report
+NO_APPLICABLE_TRANSFER. Baseline is the physical operator-deletion ablation.
+Three regression tests observed missing-function failures then passed; full
+suite71/71. This refines analysis only, leaving all six native checks unchanged.

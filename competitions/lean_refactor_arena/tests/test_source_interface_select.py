@@ -24,3 +24,25 @@ class SelectionTests(unittest.TestCase):
   self.assertEqual(result['results'][0]['objective_gain'],1)
   self.assertFalse(result['portfolio_changed'])
 if __name__=='__main__':unittest.main()
+
+class TransferTests(unittest.TestCase):
+ def test_transfer_never_selects_using_target_cost(self):
+  source=[row('v16_control'),row('source_gain',101)]
+  target=[row('v16_control'),row('target_gain',150)]
+  for r in source:r['name']='source';r['operator']='control' if r['candidate_label']=='v16_control' else 'fuse'
+  for r in target:r['name']='target';r['operator']='control' if r['candidate_label']=='v16_control' else 'infer'
+  result=m.transfer(source+target,'source','target')
+  self.assertEqual(result['frozen_operator'],'fuse')
+  self.assertEqual(result['status'],'NO_APPLICABLE_TRANSFER')
+ def test_same_operator_gain_transfers_and_control_is_ablation(self):
+  rows=[]
+  for name in ['source','target']:
+   a=row('v16_control');b=row(name+'_gain',101)
+   a.update(name=name,operator='control');b.update(name=name,operator='infer');rows.extend([a,b])
+  result=m.transfer(rows,'source','target')
+  self.assertEqual(result['status'],'MEASURED_OPERATOR_TRANSFER')
+  self.assertEqual(result['target_objective_gain'],1)
+ def test_no_source_gain_means_no_learned_policy(self):
+  a=row('v16_control');a['operator']='control'
+  b=row('tie');b['operator']='infer'
+  self.assertEqual(m.transfer([a,b],'t','other')['status'],'NO_SOURCE_GAIN')
