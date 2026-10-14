@@ -1,0 +1,34 @@
+{
+  "name": "Binius.BinaryBasefold.fiberwise_dist_lt_imp_dist_lt_unique_decoding_radius",
+  "compiled": false,
+  "length": 422,
+  "reference_length": 1463,
+  "length_reduction_pct": 71.16,
+  "heartbeats": 654,
+  "reference_heartbeats": 17440,
+  "heartbeat_reduction_pct": 96.25,
+  "objective_sum_pct": 167.41,
+  "survival_pct": 0.0,
+  "combined_pct": 55.8,
+  "eligible": false,
+  "compat": {
+    "v4.31.0": false
+  },
+  "statement_ok": true,
+  "per_version": [
+    {
+      "version": "v4.31.0",
+      "ok": false,
+      "heartbeats": 654,
+      "errors": [
+        "Application type mismatch: The argument",
+        "unsolved goals"
+      ],
+      "note": "",
+      "tested": true
+    }
+  ],
+  "note": "compiled=False or survival<100%: the length/heartbeat/objective numbers above are raw diagnostic measurements from this failed attempt, not a valid score \u2014 an incomplete elaboration can show artificially low heartbeats. This candidate would not be accepted.",
+  "published_heartbeats": 15645
+}
+

@@ -1,0 +1,65 @@
+{
+  "scope": "primary_only",
+  "decisions": {
+    "Binius.BinaryBasefold.fiberwise_dist_lt_imp_dist_lt_unique_decoding_radius": {
+      "selected_label": "v17_control",
+      "objective_gain": 0.0,
+      "frontier_labels": [
+        "v17_control"
+      ],
+      "admission": {
+        "v17_control": {
+          "status": "WARRANTED",
+          "reason": "source and all required consequences reverified"
+        },
+        "local_expression_sharing_1518c60f91bd": {
+          "status": "REJECTED",
+          "reason": "compiler/statement rejection"
+        },
+        "local_expression_sharing_15944e902c69": {
+          "status": "REJECTED",
+          "reason": "compiler/statement rejection"
+        },
+        "local_expression_sharing_73acc0c621dd": {
+          "status": "REJECTED",
+          "reason": "compiler/statement rejection"
+        },
+        "local_expression_sharing_48242babf17f": {
+          "status": "REJECTED",
+          "reason": "compiler/statement rejection"
+        }
+      },
+      "impact": "no active proof change"
+    },
+    "Binius.BinaryBasefold.fold_advances_evaluation_poly": {
+      "selected_label": "local_expression_sharing_31304a0d5136",
+      "objective_gain": 0.55,
+      "frontier_labels": [
+        "local_expression_sharing_31304a0d5136"
+      ],
+      "admission": {
+        "v17_control": {
+          "status": "WARRANTED",
+          "reason": "source and all required consequences reverified"
+        },
+        "local_expression_sharing_31304a0d5136": {
+          "status": "WARRANTED",
+          "reason": "source and all required consequences reverified"
+        },
+        "local_expression_sharing_12a881e82efc": {
+          "status": "REJECTED",
+          "reason": "compiler/statement rejection"
+        },
+        "local_expression_sharing_2c968d730ee8": {
+          "status": "REJECTED",
+          "reason": "compiler/statement rejection"
+        },
+        "local_expression_sharing_df60f922b5f9": {
+          "status": "REJECTED",
+          "reason": "compiler/statement rejection"
+        }
+      },
+      "impact": "selected proof -> packet row -> portfolio aggregate"
+    }
+  }
+}

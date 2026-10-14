@@ -1,0 +1,64 @@
+name: Lean Refactor Arena Binius fold compatibility v4
+on:
+  workflow_dispatch:
+  push:
+    branches: ['competition/lra-binius-fold-qualification-v4']
+    paths:
+      - '.github/workflows/lean-refactor-arena-binius-fold-qualification-v4.yml'
+      - 'competitions/lean_refactor_arena/native_closure_discovery.py'
+      - 'competitions/lean_refactor_arena/experiments/binius_fold_qualification_v4.jsonl'
+permissions:
+  contents: read
+jobs:
+  measure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [v4.30, v4.29]
+    env:
+      PUBLIC_REPO_SHA: 7f3a401470d04f70013d293db4253b088ec8a0ae
+      PROJECT: ${{ matrix.project }}
+      BANK: competitions/lean_refactor_arena/experiments/binius_fold_qualification_v4.jsonl
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build pinned Lean context
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.elan/bin:$PATH"
+          git clone --depth=1 --filter=blob:none --sparse https://github.com/aurasoph/lean-refactor.git /tmp/lean-refactor
+          git -C /tmp/lean-refactor fetch --depth=1 origin "$PUBLIC_REPO_SHA"
+          git -C /tmp/lean-refactor checkout --detach FETCH_HEAD
+          git -C /tmp/lean-refactor sparse-checkout set competition
+          test "$(git -C /tmp/lean-refactor rev-parse HEAD)" = "$PUBLIC_REPO_SHA"
+          mkdir -p /tmp/source-discovery
+          (
+            cd /tmp/lean-refactor/competition/projects/"$PROJECT"
+            lake update
+            lake exe cache get || echo CACHE_FALLBACK
+            lake build ArkLib.ProofSystem.Binius.BinaryBasefold.Prelude
+          ) > /tmp/source-discovery/targeted-build.log 2>&1
+      - name: Verify both exact sources on this required version
+        run: |
+          python3 - <<'PYVERIFY'
+          import hashlib,json,os,pathlib,subprocess,sys
+          bank=pathlib.Path(os.environ['BANK']).resolve()
+          sys.path.insert(0,'/tmp/lean-refactor/competition')
+          import verify
+          version=os.environ['PROJECT']+'.0'
+          with pathlib.Path('/tmp/source-discovery/compatibility.jsonl').open('w') as f:
+            for row in map(json.loads,bank.read_text().splitlines()):
+              result=verify.verify(row['name'],row['proof'],versions=[version],timeout=1800)
+              result.update(candidate_label=row['label'],proof_sha256=hashlib.sha256(row['proof'].encode()).hexdigest(),public_harness_sha=os.environ['PUBLIC_REPO_SHA'])
+              f.write(json.dumps(result,ensure_ascii=False)+'\n');f.flush()
+              print(json.dumps(result,ensure_ascii=False),flush=True)
+          PYVERIFY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-binius-fold-${{ matrix.project }}
+          path: /tmp/source-discovery/
