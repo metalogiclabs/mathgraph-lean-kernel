@@ -1,0 +1,40 @@
+Arena/FieldSpecification_WickAlgebra_timeOrderF_superCommuteF_eq_time.lean:191:71: error: unsolved goals
+𝓕 : FieldSpecification
+φ ψ : 𝓕.CrAnFieldOp
+hφψ : crAnTimeOrderRel φ ψ
+hψφ : crAnTimeOrderRel ψ φ
+a b : 𝓕.FieldOpFreeAlgebra
+mg_acquired : 𝓕.CrAnFieldOp → Prop := fun c => crAnTimeOrderRel φ c ∧ crAnTimeOrderRel c φ
+C : 𝓕.FieldOpFreeAlgebra := (superCommuteF (ofCrAnOpF φ)) (ofCrAnOpF ψ)
+T : 𝓕.FieldOpFreeAlgebra →ₗ[ℂ] 𝓕.WickAlgebra := ι.toLinearMap ∘ₗ timeOrderF
+l r : List 𝓕.CrAnFieldOp
+L : List 𝓕.CrAnFieldOp :=
+  List.takeWhile (fun c => decide ¬crAnTimeOrderRel φ c) (List.insertionSort crAnTimeOrderRel (l ++ r)) ++
+    List.filter (fun b => decide (mg_acquired b)) l
+R : List 𝓕.CrAnFieldOp :=
+  List.filter (fun b => decide (mg_acquired b)) r ++
+    List.filter (fun c => decide (crAnTimeOrderRel φ c ∧ ¬crAnTimeOrderRel c φ))
+      (List.insertionSort crAnTimeOrderRel (l ++ r))
+m : List 𝓕.CrAnFieldOp
+hm : ∀ c ∈ m, crAnTimeOrderRel φ c ∧ crAnTimeOrderRel c φ
+⊢ ι
+        (ofCrAnListF
+          (List.takeWhile (fun c => decide ¬crAnTimeOrderRel φ c) (List.insertionSort crAnTimeOrderRel (l ++ r)))) *
+      (ι (ofCrAnListF (List.filter (fun c => decide (crAnTimeOrderRel φ c ∧ crAnTimeOrderRel c φ)) l)) *
+        (ι (ofCrAnListF m) *
+          (ι (ofCrAnListF (List.filter (fun c => decide (crAnTimeOrderRel φ c ∧ crAnTimeOrderRel c φ)) r)) *
+            ι
+              (ofCrAnListF
+                (List.filter (fun c => decide (crAnTimeOrderRel φ c ∧ ¬crAnTimeOrderRel c φ))
+                  (List.insertionSort crAnTimeOrderRel (l ++ r))))))) =
+    ι
+        (ofCrAnListF
+          (List.takeWhile (fun c => decide ¬crAnTimeOrderRel φ c) (List.insertionSort crAnTimeOrderRel (l ++ r)))) *
+      (ι (ofCrAnListF (List.filter (fun b => decide (mg_acquired b)) l)) *
+        (ι (ofCrAnListF m) *
+          (ι (ofCrAnListF (List.filter (fun b => decide (mg_acquired b)) r)) *
+            ι
+              (ofCrAnListF
+                (List.filter (fun c => decide (crAnTimeOrderRel φ c ∧ ¬crAnTimeOrderRel c φ))
+                  (List.insertionSort crAnTimeOrderRel (l ++ r)))))))
+

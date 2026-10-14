@@ -64,3 +64,21 @@ completed harness result. Fixed red→green: persist native JSON first; best-eff
 diagnostic helper captures timeout/OSError and partial byte output. 78 tests pass.
 The currently running frozen bank and Lean proof bytes are unchanged. Native
 results remain bound to83c2054; this robustness-only fix applies to future runs.
+
+V2 native run38636016104 SUCCESS at83c2054. EM ordered-rw merge qualifies:
+551→547 tokens,10403→10382 heartbeats,objective122.47→122.84. The four macro
+candidates fail; two have unsolved goals differing by the new local definition,
+two proof aliases have incompatible types. Primary source-selected operator
+merge_directed_rewrites has no Wick application: NO_APPLICABLE_TRANSFER.
+
+V3 closes the concrete native residual, without inventing another witness:
+parse unsolved-goal diagnostic location, map through pinned benchmark start_line,
+verify that it names a `:= by` scope, append all_goals rfl at that block's end.
+No theorem-specific scope or repair location is supplied. Native parent hash is
+checked. Typed-mismatch aliases are excluded. Five frozen checks: V16 controls,
+qualified EM v2 merge comparator, two native-location-derived macro repairs.
+81 Python tests pass. Scope-location mapping and repair grammar are bounded and
+programmer supplied. Both EM and Wick previous native failures are inputs, so
+this is feedback-assisted application, not zero-shot/blind transfer. Source-only
+operator cost choice remains frozen. Portfolio admission awaits the complete
+comparison; v2 local gain is not being confused with a leaderboard improvement.

@@ -1,0 +1,36 @@
+Arena/Electromagnetism_ElectromagneticPotential_time_deriv_time_deriv_electricField_of_isExtrema.lean:385:60: error: unsolved goals
+d : ℕ
+A : ElectromagneticPotential d
+𝓕 : FreeSpace
+hA : ContDiff ℝ ∞ A.val
+J : LorentzCurrentDensity d
+hJ : ContDiff ℝ ∞ J
+h : IsExtrema 𝓕 A J
+t : Time
+x : Space d
+i : Fin d
+mg_acquired : Space d → EuclideanSpace ℝ (Fin d) := electricField 𝓕.c A t
+hEs : ∀ (j : Fin d), ContDiff ℝ 2 fun y => (mg_acquired y).ofLp j
+hEd : ∀ (j k : Fin d), Differentiable ℝ (Space.deriv k fun y => (mg_acquired y).ofLp j)
+hB : ∀ (j : Fin d), ContDiff ℝ 2 ↿fun t x => magneticFieldMatrix 𝓕.c A t x (j, i)
+hBt : ∀ (j : Fin d), Differentiable ℝ fun t => Space.deriv j (fun x => magneticFieldMatrix 𝓕.c A t x (j, i)) x
+hJt : Differentiable ℝ fun t => (LorentzCurrentDensity.currentDensity 𝓕.c J t x).ofLp i
+hterm :
+  ∀ (j : Fin d),
+    ∂ₜ (fun s => Space.deriv j (fun x => magneticFieldMatrix 𝓕.c A s x (j, i)) x) t =
+      Space.deriv j (Space.deriv j fun x => (mg_acquired x).ofLp i) x -
+        Space.deriv i (Space.deriv j fun x => (mg_acquired x).ofLp j) x
+hdiv :
+  (fun y => ∑ j, Space.deriv j (fun x => (mg_acquired x).ofLp j) y) = fun y =>
+    1 / 𝓕.ε₀ * LorentzCurrentDensity.chargeDensity 𝓕.c J t y
+hcross :
+  ∑ j, Space.deriv i (Space.deriv j fun x => (mg_acquired x).ofLp j) x =
+    1 / 𝓕.ε₀ * Space.deriv i (fun x => LorentzCurrentDensity.chargeDensity 𝓕.c J t x) x
+hsum : DifferentiableAt ℝ (fun y => ∑ i_1, Space.deriv i_1 (fun x => magneticFieldMatrix 𝓕.c A y x (i_1, i)) x) t
+⊢ 𝓕.ε₀ * ∑ x_1, Space.deriv x_1 (Space.deriv x_1 fun x => (mg_acquired x).ofLp i) x -
+        Space.deriv i (fun x => LorentzCurrentDensity.chargeDensity 𝓕.c J t x) x -
+      𝓕.μ₀ * 𝓕.ε₀ * ∂ₜ (fun t => (LorentzCurrentDensity.currentDensity 𝓕.c J t x).ofLp i) t =
+    𝓕.ε₀ * ∑ x_1, Space.deriv x_1 (Space.deriv x_1 fun x => (electricField 𝓕.c A t x).ofLp i) x -
+        Space.deriv i (fun x => LorentzCurrentDensity.chargeDensity 𝓕.c J t x) x -
+      𝓕.μ₀ * 𝓕.ε₀ * ∂ₜ (fun t => (LorentzCurrentDensity.currentDensity 𝓕.c J t x).ofLp i) t
+
