@@ -25,6 +25,7 @@ and is reproduced by reconcile_discovery_v17.py using existing frontier gates.
 Qualification38639868347 SUCCESS:84tests and15-row schema/lineage checks.
 
 Local prospective combined gain0.201111points;83.1596is a local projection, not a
-hosted score. Automatic approval review blocked the credential-authenticated V17
-upload; no new official result or rank exists. Last observed official V16 score
-is82.74%. Generation-budget and final competition eligibility remain unknown.
+hosted score. User explicitly approved the credential-authenticated upload. Official submission
+20261014T212826Z completed:82.94% (+0.20points),rank9/34,15/15compiled,100%version
+transfer. Prior approval block is resolved. Generation-budget and final competition
+eligibility remain unknown.

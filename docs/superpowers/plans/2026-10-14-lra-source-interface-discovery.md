@@ -105,3 +105,8 @@ blocked by automatic approval review before execution: explicit approval require
 for stored MathGraph credential use at the organizer Hugging Face service.
 No V17 receipt exists; no new hosted score or rank is claimed. V17 is retained
 and ready; V16 last observed official score82.74 remains the only scored result.
+
+User approved exact upload on2026-10-15T10:28:07+13:00. Official V17submission
+20261014T212826Z scored82.94%,+0.20points versusV16,rank9/34,15/15compiled and
+100%versiontransfer. Sanitized receipt,per-theorem results and fresh leaderboard
+snapshot retained. Prior automatic-review block resolved; budget eligibility unknown.
