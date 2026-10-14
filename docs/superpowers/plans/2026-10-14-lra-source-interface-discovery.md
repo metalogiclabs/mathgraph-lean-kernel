@@ -98,3 +98,10 @@ packet from immutable V16 bytes. Current audit pointer replaces stale hardcoded
 V16 regression binding (observed failure→fixed);84tests pass. Full15-row upload
 preflight passes,15overrides,0fallbacks. Local prospective combined gain0.201111
 points;83.1596localprojection is not hosted scoring. Official evaluation next.
+
+Final qualification run38639868347 SUCCESS at8e324871,84/84tests, exact15-row
+upload format and complete per-proof version lineage. Official V17 upload was
+blocked by automatic approval review before execution: explicit approval required
+for stored MathGraph credential use at the organizer Hugging Face service.
+No V17 receipt exists; no new hosted score or rank is claimed. V17 is retained
+and ready; V16 last observed official score82.74 remains the only scored result.
