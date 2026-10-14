@@ -1,0 +1,51 @@
+name: Lean Refactor Arena Binius generated closure and qualification v4
+on:
+  workflow_dispatch:
+  push:
+    branches: ['competition/lra-binius-closure-v4']
+    paths:
+      - '.github/workflows/lean-refactor-arena-binius-closure-v4.yml'
+      - 'competitions/lean_refactor_arena/native_transfer_runner.py'
+      - 'competitions/lean_refactor_arena/experiments/source_binius_transfer_v4.jsonl'
+permissions:
+  contents: read
+jobs:
+  measure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    env:
+      PUBLIC_REPO_SHA: 7f3a401470d04f70013d293db4253b088ec8a0ae
+      BANK: competitions/lean_refactor_arena/experiments/source_binius_transfer_v4.jsonl
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build pinned Lean context
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.elan/bin:$PATH"
+          git clone --depth=1 --filter=blob:none --sparse https://github.com/aurasoph/lean-refactor.git /tmp/lean-refactor
+          git -C /tmp/lean-refactor fetch --depth=1 origin "$PUBLIC_REPO_SHA"
+          git -C /tmp/lean-refactor checkout --detach FETCH_HEAD
+          git -C /tmp/lean-refactor sparse-checkout set competition
+          test "$(git -C /tmp/lean-refactor rev-parse HEAD)" = "$PUBLIC_REPO_SHA"
+          mkdir -p /tmp/source-discovery
+          (
+            cd /tmp/lean-refactor/competition/projects/v4.31
+            lake update
+            lake exe cache get || echo CACHE_FALLBACK
+            lake build ArkLib.ProofSystem.Binius.BinaryBasefold.Prelude
+          ) > /tmp/source-discovery/targeted-build.log 2>&1
+      - name: Measure, acquire bounded closures, and qualify any gain
+        run: |
+          python3 -m unittest discover -s competitions/lean_refactor_arena/tests
+          python3 competitions/lean_refactor_arena/native_transfer_runner.py \
+            --competition /tmp/lean-refactor/competition --bank "$BANK" --out /tmp/binius-qualification
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lra-binius-closure-v4
+          path: |
+            /tmp/source-discovery/
+            /tmp/binius-qualification/
