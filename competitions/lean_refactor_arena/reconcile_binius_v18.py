@@ -21,6 +21,8 @@ def blob(s):return subprocess.check_output(['git','hash-object','--stdin'],input
 def prior(p):return subprocess.check_output(['git','show',BASE+':'+str(p.relative_to(REPO))],text=True)
 def rows(s):return [json.loads(x) for x in s.splitlines() if x.strip()]
 def read(p):return json.loads(p.read_text())
+def assert_current_state(current,baseline,generated):
+    if current!=baseline and current!=generated:raise ValueError('intervening or partial retained state change')
 def run(check=False):
     meta=read(EV/'qualification-run.json');primary_meta=read(EV/'run.json')
     assert meta['id']==38645914725 and meta['head_sha']==HEAD
@@ -109,6 +111,11 @@ def run(check=False):
         assert PORT.read_text()==portfolio and PACKET.read_text()==packet and read(AUDIT)==audit
         assert read(ROOT/'evidence/retained_current_audit.json')==pointer
     else:
+        pointer_path=ROOT/'evidence/retained_current_audit.json'
+        assert_current_state((PORT.read_text(),PACKET.read_text(),read(pointer_path)),
+          (prior(PORT),prior(PACKET),json.loads(prior(pointer_path))),
+          (portfolio,packet,pointer))
+        if AUDIT.exists() and read(AUDIT)!=audit:raise ValueError('conflicting existing V18 audit')
         PORT.write_text(portfolio);PACKET.write_text(packet)
         AUDIT.write_text(json.dumps(audit,ensure_ascii=False,indent=2)+'\n')
         (ROOT/'evidence/retained_current_audit.json').write_text(json.dumps(pointer,indent=2)+'\n')
