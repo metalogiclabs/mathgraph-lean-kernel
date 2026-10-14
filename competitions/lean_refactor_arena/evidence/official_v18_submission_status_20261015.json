@@ -1,0 +1,36 @@
+{
+  "schema": "mathgraph.lra.official-submission-status.v18",
+  "state": "QUALIFIED_V18_BLOCKED_BY_AUTOMATIC_APPROVAL_REVIEW",
+  "source_commit": "2627cca901bf43e33a549b3478e7c7ef845c88eb",
+  "upload_path": "competitions/lean_refactor_arena/submissions/mathgraph_official_v18_20261015.jsonl",
+  "upload_sha256": "1bb3aba79737df002caf04d3d3215db1b7f9f546589089251cbbf5856478ba21",
+  "rows": 15,
+  "reference_fallbacks": 0,
+  "tests_passed": 98,
+  "native_primary_run": 38643866166,
+  "native_older_versions_run": 38645914725,
+  "qualification_runs": [
+    {
+      "id": 38648377713,
+      "head_sha": "2627cca901bf43e33a549b3478e7c7ef845c88eb",
+      "branch": "competition/lean-refactor-arena-track1",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/38648377713"
+    },
+    {
+      "id": 38648265055,
+      "head_sha": "2627cca901bf43e33a549b3478e7c7ef845c88eb",
+      "branch": "competition/lra-v18-binius-source-20261015",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/38648265055"
+    }
+  ],
+  "official_upload": false,
+  "official_result": "UNKNOWN",
+  "credential_in_repository": false,
+  "approval_block_reason": "New V18 proof payload to organizer Hugging Face service using stored MathGraph credential; previous explicit approval covered only exact V17 upload.",
+  "approval_needed": "Explicit approval for this exact verified V18 upload.",
+  "generation_budget_eligibility": "UNKNOWN"
+}
