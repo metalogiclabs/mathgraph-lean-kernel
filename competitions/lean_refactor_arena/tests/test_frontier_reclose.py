@@ -264,17 +264,12 @@ class FrontierTests(unittest.TestCase):
         self.assertEqual([(x["name"],x["proof"]) for x in portfolio],
                          [(x["name"],x["proof"]) for x in packet])
         self.assertEqual(len({x["name"] for x in packet}),15)
-        bank=next(json.loads(s) for s in
-            (root/"experiments"/"wick_bilinear_terminal_verified_v1.jsonl").read_text().splitlines()
-            if s.strip())
-        typing=next(json.loads(s) for s in
-            (root/"experiments"/"typing_four_residual_structural_v1.jsonl").read_text().splitlines()
-            if s.strip() and json.loads(s).get("label")=="typing_movable_tli_grind")
+        audit=json.loads((root/"evidence"/"retained_exact_full_version_audit_20261015_v16.json").read_text())
         active={row["name"]:row for row in portfolio}
-        self.assertEqual(active[bank["name"]]["proof"],bank["proof"])
-        self.assertEqual(active[typing["name"]]["proof"],typing["proof"])
-        self.assertEqual(active[bank["name"]]["label"],"warranted_wick_bilinear_terminal_555")
-        self.assertEqual(active[typing["name"]]["label"],"warranted_typing_movable_tli_grind_308")
+        for record in audit["records"]:
+            row=active[record["name"]]
+            self.assertEqual(row["label"],record["label"])
+            self.assertEqual(hashlib.sha256(row["proof"].encode()).hexdigest(),record["proof_sha256"])
 
 
 if __name__ == "__main__":

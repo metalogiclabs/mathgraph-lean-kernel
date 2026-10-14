@@ -1,0 +1,43 @@
+{
+  "schema": "mathgraph.lra.fiber-v12.four-version-admission.v1",
+  "state": "WARRANTED_EXACT_FOUR_REQUIRED_VERSIONS_PENDING_15_ROW_PACKET",
+  "source": {
+    "schema": "mathgraph.lra.fiber-v12.strict-source-binding.v1",
+    "state": "PRIMARY_WARRANTED_PENDING_ALL_VERSION",
+    "source_run": 38010223751,
+    "source_head": "a34063aa007ed40c4191de1d49dbfa9365423df2",
+    "reference_sha256": "4cc38cc655753d1e1bc610c9f493fd28677155afe84426f505f5a405932bf1bc",
+    "winner_label": "fiber_v12_closeness_observer",
+    "winner_sha256": "c6b953c0027a8d3e9b44889951dbb8177a3841187004684f7104d0d7d30f1c8e",
+    "pinned_harness": "7f3a401470d04f70013d293db4253b088ec8a0ae",
+    "required_versions": [
+      "v4.31.0",
+      "v4.30.0",
+      "v4.29.0",
+      "v4.28.0"
+    ],
+    "active_retained_changed": false,
+    "official_submission": false
+  },
+  "primary_run": 38010223751,
+  "active_incumbent": {
+    "tokens": 439,
+    "heartbeats": 7052,
+    "objective": 129.55
+  },
+  "winner": {
+    "tokens": 424,
+    "heartbeats": 7004,
+    "objective": 130.86
+  },
+  "primary_objective_improvement": 1.31,
+  "required_versions": [
+    "v4.28.0",
+    "v4.29.0",
+    "v4.30.0",
+    "v4.31.0"
+  ],
+  "next_gate": "Source-exact V15 single Binius proof replacement with 14 unchanged rows and current audit",
+  "portfolio_mutated": false,
+  "official_submission": false
+}

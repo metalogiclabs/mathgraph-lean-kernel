@@ -1,0 +1,51 @@
+{
+  "schema": "mathgraph.lra.wick.bilinear-observer.v16",
+  "state": "CANDIDATE_PRIMARY_GAIN_REQUIRES_EXACT_V4_32_REPLAY",
+  "control": {
+    "tokens": 542,
+    "heartbeats": 11751,
+    "objective": 127.75
+  },
+  "tested": 4,
+  "compiled": 4,
+  "qualified": [
+    {
+      "label": "wick_v16_542_control",
+      "tokens": 542,
+      "heartbeats": 11751,
+      "objective": 127.75
+    },
+    {
+      "label": "wick_v16_hzero_consequence",
+      "tokens": 532,
+      "heartbeats": 11947,
+      "objective": 128.11
+    },
+    {
+      "label": "wick_v16_hs_consequence",
+      "tokens": 540,
+      "heartbeats": 11722,
+      "objective": 127.98
+    },
+    {
+      "label": "wick_v16_hzero_hs_compound",
+      "tokens": 530,
+      "heartbeats": 11920,
+      "objective": 128.34
+    }
+  ],
+  "failures": [],
+  "best": {
+    "label": "wick_v16_hzero_hs_compound",
+    "tokens": 530,
+    "heartbeats": 11920,
+    "objective": 128.34,
+    "sha256": "0311a7be0df0fbbc727ff635c0dffabed4ead756c5a7bfbbc64157fcc0915a64"
+  },
+  "required_future": [
+    "v4.32.0",
+    "exact 15-proof packet"
+  ],
+  "portfolio_mutated": false,
+  "official_submission": false
+}
