@@ -82,3 +82,8 @@ programmer supplied. Both EM and Wick previous native failures are inputs, so
 this is feedback-assisted application, not zero-shot/blind transfer. Source-only
 operator cost choice remains frozen. Portfolio admission awaits the complete
 comparison; v2 local gain is not being confused with a leaderboard improvement.
+
+V3 reviewer confirmed exact parent/hash/scope placement and no frozen-bank blocker.
+Tightened diagnostic filename binding after reviewing the general limitation:
+wrong-file regression failed before guard, passes afterward;82/82suite. Both
+frozen repair proofs and metadata regenerate byte-identically; no native restart.

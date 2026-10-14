@@ -13,9 +13,11 @@ def digest(s):return hashlib.sha256(s.encode()).hexdigest()
 
 def repair(row,log,source_start):
     proof=row['proof'];lines=proof.splitlines()
-    matches=re.findall(r'\.lean:(\d+):\d+: error: unsolved goals',log)
-    if len(matches)!=1:return None
-    scope=int(matches[0])-source_start
+    matches=re.findall(r'([^/\s]+\.lean):(\d+):\d+: error: unsolved goals',log)
+    expected=re.sub(r'[^A-Za-z0-9]+','_',row['name']).strip('_')+'.lean'
+    if len(matches)!=1 or matches[0][0]!=expected:return None
+    native_line=int(matches[0][1])
+    scope=native_line-source_start
     if not 1<=scope<len(lines) or not lines[scope-1].rstrip().endswith(':= by'):return None
     first=scope
     while first<len(lines) and not lines[first].strip():first+=1
@@ -37,7 +39,7 @@ def repair(row,log,source_start):
       operator='native_definitional_closure',rule_version='source-native-closure-v3',
       proof_sha256=sha,parent_sha256=digest(proof),status='CANDIDATE_UNVERIFIED',
       discovered=dict(proof_scope_line=scope,inserted_after_proof_line=insertion,
-        native_error_line=int(matches[0]),source_start=source_start,
+        native_error_line=native_line,source_start=source_start,
         parent_label=row.get('label'),parent_operator=row.get('operator'),
         native_error_sha256=digest(log)))
 
