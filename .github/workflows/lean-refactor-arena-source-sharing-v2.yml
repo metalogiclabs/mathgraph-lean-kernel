@@ -63,17 +63,30 @@ jobs:
                 cwd='/tmp/lean-refactor/competition',text=True,capture_output=True)
               pathlib.Path('/tmp/source-discovery/'+row['label']+'_'+str(len(row['name']))+'.log').write_text(p.stdout+'\n'+p.stderr)
               result=json.loads(p.stdout)
-              if not result.get('compiled'):
-                import re
-                slug=re.sub(r'[^A-Za-z0-9]+','_',row['name']).strip('_')
-                diagnostic=subprocess.run(['lake','env','lean','Arena/'+slug+'.lean'],
-                  cwd='/tmp/lean-refactor/competition/projects/v4.32',capture_output=True,text=True,timeout=240)
-                pathlib.Path('/tmp/source-discovery/'+row['label']+'.lean.log').write_text(diagnostic.stdout+'\n'+diagnostic.stderr)
               result.update(name=row['name'],candidate_label=row['label'],proof_sha256=row.get('proof_sha256'),operator=row['operator'])
               f.write(json.dumps(result,ensure_ascii=False)+'\n');f.flush()
+              if not result.get('compiled'):
+                import re,sys
+                sys.path.insert(0,'competitions/lean_refactor_arena')
+                from native_diagnostic import capture
+                slug=re.sub(r'[^A-Za-z0-9]+','_',row['name']).strip('_')
+                diagnostic=capture(['lake','env','lean','Arena/'+slug+'.lean'],
+                  '/tmp/lean-refactor/competition/projects/v4.32')
+                pathlib.Path('/tmp/source-discovery/'+row['label']+'.lean.log').write_text(json.dumps(diagnostic,ensure_ascii=False))
               print(json.dumps(result,ensure_ascii=False),flush=True)
           PY
           python3 competitions/lean_refactor_arena/source_interface_select.py /tmp/source-discovery/results.jsonl --out /tmp/source-discovery/selection.json
+          python3 - <<'PYTRANSFER'
+          import json,pathlib,sys
+          sys.path.insert(0,'competitions/lean_refactor_arena')
+          from source_interface_select import transfer
+          rows=[json.loads(x) for x in pathlib.Path('/tmp/source-discovery/results.jsonl').read_text().splitlines()]
+          names=list(dict.fromkeys(r['name'] for r in rows))
+          assert len(names)==2
+          result=transfer(rows,*names)
+          pathlib.Path('/tmp/source-discovery/transfer.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
+          print(json.dumps(result,ensure_ascii=False,indent=2))
+          PYTRANSFER
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -58,3 +58,9 @@ Source-only transfer policy is unchanged. 75 Python tests pass. Seven frozen row
 two V16 controls, three EM macros, one ordered-rw fusion, one Wick predicate macro.
 Targeted builds restrict dependencies to the two benchmark source modules. This is
 an experimental continuation, not a mathematical witness or new cost warrant.
+
+V2 final reviewer found optional diagnostic timeout could discard an already
+completed harness result. Fixed red→green: persist native JSON first; best-effort
+diagnostic helper captures timeout/OSError and partial byte output. 78 tests pass.
+The currently running frozen bank and Lean proof bytes are unchanged. Native
+results remain bound to83c2054; this robustness-only fix applies to future runs.
