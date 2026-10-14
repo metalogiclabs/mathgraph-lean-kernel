@@ -1,0 +1,461 @@
+{
+  "schema": "mathgraph.lra.retained-proof-exact-version-audit.v18",
+  "state": "EXACT_NATIVE_QUALIFIED_PACKET",
+  "observed_on": "2026-10-15",
+  "source_repo": "aurasoph/lean-refactor",
+  "source_sha": "7f3a401470d04f70013d293db4253b088ec8a0ae",
+  "previous_audit_path": "competitions/lean_refactor_arena/evidence/retained_exact_full_version_audit_20261015_v17.json",
+  "baseline_commit": "2b6010d70daba376eab87d83775ab4cc1e16fda7",
+  "portfolio_path": "competitions/lean_refactor_arena/portfolio/warmup_portfolio_v1.jsonl",
+  "portfolio_blob_sha": "c65a7ff279700029274a2ec91b9c655eb634fe9d",
+  "current_portfolio_blob_sha": "c65a7ff279700029274a2ec91b9c655eb634fe9d",
+  "records": [
+    {
+      "name": "CallElimCorrect.substOldPostSubset",
+      "label": "warranted_strata_tail_simp_grind_135",
+      "required_versions": [
+        "v4.26.0"
+      ],
+      "matches_pinned_public_full_test": false,
+      "public_hash": null,
+      "public_compat": null,
+      "evidence_status": "WARRANTED_INDEPENDENT_EXACT_REQUIRED_VERSION",
+      "independent_run": 37980654973,
+      "compat": {
+        "v4.26.0": true
+      },
+      "independent_authority": {
+        "run": 37980654973,
+        "job": 113990516584,
+        "required_versions_verified": [
+          "v4.26.0"
+        ],
+        "workflow": "Lean Refactor Arena Strata structural consequence crossover",
+        "proof_label": "tail_simp_grind_lean",
+        "all_required_versions_positive": true
+      },
+      "measured_objective_sum_pct": 120.41,
+      "proof_sha256": "eebde3bca69669747ab6203723a222fc84c8a6554e188e5f86c00308635a5f13"
+    },
+    {
+      "name": "CallElimCorrect.extractedOldExprInVars",
+      "label": "warranted_witness_44",
+      "required_versions": [
+        "v4.26.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "d2aa22236a16",
+      "public_compat": {
+        "v4.26.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION",
+      "proof_sha256": "4926d380d5697ee172814f8bf2ba53d4a72b774971e745254730f9b4239c2c35"
+    },
+    {
+      "name": "Core.InitsUpdatesComm",
+      "label": "public_informed_semantic_reconstruction_87",
+      "required_versions": [
+        "v4.29.1",
+        "v4.27.0",
+        "v4.26.0"
+      ],
+      "matches_pinned_public_full_test": false,
+      "public_hash": null,
+      "public_compat": null,
+      "evidence_status": "WARRANTED_INDEPENDENT_EXACT_REQUIRED_VERSION",
+      "independent_authority": {
+        "run": 37889600290,
+        "required_versions_verified": [
+          "v4.29.1",
+          "v4.27.0",
+          "v4.26.0"
+        ]
+      },
+      "proof_sha256": "6c1b64ee4e63151d519ca837e8314d8d05306aca42565d449721e1d4122caa57"
+    },
+    {
+      "name": "fundamental_theorem_of_variational_calculus'",
+      "label": "warranted_variational_support_nonzero_170",
+      "required_versions": [
+        "v4.32.0"
+      ],
+      "matches_pinned_public_full_test": false,
+      "public_hash": null,
+      "public_compat": null,
+      "evidence_status": "WARRANTED_INDEPENDENT_EXACT_REQUIRED_VERSION",
+      "independent_run": 37987082422,
+      "compat": {
+        "v4.32.0": true
+      },
+      "independent_authority": {
+        "run": 37987082422,
+        "job": 114011644918,
+        "source_head": "8e49779d12da2c226bee92080862518e5f04b78e",
+        "proof_label": "support_on_nonzero",
+        "required_versions_verified": [
+          "v4.32.0"
+        ],
+        "measured": {
+          "tokens": 170,
+          "heartbeats": 2022,
+          "objective_sum_pct": 163.22
+        },
+        "replay": "--all-versions success on pinned v4.32.0"
+      },
+      "measured_objective_sum_pct": 163.22,
+      "proof_sha256": "c1c79d119a6f4382ecaba52ddaf7e3c405a42e9b40b23cf24950b6fe33ba4f03"
+    },
+    {
+      "name": "Electromagnetism.ElectromagneticPotential.time_deriv_time_deriv_electricField_of_isExtrema",
+      "label": "warranted_native_definitional_closure_932452c08af5",
+      "required_versions": [
+        "v4.32.0"
+      ],
+      "matches_pinned_public_full_test": false,
+      "public_hash": null,
+      "public_compat": null,
+      "evidence_status": "WARRANTED_INDEPENDENT_EXACT_REQUIRED_VERSION",
+      "independent_authority": {
+        "run": 38638063495,
+        "source_head": "5860c36449b76e182add6d78311b76eeda5e8d74",
+        "protected_source_sha": "7f3a401470d04f70013d293db4253b088ec8a0ae",
+        "proof_sha256": "932452c08af5395c7f8259c27f51035c337cd83d7ac2d22d7bd5469189d55f08",
+        "required_versions_verified": [
+          "v4.32.0"
+        ],
+        "all_required_versions_positive": true,
+        "compiled": true,
+        "statement_ok": true,
+        "measured": {
+          "tokens": 549,
+          "heartbeats": 7993,
+          "objective_sum_pct": 131.28
+        }
+      },
+      "independent_run": 38638063495,
+      "compat": {
+        "v4.32.0": true
+      },
+      "measured_objective_sum_pct": 131.28,
+      "proof_sha256": "932452c08af5395c7f8259c27f51035c337cd83d7ac2d22d7bd5469189d55f08"
+    },
+    {
+      "name": "FieldSpecification.WickAlgebra.ι_timeOrderF_superCommuteF_eq_time",
+      "label": "warranted_native_definitional_closure_fb44212c4f33",
+      "required_versions": [
+        "v4.32.0"
+      ],
+      "matches_pinned_public_full_test": false,
+      "public_hash": null,
+      "public_compat": null,
+      "evidence_status": "WARRANTED_INDEPENDENT_EXACT_REQUIRED_VERSION",
+      "independent_authority": {
+        "run": 38638063495,
+        "source_head": "5860c36449b76e182add6d78311b76eeda5e8d74",
+        "protected_source_sha": "7f3a401470d04f70013d293db4253b088ec8a0ae",
+        "proof_sha256": "fb44212c4f3322ca9e44a5935f234e648e211d277d689e703b71655a45a7245b",
+        "required_versions_verified": [
+          "v4.32.0"
+        ],
+        "all_required_versions_positive": true,
+        "compiled": true,
+        "statement_ok": true,
+        "measured": {
+          "tokens": 525,
+          "heartbeats": 11993,
+          "objective_sum_pct": 128.58
+        }
+      },
+      "independent_run": 38638063495,
+      "compat": {
+        "v4.32.0": true
+      },
+      "measured_objective_sum_pct": 128.58,
+      "proof_sha256": "fb44212c4f3322ca9e44a5935f234e648e211d277d689e703b71655a45a7245b"
+    },
+    {
+      "name": "Cslib.LambdaCalculus.LocallyNameless.Fsub.Typing.progress",
+      "label": "warranted_typing_v21_minimum_value_witness_293",
+      "required_versions": [
+        "v4.33.0-rc2",
+        "v4.32.0",
+        "v4.31.0"
+      ],
+      "matches_pinned_public_full_test": false,
+      "public_hash": null,
+      "public_compat": null,
+      "evidence_status": "WARRANTED_INDEPENDENT_EXACT_REQUIRED_VERSION",
+      "independent_run": 38008548208,
+      "compat": {
+        "v4.33.0-rc2": true,
+        "v4.32.0": true,
+        "v4.31.0": true
+      },
+      "measured_objective_sum_pct": 123.74,
+      "independent_authority": {
+        "run": 38008548208,
+        "primary_run": 38008137539,
+        "primary_label": "typing_v21_inl_minus_both_value",
+        "required_versions_verified": [
+          "v4.33.0-rc2",
+          "v4.32.0",
+          "v4.31.0"
+        ],
+        "qualification": "Completed successful pinned independently source-bound Lean replay across all benchmark required toolchains.",
+        "exact_proof_validation": "Source winner hash verified in current strict V14 packet gate"
+      },
+      "proof_sha256": "1e03399f7d906fa309f0e88e38831922f6faa97bbeea1b23d19a7db9f61d925b"
+    },
+    {
+      "name": "Cslib.SKI.parallelReduction_diamond",
+      "label": "warranted_ski_v18_shared_S_251",
+      "required_versions": [
+        "v4.33.0-rc2",
+        "v4.32.0",
+        "v4.31.0",
+        "v4.30.0"
+      ],
+      "matches_pinned_public_full_test": false,
+      "public_hash": null,
+      "public_compat": null,
+      "evidence_status": "WARRANTED_INDEPENDENT_EXACT_REQUIRED_VERSION",
+      "independent_authority": {
+        "run": 38008633401,
+        "primary_run": 38008324035,
+        "primary_label": "ski_v18_group_S",
+        "required_versions_verified": [
+          "v4.33.0-rc2",
+          "v4.32.0",
+          "v4.31.0",
+          "v4.30.0"
+        ],
+        "qualification": "Completed successful pinned independently source-bound Lean replay across all benchmark required toolchains.",
+        "exact_proof_validation": "Source winner hash verified in current strict V14 packet gate"
+      },
+      "independent_run": 38008633401,
+      "compat": {
+        "v4.33.0-rc2": true,
+        "v4.32.0": true,
+        "v4.31.0": true,
+        "v4.30.0": true
+      },
+      "measured_objective_sum_pct": 103.22,
+      "proof_sha256": "992fca8bcec669c0e744aa1ae45a53d7d71442f40babf8d5c90f1ec571c80fd3"
+    },
+    {
+      "name": "Cslib.CCS.bisimilarity_congr_choice",
+      "label": "public_informed_derivation_85",
+      "required_versions": [
+        "v4.33.0-rc2",
+        "v4.32.0",
+        "v4.31.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "3b5c96c77fc7",
+      "public_compat": {
+        "v4.33.0-rc2": true,
+        "v4.32.0": true,
+        "v4.31.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION",
+      "proof_sha256": "481f96a56cf617cde7d2e94013de5078d8129c94e3f7d5fa8f892b493cb1148a"
+    },
+    {
+      "name": "Binius.BinaryBasefold.fiberwise_dist_lt_imp_dist_lt_unique_decoding_radius",
+      "label": "warranted_fiber_v12_closeness_observer",
+      "required_versions": [
+        "v4.31.0",
+        "v4.30.0",
+        "v4.29.0",
+        "v4.28.0"
+      ],
+      "matches_pinned_public_full_test": false,
+      "public_hash": null,
+      "public_compat": null,
+      "evidence_status": "WARRANTED_INDEPENDENT_EXACT_REQUIRED_VERSION",
+      "proof_sha256": "c6b953c0027a8d3e9b44889951dbb8177a3841187004684f7104d0d7d30f1c8e",
+      "independent_run": 38011591819,
+      "compat": {
+        "v4.31.0": true,
+        "v4.30.0": true,
+        "v4.29.0": true,
+        "v4.28.0": true
+      },
+      "independent_authority": {
+        "run": 38011591819,
+        "proof_sha256": "c6b953c0027a8d3e9b44889951dbb8177a3841187004684f7104d0d7d30f1c8e",
+        "required_versions_verified": [
+          "v4.31.0",
+          "v4.30.0",
+          "v4.29.0",
+          "v4.28.0"
+        ],
+        "all_required_versions_positive": true
+      },
+      "measured_objective_sum_pct": 130.86
+    },
+    {
+      "name": "Binius.BinaryBasefold.fold_advances_evaluation_poly",
+      "label": "warranted_local_expression_sharing_31304a0d5136",
+      "required_versions": [
+        "v4.31.0",
+        "v4.30.0",
+        "v4.29.0"
+      ],
+      "matches_pinned_public_full_test": false,
+      "public_hash": null,
+      "public_compat": null,
+      "evidence_status": "WARRANTED_INDEPENDENT_EXACT_REQUIRED_VERSION",
+      "independent_authority": {
+        "run": 38645914725,
+        "source_head": "d241190ef46775abc152c393d389db406fb08cf3",
+        "protected_source_sha": "7f3a401470d04f70013d293db4253b088ec8a0ae",
+        "proof_sha256": "31304a0d513626bafe629cb374f45c8422c056c73752fdeffce143770e344e28",
+        "required_versions_verified": [
+          "v4.31.0",
+          "v4.30.0",
+          "v4.29.0"
+        ],
+        "all_required_versions_positive": true,
+        "compiled": true,
+        "statement_ok": true,
+        "primary_run": 38643866166,
+        "primary_source_head": "0e510afad3dbff777bb79bc74f554cc50b14b65c",
+        "measured": {
+          "tokens": 377,
+          "heartbeats": 8897,
+          "objective_sum_pct": 162.23
+        }
+      },
+      "independent_run": 38645914725,
+      "compat": {
+        "v4.31.0": true,
+        "v4.30.0": true,
+        "v4.29.0": true
+      },
+      "measured_objective_sum_pct": 162.23,
+      "proof_sha256": "31304a0d513626bafe629cb374f45c8422c056c73752fdeffce143770e344e28"
+    },
+    {
+      "name": "interleaved_affine_gaps_imply_tensor_gaps",
+      "label": "public_informed_recursive_form_173",
+      "required_versions": [
+        "v4.31.0",
+        "v4.30.0",
+        "v4.29.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "fe4c6fa1984f",
+      "public_compat": {
+        "v4.31.0": true,
+        "v4.30.0": true,
+        "v4.29.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION",
+      "proof_sha256": "2c91972da8c78495eb6df2e094c2b8216b6137438998bd0f26a210a3b8a5f5e5"
+    },
+    {
+      "name": "putnam_1964_a4",
+      "label": "public_informed_minimal_state_291",
+      "required_versions": [
+        "v4.25.0",
+        "v4.26.0",
+        "v4.27.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "6801603b11c9",
+      "public_compat": {
+        "v4.25.0": true,
+        "v4.26.0": true,
+        "v4.27.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION",
+      "proof_sha256": "d708e5c25fa4889bc4d727efcea59b79aedaeb23e76c4f37b1eb26018fadc165"
+    },
+    {
+      "name": "putnam_1964_b2",
+      "label": "public_all_versions_d9377ebbc1d6",
+      "required_versions": [
+        "v4.25.0",
+        "v4.26.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "d9377ebbc1d6",
+      "public_compat": {
+        "v4.25.0": true,
+        "v4.26.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION",
+      "proof_sha256": "638f6cda2cf4c8838cdc604c16aa7736d013b91f5e737b0cfc75f22d720d2334"
+    },
+    {
+      "name": "putnam_1995_a3",
+      "label": "public_informed_digit_replace_414",
+      "required_versions": [
+        "v4.25.0",
+        "v4.26.0",
+        "v4.27.0"
+      ],
+      "matches_pinned_public_full_test": true,
+      "public_hash": "70b336d1cc35",
+      "public_compat": {
+        "v4.25.0": true,
+        "v4.26.0": true,
+        "v4.27.0": true
+      },
+      "evidence_status": "WARRANTED_EXTERNAL_EXACT_FULL_VERSION",
+      "proof_sha256": "5ddc148fd71325225016f8ae74f50fe502bd24e830af36b530d728dc5b74c256"
+    }
+  ],
+  "comparator_full_version_exact_count": 6,
+  "independently_qualified_count": 9,
+  "total_authorized_by_prior_evidence": 15,
+  "change_fingerprint": {
+    "changed_theorems": [
+      "Binius.BinaryBasefold.fold_advances_evaluation_poly"
+    ],
+    "preserved_proof_rows_from_v17": 14,
+    "source_run": 38645914725,
+    "source_head": "d241190ef46775abc152c393d389db406fb08cf3"
+  },
+  "protected_future_invariant": "Fourteen V17 rows byte-identical; every proof bound to complete required-version authority.",
+  "current_packet": {
+    "path": "competitions/lean_refactor_arena/submissions/mathgraph_verified_15_warmup_20261009.jsonl",
+    "git_blob_sha": "085b59aae34ec8e70698bb25e50fdd33db580143",
+    "sha256": "e5d2949317ba5c21f433562b00838c4393e0b92b0917959e956baebdc1d54e3d",
+    "rows": 15,
+    "status": "EXACT_V18_PACKET_RECLOSED"
+  },
+  "projected_score": {
+    "objective_sum_total": 2242.73,
+    "combined_pct_if_full_survival": 83.1718,
+    "prospective_delta_points": 0.012222,
+    "status": "LOCAL_PROJECTION_NOT_HOSTED_SCORE"
+  },
+  "decisions": {
+    "Binius.BinaryBasefold.fold_advances_evaluation_poly": {
+      "selected_label": "local_expression_sharing_31304a0d5136",
+      "objective_gain": 0.55,
+      "frontier_labels": [
+        "local_expression_sharing_31304a0d5136"
+      ],
+      "admission": {
+        "v17_control": {
+          "status": "WARRANTED",
+          "reason": "source and all required consequences reverified"
+        },
+        "local_expression_sharing_31304a0d5136": {
+          "status": "WARRANTED",
+          "reason": "source and all required consequences reverified"
+        }
+      },
+      "impact": "selected proof -> packet row -> portfolio aggregate"
+    }
+  },
+  "promotion_boundary": {
+    "official_submission": false,
+    "competition_generation_budget": "UNKNOWN",
+    "final_competition_eligibility": "UNKNOWN",
+    "operator_transfer": "FEEDBACK_ASSISTED_PREVIOUSLY_INSPECTED_WARMUPS"
+  }
+}
