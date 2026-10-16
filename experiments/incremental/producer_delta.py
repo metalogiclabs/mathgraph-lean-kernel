@@ -24,6 +24,7 @@ HERE = Path(__file__).resolve().parent
 TRANSITION = 'mathgraph.lean-source-owned-transition.v1'
 GENESIS = 'mathgraph.lean-source-owned-genesis.v1'
 REPRESENTATION = 'mathgraph.lean-delta-representation.v1'
+SPARSE_ACCEPTANCE = 'mathgraph.incremental-lean.sparse-accepted.v1'
 SOURCES = ('IncrementalWorkload/Base.lean', 'IncrementalWorkload/Derived.lean',
            'IncrementalWorkload/Leaves.lean', 'Workload.lean', 'lakefile.toml', 'lean-toolchain')
 
@@ -172,6 +173,57 @@ def reconstruct_index_patch(baseline, patch):
     out['builtins'] = builtins
     return out
 
+
+def authenticate_sparse_acceptance(raw, evidence_id, key, baseline):
+    """Authenticate a compact acceptance and re-establish its exact applicability.
+
+    This is a distinct receipt domain. The baseline must already be HMAC
+    authenticated by the original verifier issuer. Neither this function nor
+    any cache receipt may manufacture kernel acceptance.
+    """
+    if type(evidence_id) is not str or len(evidence_id) != 64 or any(
+            c not in '0123456789abcdef' for c in evidence_id):
+        raise ValueError('invalid sparse receipt identity')
+    if sha(raw) != evidence_id:
+        raise ValueError('sparse acceptance content-address mismatch')
+    signed = json.loads(raw, object_pairs_hook=engine.strict_object)
+    payload = authenticate(signed, key, SPARSE_ACCEPTANCE)
+    required = {'schema', 'status', 'export_sha256', 'previous_evidence',
+                'delta_representation', 'producer_provenance', 'index_patch',
+                'obligation_count', 'checked_indices'}
+    if set(payload) != required or payload['status'] != 'VERIFIED':
+        raise ValueError('unsupported sparse acceptance certificate')
+    def hexid(value):
+        return type(value) is str and len(value) == 64 and all(
+            c in '0123456789abcdef' for c in value)
+    for name in ('previous_evidence', 'export_sha256', 'delta_representation'):
+        if not hexid(payload[name]):
+            raise ValueError('malformed signed sparse acceptance reference: ' + name)
+    if type(baseline) is not dict or baseline.get('status') != 'VERIFIED':
+        raise ValueError('sparse receipt requires issuer-validated baseline')
+    if not hexid(baseline.get('export_sha256')):
+        raise ValueError('malformed verified baseline export identity')
+    if not isinstance(baseline.get('provenance'), dict) or not isinstance(
+            payload.get('producer_provenance'), dict):
+        raise ValueError('missing acceptance provenance')
+    if type(payload['obligation_count']) is not int:
+        raise ValueError('invalid obligation count')
+    index = reconstruct_index_patch(baseline['index'], payload['index_patch'])
+    if index['count'] != payload['obligation_count']:
+        raise ValueError('sparse receipt count mismatch')
+    selected = payload['checked_indices']
+    if (type(selected) is not list or
+        any(type(i) is not int or i < 0 or i >= index['count'] for i in selected) or
+        selected != sorted(set(selected))):
+        raise ValueError('invalid checked-obligation list')
+    expected, _decisions = engine.reuse_decisions(
+        baseline, index, baseline['provenance'], payload['previous_evidence'])
+    if expected != selected:
+        raise ValueError('signed receipt disagrees with verified applicability rule')
+    checked = set(selected)
+    return dict(payload, index=index,
+                reused_indices=[i for i in range(index['count']) if i not in checked])
+
 class DeltaSession:
     """One authenticated baseline-anchored transaction, then close or restart.
 
@@ -181,7 +233,8 @@ class DeltaSession:
     requires the exact pinned baseline export and authenticated prior evidence.
     """
     def __init__(self, root, workloads, producer, checker, indexer, index_session,
-                 authority_key, index_mode='retained', sparse_index_wire=False):
+                 authority_key, index_mode='retained', sparse_index_wire=False,
+                 sparse_receipt=False):
         # Mode is an explicit, authenticated A/B policy rather than an
         # unrecorded subprocess switch. Both paths must produce the same index.
         if index_mode not in ('retained', 'full'):
@@ -190,6 +243,9 @@ class DeltaSession:
         if type(sparse_index_wire) is not bool or (sparse_index_wire and index_mode != 'retained'):
             raise ValueError('sparse index wire requires retained identity mode')
         self.sparse_index_wire = sparse_index_wire
+        if type(sparse_receipt) is not bool or (sparse_receipt and not sparse_index_wire):
+            raise ValueError('sparse receipt requires sparse typed-index transport')
+        self.sparse_receipt = sparse_receipt
         self.root, self.workloads = Path(root).resolve(), Path(workloads).resolve()
         self.root.mkdir(parents=True, exist_ok=True)
         self.key_path = Path(authority_key).resolve()
@@ -254,6 +310,8 @@ class DeltaSession:
             identity_finish_mode=self.index_mode)
         if self.sparse_index_wire:
             self.delta_provenance['identity_index_wire'] = 'baseline_patch_v1'
+        if self.sparse_receipt:
+            self.delta_provenance['acceptance_receipt'] = SPARSE_ACCEPTANCE
 
     def start(self):
         tick, cpu = time.perf_counter(), self.cpu_time()
@@ -570,11 +628,28 @@ class DeltaSession:
             representation = dict(schema=REPRESENTATION, base_evidence_id=self.base_id,
                 delta_sha256=delta_id, transition_id=attestation_id, export_sha256=export_hash)
             representation_id = self._put('representations', engine.encoded(representation), '.json')
-            accepted = dict(schema=engine.SCHEMA, status=status, export_sha256=export_hash,
-                index=index, provenance=self.old['provenance'], previous_evidence=self.base_id,
-                checked_indices=selected, reused_indices=[d['index'] for d in decisions if d['status']=='VERIFIED_REUSED'],
-                producer_provenance=self.delta_provenance, delta_representation=representation_id)
-            receipt_id = self._put('records', engine.encoded(seal(accepted, self.key)), '.json')
+            if self.sparse_receipt and update.get('index_wire') == 'baseline_patch_v1':
+                # A typed delta over authenticated baseline, not a self-issued
+                # acceptance. The same actual selected kernel ran above.
+                accepted = dict(schema=SPARSE_ACCEPTANCE, status=status,
+                    export_sha256=export_hash, previous_evidence=self.base_id,
+                    index_patch=update['index_patch'], obligation_count=index['count'],
+                    checked_indices=selected, producer_provenance=self.delta_provenance,
+                    delta_representation=representation_id)
+                candidate = engine.encoded(seal(accepted, self.key))
+                restored = authenticate_sparse_acceptance(
+                    candidate, sha(candidate), self.key, self.old)
+                if engine.encoded(restored['index']) != engine.encoded(index):
+                    raise ValueError('signed sparse receipt does not reconstruct live typed index')
+            else:
+                accepted = dict(schema=engine.SCHEMA, status=status, export_sha256=export_hash,
+                    index=index, provenance=self.old['provenance'], previous_evidence=self.base_id,
+                    checked_indices=selected,
+                    reused_indices=[d['index'] for d in decisions if d['status']=='VERIFIED_REUSED'],
+                    producer_provenance=self.delta_provenance,
+                    delta_representation=representation_id)
+                candidate = engine.encoded(seal(accepted, self.key))
+            receipt_id = self._put('records', candidate, '.json')
             for decision in decisions:
                 if decision['status'] == 'VERIFIED_NEW':
                     decision['evidence_id'] = receipt_id
@@ -616,7 +691,16 @@ class DeltaSession:
 
     def replay(self, receipt_id):
         raw = self._object('records', receipt_id, '.json')
-        record = engine.authenticate_record(raw, receipt_id, self.key)
+        envelope = json.loads(raw, object_pairs_hook=engine.strict_object)
+        domain = envelope.get('payload', {}).get('schema') if type(envelope) is dict else None
+        if domain == SPARSE_ACCEPTANCE:
+            if not self.sparse_receipt:
+                raise ValueError('sparse receipt not enabled under current policy')
+            record = authenticate_sparse_acceptance(raw, receipt_id, self.key, self.old)
+            if record['previous_evidence'] != self.base_id:
+                raise ValueError('sparse receipt targets foreign baseline evidence')
+        else:
+            record = engine.authenticate_record(raw, receipt_id, self.key)
         if record.get('producer_provenance') != self.delta_provenance:
             raise ValueError('accepted delta toolchain/provenance mismatch')
         representation = json.loads(self._object('representations', record['delta_representation'], '.json'),
@@ -631,8 +715,16 @@ class DeltaSession:
                                          producer_report=payload['producer_report']))
         if (result['status'] != 'VERIFIED' or result['export_sha256'] != record['export_sha256'] or
             result['export_sha256'] != representation['export_sha256'] or
-            result['counts']['scheduled'] != len(record['checked_indices'])):
+            result['counts']['scheduled'] != len(record['checked_indices']) or
+            [d['index'] for d in result['decisions'] if d['status'] == 'VERIFIED_NEW']
+               != record['checked_indices']):
             raise ValueError('persisted delta replay mismatch')
+        if domain == SPARSE_ACCEPTANCE:
+            for d, witness in zip(record['index']['declarations'], result['decisions']):
+                if (d['index'] != witness['index'] or
+                    d['own'] != witness['dependency_witness']['own'] or
+                    d['closure'] != witness['dependency_witness']['closure']):
+                    raise ValueError('cold replay typed declaration identity mismatch')
         return result
 
     def close(self):
