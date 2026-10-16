@@ -106,6 +106,7 @@ pub struct IdentityDelta {
     pub replaced_names: Vec<String>,
     pub retained_graph_used: bool,
     pub recomputed_sccs: usize,
+    pub finish_nanos: u64,
 }
 
 /// Baseline SCC cache. Never grants acceptance; the authenticated source
@@ -855,10 +856,12 @@ impl IdentityBuilder {
             }
             rows_processed += 1;
         }
+        let finish_start = std::time::Instant::now();
         let (index, retained_graph_used, recomputed_sccs) =
             self.finish_delta(&replaced_positions, added_names)?;
+        let finish_nanos = finish_start.elapsed().as_nanos() as u64;
         Ok(IdentityDelta { index, rows_processed, dag_rows, replaced_names,
-                           retained_graph_used, recomputed_sccs })
+                           retained_graph_used, recomputed_sccs, finish_nanos })
     }
     /// Cold-only admission of the original complete index and retained SCC DAG.
     pub fn prepare_retained(&mut self) -> Result<ExportIdentityIndex> {

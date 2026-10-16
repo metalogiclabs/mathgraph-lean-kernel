@@ -122,7 +122,13 @@ class DeltaSession:
     proof state stays immutable in that process; restart reconstructs it and
     requires the exact pinned baseline export and authenticated prior evidence.
     """
-    def __init__(self, root, workloads, producer, checker, indexer, index_session, authority_key):
+    def __init__(self, root, workloads, producer, checker, indexer, index_session,
+                 authority_key, index_mode='retained'):
+        # Mode is an explicit, authenticated A/B policy rather than an
+        # unrecorded subprocess switch. Both paths must produce the same index.
+        if index_mode not in ('retained', 'full'):
+            raise ValueError('unsupported identity finish mode')
+        self.index_mode = index_mode
         self.root, self.workloads = Path(root).resolve(), Path(workloads).resolve()
         self.root.mkdir(parents=True, exist_ok=True)
         self.key_path = Path(authority_key).resolve()
@@ -183,7 +189,8 @@ class DeltaSession:
             engine_sha256=sha((HERE / 'engine.py').read_bytes()), pins_sha256=sha((HERE / 'pins.json').read_bytes()),
             profile=self.profile, profile_policy_sha256=self.profile_policy_sha256, roots=self.roots,
             source_policy='complete-six-file-capture;fixed-imports;one-simple-replacement-set',
-            representation='baseline-DAG;append-only-delta-DAG;original-declaration-schedule')
+            representation='baseline-DAG;append-only-delta-DAG;original-declaration-schedule',
+            identity_finish_mode=self.index_mode)
 
     def start(self):
         tick, cpu = time.perf_counter(), self.cpu_time()
@@ -237,7 +244,10 @@ class DeltaSession:
         configuration = dict(self.old['provenance']['configuration'], export_file_path=str(initial_export))
         config = self.temp / 'index-config.json'
         config.write_bytes(engine.encoded(configuration))
-        self.index = JsonProcess([self.tools['index_session'], config], self.root / 'index.stderr')
+        command = [self.tools['index_session'], config]
+        if self.index_mode == 'full':
+            command.append('--full-index')
+        self.index = JsonProcess(command, self.root / 'index.stderr')
         indexed = self.index.receive()
         if indexed.get('status') != 'ready' or engine.encoded(indexed.get('index')) != engine.encoded(self.old['index']):
             raise ValueError('retained typed index disagrees with authenticated baseline')

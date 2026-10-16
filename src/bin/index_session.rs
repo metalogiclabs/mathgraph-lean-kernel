@@ -26,8 +26,10 @@ fn emit(value: &impl serde::Serialize) -> Result<(), Box<dyn Error>> {
 
 fn run() -> Result<(), Box<dyn Error>> {
     let args = std::env::args().skip(1).collect::<Vec<_>>();
-    let [config_path] = args.as_slice() else {
-        return Err("usage: index-session CONFIG".into());
+    let (config_path, full_index) = match args.as_slice() {
+        [path] => (path, false),
+        [path, flag] if flag == "--full-index" => (path, true),
+        _ => return Err("usage: index-session CONFIG [--full-index]".into()),
     };
     let config = Config::try_from(Path::new(config_path))?;
     let path = config.export_file_path.as_ref().ok_or("index-session requires baseline export_file_path")?;
@@ -35,7 +37,11 @@ fn run() -> Result<(), Box<dyn Error>> {
     let map = unsafe { memmap2::Mmap::map(&file) }?;
     let mut identity = sokonanoda::parser::export_identity_builder(&map, config)?;
     drop(map);
-    emit(&json!({"status":"ready", "index":identity.prepare_retained()?}))?;
+    // A/B control: same parser and binary; only the identity finish algorithm
+    // differs. Both return the same canonical full index and require the same
+    // source attestation plus independent selected checker downstream.
+    let initial_index = if full_index { identity.finish()? } else { identity.prepare_retained()? };
+    emit(&json!({"status":"ready", "index":initial_index}))?;
     for line in std::io::stdin().lock().lines() {
         // Struct deserialization rejects duplicate fields, unknown fields,
         // malformed JSON and unescaped controls before any DAG mutation.
@@ -46,7 +52,9 @@ fn run() -> Result<(), Box<dyn Error>> {
             "rows_processed":update.rows_processed, "dag_rows":update.dag_rows,
             "replaced_names":update.replaced_names,
             "retained_graph_used":update.retained_graph_used,
-            "recomputed_sccs":update.recomputed_sccs}))?;
+            "recomputed_sccs":update.recomputed_sccs,
+            "finish_nanos":update.finish_nanos,
+            "finish_mode":if full_index {"full"} else {"retained"} }))?;
     }
     Ok(())
 }
