@@ -1,0 +1,99 @@
+name: Focused causal SCC A/B diagnostic
+on:
+  push:
+    branches: [research/scc-ab-causal-fast-20261017]
+  workflow_dispatch:
+permissions:
+  contents: read
+defaults:
+  run:
+    shell: bash
+jobs:
+  diagnostic:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 70
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+      - name: Pin exact source, compiler, and native tests
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          git rev-parse HEAD > artifacts/source-ref.txt
+          git diff --exit-code
+          bash experiments/incremental/setup.sh
+          export PATH="$HOME/.cargo/bin:$HOME/.elan/bin:$PATH"
+          cargo +1.95.0 test --release --locked --lib
+          cargo +1.95.0 test --release --locked --bin index-session
+          python3 -m py_compile experiments/incremental/benchmark_retained_scc.py
+          cargo +1.95.0 build --release --locked --bins
+      - name: Build pinned genuine original and expanded Lean Std workloads
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$HOME/.elan/bin:$PATH"
+          bash experiments/incremental/build_delta_producer.sh artifacts/delta-build
+          python3 experiments/incremental/build_workloads.py --out artifacts/workloads
+          python3 experiments/incremental/build_delta_workloads.py \
+            --workloads artifacts/workloads --out artifacts/expanded \
+            --producer artifacts/delta-build/delta-producer
+          sha256sum artifacts/delta-build/delta-producer target/release/index-session \
+            target/release/check-selected target/release/export-index \
+            > artifacts/executable-SHA256SUMS
+      - name: Five balanced same-host A/B pairs — 3436 and 11653 real obligations
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$HOME/.elan/bin:$PATH"
+          python3 experiments/incremental/engine.py --init-key "$RUNNER_TEMP/causal-small.key"
+          python3 experiments/incremental/engine.py --init-key "$RUNNER_TEMP/causal-large.key"
+          python3 experiments/incremental/benchmark_retained_scc.py \
+            --workloads artifacts/workloads \
+            --producer artifacts/delta-build/delta-producer \
+            --checker target/release/check-selected --indexer target/release/export-index \
+            --index-session target/release/index-session --full-checker target/release/sokonanoda \
+            --authority-key "$RUNNER_TEMP/causal-small.key" \
+            --out artifacts/ab-small --repetitions 5
+          python3 experiments/incremental/benchmark_retained_scc.py \
+            --workloads artifacts/expanded \
+            --producer artifacts/delta-build/delta-producer \
+            --checker target/release/check-selected --indexer target/release/export-index \
+            --index-session target/release/index-session --full-checker target/release/sokonanoda \
+            --authority-key "$RUNNER_TEMP/causal-large.key" \
+            --out artifacts/ab-large --repetitions 5
+      - name: Fail closed unless all exact A/B pairs and oracles pass
+        run: |
+          set -euo pipefail
+          git diff --exit-code
+          sha256sum --check artifacts/executable-SHA256SUMS
+          python3 - <<'PY'
+          import json,subprocess
+          from pathlib import Path
+          sha=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          for label in ('ab-small','ab-large'):
+              x=json.loads((Path('artifacts')/label/'summary.json').read_text())
+              assert x['source_sha']==sha and x['complete'] and x['correctness_passed']
+              assert all(g['passed'] is True for g in x['gates'])
+              assert len(x['pairs'])==10
+              for edit in ('early-definition','unrelated-definition'):
+                  e=x['economics'][edit]
+                  assert e['complete_transaction']['paired_count']==5
+                  assert e['native_scc_finish']['paired_count']==5
+          PY
+      - name: Preserve compact same-host evidence, including failure records
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: focused-scc-causal-ab
+          path: |
+            artifacts/source-ref.txt
+            artifacts/executable-SHA256SUMS
+            artifacts/ab-small/summary.json
+            artifacts/ab-small/summary.md
+            artifacts/ab-small/partial.json
+            artifacts/ab-small/failure.txt
+            artifacts/ab-large/summary.json
+            artifacts/ab-large/summary.md
+            artifacts/ab-large/partial.json
+            artifacts/ab-large/failure.txt
+          if-no-files-found: warn
+          retention-days: 30
