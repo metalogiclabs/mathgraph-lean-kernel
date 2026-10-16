@@ -1,0 +1,66 @@
+name: Retained SCC delta qualification
+on:
+  push:
+    branches: [research/incremental-retained-scc-20261017]
+  workflow_dispatch:
+permissions:
+  contents: read
+defaults:
+  run:
+    shell: bash
+jobs:
+  qualification:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Build exact toolchain and exercise retained graph tests
+        run: |
+          set -euo pipefail
+          bash experiments/incremental/setup.sh
+          export PATH="$HOME/.cargo/bin:$HOME/.elan/bin:$PATH"
+          cargo +1.95.0 test --release --locked --lib identity::session_tests -- --nocapture
+          cargo +1.95.0 test --release --locked --bin index-session
+          cargo +1.95.0 test --release --locked --lib
+          python3 experiments/incremental/test_delta_reuse.py
+          python3 experiments/incremental/test_source_delta_authority.py
+      - name: Build pinned original and expanded Lean Std exports
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$HOME/.elan/bin:$PATH"
+          mkdir -p artifacts
+          bash experiments/incremental/build_delta_producer.sh artifacts/delta-build
+          python3 experiments/incremental/build_workloads.py --out artifacts/workloads
+          python3 experiments/incremental/build_delta_workloads.py \
+            --workloads artifacts/workloads --out artifacts/expanded \
+            --producer artifacts/delta-build/delta-producer
+      - name: Full original and expanded producer-delta oracle qualification
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$HOME/.elan/bin:$PATH"
+          python3 experiments/incremental/engine.py --init-key "$RUNNER_TEMP/issuer-small.key"
+          python3 experiments/incremental/engine.py --init-key "$RUNNER_TEMP/issuer-large.key"
+          python3 experiments/incremental/qualify_delta.py \
+            --workloads artifacts/workloads --producer artifacts/delta-build/delta-producer \
+            --checker target/release/check-selected --indexer target/release/export-index \
+            --index-session target/release/index-session --full-checker target/release/sokonanoda \
+            --authority-key "$RUNNER_TEMP/issuer-small.key" \
+            --out artifacts/small --repetitions 5
+          python3 experiments/incremental/qualify_delta.py \
+            --workloads artifacts/expanded --producer artifacts/delta-build/delta-producer \
+            --checker target/release/check-selected --indexer target/release/export-index \
+            --index-session target/release/index-session --full-checker target/release/sokonanoda \
+            --authority-key "$RUNNER_TEMP/issuer-large.key" \
+            --out artifacts/large --repetitions 5
+      - name: Publish concise evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: retained-scc-qualification
+          path: |
+            artifacts/small/summary.json
+            artifacts/small/summary.md
+            artifacts/large/summary.json
+            artifacts/large/summary.md
+          if-no-files-found: warn
+          retention-days: 30

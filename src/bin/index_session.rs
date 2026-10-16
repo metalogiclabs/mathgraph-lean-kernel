@@ -35,7 +35,7 @@ fn run() -> Result<(), Box<dyn Error>> {
     let map = unsafe { memmap2::Mmap::map(&file) }?;
     let mut identity = sokonanoda::parser::export_identity_builder(&map, config)?;
     drop(map);
-    emit(&json!({"status":"ready", "index":identity.finish()?}))?;
+    emit(&json!({"status":"ready", "index":identity.prepare_retained()?}))?;
     for line in std::io::stdin().lock().lines() {
         // Struct deserialization rejects duplicate fields, unknown fields,
         // malformed JSON and unescaped controls before any DAG mutation.
@@ -44,7 +44,9 @@ fn run() -> Result<(), Box<dyn Error>> {
         let update = identity.apply_delta(&delta)?;
         emit(&json!({"status":"indexed", "index":update.index,
             "rows_processed":update.rows_processed, "dag_rows":update.dag_rows,
-            "replaced_names":update.replaced_names}))?;
+            "replaced_names":update.replaced_names,
+            "retained_graph_used":update.retained_graph_used,
+            "recomputed_sccs":update.recomputed_sccs}))?;
     }
     Ok(())
 }

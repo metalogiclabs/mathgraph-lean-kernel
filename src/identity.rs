@@ -63,7 +63,7 @@ impl Serialize for HexFingerprint {
         serializer.serialize_str(std::str::from_utf8(&bytes).expect("hexadecimal ASCII"))
     }
 }
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 struct ExportDeclaration {
     key: HexFingerprint,
     name: String,
@@ -74,7 +74,7 @@ struct ExportDeclaration {
     closure: HexFingerprint,
 }
 /// The same JSON index schema returned by the Python identity oracle.
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct ExportIdentityIndex {
     meta: Value,
     declarations: Vec<ExportDeclaration>,
@@ -96,6 +96,7 @@ pub struct IdentityBuilder {
     rows: usize,
     buffer: Vec<u8>,
     delta_attempted: bool,
+    retained: Option<RetainedClosure>,
 }
 #[derive(Serialize)]
 pub struct IdentityDelta {
@@ -103,7 +104,185 @@ pub struct IdentityDelta {
     pub rows_processed: usize,
     pub dag_rows: usize,
     pub replaced_names: Vec<String>,
+    pub retained_graph_used: bool,
+    pub recomputed_sccs: usize,
 }
+
+/// Baseline SCC cache. Never grants acceptance; the authenticated source
+/// transition and real selected kernel are required independently.
+struct RetainedComponent {
+    members: Vec<usize>,
+    outgoing: Vec<usize>,
+    reverse: Vec<usize>,
+    negatives: Vec<String>,
+}
+struct RetainedClosure {
+    baseline: ExportIdentityIndex,
+    component_for: Vec<usize>,
+    components: Vec<RetainedComponent>,
+    roots: Vec<Fingerprint>,
+    builtin_components: Vec<(String, usize)>,
+}
+impl RetainedClosure {
+    fn capture(baseline: ExportIdentityIndex) -> Result<Self> {
+        let n = baseline.declarations.len();
+        if baseline.count != n { return failure("retained count mismatch"); }
+        let mut by_key: FxHashMap<Fingerprint, usize> = new_fx_hash_map();
+        for (i, d) in baseline.declarations.iter().enumerate() {
+            if by_key.insert(d.key.0, i).is_some() {
+                return failure("duplicate retained declaration");
+            }
+        }
+        let adjacency = baseline.declarations.iter()
+            .map(|d| d.deps.iter().filter_map(|k| by_key.get(&k.0).copied()).collect::<Vec<_>>())
+            .collect::<Vec<_>>();
+        let mut reverse = vec![Vec::<usize>::new(); n];
+        for (i, edges) in adjacency.iter().enumerate() {
+            for j in edges { reverse[*j].push(i); }
+        }
+        // Exactly mirror the original finish() SCC ordering.
+        let (mut visited, mut order) = (vec![false; n], Vec::with_capacity(n));
+        for start in 0..n {
+            if visited[start] { continue; }
+            let mut stack = vec![(start, false)];
+            while let Some((k, done)) = stack.pop() {
+                if done { order.push(k); }
+                else if !visited[k] {
+                    visited[k] = true;
+                    stack.push((k, true));
+                    for v in &adjacency[k] {
+                        if !visited[*v] { stack.push((*v, false)); }
+                    }
+                }
+            }
+        }
+        let (mut groups, mut component_for) =
+            (Vec::<Vec<usize>>::new(), vec![usize::MAX; n]);
+        for start in order.into_iter().rev() {
+            if component_for[start] != usize::MAX { continue; }
+            let number = groups.len();
+            let mut members = Vec::new();
+            let mut stack = vec![start];
+            component_for[start] = number;
+            while let Some(k) = stack.pop() {
+                members.push(k);
+                for v in &reverse[k] {
+                    if component_for[*v] == usize::MAX {
+                        component_for[*v] = number;
+                        stack.push(*v);
+                    }
+                }
+            }
+            groups.push(members);
+        }
+        let mut components = Vec::with_capacity(groups.len());
+        let mut roots = Vec::with_capacity(groups.len());
+        for (number, members) in groups.into_iter().enumerate() {
+            let Some(first) = members.first() else { return failure("empty SCC"); };
+            let root = baseline.declarations[*first].closure.0;
+            let mut outgoing = BTreeSet::new();
+            let mut negatives = BTreeSet::new();
+            for &i in &members {
+                if baseline.declarations[i].closure.0 != root {
+                    return failure("inconsistent baseline SCC identity");
+                }
+                for &dependency in &adjacency[i] {
+                    let other = component_for[dependency];
+                    if other != number { outgoing.insert(other); }
+                }
+                for dependency in &baseline.declarations[i].deps {
+                    if !by_key.contains_key(&dependency.0) {
+                        negatives.insert(hex(dependency.0));
+                    }
+                }
+            }
+            components.push(RetainedComponent {
+                members, outgoing: outgoing.into_iter().collect(),
+                reverse: Vec::new(), negatives: negatives.into_iter().collect(),
+            });
+            roots.push(root);
+        }
+        for number in 0..components.len() {
+            let outgoing = components[number].outgoing.clone();
+            for dependency in outgoing { components[dependency].reverse.push(number); }
+        }
+        // Independently reconstruct all baseline hashes once on the cold path.
+        // Refuse the cache if it differs from the full-index result.
+        for number in (0..components.len()).rev() {
+            let component = &components[number];
+            let mut contents = component.members.iter().map(|&i|
+                (hex(baseline.declarations[i].key.0), hex(baseline.declarations[i].own.0)))
+                .collect::<Vec<_>>();
+            contents.sort_unstable();
+            let mut dependencies = component.outgoing.iter().map(|&c| hex(roots[c]))
+                .collect::<Vec<_>>();
+            dependencies.sort_unstable();
+            let expected = digest_value(&json!(["scc", contents, dependencies, component.negatives]));
+            if expected != roots[number] { return failure("retained SCC baseline oracle mismatch"); }
+        }
+        let mut builtin_components = Vec::new();
+        for (name, (Some(key), Some(root))) in &baseline.builtins {
+            let Some(&i) = by_key.get(&key.0) else { return failure("missing builtin declaration"); };
+            if root.0 != roots[component_for[i]] { return failure("builtin closure mismatch"); }
+            builtin_components.push((name.clone(), component_for[i]));
+        }
+        Ok(Self { baseline, component_for, components, roots, builtin_components })
+    }
+
+    fn update(&self, current: &[Declaration], positions: &[usize])
+        -> Result<(ExportIdentityIndex, usize)>
+    {
+        if current.len() != self.baseline.count { return failure("retained count drift"); }
+        let mut result = self.baseline.clone();
+        let mut frontier = Vec::new();
+        for &i in positions {
+            let previous = result.declarations.get(i).ok_or("unknown replacement index")?;
+            let d = current.get(i).ok_or("missing replacement declaration")?;
+            if previous.key.0 != d.key || previous.kind != d.kind
+                || previous.deps.len() != d.deps.len()
+                || previous.deps.iter().zip(&d.deps).any(|(a,b)| a.0 != *b)
+            {
+                return failure("retained graph topology drift");
+            }
+            if previous.own.0 != d.own { frontier.push(self.component_for[i]); }
+            result.declarations[i].own = HexFingerprint(d.own);
+        }
+        let mut affected = vec![false; self.components.len()];
+        while let Some(c) = frontier.pop() {
+            if affected[c] { continue; }
+            affected[c] = true;
+            frontier.extend(self.components[c].reverse.iter().copied());
+        }
+        let mut roots = self.roots.clone();
+        let mut recomputed = 0;
+        for number in (0..self.components.len()).rev() {
+            if !affected[number] { continue; }
+            recomputed += 1;
+            let component = &self.components[number];
+            let mut contents = component.members.iter().map(|&i|
+                (hex(current[i].key), hex(current[i].own))).collect::<Vec<_>>();
+            contents.sort_unstable();
+            let mut dependencies = component.outgoing.iter().map(|&c| hex(roots[c]))
+                .collect::<Vec<_>>();
+            dependencies.sort_unstable();
+            roots[number] = digest_value(&json!(["scc", contents, dependencies, component.negatives]));
+        }
+        for (number, component) in self.components.iter().enumerate() {
+            if !affected[number] { continue; }
+            for &i in &component.members {
+                result.declarations[i].closure = HexFingerprint(roots[number]);
+            }
+        }
+        for (name, component) in &self.builtin_components {
+            if affected[*component] {
+                let entry = result.builtins.get_mut(name).ok_or("missing retained builtin")?;
+                entry.1 = Some(HexFingerprint(roots[*component]));
+            }
+        }
+        Ok((result, recomputed))
+    }
+}
+
 impl IdentityBuilder {
     pub(crate) fn new(input_len: usize) -> Self {
         Self {
@@ -117,6 +296,7 @@ impl IdentityBuilder {
             rows: 0,
             buffer: Vec::with_capacity(512),
             delta_attempted: false,
+            retained: None,
         }
     }
     fn begin(&mut self) -> Result<()> {
@@ -641,6 +821,8 @@ impl IdentityBuilder {
         let mut rows_processed = 0;
         let mut dag_rows = 0;
         let mut replaced_names = Vec::new();
+        let mut replaced_positions = Vec::new();
+        let mut added_names = false;
         let mut replaced = BTreeSet::new();
         for line in input.lines() {
             let StrictValue(row) = serde_json::from_str(line)?;
@@ -661,7 +843,9 @@ impl IdentityBuilder {
                 let replacement = self.declarations.pop().ok_or("replacement missing")?;
                 replaced_names.push(replacement.name.clone());
                 self.declarations[position] = replacement;
+                replaced_positions.push(position);
             } else {
+                if matches!(tag, "str" | "num") { added_names = true; }
                 if !matches!(tag, "str" | "num" | "succ" | "max" | "imax" | "param" | "bvar" | "sort" | "const" | "app" | "lam" | "forallE" | "letE" | "proj" | "natVal" | "strVal") {
                     return failure("delta metadata and complex declarations are unsupported");
                 }
@@ -670,7 +854,35 @@ impl IdentityBuilder {
             }
             rows_processed += 1;
         }
-        Ok(IdentityDelta { index: self.finish()?, rows_processed, dag_rows, replaced_names })
+        let (index, retained_graph_used, recomputed_sccs) =
+            self.finish_delta(&replaced_positions, added_names)?;
+        Ok(IdentityDelta { index, rows_processed, dag_rows, replaced_names,
+                           retained_graph_used, recomputed_sccs })
+    }
+    /// Cold-only admission of the original complete index and retained SCC DAG.
+    pub fn prepare_retained(&mut self) -> Result<ExportIdentityIndex> {
+        let baseline = self.finish()?;
+        self.retained = Some(RetainedClosure::capture(baseline.clone())?);
+        Ok(baseline)
+    }
+    fn finish_delta(&self, positions: &[usize], added_names: bool)
+        -> Result<(ExportIdentityIndex, bool, usize)>
+    {
+        if let Some(cache) = &self.retained {
+            let topology_changed = positions.iter().any(|&i| {
+                let Some(old) = cache.baseline.declarations.get(i) else { return true; };
+                let Some(new) = self.declarations.get(i) else { return true; };
+                old.key.0 != new.key || old.kind != new.kind ||
+                old.deps.len() != new.deps.len() ||
+                old.deps.iter().zip(&new.deps).any(|(a, b)| a.0 != *b)
+            });
+            // Added name entries may change implicit builtin lookup roots.
+            if !added_names && !topology_changed {
+                let (index, recomputed) = cache.update(&self.declarations, positions)?;
+                return Ok((index, true, recomputed));
+            }
+        }
+        Ok((self.finish()?, false, 0))
     }
     pub fn finish(&self) -> Result<ExportIdentityIndex> {
         let mut by_key: FxHashMap<Fingerprint, usize> = new_fx_hash_map();
@@ -815,6 +1027,64 @@ mod session_tests {
     fn config() -> crate::util::Config { serde_json::from_value(json!({"use_stdin":true,"num_threads":1})).unwrap() }
     fn builder() -> IdentityBuilder { crate::parser::export_identity_builder(baseline().as_bytes(),config()).unwrap() }
     fn replacement(value:u32) -> String { json!({"def":{"name":1,"levelParams":[],"type":0,"value":value,"hints":"abbrev","safety":"safe","all":[]}}).to_string() }
+
+    fn three_declarations() -> String {
+        let mut rows = baseline().lines().map(str::to_owned).collect::<Vec<_>>();
+        rows.insert(3, r#"{"in":3,"str":{"pre":0,"str":"c"}}"#.to_owned());
+        rows.push(r#"{"def":{"name":3,"levelParams":[],"type":0,"value":0,"hints":"abbrev","safety":"safe","all":[]}}"#.to_owned());
+        rows.join("\n") + "\n"
+    }
+    #[test]
+    fn retained_fixed_topology_recloses_affected_sccs_and_matches_fresh_index() {
+        let source = three_declarations();
+        let mut identity = crate::parser::export_identity_builder(source.as_bytes(), config()).unwrap();
+        let before = identity.prepare_retained().unwrap();
+        assert_eq!(before.count, 3);
+        let additions = "{\"il\":1,\"succ\":0}\n{\"ie\":2,\"sort\":1}\n";
+        let delta = identity.apply_delta(&(additions.to_owned() + &replacement(2) + "\n")).unwrap();
+        assert!(delta.retained_graph_used);
+        assert_eq!(delta.recomputed_sccs, 2, "changed a and dependent b; untouched c");
+        let mut rows = source.lines().map(str::to_owned).collect::<Vec<_>>();
+        let at = rows.iter().position(|s| s.contains("\"def\":{\"name\":1")).unwrap();
+        rows.splice(at..=at, [r#"{"il":1,"succ":0}"#.to_owned(),
+                              r#"{"ie":2,"sort":1}"#.to_owned(), replacement(2)]);
+        let full = crate::parser::export_identity((rows.join("\n")+"\n").as_bytes(), config()).unwrap();
+        assert_eq!(serde_json::to_value(delta.index).unwrap(), serde_json::to_value(full).unwrap());
+        let mut noop = crate::parser::export_identity_builder(source.as_bytes(), config()).unwrap();
+        let baseline_index = noop.prepare_retained().unwrap();
+        let zero = noop.apply_delta("").unwrap();
+        assert!(zero.retained_graph_used);
+        assert_eq!(zero.recomputed_sccs, 0);
+        assert_eq!(serde_json::to_value(zero.index).unwrap(),
+                   serde_json::to_value(baseline_index).unwrap());
+    }
+    #[test]
+    fn retained_graph_edge_changes_and_new_cycles_fall_back_to_full_index() {
+        for (dag, replacement_row) in [
+            ("", replacement(0).replace("\"name\":1", "\"name\":2")),
+            ("{\"ie\":2,\"const\":{\"name\":2,\"us\":[]}}\n", replacement(2)),
+        ] {
+            let mut identity = builder();
+            identity.prepare_retained().unwrap();
+            let delta = identity.apply_delta(&(dag.to_owned()+&replacement_row+"\n")).unwrap();
+            assert!(!delta.retained_graph_used, "dependency topology changed");
+            let mut rows = baseline().lines().map(str::to_owned).collect::<Vec<_>>();
+            let target = if dag.is_empty() { 2 } else { 1 };
+            let at = rows.iter().position(|s| s.contains(&format!("\"def\":{{\"name\":{target}"))).unwrap();
+            let mut replacement_rows = dag.lines().map(str::to_owned).collect::<Vec<_>>();
+            replacement_rows.push(replacement_row);
+            rows.splice(at..=at, replacement_rows);
+            let oracle = crate::parser::export_identity((rows.join("\n")+"\n").as_bytes(), config()).unwrap();
+            assert_eq!(serde_json::to_value(delta.index).unwrap(), serde_json::to_value(oracle).unwrap());
+        }
+    }
+    #[test]
+    fn retained_added_names_require_full_builtin_identity_scan() {
+        let mut identity = builder();
+        identity.prepare_retained().unwrap();
+        let delta = identity.apply_delta("{\"in\":3,\"str\":{\"pre\":0,\"str\":\"Nat\"}}\n").unwrap();
+        assert!(!delta.retained_graph_used);
+    }
     #[test]
     fn session_replacement_matches_fresh_genuine_parser_and_preserves_dependency_schedule() {
         let mut retained=builder();
