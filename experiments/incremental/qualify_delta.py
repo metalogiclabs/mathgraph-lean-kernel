@@ -315,6 +315,11 @@ def paired_economics(pairs, seed=20261016, bootstrap_repetitions=10000):
 
 class Qualification:
     def __init__(self, args):
+        # Resolve CLI paths in the caller's directory before index subprocesses
+        # switch cwd to HERE for the normal Python index loader.
+        for name in ('producer', 'checker', 'indexer', 'index_session',
+                     'full_checker', 'authority_key', 'workloads', 'out'):
+            setattr(args, name, Path(getattr(args, name)).resolve())
         from producer_delta import DeltaSession
         self.session_type, self.args = DeltaSession, args
         self.out = args.out.resolve()
