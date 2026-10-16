@@ -59,7 +59,7 @@ class SparseAcceptanceTests(unittest.TestCase):
             dict(receipt,status='UNKNOWN'),
             dict(receipt,unexpected_authority='all'),
             dict(receipt,index_patch=dict(sparse_patch(),count=4)),
-            dict(receipt,index_patch=dict(sparse_patch(),declarations=[])),
+            dict(receipt,index_patch=dict(sparse_patch(),declarations=[],builtins={})),
         ]:
             payload=engine.encoded(seal(altered,KEY))
             with self.subTest(altered=altered),self.assertRaises(ValueError):
