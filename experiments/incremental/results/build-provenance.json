@@ -1,0 +1,40 @@
+{
+  "source_git_commit": "9ac04033b51703fb135ec3c28621d44b183944fe",
+  "tracked_diff": "",
+  "source_tree": "b3b28037455ac198d710c89217caa425e75f4bc5",
+  "compiler": "rustc 1.95.0 (59807616e 2026-04-14)\nbinary: rustc\ncommit-hash: 59807616e1fa2540724bfbac14d7976d7e4a3860\ncommit-date: 2026-04-14\nhost: x86_64-unknown-linux-gnu\nrelease: 1.95.0\nLLVM version: 22.1.2",
+  "sources_sha256": {
+    "Cargo.toml": "88eb7c951bfd134d06c9a269460228fc97b566da2ee8b6a67b1860f9360adec5",
+    "Cargo.lock": "caeadd75fc2d9d26d0fe1a3c17b31185ba788e25eabf08b9d194f31b0cd3d64a",
+    "src/bin/check_selected.rs": "cfdb173d17f29259289d6df99870aa3d3ee887a77588d368dcd7d1d22e13466c",
+    "src/conv.rs": "79ff3581d0d0347c67b267e789866f947ba22dbd152178566f52e409eb19ec20",
+    "src/debug_printer.rs": "02a5afd74a72521a9a44dd30aa15ff3cb708f9ab9b823549e9b0e51fdb8200f9",
+    "src/env.rs": "e4666cd98c97021a5b22af5d7cb29e6ef82311283087bf8313ec5ddf371b1b01",
+    "src/eval.rs": "2cdae4102d867315bcaa1d6c233f858ca5edead18e11cbfd64569b07acba178b",
+    "src/expr.rs": "82bcf59fd2e4b93d56fc02981778eaf4a2bc525cf5e9f863d4773330dc3bd64f",
+    "src/flash.rs": "e268693db385c4295ab47020883a5edee6ca991acb4c3cda49a0c2c39917cfef",
+    "src/inductive.rs": "3adb50c518e3df64d1ada7ec1a046c3520f62a68143bf3ac361860d347e3f320",
+    "src/infer.rs": "833c7a30a07c67bfd5eeaffd1f69195e79095df0b9182ae24f58407e7969f977",
+    "src/level.rs": "af3b0754d7a665411184c6e355a0b298b3911e3aad9059f14ed9224faa139227",
+    "src/lib.rs": "6d3eeb231f86448f41361d5777bea8d34c6a83389c96bf95cd9bf3a836903b45",
+    "src/main.rs": "a1e41cb60edacaed4a4a6bc4dccd7c84f8113c020986e1fa6a36911d9ddd0592",
+    "src/name.rs": "88024c8461118839504eed8f26c053c2b0843d86011935253047dbc3b87c4481",
+    "src/parser.rs": "7117d21b726f14e06d4b634703f1923067549f1aad1df7580de47d547d9ae0d6",
+    "src/quot.rs": "ca9ba5ca4b2be53210f9bbdbfc42f66b6fd1017b6ee4d2828dac01df17d497e7",
+    "src/quote.rs": "f6c24a59e4f8a14308a3a4ac7ec84b5ccda708de890a5b64dfbcc1d0b4ce6992",
+    "src/relevance.rs": "47a8af94bc6aaeb54a9ad4914340013c71333b1833c0b5d2228df973646528b0",
+    "src/tc.rs": "0f0d84f415638b70f328ffd3e491c800d61e2d26de6c9f94fc9c516471b41648",
+    "src/tests/level.rs": "d1b4714911480885a0571d7ee4111e3b10b1f8722fb61c4be1c33b0431aebb04",
+    "src/tests/natlit.rs": "49e012cf9af881c4d3205795d2ced385e39128baa53770806489b69aaa1674fe",
+    "src/tests/util.rs": "5d70289aa6c30e30d34a691e5a1c51c2041b34ba2596d360c3e9032e7da16d15",
+    "src/tests.rs": "594aac68cef5af3c6c9513c09846c27b041d43b855828e2ec742ca1dd4173e56",
+    "src/util.rs": "f88b6e9babd1a2ab19de60ee4eb63cd66c9ef5b4ed21c7b5a8f95472a74f0af7",
+    "src/value.rs": "c2732653cc40aa37f38fa4c47d95420fdf42bc4f938462fe8b1fdf094f946fce"
+  },
+  "binaries_sha256": {
+    "target/release/check-selected": "869dbda8a8e2807c194b7937391cc659cfa437fc42bc365d51ec5c8f8cf2009d",
+    "target/release/sokonanoda": "c4523b615807d30cb9bbae426524af42eb31e1a90c79cc7a7a9dee8ac7ff9673"
+  },
+  "build_command": "cargo +1.95.0 build --release --locked --bins",
+  "build_exit_code": 0
+}

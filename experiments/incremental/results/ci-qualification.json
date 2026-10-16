@@ -1,0 +1,131 @@
+{
+  "schema": "mathgraph.incremental-lean.ci-evidence.v1",
+  "run": {
+    "id": 38870812215,
+    "name": "Incremental Lean exact-export qualification",
+    "head_branch": "research/incremental-lean-evidence-20261016",
+    "head_sha": "9ac04033b51703fb135ec3c28621d44b183944fe",
+    "event": "push",
+    "status": "completed",
+    "conclusion": "success",
+    "html_url": "https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/38870812215",
+    "created_at": "2026-10-16T08:00:26Z",
+    "updated_at": "2026-10-16T08:16:29Z",
+    "run_attempt": 1
+  },
+  "jobs": [
+    {
+      "id": 116876354705,
+      "name": "qualification",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-16T08:06:29Z",
+      "completed_at": "2026-10-16T08:16:29Z",
+      "html_url": "https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/38870812215/job/116876354705",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-16T08:06:29Z",
+          "completed_at": "2026-10-16T08:06:30Z"
+        },
+        {
+          "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-16T08:06:30Z",
+          "completed_at": "2026-10-16T08:06:31Z"
+        },
+        {
+          "name": "Install exact compiler and build checker",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-16T08:06:31Z",
+          "completed_at": "2026-10-16T08:07:25Z"
+        },
+        {
+          "name": "Test native checker and adversarial identity predicate",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-16T08:07:25Z",
+          "completed_at": "2026-10-16T08:07:57Z"
+        },
+        {
+          "name": "Compile genuine Std source workloads and export dependency cones",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-16T08:07:57Z",
+          "completed_at": "2026-10-16T08:08:23Z"
+        },
+        {
+          "name": "Qualify fresh and authenticated incremental checking",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-10-16T08:08:23Z",
+          "completed_at": "2026-10-16T08:15:57Z"
+        },
+        {
+          "name": "Publish concise measurement table",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-10-16T08:15:57Z",
+          "completed_at": "2026-10-16T08:15:57Z"
+        },
+        {
+          "name": "Qualify consumption by the pinned existing MathGraph warrant resolver",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-10-16T08:15:57Z",
+          "completed_at": "2026-10-16T08:15:59Z"
+        },
+        {
+          "name": "Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-10-16T08:15:59Z",
+          "completed_at": "2026-10-16T08:16:27Z"
+        },
+        {
+          "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 18,
+          "started_at": "2026-10-16T08:16:27Z",
+          "completed_at": "2026-10-16T08:16:27Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 19,
+          "started_at": "2026-10-16T08:16:27Z",
+          "completed_at": "2026-10-16T08:16:27Z"
+        }
+      ]
+    }
+  ],
+  "artifacts": [
+    {
+      "id": 12033644005,
+      "name": "incremental-lean-9ac04033b51703fb135ec3c28621d44b183944fe",
+      "size_in_bytes": 235997317,
+      "expired": false,
+      "digest": "sha256:8ffd2dd4c2820a91211ba14b67496260949b3a6d975805eebc3385117aa85607",
+      "created_at": "2026-10-16T08:16:27Z",
+      "expires_at": "2026-11-15T08:16:00Z",
+      "archive_download_url": "https://api.github.com/repos/metalogiclabs/mathgraph-lean-kernel/actions/artifacts/12033644005/zip"
+    }
+  ],
+  "archive_digest_authority": "GitHub artifact service metadata; independent ZIP retrieval blocked by Azure HTTP403 in this environment",
+  "local_result_metrics": "Local three-repetition measurements, not claimed as downloaded CI measurements"
+}

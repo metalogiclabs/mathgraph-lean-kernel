@@ -1,0 +1,4384 @@
+{
+  "schema": "mathgraph.incremental-lean.local-qualified-results.v1",
+  "qualification_passed": true,
+  "gates": [
+    {
+      "name": "native-full-baseline",
+      "passed": true
+    },
+    {
+      "name": "native-parse-only",
+      "passed": true
+    },
+    {
+      "name": "baseline-leanchecker",
+      "passed": true
+    },
+    {
+      "name": "baseline-leanchecker-paranoid",
+      "passed": true
+    },
+    {
+      "name": "early-definition-leanchecker",
+      "passed": true
+    },
+    {
+      "name": "early-definition-leanchecker-paranoid",
+      "passed": true
+    },
+    {
+      "name": "unrelated-definition-leanchecker",
+      "passed": true
+    },
+    {
+      "name": "unrelated-definition-leanchecker-paranoid",
+      "passed": true
+    },
+    {
+      "name": "theorem-leaf-leanchecker",
+      "passed": true
+    },
+    {
+      "name": "theorem-leaf-leanchecker-paranoid",
+      "passed": true
+    },
+    {
+      "name": "type-change-leanchecker",
+      "passed": true
+    },
+    {
+      "name": "type-change-leanchecker-paranoid",
+      "passed": true
+    },
+    {
+      "name": "invalid-proof-leanchecker",
+      "passed": true
+    },
+    {
+      "name": "invalid-proof-leanchecker-paranoid",
+      "passed": true
+    },
+    {
+      "name": "axiom-type-leanchecker",
+      "passed": true
+    },
+    {
+      "name": "axiom-type-leanchecker-paranoid",
+      "passed": true
+    },
+    {
+      "name": "toolchain-metadata-leanchecker",
+      "passed": true
+    },
+    {
+      "name": "toolchain-metadata-leanchecker-paranoid",
+      "passed": true
+    },
+    {
+      "name": "malformed-unused-dag-leanchecker",
+      "passed": true
+    },
+    {
+      "name": "malformed-unused-dag-leanchecker-paranoid",
+      "passed": true
+    },
+    {
+      "name": "malformed-unused-typed-node-leanchecker",
+      "passed": true
+    },
+    {
+      "name": "malformed-unused-typed-node-leanchecker-paranoid",
+      "passed": true
+    },
+    {
+      "name": "optional-lean4lean-no-disagreement",
+      "passed": true
+    },
+    {
+      "name": "optional-con-leche-no-disagreement",
+      "passed": true
+    },
+    {
+      "name": "optional-con-ron-no-disagreement",
+      "passed": true
+    },
+    {
+      "name": "optional-nanoda_bin-no-disagreement",
+      "passed": true
+    },
+    {
+      "name": "lake-paranoid-unsandboxed-agreement",
+      "passed": true
+    },
+    {
+      "name": "lake-paranoid-sandboxed-agreement",
+      "passed": true
+    },
+    {
+      "name": "no-change-0-agreement",
+      "passed": true
+    },
+    {
+      "name": "no-change-0-fewer-kernel-obligations",
+      "passed": true
+    },
+    {
+      "name": "no-change-1-agreement",
+      "passed": true
+    },
+    {
+      "name": "no-change-1-fewer-kernel-obligations",
+      "passed": true
+    },
+    {
+      "name": "no-change-2-agreement",
+      "passed": true
+    },
+    {
+      "name": "no-change-2-fewer-kernel-obligations",
+      "passed": true
+    },
+    {
+      "name": "early-definition-0-agreement",
+      "passed": true
+    },
+    {
+      "name": "early-definition-0-fewer-kernel-obligations",
+      "passed": true
+    },
+    {
+      "name": "early-definition-0-large-later-development",
+      "passed": true
+    },
+    {
+      "name": "early-definition-0-changed-cone-rechecked",
+      "passed": true
+    },
+    {
+      "name": "early-definition-0-unrelated-preserved",
+      "passed": true
+    },
+    {
+      "name": "early-definition-1-agreement",
+      "passed": true
+    },
+    {
+      "name": "early-definition-1-fewer-kernel-obligations",
+      "passed": true
+    },
+    {
+      "name": "early-definition-1-large-later-development",
+      "passed": true
+    },
+    {
+      "name": "early-definition-1-changed-cone-rechecked",
+      "passed": true
+    },
+    {
+      "name": "early-definition-1-unrelated-preserved",
+      "passed": true
+    },
+    {
+      "name": "early-definition-2-agreement",
+      "passed": true
+    },
+    {
+      "name": "early-definition-2-fewer-kernel-obligations",
+      "passed": true
+    },
+    {
+      "name": "early-definition-2-large-later-development",
+      "passed": true
+    },
+    {
+      "name": "early-definition-2-changed-cone-rechecked",
+      "passed": true
+    },
+    {
+      "name": "early-definition-2-unrelated-preserved",
+      "passed": true
+    },
+    {
+      "name": "unrelated-definition-0-agreement",
+      "passed": true
+    },
+    {
+      "name": "unrelated-definition-0-fewer-kernel-obligations",
+      "passed": true
+    },
+    {
+      "name": "unrelated-definition-0-edited-targets-rechecked",
+      "passed": true
+    },
+    {
+      "name": "unrelated-definition-1-agreement",
+      "passed": true
+    },
+    {
+      "name": "unrelated-definition-1-fewer-kernel-obligations",
+      "passed": true
+    },
+    {
+      "name": "unrelated-definition-1-edited-targets-rechecked",
+      "passed": true
+    },
+    {
+      "name": "unrelated-definition-2-agreement",
+      "passed": true
+    },
+    {
+      "name": "unrelated-definition-2-fewer-kernel-obligations",
+      "passed": true
+    },
+    {
+      "name": "unrelated-definition-2-edited-targets-rechecked",
+      "passed": true
+    },
+    {
+      "name": "theorem-leaf-0-agreement",
+      "passed": true
+    },
+    {
+      "name": "theorem-leaf-0-fewer-kernel-obligations",
+      "passed": true
+    },
+    {
+      "name": "theorem-leaf-0-edited-targets-rechecked",
+      "passed": true
+    },
+    {
+      "name": "theorem-leaf-1-agreement",
+      "passed": true
+    },
+    {
+      "name": "theorem-leaf-1-fewer-kernel-obligations",
+      "passed": true
+    },
+    {
+      "name": "theorem-leaf-1-edited-targets-rechecked",
+      "passed": true
+    },
+    {
+      "name": "theorem-leaf-2-agreement",
+      "passed": true
+    },
+    {
+      "name": "theorem-leaf-2-fewer-kernel-obligations",
+      "passed": true
+    },
+    {
+      "name": "theorem-leaf-2-edited-targets-rechecked",
+      "passed": true
+    },
+    {
+      "name": "type-change-0-agreement",
+      "passed": true
+    },
+    {
+      "name": "type-change-0-edited-targets-rechecked",
+      "passed": true
+    },
+    {
+      "name": "type-change-1-agreement",
+      "passed": true
+    },
+    {
+      "name": "type-change-1-edited-targets-rechecked",
+      "passed": true
+    },
+    {
+      "name": "type-change-2-agreement",
+      "passed": true
+    },
+    {
+      "name": "type-change-2-edited-targets-rechecked",
+      "passed": true
+    },
+    {
+      "name": "invalid-proof-0-agreement",
+      "passed": true
+    },
+    {
+      "name": "invalid-proof-0-no-evidence",
+      "passed": true
+    },
+    {
+      "name": "invalid-proof-1-agreement",
+      "passed": true
+    },
+    {
+      "name": "invalid-proof-1-no-evidence",
+      "passed": true
+    },
+    {
+      "name": "invalid-proof-2-agreement",
+      "passed": true
+    },
+    {
+      "name": "invalid-proof-2-no-evidence",
+      "passed": true
+    },
+    {
+      "name": "axiom-type-0-agreement",
+      "passed": true
+    },
+    {
+      "name": "axiom-type-0-no-evidence",
+      "passed": true
+    },
+    {
+      "name": "axiom-type-1-agreement",
+      "passed": true
+    },
+    {
+      "name": "axiom-type-1-no-evidence",
+      "passed": true
+    },
+    {
+      "name": "axiom-type-2-agreement",
+      "passed": true
+    },
+    {
+      "name": "axiom-type-2-no-evidence",
+      "passed": true
+    },
+    {
+      "name": "toolchain-metadata-0-agreement",
+      "passed": true
+    },
+    {
+      "name": "toolchain-metadata-0-full-fallback",
+      "passed": true
+    },
+    {
+      "name": "toolchain-metadata-1-agreement",
+      "passed": true
+    },
+    {
+      "name": "toolchain-metadata-1-full-fallback",
+      "passed": true
+    },
+    {
+      "name": "toolchain-metadata-2-agreement",
+      "passed": true
+    },
+    {
+      "name": "toolchain-metadata-2-full-fallback",
+      "passed": true
+    },
+    {
+      "name": "malformed-unused-dag-0-agreement",
+      "passed": true
+    },
+    {
+      "name": "malformed-unused-dag-0-no-evidence",
+      "passed": true
+    },
+    {
+      "name": "malformed-unused-dag-1-agreement",
+      "passed": true
+    },
+    {
+      "name": "malformed-unused-dag-1-no-evidence",
+      "passed": true
+    },
+    {
+      "name": "malformed-unused-dag-2-agreement",
+      "passed": true
+    },
+    {
+      "name": "malformed-unused-dag-2-no-evidence",
+      "passed": true
+    },
+    {
+      "name": "malformed-unused-typed-node-0-agreement",
+      "passed": true
+    },
+    {
+      "name": "malformed-unused-typed-node-0-no-evidence",
+      "passed": true
+    },
+    {
+      "name": "malformed-unused-typed-node-0-real-parser-with-zero-obligations",
+      "passed": true
+    },
+    {
+      "name": "malformed-unused-typed-node-1-agreement",
+      "passed": true
+    },
+    {
+      "name": "malformed-unused-typed-node-1-no-evidence",
+      "passed": true
+    },
+    {
+      "name": "malformed-unused-typed-node-1-real-parser-with-zero-obligations",
+      "passed": true
+    },
+    {
+      "name": "malformed-unused-typed-node-2-agreement",
+      "passed": true
+    },
+    {
+      "name": "malformed-unused-typed-node-2-no-evidence",
+      "passed": true
+    },
+    {
+      "name": "malformed-unused-typed-node-2-real-parser-with-zero-obligations",
+      "passed": true
+    },
+    {
+      "name": "restore-dependency-verified",
+      "passed": true
+    },
+    {
+      "name": "restore-dependency-cone-rechecked",
+      "passed": true
+    },
+    {
+      "name": "restored-evidence-fully-reused",
+      "passed": true
+    },
+    {
+      "name": "cold-cache-verified",
+      "passed": true
+    },
+    {
+      "name": "cold-cache-full-fallback",
+      "passed": true
+    },
+    {
+      "name": "policy-change-verified",
+      "passed": true
+    },
+    {
+      "name": "policy-change-full-fallback",
+      "passed": true
+    },
+    {
+      "name": "cache-disabled-verified",
+      "passed": true
+    },
+    {
+      "name": "cache-disabled-full-fallback",
+      "passed": true
+    },
+    {
+      "name": "missing-evidence-verified",
+      "passed": true
+    },
+    {
+      "name": "missing-evidence-full-fallback",
+      "passed": true
+    },
+    {
+      "name": "corrupt-record-verified",
+      "passed": true
+    },
+    {
+      "name": "corrupt-record-full-fallback",
+      "passed": true
+    },
+    {
+      "name": "corrupt-snapshot-verified",
+      "passed": true
+    },
+    {
+      "name": "corrupt-snapshot-full-fallback",
+      "passed": true
+    },
+    {
+      "name": "foreign-authority-verified",
+      "passed": true
+    },
+    {
+      "name": "foreign-authority-full-fallback",
+      "passed": true
+    },
+    {
+      "name": "checker-change-full-fallback",
+      "passed": true
+    },
+    {
+      "name": "cold-process-restart-identical-decisions",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/no-change/0/fresh.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/no-change/0/incremental.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/no-change/1/incremental.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/no-change/1/fresh.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/no-change/2/fresh.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/no-change/2/incremental.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/early-definition/0/fresh.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/early-definition/0/incremental.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/early-definition/1/incremental.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/early-definition/1/fresh.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/early-definition/2/fresh.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/early-definition/2/incremental.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/unrelated-definition/0/fresh.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/unrelated-definition/0/incremental.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/unrelated-definition/1/incremental.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/unrelated-definition/1/fresh.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/unrelated-definition/2/fresh.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/unrelated-definition/2/incremental.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/theorem-leaf/0/fresh.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/theorem-leaf/0/incremental.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/theorem-leaf/1/incremental.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/theorem-leaf/1/fresh.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/theorem-leaf/2/fresh.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/theorem-leaf/2/incremental.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/type-change/0/fresh.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/type-change/0/incremental.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/type-change/1/incremental.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/type-change/1/fresh.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/type-change/2/fresh.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/type-change/2/incremental.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/invalid-proof/0/fresh.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/invalid-proof/0/incremental.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/invalid-proof/1/incremental.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/invalid-proof/1/fresh.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/invalid-proof/2/fresh.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/invalid-proof/2/incremental.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/axiom-type/0/fresh.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/axiom-type/0/incremental.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/axiom-type/1/incremental.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/axiom-type/1/fresh.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/axiom-type/2/fresh.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/axiom-type/2/incremental.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/toolchain-metadata/0/fresh.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/toolchain-metadata/0/incremental.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/toolchain-metadata/1/incremental.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/toolchain-metadata/1/fresh.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/toolchain-metadata/2/fresh.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/toolchain-metadata/2/incremental.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/malformed-unused-dag/0/fresh.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/malformed-unused-dag/0/incremental.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/malformed-unused-dag/1/incremental.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/malformed-unused-dag/1/fresh.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/malformed-unused-dag/2/fresh.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/malformed-unused-dag/2/incremental.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/malformed-unused-typed-node/0/fresh.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/malformed-unused-typed-node/0/incremental.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/malformed-unused-typed-node/1/incremental.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/malformed-unused-typed-node/1/fresh.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/malformed-unused-typed-node/2/fresh.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:scenarios/malformed-unused-typed-node/2/incremental.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:controls/restore-dependency.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:controls/restored-evidence-reuse.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:controls/cold-cache.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:controls/policy-change.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:controls/cache-disabled.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:controls/missing-evidence.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:controls/corrupt-record.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:controls/corrupt-snapshot.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:controls/foreign-authority.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:controls/checker-change.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:controls/cold-process-restart.json",
+      "passed": true
+    },
+    {
+      "name": "engine-exit-protocol:baseline-full.json",
+      "passed": true
+    }
+  ],
+  "raw_summary_sha256": "0fc2a61ada2cb8fb3ee494ee009723216cefe2fb4f04a8212d53d97ba0c50a89",
+  "qualification_git_head_at_start": "367288dfc01147746cdc2a9e12b6ee3555c45efd",
+  "exact_committed_implementation": "9ac04033b51703fb135ec3c28621d44b183944fe",
+  "attribution": "Qualification began before the final harness commit; all recorded Python source hashes match the committed implementation. Kernel source and rebuilt binary identity are recorded separately. CI uses clean checkouts.",
+  "source_hashes": {
+    "build_workloads.py": "721ffe17d5ac318ad918efb15cb7a347f11a8321956612c296afef5aaadc66c4",
+    "engine.py": "1937d9504bc44728e57d1a33a0481a6b413fd84d26cca5a929ce7adedd7afa22",
+    "mathgraph_integration.py": "494753602065cfa28adead5518cde834a4753cc7c06344e7505358800e0d8df2",
+    "process.py": "a53612921e182fa8e9efe264f185c1f7de31c13e362d2a0340ec44e409701fc1",
+    "qualify.py": "c699288d2dee29665dbdd4da37165b7508f2c5d8fe7cdbfc9bcd0f7207162717",
+    "qualify_integration.py": "6f2d3010896ad17a1060a46b65afc7c95ce0c907f64dbe422906b366672ee02a",
+    "test_predicate.py": "5e358580f43d0e9b07311e72ea6d2779a6f721e622d70f8084fa8b4d93d7cec1"
+  },
+  "adapter_sha256": "1937d9504bc44728e57d1a33a0481a6b413fd84d26cca5a929ce7adedd7afa22",
+  "checker_sha256": "869dbda8a8e2807c194b7937391cc659cfa437fc42bc365d51ec5c8f8cf2009d",
+  "full_checker_sha256": "c4523b615807d30cb9bbae426524af42eb31e1a90c79cc7a7a9dee8ac7ff9673",
+  "repetitions": 3,
+  "cache_resources": {
+    "bytes": 155643668,
+    "snapshot_bytes": 95532305,
+    "evidence_bytes": 60111363,
+    "evidence_records": 14
+  },
+  "platform": {
+    "uname": [
+      "Linux",
+      "4ae7d8abe043",
+      "6.18.44",
+      "#1 SMP Sat Sep 26 20:02:31 UTC 2026",
+      "x86_64",
+      ""
+    ],
+    "cpu_model": "AMD EPYC 9V74 80-Core Processor",
+    "cgroup_limits": {
+      "/sys/fs/cgroup/cpu.max": "400000 100000",
+      "/sys/fs/cgroup/memory.max": "17179869184"
+    }
+  },
+  "scenarios": {
+    "no-change": {
+      "paired_resource_medians": {
+        "fresh": {
+          "wall_seconds": 4.512747447000038,
+          "cpu_seconds": 4.493291999999999,
+          "max_rss_kib": 279932
+        },
+        "incremental": {
+          "wall_seconds": 0.1826902230000087,
+          "cpu_seconds": 0.177975,
+          "max_rss_kib": 58656
+        }
+      },
+      "verification_phase_medians": {
+        "fresh": {
+          "identity_seconds": 4.075413188000084,
+          "cache_validation_seconds": 1.9000003703695256e-07,
+          "checking_seconds": 0.30129408700008753,
+          "total_seconds": 4.429524133000086
+        },
+        "incremental": {
+          "identity_seconds": 0.012200563999840597,
+          "cache_validation_seconds": 0.04758102300002065,
+          "checking_seconds": 1.0609999208099907e-06,
+          "total_seconds": 0.12288489999991725
+        }
+      },
+      "incremental_wall_improvement_percent": 95.95168519520283,
+      "export_plus_verification_resources": {
+        "fresh": {
+          "wall_seconds": 5.506686598999977,
+          "cpu_seconds": 5.474346,
+          "max_rss_kib": 878060,
+          "scope": "sum/max of separately measured exporter and verifier; source build measured in workload manifest"
+        },
+        "incremental": {
+          "wall_seconds": 1.1766293749999477,
+          "cpu_seconds": 1.1590289999999999,
+          "max_rss_kib": 878060,
+          "scope": "sum/max of separately measured exporter and verifier; source build measured in workload manifest"
+        }
+      },
+      "build_export_verification_resources": {
+        "fresh": {
+          "wall_seconds": 6.25416124000003,
+          "cpu_seconds": 6.368715,
+          "max_rss_kib": 878060,
+          "scope": "sum/max of separately measured identical source build/export cost plus each verification arm"
+        },
+        "incremental": {
+          "wall_seconds": 1.9241040160000011,
+          "cpu_seconds": 2.0533979999999996,
+          "max_rss_kib": 878060,
+          "scope": "sum/max of separately measured identical source build/export cost plus each verification arm"
+        }
+      },
+      "runs": [
+        {
+          "fresh": {
+            "counts": {
+              "invalidated": 0,
+              "rechecked": 3436,
+              "reused": 0,
+              "scheduled": 3436,
+              "total": 3436
+            },
+            "status": "VERIFIED",
+            "evidence_id": "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067",
+            "export_sha256": "d81ecde8f818ed8d8748b476e22412ec74820a49edbe7986c2c3633a3d66bef0",
+            "result_sha256": "727c6641638db56fdc86fb6bace5368bdd17adce1bcb1b80c94d5b2462c84a55",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/baseline/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/no-change/0/fresh-cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/no-change/0/fresh.json",
+                "--policy",
+                "default",
+                "--disable-cache"
+              ],
+              "cwd": null,
+              "returncode": 0,
+              "timed_out": false,
+              "wall_seconds": 4.588341893000006,
+              "cpu_seconds": 4.57645,
+              "max_rss_kib": 281856,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/no-change/0/fresh-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/no-change/0/fresh-process.stderr"
+            }
+          },
+          "incremental": {
+            "counts": {
+              "invalidated": 0,
+              "rechecked": 0,
+              "reused": 3436,
+              "scheduled": 0,
+              "total": 3436
+            },
+            "status": "VERIFIED",
+            "evidence_id": "a72cf0a255cb0020ec7db678f886502e83b012fd967e1f3ed5e37f764ebbdd19",
+            "export_sha256": "d81ecde8f818ed8d8748b476e22412ec74820a49edbe7986c2c3633a3d66bef0",
+            "result_sha256": "bdf61b0fa88e4e38e76866791d0690699a02ca5f4d293423f754c030cf692bc7",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/baseline/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/no-change/0/incremental.json",
+                "--policy",
+                "default",
+                "--previous",
+                "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067"
+              ],
+              "cwd": null,
+              "returncode": 0,
+              "timed_out": false,
+              "wall_seconds": 0.1826902230000087,
+              "cpu_seconds": 0.177975,
+              "max_rss_kib": 58576,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/no-change/0/incremental-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/no-change/0/incremental-process.stderr"
+            }
+          }
+        },
+        {
+          "fresh": {
+            "counts": {
+              "invalidated": 0,
+              "rechecked": 3436,
+              "reused": 0,
+              "scheduled": 3436,
+              "total": 3436
+            },
+            "status": "VERIFIED",
+            "evidence_id": "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067",
+            "export_sha256": "d81ecde8f818ed8d8748b476e22412ec74820a49edbe7986c2c3633a3d66bef0",
+            "result_sha256": "a8e4b28eb9db2976b83e5a8cd7b3f1cb1f8f5e2bc6271d84f6ffb05d7282ff02",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/baseline/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/no-change/1/fresh-cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/no-change/1/fresh.json",
+                "--policy",
+                "default",
+                "--disable-cache"
+              ],
+              "cwd": null,
+              "returncode": 0,
+              "timed_out": false,
+              "wall_seconds": 4.486963230999891,
+              "cpu_seconds": 4.468501,
+              "max_rss_kib": 279840,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/no-change/1/fresh-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/no-change/1/fresh-process.stderr"
+            }
+          },
+          "incremental": {
+            "counts": {
+              "invalidated": 0,
+              "rechecked": 0,
+              "reused": 3436,
+              "scheduled": 0,
+              "total": 3436
+            },
+            "status": "VERIFIED",
+            "evidence_id": "a72cf0a255cb0020ec7db678f886502e83b012fd967e1f3ed5e37f764ebbdd19",
+            "export_sha256": "d81ecde8f818ed8d8748b476e22412ec74820a49edbe7986c2c3633a3d66bef0",
+            "result_sha256": "8e0b7a56878bfb0c0dc46c9ef557460e453f630803f6b431fe24b45175ed74ff",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/baseline/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/no-change/1/incremental.json",
+                "--policy",
+                "default",
+                "--previous",
+                "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067"
+              ],
+              "cwd": null,
+              "returncode": 0,
+              "timed_out": false,
+              "wall_seconds": 0.17284637600005226,
+              "cpu_seconds": 0.169564,
+              "max_rss_kib": 58656,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/no-change/1/incremental-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/no-change/1/incremental-process.stderr"
+            }
+          }
+        },
+        {
+          "fresh": {
+            "counts": {
+              "invalidated": 0,
+              "rechecked": 3436,
+              "reused": 0,
+              "scheduled": 3436,
+              "total": 3436
+            },
+            "status": "VERIFIED",
+            "evidence_id": "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067",
+            "export_sha256": "d81ecde8f818ed8d8748b476e22412ec74820a49edbe7986c2c3633a3d66bef0",
+            "result_sha256": "0efed9d66bcccd31eda61d064c256a67fb054e8ef72b1b57fe3c0f58bdad7b56",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/baseline/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/no-change/2/fresh-cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/no-change/2/fresh.json",
+                "--policy",
+                "default",
+                "--disable-cache"
+              ],
+              "cwd": null,
+              "returncode": 0,
+              "timed_out": false,
+              "wall_seconds": 4.512747447000038,
+              "cpu_seconds": 4.493291999999999,
+              "max_rss_kib": 279932,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/no-change/2/fresh-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/no-change/2/fresh-process.stderr"
+            }
+          },
+          "incremental": {
+            "counts": {
+              "invalidated": 0,
+              "rechecked": 0,
+              "reused": 3436,
+              "scheduled": 0,
+              "total": 3436
+            },
+            "status": "VERIFIED",
+            "evidence_id": "a72cf0a255cb0020ec7db678f886502e83b012fd967e1f3ed5e37f764ebbdd19",
+            "export_sha256": "d81ecde8f818ed8d8748b476e22412ec74820a49edbe7986c2c3633a3d66bef0",
+            "result_sha256": "a02193d1138f82b703f9cc8534be699dd6edf77763d64283736209a15554a4a6",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/baseline/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/no-change/2/incremental.json",
+                "--policy",
+                "default",
+                "--previous",
+                "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067"
+              ],
+              "cwd": null,
+              "returncode": 0,
+              "timed_out": false,
+              "wall_seconds": 0.19279367900003308,
+              "cpu_seconds": 0.191662,
+              "max_rss_kib": 80412,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/no-change/2/incremental-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/no-change/2/incremental-process.stderr"
+            }
+          }
+        }
+      ]
+    },
+    "early-definition": {
+      "paired_resource_medians": {
+        "fresh": {
+          "wall_seconds": 4.45685580899999,
+          "cpu_seconds": 4.441334,
+          "max_rss_kib": 274180
+        },
+        "incremental": {
+          "wall_seconds": 4.227737364999939,
+          "cpu_seconds": 4.215073,
+          "max_rss_kib": 299036
+        }
+      },
+      "verification_phase_medians": {
+        "fresh": {
+          "identity_seconds": 3.985180168999932,
+          "cache_validation_seconds": 2.9100010578986257e-07,
+          "checking_seconds": 0.30232915300007335,
+          "total_seconds": 4.367497970999921
+        },
+        "incremental": {
+          "identity_seconds": 3.975566444999913,
+          "cache_validation_seconds": 0.04561101499984943,
+          "checking_seconds": 0.052894435999860434,
+          "total_seconds": 4.143059602999983
+        }
+      },
+      "incremental_wall_improvement_percent": 5.140808987748235,
+      "export_plus_verification_resources": {
+        "fresh": {
+          "wall_seconds": 5.473107043000027,
+          "cpu_seconds": 5.452702,
+          "max_rss_kib": 879880,
+          "scope": "sum/max of separately measured exporter and verifier; source build measured in workload manifest"
+        },
+        "incremental": {
+          "wall_seconds": 5.243988598999977,
+          "cpu_seconds": 5.226441,
+          "max_rss_kib": 879880,
+          "scope": "sum/max of separately measured exporter and verifier; source build measured in workload manifest"
+        }
+      },
+      "build_export_verification_resources": {
+        "fresh": {
+          "wall_seconds": 6.216241683000021,
+          "cpu_seconds": 6.3715470000000005,
+          "max_rss_kib": 879880,
+          "scope": "sum/max of separately measured identical source build/export cost plus each verification arm"
+        },
+        "incremental": {
+          "wall_seconds": 5.9871232389999705,
+          "cpu_seconds": 6.1452860000000005,
+          "max_rss_kib": 879880,
+          "scope": "sum/max of separately measured identical source build/export cost plus each verification arm"
+        }
+      },
+      "runs": [
+        {
+          "fresh": {
+            "counts": {
+              "invalidated": 0,
+              "rechecked": 3436,
+              "reused": 0,
+              "scheduled": 3436,
+              "total": 3436
+            },
+            "status": "VERIFIED",
+            "evidence_id": "a44e72323c8c9eabef86e82ff89b1b36c7c61429fb97b69efa2f5c17d50bc425",
+            "export_sha256": "13323bf721599b9b77fe0ea94da5c4632edd2a25188842fb09738bfdf74fdd9f",
+            "result_sha256": "a03eb68fb1df1ff3166d5cd630824e9d89511eab230476624136b5680d43f984",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/early-definition/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/early-definition/0/fresh-cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/early-definition/0/fresh.json",
+                "--policy",
+                "default",
+                "--disable-cache"
+              ],
+              "cwd": null,
+              "returncode": 0,
+              "timed_out": false,
+              "wall_seconds": 4.4784017479998965,
+              "cpu_seconds": 4.462153000000001,
+              "max_rss_kib": 274176,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/early-definition/0/fresh-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/early-definition/0/fresh-process.stderr"
+            }
+          },
+          "incremental": {
+            "counts": {
+              "invalidated": 413,
+              "rechecked": 413,
+              "reused": 3023,
+              "scheduled": 413,
+              "total": 3436
+            },
+            "status": "VERIFIED",
+            "evidence_id": "40eda60aeaf6e8e95875d828297b87981f584ced73d5ae6ee2657edb95576e92",
+            "export_sha256": "13323bf721599b9b77fe0ea94da5c4632edd2a25188842fb09738bfdf74fdd9f",
+            "result_sha256": "5ea296d47a9dd9f0dd8ecf94318aea71ef3c9918e28df7bc3678f26470bb9858",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/early-definition/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/early-definition/0/incremental.json",
+                "--policy",
+                "default",
+                "--previous",
+                "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067"
+              ],
+              "cwd": null,
+              "returncode": 0,
+              "timed_out": false,
+              "wall_seconds": 4.267137064000053,
+              "cpu_seconds": 4.2493620000000005,
+              "max_rss_kib": 284532,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/early-definition/0/incremental-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/early-definition/0/incremental-process.stderr"
+            }
+          }
+        },
+        {
+          "fresh": {
+            "counts": {
+              "invalidated": 0,
+              "rechecked": 3436,
+              "reused": 0,
+              "scheduled": 3436,
+              "total": 3436
+            },
+            "status": "VERIFIED",
+            "evidence_id": "a44e72323c8c9eabef86e82ff89b1b36c7c61429fb97b69efa2f5c17d50bc425",
+            "export_sha256": "13323bf721599b9b77fe0ea94da5c4632edd2a25188842fb09738bfdf74fdd9f",
+            "result_sha256": "41519bdcd9b148d45bb3f5e01153bf91558e07fbf345da93ea00d8b9825dcb9e",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/early-definition/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/early-definition/1/fresh-cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/early-definition/1/fresh.json",
+                "--policy",
+                "default",
+                "--disable-cache"
+              ],
+              "cwd": null,
+              "returncode": 0,
+              "timed_out": false,
+              "wall_seconds": 4.377027190000035,
+              "cpu_seconds": 4.36235,
+              "max_rss_kib": 274212,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/early-definition/1/fresh-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/early-definition/1/fresh-process.stderr"
+            }
+          },
+          "incremental": {
+            "counts": {
+              "invalidated": 413,
+              "rechecked": 413,
+              "reused": 3023,
+              "scheduled": 413,
+              "total": 3436
+            },
+            "status": "VERIFIED",
+            "evidence_id": "40eda60aeaf6e8e95875d828297b87981f584ced73d5ae6ee2657edb95576e92",
+            "export_sha256": "13323bf721599b9b77fe0ea94da5c4632edd2a25188842fb09738bfdf74fdd9f",
+            "result_sha256": "278b64c0f5a00ea3c9145955556c39b0353465e506e5671baa6e18911623180a",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/early-definition/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/early-definition/1/incremental.json",
+                "--policy",
+                "default",
+                "--previous",
+                "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067"
+              ],
+              "cwd": null,
+              "returncode": 0,
+              "timed_out": false,
+              "wall_seconds": 4.205028747000142,
+              "cpu_seconds": 4.200406999999999,
+              "max_rss_kib": 301040,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/early-definition/1/incremental-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/early-definition/1/incremental-process.stderr"
+            }
+          }
+        },
+        {
+          "fresh": {
+            "counts": {
+              "invalidated": 0,
+              "rechecked": 3436,
+              "reused": 0,
+              "scheduled": 3436,
+              "total": 3436
+            },
+            "status": "VERIFIED",
+            "evidence_id": "a44e72323c8c9eabef86e82ff89b1b36c7c61429fb97b69efa2f5c17d50bc425",
+            "export_sha256": "13323bf721599b9b77fe0ea94da5c4632edd2a25188842fb09738bfdf74fdd9f",
+            "result_sha256": "cd5a12eac85bd8eca41f49622fb2b074da5d5efc68deb8857a6885173701ad7a",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/early-definition/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/early-definition/2/fresh-cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/early-definition/2/fresh.json",
+                "--policy",
+                "default",
+                "--disable-cache"
+              ],
+              "cwd": null,
+              "returncode": 0,
+              "timed_out": false,
+              "wall_seconds": 4.45685580899999,
+              "cpu_seconds": 4.441334,
+              "max_rss_kib": 274180,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/early-definition/2/fresh-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/early-definition/2/fresh-process.stderr"
+            }
+          },
+          "incremental": {
+            "counts": {
+              "invalidated": 413,
+              "rechecked": 413,
+              "reused": 3023,
+              "scheduled": 413,
+              "total": 3436
+            },
+            "status": "VERIFIED",
+            "evidence_id": "40eda60aeaf6e8e95875d828297b87981f584ced73d5ae6ee2657edb95576e92",
+            "export_sha256": "13323bf721599b9b77fe0ea94da5c4632edd2a25188842fb09738bfdf74fdd9f",
+            "result_sha256": "b330046bb06865ab433e4a8123b094b1c3e9fdcd3adee15136048cf78ceb45a9",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/early-definition/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/early-definition/2/incremental.json",
+                "--policy",
+                "default",
+                "--previous",
+                "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067"
+              ],
+              "cwd": null,
+              "returncode": 0,
+              "timed_out": false,
+              "wall_seconds": 4.227737364999939,
+              "cpu_seconds": 4.215073,
+              "max_rss_kib": 299036,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/early-definition/2/incremental-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/early-definition/2/incremental-process.stderr"
+            }
+          }
+        }
+      ]
+    },
+    "unrelated-definition": {
+      "paired_resource_medians": {
+        "fresh": {
+          "wall_seconds": 4.398269276000065,
+          "cpu_seconds": 4.386454,
+          "max_rss_kib": 281844
+        },
+        "incremental": {
+          "wall_seconds": 4.498681093000187,
+          "cpu_seconds": 4.487311,
+          "max_rss_kib": 303064
+        }
+      },
+      "verification_phase_medians": {
+        "fresh": {
+          "identity_seconds": 3.9449722680001287,
+          "cache_validation_seconds": 2.700001004996011e-07,
+          "checking_seconds": 0.3086019219999798,
+          "total_seconds": 4.31497803000002
+        },
+        "incremental": {
+          "identity_seconds": 4.278328700999964,
+          "cache_validation_seconds": 0.04807579800012718,
+          "checking_seconds": 0.022605336999959036,
+          "total_seconds": 4.416642825000054
+        }
+      },
+      "incremental_wall_improvement_percent": -2.2829847537538583,
+      "export_plus_verification_resources": {
+        "fresh": {
+          "wall_seconds": 5.512914287000058,
+          "cpu_seconds": 5.489184999999999,
+          "max_rss_kib": 879040,
+          "scope": "sum/max of separately measured exporter and verifier; source build measured in workload manifest"
+        },
+        "incremental": {
+          "wall_seconds": 5.61332610400018,
+          "cpu_seconds": 5.590042,
+          "max_rss_kib": 879040,
+          "scope": "sum/max of separately measured exporter and verifier; source build measured in workload manifest"
+        }
+      },
+      "build_export_verification_resources": {
+        "fresh": {
+          "wall_seconds": 6.376918415000091,
+          "cpu_seconds": 6.506422999999999,
+          "max_rss_kib": 879040,
+          "scope": "sum/max of separately measured identical source build/export cost plus each verification arm"
+        },
+        "incremental": {
+          "wall_seconds": 6.477330232000213,
+          "cpu_seconds": 6.60728,
+          "max_rss_kib": 879040,
+          "scope": "sum/max of separately measured identical source build/export cost plus each verification arm"
+        }
+      },
+      "runs": [
+        {
+          "fresh": {
+            "counts": {
+              "invalidated": 0,
+              "rechecked": 3436,
+              "reused": 0,
+              "scheduled": 3436,
+              "total": 3436
+            },
+            "status": "VERIFIED",
+            "evidence_id": "76ac307fd0a7a03723e281361d5c6ecde1a025070ce4eb19f80ca9af13b0ee68",
+            "export_sha256": "3e87c0fdad28a426d73073940ffea9dc03941c274f9c79887765d51f2dcc2ad5",
+            "result_sha256": "c36df2465117b57517cc047b9d841fb6463cf64f7e22e038df3228d42cff16ef",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/unrelated-definition/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/unrelated-definition/0/fresh-cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/unrelated-definition/0/fresh.json",
+                "--policy",
+                "default",
+                "--disable-cache"
+              ],
+              "cwd": null,
+              "returncode": 0,
+              "timed_out": false,
+              "wall_seconds": 4.398269276000065,
+              "cpu_seconds": 4.386454,
+              "max_rss_kib": 281844,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/unrelated-definition/0/fresh-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/unrelated-definition/0/fresh-process.stderr"
+            }
+          },
+          "incremental": {
+            "counts": {
+              "invalidated": 1,
+              "rechecked": 1,
+              "reused": 3435,
+              "scheduled": 1,
+              "total": 3436
+            },
+            "status": "VERIFIED",
+            "evidence_id": "ee36056b0ef19354f206fd3cf5a382d1e5d27495075a3354df4cff78e47eddb8",
+            "export_sha256": "3e87c0fdad28a426d73073940ffea9dc03941c274f9c79887765d51f2dcc2ad5",
+            "result_sha256": "272d59e9f134ba697db7e8f0489b1e0ad7e3ec1833b7812667a783abf7b554c6",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/unrelated-definition/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/unrelated-definition/0/incremental.json",
+                "--policy",
+                "default",
+                "--previous",
+                "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067"
+              ],
+              "cwd": null,
+              "returncode": 0,
+              "timed_out": false,
+              "wall_seconds": 4.307623591000038,
+              "cpu_seconds": 4.288056,
+              "max_rss_kib": 284508,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/unrelated-definition/0/incremental-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/unrelated-definition/0/incremental-process.stderr"
+            }
+          }
+        },
+        {
+          "fresh": {
+            "counts": {
+              "invalidated": 0,
+              "rechecked": 3436,
+              "reused": 0,
+              "scheduled": 3436,
+              "total": 3436
+            },
+            "status": "VERIFIED",
+            "evidence_id": "76ac307fd0a7a03723e281361d5c6ecde1a025070ce4eb19f80ca9af13b0ee68",
+            "export_sha256": "3e87c0fdad28a426d73073940ffea9dc03941c274f9c79887765d51f2dcc2ad5",
+            "result_sha256": "7112089136110cf33d45f372364df67305a3be3b02a590d49a6d54dc4a7c1483",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/unrelated-definition/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/unrelated-definition/1/fresh-cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/unrelated-definition/1/fresh.json",
+                "--policy",
+                "default",
+                "--disable-cache"
+              ],
+              "cwd": null,
+              "returncode": 0,
+              "timed_out": false,
+              "wall_seconds": 4.612721489999785,
+              "cpu_seconds": 4.549672,
+              "max_rss_kib": 283868,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/unrelated-definition/1/fresh-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/unrelated-definition/1/fresh-process.stderr"
+            }
+          },
+          "incremental": {
+            "counts": {
+              "invalidated": 1,
+              "rechecked": 1,
+              "reused": 3435,
+              "scheduled": 1,
+              "total": 3436
+            },
+            "status": "VERIFIED",
+            "evidence_id": "ee36056b0ef19354f206fd3cf5a382d1e5d27495075a3354df4cff78e47eddb8",
+            "export_sha256": "3e87c0fdad28a426d73073940ffea9dc03941c274f9c79887765d51f2dcc2ad5",
+            "result_sha256": "f27af32a0569ad70ba1f8824783f6d36986cbef68f23ceeeb09100f48f24c7a5",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/unrelated-definition/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/unrelated-definition/1/incremental.json",
+                "--policy",
+                "default",
+                "--previous",
+                "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067"
+              ],
+              "cwd": null,
+              "returncode": 0,
+              "timed_out": false,
+              "wall_seconds": 4.498681093000187,
+              "cpu_seconds": 4.487311,
+              "max_rss_kib": 303064,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/unrelated-definition/1/incremental-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/unrelated-definition/1/incremental-process.stderr"
+            }
+          }
+        },
+        {
+          "fresh": {
+            "counts": {
+              "invalidated": 0,
+              "rechecked": 3436,
+              "reused": 0,
+              "scheduled": 3436,
+              "total": 3436
+            },
+            "status": "VERIFIED",
+            "evidence_id": "76ac307fd0a7a03723e281361d5c6ecde1a025070ce4eb19f80ca9af13b0ee68",
+            "export_sha256": "3e87c0fdad28a426d73073940ffea9dc03941c274f9c79887765d51f2dcc2ad5",
+            "result_sha256": "1c906e526c42e2dc357290a4c1fd85016dafb428699fa41d30f6922f2ae9c655",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/unrelated-definition/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/unrelated-definition/2/fresh-cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/unrelated-definition/2/fresh.json",
+                "--policy",
+                "default",
+                "--disable-cache"
+              ],
+              "cwd": null,
+              "returncode": 0,
+              "timed_out": false,
+              "wall_seconds": 4.253187085000036,
+              "cpu_seconds": 4.238618,
+              "max_rss_kib": 280812,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/unrelated-definition/2/fresh-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/unrelated-definition/2/fresh-process.stderr"
+            }
+          },
+          "incremental": {
+            "counts": {
+              "invalidated": 1,
+              "rechecked": 1,
+              "reused": 3435,
+              "scheduled": 1,
+              "total": 3436
+            },
+            "status": "VERIFIED",
+            "evidence_id": "ee36056b0ef19354f206fd3cf5a382d1e5d27495075a3354df4cff78e47eddb8",
+            "export_sha256": "3e87c0fdad28a426d73073940ffea9dc03941c274f9c79887765d51f2dcc2ad5",
+            "result_sha256": "1e31d6a4a4b296151053efe2ead5d8fdcffcc812b30979d794726523b12bb901",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/unrelated-definition/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/unrelated-definition/2/incremental.json",
+                "--policy",
+                "default",
+                "--previous",
+                "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067"
+              ],
+              "cwd": null,
+              "returncode": 0,
+              "timed_out": false,
+              "wall_seconds": 4.588112862000116,
+              "cpu_seconds": 4.58527,
+              "max_rss_kib": 303084,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/unrelated-definition/2/incremental-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/unrelated-definition/2/incremental-process.stderr"
+            }
+          }
+        }
+      ]
+    },
+    "theorem-leaf": {
+      "paired_resource_medians": {
+        "fresh": {
+          "wall_seconds": 4.27336703900005,
+          "cpu_seconds": 4.252071000000001,
+          "max_rss_kib": 280864
+        },
+        "incremental": {
+          "wall_seconds": 4.009219697999924,
+          "cpu_seconds": 3.9980539999999998,
+          "max_rss_kib": 297580
+        }
+      },
+      "verification_phase_medians": {
+        "fresh": {
+          "identity_seconds": 3.818592356999943,
+          "cache_validation_seconds": 1.8000014279095922e-07,
+          "checking_seconds": 0.30068159400002514,
+          "total_seconds": 4.191474380000045
+        },
+        "incremental": {
+          "identity_seconds": 3.799428621999823,
+          "cache_validation_seconds": 0.04515376099993773,
+          "checking_seconds": 0.017869492000045284,
+          "total_seconds": 3.9319933730000685
+        }
+      },
+      "incremental_wall_improvement_percent": 6.1812462769857195,
+      "export_plus_verification_resources": {
+        "fresh": {
+          "wall_seconds": 5.410931665000021,
+          "cpu_seconds": 5.382506000000001,
+          "max_rss_kib": 878352,
+          "scope": "sum/max of separately measured exporter and verifier; source build measured in workload manifest"
+        },
+        "incremental": {
+          "wall_seconds": 5.146784323999896,
+          "cpu_seconds": 5.128489,
+          "max_rss_kib": 878352,
+          "scope": "sum/max of separately measured exporter and verifier; source build measured in workload manifest"
+        }
+      },
+      "build_export_verification_resources": {
+        "fresh": {
+          "wall_seconds": 6.258278637999979,
+          "cpu_seconds": 6.454622000000001,
+          "max_rss_kib": 878352,
+          "scope": "sum/max of separately measured identical source build/export cost plus each verification arm"
+        },
+        "incremental": {
+          "wall_seconds": 5.9941312969998535,
+          "cpu_seconds": 6.200605,
+          "max_rss_kib": 878352,
+          "scope": "sum/max of separately measured identical source build/export cost plus each verification arm"
+        }
+      },
+      "runs": [
+        {
+          "fresh": {
+            "counts": {
+              "invalidated": 0,
+              "rechecked": 3436,
+              "reused": 0,
+              "scheduled": 3436,
+              "total": 3436
+            },
+            "status": "VERIFIED",
+            "evidence_id": "df84127cdf0dbb0f1dc5ffe03f13cd71c990234529e364e3ffbb20bd65a60adb",
+            "export_sha256": "248174fa07162ca1dd6d2e71a2032a17e3282f26d8eb754c34f76c39805d9533",
+            "result_sha256": "9f44f9e84dac811393e0758ecd843f5a52cce11b5cfed6d9407c34d254dd0c47",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/theorem-leaf/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/theorem-leaf/0/fresh-cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/theorem-leaf/0/fresh.json",
+                "--policy",
+                "default",
+                "--disable-cache"
+              ],
+              "cwd": null,
+              "returncode": 0,
+              "timed_out": false,
+              "wall_seconds": 4.56656441999985,
+              "cpu_seconds": 4.552363,
+              "max_rss_kib": 280860,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/theorem-leaf/0/fresh-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/theorem-leaf/0/fresh-process.stderr"
+            }
+          },
+          "incremental": {
+            "counts": {
+              "invalidated": 1,
+              "rechecked": 1,
+              "reused": 3435,
+              "scheduled": 1,
+              "total": 3436
+            },
+            "status": "VERIFIED",
+            "evidence_id": "a71ca7e92562af7c3e9ccccd63acf2ad6e1bcca3c6e6ec28f8ba438677963d27",
+            "export_sha256": "248174fa07162ca1dd6d2e71a2032a17e3282f26d8eb754c34f76c39805d9533",
+            "result_sha256": "05280df18db880c393b3c6f21a9a7ccc93fee6a41a6568ecc745e4217a8f3e43",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/theorem-leaf/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/theorem-leaf/0/incremental.json",
+                "--policy",
+                "default",
+                "--previous",
+                "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067"
+              ],
+              "cwd": null,
+              "returncode": 0,
+              "timed_out": false,
+              "wall_seconds": 3.8842373049999424,
+              "cpu_seconds": 3.8691969999999998,
+              "max_rss_kib": 281996,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/theorem-leaf/0/incremental-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/theorem-leaf/0/incremental-process.stderr"
+            }
+          }
+        },
+        {
+          "fresh": {
+            "counts": {
+              "invalidated": 0,
+              "rechecked": 3436,
+              "reused": 0,
+              "scheduled": 3436,
+              "total": 3436
+            },
+            "status": "VERIFIED",
+            "evidence_id": "df84127cdf0dbb0f1dc5ffe03f13cd71c990234529e364e3ffbb20bd65a60adb",
+            "export_sha256": "248174fa07162ca1dd6d2e71a2032a17e3282f26d8eb754c34f76c39805d9533",
+            "result_sha256": "9611f39bda455dc2d427431221b5a8efbd7480ddead48548595b25eda3257bef",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/theorem-leaf/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/theorem-leaf/1/fresh-cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/theorem-leaf/1/fresh.json",
+                "--policy",
+                "default",
+                "--disable-cache"
+              ],
+              "cwd": null,
+              "returncode": 0,
+              "timed_out": false,
+              "wall_seconds": 4.27336703900005,
+              "cpu_seconds": 4.252071000000001,
+              "max_rss_kib": 283876,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/theorem-leaf/1/fresh-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/theorem-leaf/1/fresh-process.stderr"
+            }
+          },
+          "incremental": {
+            "counts": {
+              "invalidated": 1,
+              "rechecked": 1,
+              "reused": 3435,
+              "scheduled": 1,
+              "total": 3436
+            },
+            "status": "VERIFIED",
+            "evidence_id": "a71ca7e92562af7c3e9ccccd63acf2ad6e1bcca3c6e6ec28f8ba438677963d27",
+            "export_sha256": "248174fa07162ca1dd6d2e71a2032a17e3282f26d8eb754c34f76c39805d9533",
+            "result_sha256": "05a282e480dbf88f37c4f184a55274d26c8bbdc6c6d07db2be62cc2c2791d142",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/theorem-leaf/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/theorem-leaf/1/incremental.json",
+                "--policy",
+                "default",
+                "--previous",
+                "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067"
+              ],
+              "cwd": null,
+              "returncode": 0,
+              "timed_out": false,
+              "wall_seconds": 4.009219697999924,
+              "cpu_seconds": 3.9980539999999998,
+              "max_rss_kib": 297584,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/theorem-leaf/1/incremental-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/theorem-leaf/1/incremental-process.stderr"
+            }
+          }
+        },
+        {
+          "fresh": {
+            "counts": {
+              "invalidated": 0,
+              "rechecked": 3436,
+              "reused": 0,
+              "scheduled": 3436,
+              "total": 3436
+            },
+            "status": "VERIFIED",
+            "evidence_id": "df84127cdf0dbb0f1dc5ffe03f13cd71c990234529e364e3ffbb20bd65a60adb",
+            "export_sha256": "248174fa07162ca1dd6d2e71a2032a17e3282f26d8eb754c34f76c39805d9533",
+            "result_sha256": "d5500ee441b1dcf402c617697715512dd4e2e896c7a4aaaa8be6c8c7fec3fd32",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/theorem-leaf/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/theorem-leaf/2/fresh-cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/theorem-leaf/2/fresh.json",
+                "--policy",
+                "default",
+                "--disable-cache"
+              ],
+              "cwd": null,
+              "returncode": 0,
+              "timed_out": false,
+              "wall_seconds": 4.061526049999884,
+              "cpu_seconds": 4.041751,
+              "max_rss_kib": 280864,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/theorem-leaf/2/fresh-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/theorem-leaf/2/fresh-process.stderr"
+            }
+          },
+          "incremental": {
+            "counts": {
+              "invalidated": 1,
+              "rechecked": 1,
+              "reused": 3435,
+              "scheduled": 1,
+              "total": 3436
+            },
+            "status": "VERIFIED",
+            "evidence_id": "a71ca7e92562af7c3e9ccccd63acf2ad6e1bcca3c6e6ec28f8ba438677963d27",
+            "export_sha256": "248174fa07162ca1dd6d2e71a2032a17e3282f26d8eb754c34f76c39805d9533",
+            "result_sha256": "ad6067ea7040640b919475c752ca3e90cf20d79aba1796fe653d64e2120b62ba",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/theorem-leaf/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/theorem-leaf/2/incremental.json",
+                "--policy",
+                "default",
+                "--previous",
+                "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067"
+              ],
+              "cwd": null,
+              "returncode": 0,
+              "timed_out": false,
+              "wall_seconds": 4.109686768000074,
+              "cpu_seconds": 4.105582,
+              "max_rss_kib": 297580,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/theorem-leaf/2/incremental-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/theorem-leaf/2/incremental-process.stderr"
+            }
+          }
+        }
+      ]
+    },
+    "type-change": {
+      "paired_resource_medians": {
+        "fresh": {
+          "wall_seconds": 4.459847367000066,
+          "cpu_seconds": 4.444939,
+          "max_rss_kib": 291468
+        },
+        "incremental": {
+          "wall_seconds": 4.095412138999791,
+          "cpu_seconds": 4.085268,
+          "max_rss_kib": 299612
+        }
+      },
+      "verification_phase_medians": {
+        "fresh": {
+          "identity_seconds": 3.9715084800000113,
+          "cache_validation_seconds": 2.899998889915878e-07,
+          "checking_seconds": 0.3128506049999942,
+          "total_seconds": 4.390166541999861
+        },
+        "incremental": {
+          "identity_seconds": 3.862389753999878,
+          "cache_validation_seconds": 0.04666405900002246,
+          "checking_seconds": 0.017765104999853065,
+          "total_seconds": 4.0043347390001145
+        }
+      },
+      "incremental_wall_improvement_percent": 8.171473102350003,
+      "export_plus_verification_resources": {
+        "fresh": {
+          "wall_seconds": 5.646853001000181,
+          "cpu_seconds": 5.617959,
+          "max_rss_kib": 878428,
+          "scope": "sum/max of separately measured exporter and verifier; source build measured in workload manifest"
+        },
+        "incremental": {
+          "wall_seconds": 5.2824177729999064,
+          "cpu_seconds": 5.258288,
+          "max_rss_kib": 878428,
+          "scope": "sum/max of separately measured exporter and verifier; source build measured in workload manifest"
+        }
+      },
+      "build_export_verification_resources": {
+        "fresh": {
+          "wall_seconds": 6.496759857000143,
+          "cpu_seconds": 6.688813,
+          "max_rss_kib": 878428,
+          "scope": "sum/max of separately measured identical source build/export cost plus each verification arm"
+        },
+        "incremental": {
+          "wall_seconds": 6.132324628999868,
+          "cpu_seconds": 6.329142,
+          "max_rss_kib": 878428,
+          "scope": "sum/max of separately measured identical source build/export cost plus each verification arm"
+        }
+      },
+      "runs": [
+        {
+          "fresh": {
+            "counts": {
+              "invalidated": 0,
+              "rechecked": 3436,
+              "reused": 0,
+              "scheduled": 3436,
+              "total": 3436
+            },
+            "status": "VERIFIED",
+            "evidence_id": "5988c547d7a328cb97783d467a1861304f264b05e9b17402ddc728429ea4c579",
+            "export_sha256": "5dc73c594674cf2f342c72275d5f21da73fbb5c0f131ee4a002d8392aefb1705",
+            "result_sha256": "7bba578fb1d315fd9adf966990f2bd838a2c33ea1f20371dcd7feb1ec0024cff",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/type-change/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/type-change/0/fresh-cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/type-change/0/fresh.json",
+                "--policy",
+                "default",
+                "--disable-cache"
+              ],
+              "cwd": null,
+              "returncode": 0,
+              "timed_out": false,
+              "wall_seconds": 4.459847367000066,
+              "cpu_seconds": 4.444939,
+              "max_rss_kib": 282832,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/type-change/0/fresh-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/type-change/0/fresh-process.stderr"
+            }
+          },
+          "incremental": {
+            "counts": {
+              "invalidated": 2,
+              "rechecked": 2,
+              "reused": 3434,
+              "scheduled": 2,
+              "total": 3436
+            },
+            "status": "VERIFIED",
+            "evidence_id": "acd71de458ed7c86268f6bccc2bc24d74fe00919f0d9a37910f87a8d62324e9f",
+            "export_sha256": "5dc73c594674cf2f342c72275d5f21da73fbb5c0f131ee4a002d8392aefb1705",
+            "result_sha256": "98c41e848f8810fef76a2ce4c9e7d8161bac1f25e7e92273ae018fe88616ea8e",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/type-change/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/type-change/0/incremental.json",
+                "--policy",
+                "default",
+                "--previous",
+                "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067"
+              ],
+              "cwd": null,
+              "returncode": 0,
+              "timed_out": false,
+              "wall_seconds": 4.22649477899995,
+              "cpu_seconds": 4.20989,
+              "max_rss_kib": 281964,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/type-change/0/incremental-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/type-change/0/incremental-process.stderr"
+            }
+          }
+        },
+        {
+          "fresh": {
+            "counts": {
+              "invalidated": 0,
+              "rechecked": 3436,
+              "reused": 0,
+              "scheduled": 3436,
+              "total": 3436
+            },
+            "status": "VERIFIED",
+            "evidence_id": "5988c547d7a328cb97783d467a1861304f264b05e9b17402ddc728429ea4c579",
+            "export_sha256": "5dc73c594674cf2f342c72275d5f21da73fbb5c0f131ee4a002d8392aefb1705",
+            "result_sha256": "4b61136135388d9bc36c3aeaa20aa63004b40ac0226f9d7cacb43767ee046e35",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/type-change/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/type-change/1/fresh-cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/type-change/1/fresh.json",
+                "--policy",
+                "default",
+                "--disable-cache"
+              ],
+              "cwd": null,
+              "returncode": 0,
+              "timed_out": false,
+              "wall_seconds": 4.635071930000095,
+              "cpu_seconds": 4.619091,
+              "max_rss_kib": 291468,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/type-change/1/fresh-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/type-change/1/fresh-process.stderr"
+            }
+          },
+          "incremental": {
+            "counts": {
+              "invalidated": 2,
+              "rechecked": 2,
+              "reused": 3434,
+              "scheduled": 2,
+              "total": 3436
+            },
+            "status": "VERIFIED",
+            "evidence_id": "acd71de458ed7c86268f6bccc2bc24d74fe00919f0d9a37910f87a8d62324e9f",
+            "export_sha256": "5dc73c594674cf2f342c72275d5f21da73fbb5c0f131ee4a002d8392aefb1705",
+            "result_sha256": "b0cefc33260a2a3be83669921425e680359fe78ff76264c6b025089e342454c5",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/type-change/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/type-change/1/incremental.json",
+                "--policy",
+                "default",
+                "--previous",
+                "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067"
+              ],
+              "cwd": null,
+              "returncode": 0,
+              "timed_out": false,
+              "wall_seconds": 4.095412138999791,
+              "cpu_seconds": 4.085268,
+              "max_rss_kib": 299612,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/type-change/1/incremental-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/type-change/1/incremental-process.stderr"
+            }
+          }
+        },
+        {
+          "fresh": {
+            "counts": {
+              "invalidated": 0,
+              "rechecked": 3436,
+              "reused": 0,
+              "scheduled": 3436,
+              "total": 3436
+            },
+            "status": "VERIFIED",
+            "evidence_id": "5988c547d7a328cb97783d467a1861304f264b05e9b17402ddc728429ea4c579",
+            "export_sha256": "5dc73c594674cf2f342c72275d5f21da73fbb5c0f131ee4a002d8392aefb1705",
+            "result_sha256": "5de3f2b5248811b71e4672e910c8aa9e087edaabee79c63e1f8d9e898409cab5",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/type-change/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/type-change/2/fresh-cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/type-change/2/fresh.json",
+                "--policy",
+                "default",
+                "--disable-cache"
+              ],
+              "cwd": null,
+              "returncode": 0,
+              "timed_out": false,
+              "wall_seconds": 4.286149642000055,
+              "cpu_seconds": 4.271143,
+              "max_rss_kib": 300948,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/type-change/2/fresh-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/type-change/2/fresh-process.stderr"
+            }
+          },
+          "incremental": {
+            "counts": {
+              "invalidated": 2,
+              "rechecked": 2,
+              "reused": 3434,
+              "scheduled": 2,
+              "total": 3436
+            },
+            "status": "VERIFIED",
+            "evidence_id": "acd71de458ed7c86268f6bccc2bc24d74fe00919f0d9a37910f87a8d62324e9f",
+            "export_sha256": "5dc73c594674cf2f342c72275d5f21da73fbb5c0f131ee4a002d8392aefb1705",
+            "result_sha256": "d991a1a219d51e6e6be0dca9378dde128057678cd19f4dd2b0528395b2eb6890",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/type-change/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/type-change/2/incremental.json",
+                "--policy",
+                "default",
+                "--previous",
+                "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067"
+              ],
+              "cwd": null,
+              "returncode": 0,
+              "timed_out": false,
+              "wall_seconds": 4.016615781000155,
+              "cpu_seconds": 4.006953,
+              "max_rss_kib": 310548,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/type-change/2/incremental-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/type-change/2/incremental-process.stderr"
+            }
+          }
+        }
+      ]
+    },
+    "invalid-proof": {
+      "paired_resource_medians": {
+        "fresh": {
+          "wall_seconds": 4.21754883199992,
+          "cpu_seconds": 4.213387,
+          "max_rss_kib": 348336
+        },
+        "incremental": {
+          "wall_seconds": 3.9895793880000383,
+          "cpu_seconds": 3.9829250000000003,
+          "max_rss_kib": 338804
+        }
+      },
+      "verification_phase_medians": {
+        "fresh": {
+          "identity_seconds": 3.86010047700006,
+          "cache_validation_seconds": 1.6999979379761498e-07,
+          "checking_seconds": 0.2691802680001274,
+          "total_seconds": 4.137749569000107
+        },
+        "incremental": {
+          "identity_seconds": 3.833559728999944,
+          "cache_validation_seconds": 0.045326613000042926,
+          "checking_seconds": 0.02108377600006861,
+          "total_seconds": 3.9126473600001646
+        }
+      },
+      "incremental_wall_improvement_percent": 5.405259146502428,
+      "runs": [
+        {
+          "fresh": {
+            "counts": {
+              "invalidated": 0,
+              "rechecked": null,
+              "reused": 0,
+              "scheduled": 3436,
+              "total": 3436
+            },
+            "status": "REJECTED",
+            "evidence_id": null,
+            "export_sha256": "24729cd9b45f4e84b97950e4b9c85a3a42508ee98165dd818ad52553aa231eb7",
+            "result_sha256": "17272172e41e027b0638b164d89f345a6c36e409c4f10af31c30d37f5c960c45",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/invalid-proof/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/invalid-proof/0/fresh-cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/invalid-proof/0/fresh.json",
+                "--policy",
+                "default",
+                "--disable-cache"
+              ],
+              "cwd": null,
+              "returncode": 1,
+              "timed_out": false,
+              "wall_seconds": 4.048816673999909,
+              "cpu_seconds": 4.037984,
+              "max_rss_kib": 320148,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/invalid-proof/0/fresh-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/invalid-proof/0/fresh-process.stderr"
+            }
+          },
+          "incremental": {
+            "counts": {
+              "invalidated": 1,
+              "rechecked": null,
+              "reused": 3435,
+              "scheduled": 1,
+              "total": 3436
+            },
+            "status": "REJECTED",
+            "evidence_id": null,
+            "export_sha256": "24729cd9b45f4e84b97950e4b9c85a3a42508ee98165dd818ad52553aa231eb7",
+            "result_sha256": "3201d0ac3f26a1920b3895806df71e079f3a6a5b9bacc7b95b54b0cb3c8f57f4",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/invalid-proof/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/invalid-proof/0/incremental.json",
+                "--policy",
+                "default",
+                "--previous",
+                "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067"
+              ],
+              "cwd": null,
+              "returncode": 1,
+              "timed_out": false,
+              "wall_seconds": 3.9895793880000383,
+              "cpu_seconds": 3.9829250000000003,
+              "max_rss_kib": 328820,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/invalid-proof/0/incremental-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/invalid-proof/0/incremental-process.stderr"
+            }
+          }
+        },
+        {
+          "fresh": {
+            "counts": {
+              "invalidated": 0,
+              "rechecked": null,
+              "reused": 0,
+              "scheduled": 3436,
+              "total": 3436
+            },
+            "status": "REJECTED",
+            "evidence_id": null,
+            "export_sha256": "24729cd9b45f4e84b97950e4b9c85a3a42508ee98165dd818ad52553aa231eb7",
+            "result_sha256": "d73f914bda190727bc0e90edef11e412bb0dcf7f98fbf03f1cf7870b5f43ba7c",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/invalid-proof/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/invalid-proof/1/fresh-cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/invalid-proof/1/fresh.json",
+                "--policy",
+                "default",
+                "--disable-cache"
+              ],
+              "cwd": null,
+              "returncode": 1,
+              "timed_out": false,
+              "wall_seconds": 4.21754883199992,
+              "cpu_seconds": 4.213387,
+              "max_rss_kib": 348336,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/invalid-proof/1/fresh-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/invalid-proof/1/fresh-process.stderr"
+            }
+          },
+          "incremental": {
+            "counts": {
+              "invalidated": 1,
+              "rechecked": null,
+              "reused": 3435,
+              "scheduled": 1,
+              "total": 3436
+            },
+            "status": "REJECTED",
+            "evidence_id": null,
+            "export_sha256": "24729cd9b45f4e84b97950e4b9c85a3a42508ee98165dd818ad52553aa231eb7",
+            "result_sha256": "bf6510d222f8c4f980ff116934586eafb281b0817e35558db2b03a7086941e59",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/invalid-proof/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/invalid-proof/1/incremental.json",
+                "--policy",
+                "default",
+                "--previous",
+                "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067"
+              ],
+              "cwd": null,
+              "returncode": 1,
+              "timed_out": false,
+              "wall_seconds": 3.9380561719999605,
+              "cpu_seconds": 3.929666,
+              "max_rss_kib": 338804,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/invalid-proof/1/incremental-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/invalid-proof/1/incremental-process.stderr"
+            }
+          }
+        },
+        {
+          "fresh": {
+            "counts": {
+              "invalidated": 0,
+              "rechecked": null,
+              "reused": 0,
+              "scheduled": 3436,
+              "total": 3436
+            },
+            "status": "REJECTED",
+            "evidence_id": null,
+            "export_sha256": "24729cd9b45f4e84b97950e4b9c85a3a42508ee98165dd818ad52553aa231eb7",
+            "result_sha256": "3518cf17d68794f69ff24910e6b0491cfc8ac6567f954ae83c09de7936f3a20e",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/invalid-proof/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/invalid-proof/2/fresh-cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/invalid-proof/2/fresh.json",
+                "--policy",
+                "default",
+                "--disable-cache"
+              ],
+              "cwd": null,
+              "returncode": 1,
+              "timed_out": false,
+              "wall_seconds": 4.271881969999868,
+              "cpu_seconds": 4.259968,
+              "max_rss_kib": 356952,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/invalid-proof/2/fresh-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/invalid-proof/2/fresh-process.stderr"
+            }
+          },
+          "incremental": {
+            "counts": {
+              "invalidated": 1,
+              "rechecked": null,
+              "reused": 3435,
+              "scheduled": 1,
+              "total": 3436
+            },
+            "status": "REJECTED",
+            "evidence_id": null,
+            "export_sha256": "24729cd9b45f4e84b97950e4b9c85a3a42508ee98165dd818ad52553aa231eb7",
+            "result_sha256": "32e53136035004ef508009a0e82cc46894696106966fc37164fbeea240eac91e",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/invalid-proof/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/invalid-proof/2/incremental.json",
+                "--policy",
+                "default",
+                "--previous",
+                "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067"
+              ],
+              "cwd": null,
+              "returncode": 1,
+              "timed_out": false,
+              "wall_seconds": 4.091265957000132,
+              "cpu_seconds": 4.0833580000000005,
+              "max_rss_kib": 366040,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/invalid-proof/2/incremental-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/invalid-proof/2/incremental-process.stderr"
+            }
+          }
+        }
+      ]
+    },
+    "axiom-type": {
+      "paired_resource_medians": {
+        "fresh": {
+          "wall_seconds": 4.115108063999969,
+          "cpu_seconds": 4.103195,
+          "max_rss_kib": 406776
+        },
+        "incremental": {
+          "wall_seconds": 4.24994105199994,
+          "cpu_seconds": 4.240206,
+          "max_rss_kib": 400344
+        }
+      },
+      "verification_phase_medians": {
+        "fresh": {
+          "identity_seconds": 3.980558950000159,
+          "cache_validation_seconds": 2.1999994714860804e-07,
+          "checking_seconds": 0.03633893200003513,
+          "total_seconds": 4.030533154000068
+        },
+        "incremental": {
+          "identity_seconds": 4.053434487000004,
+          "cache_validation_seconds": 0.04466264500001671,
+          "checking_seconds": 0.03475112599994645,
+          "total_seconds": 4.157405604999894
+        }
+      },
+      "incremental_wall_improvement_percent": -3.2765357775054627,
+      "runs": [
+        {
+          "fresh": {
+            "counts": {
+              "invalidated": 0,
+              "rechecked": null,
+              "reused": 0,
+              "scheduled": 3436,
+              "total": 3436
+            },
+            "status": "REJECTED",
+            "evidence_id": null,
+            "export_sha256": "051ebd71fb7faf08382ebc9e96fe7f46367348c40dfc0f82b3022e3e274a6950",
+            "result_sha256": "6b2cff5e9778c11757d7b0e9c4477e1dc176ebccc5c5e802f3c218358419e64e",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/axiom-type/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/axiom-type/0/fresh-cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/axiom-type/0/fresh.json",
+                "--policy",
+                "default",
+                "--disable-cache"
+              ],
+              "cwd": null,
+              "returncode": 1,
+              "timed_out": false,
+              "wall_seconds": 4.006076867000047,
+              "cpu_seconds": 3.995815,
+              "max_rss_kib": 376664,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/axiom-type/0/fresh-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/axiom-type/0/fresh-process.stderr"
+            }
+          },
+          "incremental": {
+            "counts": {
+              "invalidated": 3436,
+              "rechecked": null,
+              "reused": 0,
+              "scheduled": 3436,
+              "total": 3436
+            },
+            "status": "REJECTED",
+            "evidence_id": null,
+            "export_sha256": "051ebd71fb7faf08382ebc9e96fe7f46367348c40dfc0f82b3022e3e274a6950",
+            "result_sha256": "e201f696dd766ddf408901c1b115601d972853202e957cef81cd52bef2a5587c",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/axiom-type/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/axiom-type/0/incremental.json",
+                "--policy",
+                "default",
+                "--previous",
+                "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067"
+              ],
+              "cwd": null,
+              "returncode": 1,
+              "timed_out": false,
+              "wall_seconds": 4.445394797000063,
+              "cpu_seconds": 4.432899,
+              "max_rss_kib": 385240,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/axiom-type/0/incremental-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/axiom-type/0/incremental-process.stderr"
+            }
+          }
+        },
+        {
+          "fresh": {
+            "counts": {
+              "invalidated": 0,
+              "rechecked": null,
+              "reused": 0,
+              "scheduled": 3436,
+              "total": 3436
+            },
+            "status": "REJECTED",
+            "evidence_id": null,
+            "export_sha256": "051ebd71fb7faf08382ebc9e96fe7f46367348c40dfc0f82b3022e3e274a6950",
+            "result_sha256": "328201b6491227eefabfd9c6b4c7e2755673a461e66076dcd1e2e4f081f5653b",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/axiom-type/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/axiom-type/1/fresh-cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/axiom-type/1/fresh.json",
+                "--policy",
+                "default",
+                "--disable-cache"
+              ],
+              "cwd": null,
+              "returncode": 1,
+              "timed_out": false,
+              "wall_seconds": 4.410982021000109,
+              "cpu_seconds": 4.400718,
+              "max_rss_kib": 406776,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/axiom-type/1/fresh-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/axiom-type/1/fresh-process.stderr"
+            }
+          },
+          "incremental": {
+            "counts": {
+              "invalidated": 3436,
+              "rechecked": null,
+              "reused": 0,
+              "scheduled": 3436,
+              "total": 3436
+            },
+            "status": "REJECTED",
+            "evidence_id": null,
+            "export_sha256": "051ebd71fb7faf08382ebc9e96fe7f46367348c40dfc0f82b3022e3e274a6950",
+            "result_sha256": "ba4c55de5e8b57448ee68edc1ac684adcf3136249b7c77de4ebc6376792cca78",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/axiom-type/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/axiom-type/1/incremental.json",
+                "--policy",
+                "default",
+                "--previous",
+                "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067"
+              ],
+              "cwd": null,
+              "returncode": 1,
+              "timed_out": false,
+              "wall_seconds": 4.24994105199994,
+              "cpu_seconds": 4.240206,
+              "max_rss_kib": 400344,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/axiom-type/1/incremental-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/axiom-type/1/incremental-process.stderr"
+            }
+          }
+        },
+        {
+          "fresh": {
+            "counts": {
+              "invalidated": 0,
+              "rechecked": null,
+              "reused": 0,
+              "scheduled": 3436,
+              "total": 3436
+            },
+            "status": "REJECTED",
+            "evidence_id": null,
+            "export_sha256": "051ebd71fb7faf08382ebc9e96fe7f46367348c40dfc0f82b3022e3e274a6950",
+            "result_sha256": "4dc3a13adce2693f087d4ee98b2d3dec6d78ad5a102fdbaac13df9ef14d52fb4",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/axiom-type/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/axiom-type/2/fresh-cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/axiom-type/2/fresh.json",
+                "--policy",
+                "default",
+                "--disable-cache"
+              ],
+              "cwd": null,
+              "returncode": 1,
+              "timed_out": false,
+              "wall_seconds": 4.115108063999969,
+              "cpu_seconds": 4.103195,
+              "max_rss_kib": 415100,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/axiom-type/2/fresh-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/axiom-type/2/fresh-process.stderr"
+            }
+          },
+          "incremental": {
+            "counts": {
+              "invalidated": 3436,
+              "rechecked": null,
+              "reused": 0,
+              "scheduled": 3436,
+              "total": 3436
+            },
+            "status": "REJECTED",
+            "evidence_id": null,
+            "export_sha256": "051ebd71fb7faf08382ebc9e96fe7f46367348c40dfc0f82b3022e3e274a6950",
+            "result_sha256": "57f28658e1a5079a70083f64e34427928fc74f4898465894c1b36de1b6927d73",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/axiom-type/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/axiom-type/2/incremental.json",
+                "--policy",
+                "default",
+                "--previous",
+                "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067"
+              ],
+              "cwd": null,
+              "returncode": 1,
+              "timed_out": false,
+              "wall_seconds": 4.223238974000196,
+              "cpu_seconds": 4.22039,
+              "max_rss_kib": 424188,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/axiom-type/2/incremental-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/axiom-type/2/incremental-process.stderr"
+            }
+          }
+        }
+      ]
+    },
+    "toolchain-metadata": {
+      "paired_resource_medians": {
+        "fresh": {
+          "wall_seconds": 4.313046044999965,
+          "cpu_seconds": 4.298151,
+          "max_rss_kib": 467324
+        },
+        "incremental": {
+          "wall_seconds": 4.473594005999985,
+          "cpu_seconds": 4.471095,
+          "max_rss_kib": 460340
+        }
+      },
+      "verification_phase_medians": {
+        "fresh": {
+          "identity_seconds": 3.8706003320000946,
+          "cache_validation_seconds": 3.0999990485724993e-07,
+          "checking_seconds": 0.30503468599999906,
+          "total_seconds": 4.237181685999985
+        },
+        "incremental": {
+          "identity_seconds": 3.9643366550001247,
+          "cache_validation_seconds": 0.04464715900007832,
+          "checking_seconds": 0.30921658099987326,
+          "total_seconds": 4.3913373059999685
+        }
+      },
+      "incremental_wall_improvement_percent": -3.722379945053933,
+      "runs": [
+        {
+          "fresh": {
+            "counts": {
+              "invalidated": 0,
+              "rechecked": 3436,
+              "reused": 0,
+              "scheduled": 3436,
+              "total": 3436
+            },
+            "status": "VERIFIED",
+            "evidence_id": "d5b638d4baed2ae4dbc489216e4fc2d295de0d19bceeef8760eac08275f50a90",
+            "export_sha256": "b69cc459be067625c8d9555ada3bccb39207cd06d685823ac955af8f2c2f8530",
+            "result_sha256": "9d64c6f4ba3cc9b19b7cde9e94403cf736c2893a29b35c0897db58c2abcfbe1a",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/toolchain-metadata/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/toolchain-metadata/0/fresh-cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/toolchain-metadata/0/fresh.json",
+                "--policy",
+                "default",
+                "--disable-cache"
+              ],
+              "cwd": null,
+              "returncode": 0,
+              "timed_out": false,
+              "wall_seconds": 4.463286015999984,
+              "cpu_seconds": 4.446662,
+              "max_rss_kib": 435580,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/toolchain-metadata/0/fresh-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/toolchain-metadata/0/fresh-process.stderr"
+            }
+          },
+          "incremental": {
+            "counts": {
+              "invalidated": 3436,
+              "rechecked": 3436,
+              "reused": 0,
+              "scheduled": 3436,
+              "total": 3436
+            },
+            "status": "VERIFIED",
+            "evidence_id": "257a4ccee465b612d5a23151ba0252b743857d7c19a7ed11d9e293f838d4d576",
+            "export_sha256": "b69cc459be067625c8d9555ada3bccb39207cd06d685823ac955af8f2c2f8530",
+            "result_sha256": "097cf1def8e092982d4769591bc4111f8c47c1ae94711b443535eb03ade86888",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/toolchain-metadata/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/toolchain-metadata/0/incremental.json",
+                "--policy",
+                "default",
+                "--previous",
+                "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067"
+              ],
+              "cwd": null,
+              "returncode": 0,
+              "timed_out": false,
+              "wall_seconds": 4.319033652999906,
+              "cpu_seconds": 4.3003,
+              "max_rss_kib": 444852,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/toolchain-metadata/0/incremental-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/toolchain-metadata/0/incremental-process.stderr"
+            }
+          }
+        },
+        {
+          "fresh": {
+            "counts": {
+              "invalidated": 0,
+              "rechecked": 3436,
+              "reused": 0,
+              "scheduled": 3436,
+              "total": 3436
+            },
+            "status": "VERIFIED",
+            "evidence_id": "d5b638d4baed2ae4dbc489216e4fc2d295de0d19bceeef8760eac08275f50a90",
+            "export_sha256": "b69cc459be067625c8d9555ada3bccb39207cd06d685823ac955af8f2c2f8530",
+            "result_sha256": "97d01ef47474055de84f9a120b280e97b0e112a10a2045c18a11ca9b9ff9b570",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/toolchain-metadata/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/toolchain-metadata/1/fresh-cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/toolchain-metadata/1/fresh.json",
+                "--policy",
+                "default",
+                "--disable-cache"
+              ],
+              "cwd": null,
+              "returncode": 0,
+              "timed_out": false,
+              "wall_seconds": 4.187025417000086,
+              "cpu_seconds": 4.169548,
+              "max_rss_kib": 467324,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/toolchain-metadata/1/fresh-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/toolchain-metadata/1/fresh-process.stderr"
+            }
+          },
+          "incremental": {
+            "counts": {
+              "invalidated": 3436,
+              "rechecked": 3436,
+              "reused": 0,
+              "scheduled": 3436,
+              "total": 3436
+            },
+            "status": "VERIFIED",
+            "evidence_id": "257a4ccee465b612d5a23151ba0252b743857d7c19a7ed11d9e293f838d4d576",
+            "export_sha256": "b69cc459be067625c8d9555ada3bccb39207cd06d685823ac955af8f2c2f8530",
+            "result_sha256": "7dfadde257b3f3ca5c141fc522885cf2e14892265ec6d70b3ef34ca65d137eb6",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/toolchain-metadata/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/toolchain-metadata/1/incremental.json",
+                "--policy",
+                "default",
+                "--previous",
+                "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067"
+              ],
+              "cwd": null,
+              "returncode": 0,
+              "timed_out": false,
+              "wall_seconds": 4.473594005999985,
+              "cpu_seconds": 4.471095,
+              "max_rss_kib": 460340,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/toolchain-metadata/1/incremental-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/toolchain-metadata/1/incremental-process.stderr"
+            }
+          }
+        },
+        {
+          "fresh": {
+            "counts": {
+              "invalidated": 0,
+              "rechecked": 3436,
+              "reused": 0,
+              "scheduled": 3436,
+              "total": 3436
+            },
+            "status": "VERIFIED",
+            "evidence_id": "d5b638d4baed2ae4dbc489216e4fc2d295de0d19bceeef8760eac08275f50a90",
+            "export_sha256": "b69cc459be067625c8d9555ada3bccb39207cd06d685823ac955af8f2c2f8530",
+            "result_sha256": "a7122259f360faa669f99e6a5f74aa9c07cae97f0d5a2c94869a27910cb137c1",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/toolchain-metadata/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/toolchain-metadata/2/fresh-cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/toolchain-metadata/2/fresh.json",
+                "--policy",
+                "default",
+                "--disable-cache"
+              ],
+              "cwd": null,
+              "returncode": 0,
+              "timed_out": false,
+              "wall_seconds": 4.313046044999965,
+              "cpu_seconds": 4.298151,
+              "max_rss_kib": 476332,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/toolchain-metadata/2/fresh-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/toolchain-metadata/2/fresh-process.stderr"
+            }
+          },
+          "incremental": {
+            "counts": {
+              "invalidated": 3436,
+              "rechecked": 3436,
+              "reused": 0,
+              "scheduled": 3436,
+              "total": 3436
+            },
+            "status": "VERIFIED",
+            "evidence_id": "257a4ccee465b612d5a23151ba0252b743857d7c19a7ed11d9e293f838d4d576",
+            "export_sha256": "b69cc459be067625c8d9555ada3bccb39207cd06d685823ac955af8f2c2f8530",
+            "result_sha256": "5e5dae3115f8adfad3f32a3b7b795baad3a29dafb66fe01b1375c62aeb349891",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/toolchain-metadata/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/toolchain-metadata/2/incremental.json",
+                "--policy",
+                "default",
+                "--previous",
+                "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067"
+              ],
+              "cwd": null,
+              "returncode": 0,
+              "timed_out": false,
+              "wall_seconds": 4.577941351999925,
+              "cpu_seconds": 4.566628000000001,
+              "max_rss_kib": 485932,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/toolchain-metadata/2/incremental-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/toolchain-metadata/2/incremental-process.stderr"
+            }
+          }
+        }
+      ]
+    },
+    "malformed-unused-dag": {
+      "paired_resource_medians": {
+        "fresh": {
+          "wall_seconds": 4.048313510999833,
+          "cpu_seconds": 4.040216,
+          "max_rss_kib": 497324
+        },
+        "incremental": {
+          "wall_seconds": 4.04341220099991,
+          "cpu_seconds": 4.033957,
+          "max_rss_kib": 497324
+        }
+      },
+      "verification_phase_medians": {
+        "fresh": {},
+        "incremental": {}
+      },
+      "incremental_wall_improvement_percent": 0.1210704157819098,
+      "runs": [
+        {
+          "fresh": {
+            "counts": null,
+            "status": "UNKNOWN",
+            "evidence_id": null,
+            "export_sha256": null,
+            "result_sha256": "06c6d1b8dd2bee78feb26f9f008102273b83e1275a5569d777b7d8bce9b9f446",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/malformed-unused-dag/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-dag/0/fresh-cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-dag/0/fresh.json",
+                "--policy",
+                "default",
+                "--disable-cache"
+              ],
+              "cwd": null,
+              "returncode": 2,
+              "timed_out": false,
+              "wall_seconds": 4.5899849229999745,
+              "cpu_seconds": 4.579352999999999,
+              "max_rss_kib": 497324,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-dag/0/fresh-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-dag/0/fresh-process.stderr"
+            }
+          },
+          "incremental": {
+            "counts": null,
+            "status": "UNKNOWN",
+            "evidence_id": null,
+            "export_sha256": null,
+            "result_sha256": "06c6d1b8dd2bee78feb26f9f008102273b83e1275a5569d777b7d8bce9b9f446",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/malformed-unused-dag/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-dag/0/incremental.json",
+                "--policy",
+                "default",
+                "--previous",
+                "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067"
+              ],
+              "cwd": null,
+              "returncode": 2,
+              "timed_out": false,
+              "wall_seconds": 4.04341220099991,
+              "cpu_seconds": 4.033957,
+              "max_rss_kib": 497324,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-dag/0/incremental-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-dag/0/incremental-process.stderr"
+            }
+          }
+        },
+        {
+          "fresh": {
+            "counts": null,
+            "status": "UNKNOWN",
+            "evidence_id": null,
+            "export_sha256": null,
+            "result_sha256": "06c6d1b8dd2bee78feb26f9f008102273b83e1275a5569d777b7d8bce9b9f446",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/malformed-unused-dag/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-dag/1/fresh-cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-dag/1/fresh.json",
+                "--policy",
+                "default",
+                "--disable-cache"
+              ],
+              "cwd": null,
+              "returncode": 2,
+              "timed_out": false,
+              "wall_seconds": 4.048313510999833,
+              "cpu_seconds": 4.040216,
+              "max_rss_kib": 497324,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-dag/1/fresh-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-dag/1/fresh-process.stderr"
+            }
+          },
+          "incremental": {
+            "counts": null,
+            "status": "UNKNOWN",
+            "evidence_id": null,
+            "export_sha256": null,
+            "result_sha256": "06c6d1b8dd2bee78feb26f9f008102273b83e1275a5569d777b7d8bce9b9f446",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/malformed-unused-dag/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-dag/1/incremental.json",
+                "--policy",
+                "default",
+                "--previous",
+                "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067"
+              ],
+              "cwd": null,
+              "returncode": 2,
+              "timed_out": false,
+              "wall_seconds": 4.033487564000097,
+              "cpu_seconds": 4.032151,
+              "max_rss_kib": 497324,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-dag/1/incremental-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-dag/1/incremental-process.stderr"
+            }
+          }
+        },
+        {
+          "fresh": {
+            "counts": null,
+            "status": "UNKNOWN",
+            "evidence_id": null,
+            "export_sha256": null,
+            "result_sha256": "06c6d1b8dd2bee78feb26f9f008102273b83e1275a5569d777b7d8bce9b9f446",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/malformed-unused-dag/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-dag/2/fresh-cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-dag/2/fresh.json",
+                "--policy",
+                "default",
+                "--disable-cache"
+              ],
+              "cwd": null,
+              "returncode": 2,
+              "timed_out": false,
+              "wall_seconds": 3.8718669509999017,
+              "cpu_seconds": 3.8700219999999996,
+              "max_rss_kib": 497324,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-dag/2/fresh-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-dag/2/fresh-process.stderr"
+            }
+          },
+          "incremental": {
+            "counts": null,
+            "status": "UNKNOWN",
+            "evidence_id": null,
+            "export_sha256": null,
+            "result_sha256": "06c6d1b8dd2bee78feb26f9f008102273b83e1275a5569d777b7d8bce9b9f446",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/malformed-unused-dag/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-dag/2/incremental.json",
+                "--policy",
+                "default",
+                "--previous",
+                "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067"
+              ],
+              "cwd": null,
+              "returncode": 2,
+              "timed_out": false,
+              "wall_seconds": 4.048038861000123,
+              "cpu_seconds": 4.041568,
+              "max_rss_kib": 497324,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-dag/2/incremental-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-dag/2/incremental-process.stderr"
+            }
+          }
+        }
+      ]
+    },
+    "malformed-unused-typed-node": {
+      "paired_resource_medians": {
+        "fresh": {
+          "wall_seconds": 3.9124302489999536,
+          "cpu_seconds": 3.904436,
+          "max_rss_kib": 525140
+        },
+        "incremental": {
+          "wall_seconds": 4.0569071119998625,
+          "cpu_seconds": 4.045973999999999,
+          "max_rss_kib": 515668
+        }
+      },
+      "verification_phase_medians": {
+        "fresh": {
+          "identity_seconds": 3.802072687999953,
+          "cache_validation_seconds": 2.399999630142702e-07,
+          "checking_seconds": 0.018193546000020433,
+          "total_seconds": 3.8356401949999963
+        },
+        "incremental": {
+          "identity_seconds": 3.896608583999978,
+          "cache_validation_seconds": 0.050548258999924656,
+          "checking_seconds": 0.017436329000020123,
+          "total_seconds": 3.9730122650000794
+        }
+      },
+      "incremental_wall_improvement_percent": -3.692765207426718,
+      "runs": [
+        {
+          "fresh": {
+            "counts": {
+              "invalidated": 0,
+              "rechecked": null,
+              "reused": 0,
+              "scheduled": 3436,
+              "total": 3436
+            },
+            "status": "REJECTED",
+            "evidence_id": null,
+            "export_sha256": "dcd0bb965b428f88c4579a97eac43057afebfe5e0c3ca91b02bebc6b995cfdce",
+            "result_sha256": "e35c17543f1e6a599eaadda377fd1f6d186698f88c14925db4389d9cc66b911a",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/malformed-unused-typed-node/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-typed-node/0/fresh-cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-typed-node/0/fresh.json",
+                "--policy",
+                "default",
+                "--disable-cache"
+              ],
+              "cwd": null,
+              "returncode": 1,
+              "timed_out": false,
+              "wall_seconds": 3.8871756389999064,
+              "cpu_seconds": 3.879092,
+              "max_rss_kib": 497324,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-typed-node/0/fresh-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-typed-node/0/fresh-process.stderr"
+            }
+          },
+          "incremental": {
+            "counts": {
+              "invalidated": 0,
+              "rechecked": null,
+              "reused": 3436,
+              "scheduled": 0,
+              "total": 3436
+            },
+            "status": "REJECTED",
+            "evidence_id": null,
+            "export_sha256": "dcd0bb965b428f88c4579a97eac43057afebfe5e0c3ca91b02bebc6b995cfdce",
+            "result_sha256": "4eb3fa5cfbcba209b482baf1cee4de8ddc0af683bffd3c94c6bf24b89cff3984",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/malformed-unused-typed-node/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-typed-node/0/incremental.json",
+                "--policy",
+                "default",
+                "--previous",
+                "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067"
+              ],
+              "cwd": null,
+              "returncode": 1,
+              "timed_out": false,
+              "wall_seconds": 3.932091939999964,
+              "cpu_seconds": 3.930415,
+              "max_rss_kib": 505556,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-typed-node/0/incremental-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-typed-node/0/incremental-process.stderr"
+            }
+          }
+        },
+        {
+          "fresh": {
+            "counts": {
+              "invalidated": 0,
+              "rechecked": null,
+              "reused": 0,
+              "scheduled": 3436,
+              "total": 3436
+            },
+            "status": "REJECTED",
+            "evidence_id": null,
+            "export_sha256": "dcd0bb965b428f88c4579a97eac43057afebfe5e0c3ca91b02bebc6b995cfdce",
+            "result_sha256": "3905010f03c28b958da735115ea1627b8395010d0bfc8f25679ec24e1ec228f0",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/malformed-unused-typed-node/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-typed-node/1/fresh-cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-typed-node/1/fresh.json",
+                "--policy",
+                "default",
+                "--disable-cache"
+              ],
+              "cwd": null,
+              "returncode": 1,
+              "timed_out": false,
+              "wall_seconds": 3.9124302489999536,
+              "cpu_seconds": 3.904436,
+              "max_rss_kib": 525140,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-typed-node/1/fresh-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-typed-node/1/fresh-process.stderr"
+            }
+          },
+          "incremental": {
+            "counts": {
+              "invalidated": 0,
+              "rechecked": null,
+              "reused": 3436,
+              "scheduled": 0,
+              "total": 3436
+            },
+            "status": "REJECTED",
+            "evidence_id": null,
+            "export_sha256": "dcd0bb965b428f88c4579a97eac43057afebfe5e0c3ca91b02bebc6b995cfdce",
+            "result_sha256": "bcebc1d83afd4db78ab1e6968a13fc298edee2586255dfb7b3b74ad8eff22d14",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/malformed-unused-typed-node/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-typed-node/1/incremental.json",
+                "--policy",
+                "default",
+                "--previous",
+                "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067"
+              ],
+              "cwd": null,
+              "returncode": 1,
+              "timed_out": false,
+              "wall_seconds": 4.145603534999964,
+              "cpu_seconds": 4.138583,
+              "max_rss_kib": 515668,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-typed-node/1/incremental-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-typed-node/1/incremental-process.stderr"
+            }
+          }
+        },
+        {
+          "fresh": {
+            "counts": {
+              "invalidated": 0,
+              "rechecked": null,
+              "reused": 0,
+              "scheduled": 3436,
+              "total": 3436
+            },
+            "status": "REJECTED",
+            "evidence_id": null,
+            "export_sha256": "dcd0bb965b428f88c4579a97eac43057afebfe5e0c3ca91b02bebc6b995cfdce",
+            "result_sha256": "805b318d5188489ba080d3d8839bf9958dac0ddff94458992fe00e87b6f1cb73",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/malformed-unused-typed-node/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-typed-node/2/fresh-cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-typed-node/2/fresh.json",
+                "--policy",
+                "default",
+                "--disable-cache"
+              ],
+              "cwd": null,
+              "returncode": 1,
+              "timed_out": false,
+              "wall_seconds": 4.177630706999935,
+              "cpu_seconds": 4.170027999999999,
+              "max_rss_kib": 534228,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-typed-node/2/fresh-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-typed-node/2/fresh-process.stderr"
+            }
+          },
+          "incremental": {
+            "counts": {
+              "invalidated": 0,
+              "rechecked": null,
+              "reused": 3436,
+              "scheduled": 0,
+              "total": 3436
+            },
+            "status": "REJECTED",
+            "evidence_id": null,
+            "export_sha256": "dcd0bb965b428f88c4579a97eac43057afebfe5e0c3ca91b02bebc6b995cfdce",
+            "result_sha256": "958ef2a0b86e86503636dc63d2ee413c07d2ceb963778de123be04c3413972dc",
+            "resources": {
+              "command": [
+                "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+                "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+                "--export",
+                "/workspace/kernel-audit/workloads-final/malformed-unused-typed-node/export.ndjson",
+                "--checker",
+                "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+                "--cache",
+                "/workspace/kernel-audit/qualification-final-v2/cache",
+                "--authority-key",
+                "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+                "--output",
+                "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-typed-node/2/incremental.json",
+                "--policy",
+                "default",
+                "--previous",
+                "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067"
+              ],
+              "cwd": null,
+              "returncode": 1,
+              "timed_out": false,
+              "wall_seconds": 4.0569071119998625,
+              "cpu_seconds": 4.045973999999999,
+              "max_rss_kib": 543316,
+              "stdout_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-typed-node/2/incremental-process.stdout",
+              "stderr_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/malformed-unused-typed-node/2/incremental-process.stderr"
+            }
+          }
+        }
+      ]
+    },
+    "restore-dependency": {
+      "status": "VERIFIED",
+      "counts": {
+        "invalidated": 413,
+        "rechecked": 413,
+        "reused": 3023,
+        "scheduled": 413,
+        "total": 3436
+      },
+      "cache_error": null,
+      "evidence_id": "d99e3d9a7dc5994ce83a091a179f6f6c3ef92147052a760c975942e0c638848a",
+      "result_sha256": "71f7f129fe7fbfcc9a6ab341c30b130d3cc895c9fc9b41af4264d4766fbfd4f0",
+      "resources": {
+        "command": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+          "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+          "--export",
+          "/workspace/kernel-audit/workloads-final/baseline/export.ndjson",
+          "--checker",
+          "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+          "--cache",
+          "/workspace/kernel-audit/qualification-final-v2/cache",
+          "--authority-key",
+          "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+          "--output",
+          "/workspace/kernel-audit/qualification-final-v2/controls/restore-dependency.json",
+          "--policy",
+          "default",
+          "--previous",
+          "40eda60aeaf6e8e95875d828297b87981f584ced73d5ae6ee2657edb95576e92"
+        ],
+        "cwd": null,
+        "returncode": 0,
+        "timed_out": false,
+        "wall_seconds": 4.480000835000055,
+        "cpu_seconds": 4.472467999999999,
+        "max_rss_kib": 561748,
+        "stdout_path": "/workspace/kernel-audit/qualification-final-v2/controls/restore-dependency-process.stdout",
+        "stderr_path": "/workspace/kernel-audit/qualification-final-v2/controls/restore-dependency-process.stderr"
+      }
+    },
+    "restored-evidence-reuse": {
+      "status": "VERIFIED",
+      "counts": {
+        "invalidated": 0,
+        "rechecked": 0,
+        "reused": 3436,
+        "scheduled": 0,
+        "total": 3436
+      },
+      "cache_error": null,
+      "evidence_id": "e4ace12b9c73b83d3e3a5c271bdfebd5b449aab7d4fa28065eff6ff376a76a44",
+      "result_sha256": "12e2eead8618aeb5a1e9e2d13896a3f1c74dfe33d040972be68431355d08bda8",
+      "resources": {
+        "command": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+          "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+          "--export",
+          "/workspace/kernel-audit/workloads-final/baseline/export.ndjson",
+          "--checker",
+          "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+          "--cache",
+          "/workspace/kernel-audit/qualification-final-v2/cache",
+          "--authority-key",
+          "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+          "--output",
+          "/workspace/kernel-audit/qualification-final-v2/controls/restored-evidence-reuse.json",
+          "--policy",
+          "default",
+          "--previous",
+          "d99e3d9a7dc5994ce83a091a179f6f6c3ef92147052a760c975942e0c638848a"
+        ],
+        "cwd": null,
+        "returncode": 0,
+        "timed_out": false,
+        "wall_seconds": 0.2031211369999255,
+        "cpu_seconds": 0.193636,
+        "max_rss_kib": 571604,
+        "stdout_path": "/workspace/kernel-audit/qualification-final-v2/controls/restored-evidence-reuse-process.stdout",
+        "stderr_path": "/workspace/kernel-audit/qualification-final-v2/controls/restored-evidence-reuse-process.stderr"
+      }
+    },
+    "cold-cache": {
+      "status": "VERIFIED",
+      "counts": {
+        "invalidated": 3436,
+        "rechecked": 3436,
+        "reused": 0,
+        "scheduled": 3436,
+        "total": 3436
+      },
+      "cache_error": "[Errno 2] No such file or directory: '/workspace/kernel-audit/qualification-final-v2/empty-cache/records/8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067.json'",
+      "evidence_id": "55939166043822b7bb82be0fbecd4e29ba7010e891970f93fa8632428156db7a",
+      "result_sha256": "10dd9855c763f3e35f6c266133d0a48f05add9df55112dea8651268223947277",
+      "resources": {
+        "command": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+          "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+          "--export",
+          "/workspace/kernel-audit/workloads-final/baseline/export.ndjson",
+          "--checker",
+          "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+          "--cache",
+          "/workspace/kernel-audit/qualification-final-v2/empty-cache",
+          "--authority-key",
+          "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+          "--output",
+          "/workspace/kernel-audit/qualification-final-v2/controls/cold-cache.json",
+          "--policy",
+          "default",
+          "--previous",
+          "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067"
+        ],
+        "cwd": null,
+        "returncode": 0,
+        "timed_out": false,
+        "wall_seconds": 4.5162335679999615,
+        "cpu_seconds": 4.503119,
+        "max_rss_kib": 581204,
+        "stdout_path": "/workspace/kernel-audit/qualification-final-v2/controls/cold-cache-process.stdout",
+        "stderr_path": "/workspace/kernel-audit/qualification-final-v2/controls/cold-cache-process.stderr"
+      }
+    },
+    "policy-change": {
+      "status": "VERIFIED",
+      "counts": {
+        "invalidated": 3436,
+        "rechecked": 3436,
+        "reused": 0,
+        "scheduled": 3436,
+        "total": 3436
+      },
+      "cache_error": null,
+      "evidence_id": "8b0f820f868cfb5e4c2a6b0bf021c8ddc2b420106aeb9f85c8eff689fdad0aa2",
+      "result_sha256": "45f46597234164e799ca837f0e52b11874cda746c759fdcfed1f9ce17b21a8b0",
+      "resources": {
+        "command": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+          "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+          "--export",
+          "/workspace/kernel-audit/workloads-final/baseline/export.ndjson",
+          "--checker",
+          "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+          "--cache",
+          "/workspace/kernel-audit/qualification-final-v2/cache",
+          "--authority-key",
+          "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+          "--output",
+          "/workspace/kernel-audit/qualification-final-v2/controls/policy-change.json",
+          "--policy",
+          "changed-control",
+          "--previous",
+          "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067"
+        ],
+        "cwd": null,
+        "returncode": 0,
+        "timed_out": false,
+        "wall_seconds": 4.308478412999875,
+        "cpu_seconds": 4.300799,
+        "max_rss_kib": 598868,
+        "stdout_path": "/workspace/kernel-audit/qualification-final-v2/controls/policy-change-process.stdout",
+        "stderr_path": "/workspace/kernel-audit/qualification-final-v2/controls/policy-change-process.stderr"
+      }
+    },
+    "cache-disabled": {
+      "status": "VERIFIED",
+      "counts": {
+        "invalidated": 3436,
+        "rechecked": 3436,
+        "reused": 0,
+        "scheduled": 3436,
+        "total": 3436
+      },
+      "cache_error": null,
+      "evidence_id": "55939166043822b7bb82be0fbecd4e29ba7010e891970f93fa8632428156db7a",
+      "result_sha256": "6d647bb00cf1577c7fe4fe0c0f8e8cf34582af66cd8e8e8bfabe8129d25ea427",
+      "resources": {
+        "command": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+          "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+          "--export",
+          "/workspace/kernel-audit/workloads-final/baseline/export.ndjson",
+          "--checker",
+          "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+          "--cache",
+          "/workspace/kernel-audit/qualification-final-v2/cache",
+          "--authority-key",
+          "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+          "--output",
+          "/workspace/kernel-audit/qualification-final-v2/controls/cache-disabled.json",
+          "--policy",
+          "default",
+          "--previous",
+          "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067",
+          "--disable-cache"
+        ],
+        "cwd": null,
+        "returncode": 0,
+        "timed_out": false,
+        "wall_seconds": 4.21924034299991,
+        "cpu_seconds": 4.209029,
+        "max_rss_kib": 604584,
+        "stdout_path": "/workspace/kernel-audit/qualification-final-v2/controls/cache-disabled-process.stdout",
+        "stderr_path": "/workspace/kernel-audit/qualification-final-v2/controls/cache-disabled-process.stderr"
+      }
+    },
+    "missing-evidence": {
+      "status": "VERIFIED",
+      "counts": {
+        "invalidated": 3436,
+        "rechecked": 3436,
+        "reused": 0,
+        "scheduled": 3436,
+        "total": 3436
+      },
+      "cache_error": "[Errno 2] No such file or directory: '/workspace/kernel-audit/qualification-final-v2/cache/records/0000000000000000000000000000000000000000000000000000000000000000.json'",
+      "evidence_id": "b9b0e123fbc321296538fa105442c2466ffbf24feeab9cfdffe65dcf3a5589e2",
+      "result_sha256": "ba9a1c23258266cf429bce1b7acde6858080aad1046936aa89a34a84f99c3113",
+      "resources": {
+        "command": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+          "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+          "--export",
+          "/workspace/kernel-audit/workloads-final/baseline/export.ndjson",
+          "--checker",
+          "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+          "--cache",
+          "/workspace/kernel-audit/qualification-final-v2/cache",
+          "--authority-key",
+          "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+          "--output",
+          "/workspace/kernel-audit/qualification-final-v2/controls/missing-evidence.json",
+          "--policy",
+          "default",
+          "--previous",
+          "0000000000000000000000000000000000000000000000000000000000000000"
+        ],
+        "cwd": null,
+        "returncode": 0,
+        "timed_out": false,
+        "wall_seconds": 4.595115303999819,
+        "cpu_seconds": 4.583785000000001,
+        "max_rss_kib": 615208,
+        "stdout_path": "/workspace/kernel-audit/qualification-final-v2/controls/missing-evidence-process.stdout",
+        "stderr_path": "/workspace/kernel-audit/qualification-final-v2/controls/missing-evidence-process.stderr"
+      }
+    },
+    "corrupt-record": {
+      "status": "VERIFIED",
+      "counts": {
+        "invalidated": 3436,
+        "rechecked": 3436,
+        "reused": 0,
+        "scheduled": 3436,
+        "total": 3436
+      },
+      "cache_error": "evidence content address mismatch",
+      "evidence_id": "55939166043822b7bb82be0fbecd4e29ba7010e891970f93fa8632428156db7a",
+      "result_sha256": "e00347d5c4a90454d8557268c560517eb4aa79a0843ff613e325424567b68dce",
+      "resources": {
+        "command": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+          "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+          "--export",
+          "/workspace/kernel-audit/workloads-final/baseline/export.ndjson",
+          "--checker",
+          "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+          "--cache",
+          "/workspace/kernel-audit/qualification-final-v2/corrupt-record-cache",
+          "--authority-key",
+          "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+          "--output",
+          "/workspace/kernel-audit/qualification-final-v2/controls/corrupt-record.json",
+          "--policy",
+          "default",
+          "--previous",
+          "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067"
+        ],
+        "cwd": null,
+        "returncode": 0,
+        "timed_out": false,
+        "wall_seconds": 4.723757244000126,
+        "cpu_seconds": 4.716406,
+        "max_rss_kib": 629288,
+        "stdout_path": "/workspace/kernel-audit/qualification-final-v2/controls/corrupt-record-process.stdout",
+        "stderr_path": "/workspace/kernel-audit/qualification-final-v2/controls/corrupt-record-process.stderr"
+      }
+    },
+    "corrupt-snapshot": {
+      "status": "VERIFIED",
+      "counts": {
+        "invalidated": 3436,
+        "rechecked": 3436,
+        "reused": 0,
+        "scheduled": 3436,
+        "total": 3436
+      },
+      "cache_error": "persisted export corruption",
+      "evidence_id": "55939166043822b7bb82be0fbecd4e29ba7010e891970f93fa8632428156db7a",
+      "result_sha256": "7530d058769d4ffc10605a8ae8696d730c4f719ddb118262f54463399aa8140c",
+      "resources": {
+        "command": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+          "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+          "--export",
+          "/workspace/kernel-audit/workloads-final/baseline/export.ndjson",
+          "--checker",
+          "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+          "--cache",
+          "/workspace/kernel-audit/qualification-final-v2/corrupt-snapshot-cache",
+          "--authority-key",
+          "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+          "--output",
+          "/workspace/kernel-audit/qualification-final-v2/controls/corrupt-snapshot.json",
+          "--policy",
+          "default",
+          "--previous",
+          "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067"
+        ],
+        "cwd": null,
+        "returncode": 0,
+        "timed_out": false,
+        "wall_seconds": 4.264820088999841,
+        "cpu_seconds": 4.232801,
+        "max_rss_kib": 640168,
+        "stdout_path": "/workspace/kernel-audit/qualification-final-v2/controls/corrupt-snapshot-process.stdout",
+        "stderr_path": "/workspace/kernel-audit/qualification-final-v2/controls/corrupt-snapshot-process.stderr"
+      }
+    },
+    "foreign-authority": {
+      "status": "VERIFIED",
+      "counts": {
+        "invalidated": 3436,
+        "rechecked": 3436,
+        "reused": 0,
+        "scheduled": 3436,
+        "total": 3436
+      },
+      "cache_error": "evidence issuer authentication failed",
+      "evidence_id": "d09c766e7817c590f8f2eaab49b64e531c5a83139f4ecd91999270a536366310",
+      "result_sha256": "afa44f420e0b338a15eea6fb9f156a3d9d41a4ed4055df72e60e5c3d33a947cc",
+      "resources": {
+        "command": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+          "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+          "--export",
+          "/workspace/kernel-audit/workloads-final/baseline/export.ndjson",
+          "--checker",
+          "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+          "--cache",
+          "/workspace/kernel-audit/qualification-final-v2/cache",
+          "--authority-key",
+          "/workspace/kernel-audit/.qualification-final-v2-authority/foreign.key",
+          "--output",
+          "/workspace/kernel-audit/qualification-final-v2/controls/foreign-authority.json",
+          "--policy",
+          "default",
+          "--previous",
+          "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067"
+        ],
+        "cwd": null,
+        "returncode": 0,
+        "timed_out": false,
+        "wall_seconds": 4.47226967000006,
+        "cpu_seconds": 4.4620500000000005,
+        "max_rss_kib": 651048,
+        "stdout_path": "/workspace/kernel-audit/qualification-final-v2/controls/foreign-authority-process.stdout",
+        "stderr_path": "/workspace/kernel-audit/qualification-final-v2/controls/foreign-authority-process.stderr"
+      }
+    },
+    "checker-change": {
+      "status": "VERIFIED",
+      "counts": {
+        "invalidated": 3436,
+        "rechecked": 3436,
+        "reused": 0,
+        "scheduled": 3436,
+        "total": 3436
+      },
+      "cache_error": null,
+      "evidence_id": "8198a6bba5c1480827797a3a3086bc219be4b79be6feeb3503829e179ec2bfde",
+      "result_sha256": "52894d748c0e8c85b683b2eab27fd968715420f0f58d154e1a972a049377450d",
+      "resources": {
+        "command": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+          "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+          "--export",
+          "/workspace/kernel-audit/workloads-final/baseline/export.ndjson",
+          "--checker",
+          "/workspace/kernel-audit/qualification-final-v2/changed-checker",
+          "--cache",
+          "/workspace/kernel-audit/qualification-final-v2/cache",
+          "--authority-key",
+          "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+          "--output",
+          "/workspace/kernel-audit/qualification-final-v2/controls/checker-change.json",
+          "--policy",
+          "default",
+          "--previous",
+          "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067"
+        ],
+        "cwd": null,
+        "returncode": 0,
+        "timed_out": false,
+        "wall_seconds": 4.4920215049999115,
+        "cpu_seconds": 4.479695,
+        "max_rss_kib": 662056,
+        "stdout_path": "/workspace/kernel-audit/qualification-final-v2/controls/checker-change-process.stdout",
+        "stderr_path": "/workspace/kernel-audit/qualification-final-v2/controls/checker-change-process.stderr"
+      }
+    },
+    "cold-process-restart": {
+      "status": "VERIFIED",
+      "counts": {
+        "invalidated": 0,
+        "rechecked": 0,
+        "reused": 3436,
+        "scheduled": 0,
+        "total": 3436
+      },
+      "cache_error": null,
+      "evidence_id": "a72cf0a255cb0020ec7db678f886502e83b012fd967e1f3ed5e37f764ebbdd19",
+      "result_sha256": "cbef3acbc27e81ae8c6b26ed1c8a8ce5c5049b1a7dd1080721e3fa7a92f07f4d",
+      "resources": {
+        "command": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+          "/workspace/mathgraph-lean-kernel/experiments/incremental/engine.py",
+          "--export",
+          "/workspace/kernel-audit/workloads-final/baseline/export.ndjson",
+          "--checker",
+          "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+          "--cache",
+          "/workspace/kernel-audit/qualification-final-v2/cache",
+          "--authority-key",
+          "/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key",
+          "--output",
+          "/workspace/kernel-audit/qualification-final-v2/controls/cold-process-restart.json",
+          "--policy",
+          "default",
+          "--previous",
+          "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067"
+        ],
+        "cwd": null,
+        "returncode": 0,
+        "timed_out": false,
+        "wall_seconds": 0.1929296080002132,
+        "cpu_seconds": 0.187532,
+        "max_rss_kib": 672808,
+        "stdout_path": "/workspace/kernel-audit/qualification-final-v2/controls/cold-process-restart-process.stdout",
+        "stderr_path": "/workspace/kernel-audit/qualification-final-v2/controls/cold-process-restart-process.stderr"
+      }
+    }
+  },
+  "oracles": {
+    "baseline": {
+      "leanchecker": {
+        "status": "ACCEPT",
+        "expected": "ACCEPT",
+        "export_sha256": "d81ecde8f818ed8d8748b476e22412ec74820a49edbe7986c2c3633a3d66bef0",
+        "binary_sha256": "12c38901cdbfab178f1bf6145dd30012e9a3b2c11ca695292a5884fa3cbaddb6"
+      },
+      "leanchecker-paranoid": {
+        "status": "ACCEPT",
+        "expected": "ACCEPT",
+        "export_sha256": "d81ecde8f818ed8d8748b476e22412ec74820a49edbe7986c2c3633a3d66bef0",
+        "binary_sha256": "ca74d1e9a856149ed05acb600d8931a574dd9f465745beeaf93e3de7b7cbe274"
+      }
+    },
+    "early-definition": {
+      "leanchecker": {
+        "status": "ACCEPT",
+        "expected": "ACCEPT",
+        "export_sha256": "13323bf721599b9b77fe0ea94da5c4632edd2a25188842fb09738bfdf74fdd9f",
+        "binary_sha256": "12c38901cdbfab178f1bf6145dd30012e9a3b2c11ca695292a5884fa3cbaddb6"
+      },
+      "leanchecker-paranoid": {
+        "status": "ACCEPT",
+        "expected": "ACCEPT",
+        "export_sha256": "13323bf721599b9b77fe0ea94da5c4632edd2a25188842fb09738bfdf74fdd9f",
+        "binary_sha256": "ca74d1e9a856149ed05acb600d8931a574dd9f465745beeaf93e3de7b7cbe274"
+      }
+    },
+    "unrelated-definition": {
+      "leanchecker": {
+        "status": "ACCEPT",
+        "expected": "ACCEPT",
+        "export_sha256": "3e87c0fdad28a426d73073940ffea9dc03941c274f9c79887765d51f2dcc2ad5",
+        "binary_sha256": "12c38901cdbfab178f1bf6145dd30012e9a3b2c11ca695292a5884fa3cbaddb6"
+      },
+      "leanchecker-paranoid": {
+        "status": "ACCEPT",
+        "expected": "ACCEPT",
+        "export_sha256": "3e87c0fdad28a426d73073940ffea9dc03941c274f9c79887765d51f2dcc2ad5",
+        "binary_sha256": "ca74d1e9a856149ed05acb600d8931a574dd9f465745beeaf93e3de7b7cbe274"
+      }
+    },
+    "theorem-leaf": {
+      "leanchecker": {
+        "status": "ACCEPT",
+        "expected": "ACCEPT",
+        "export_sha256": "248174fa07162ca1dd6d2e71a2032a17e3282f26d8eb754c34f76c39805d9533",
+        "binary_sha256": "12c38901cdbfab178f1bf6145dd30012e9a3b2c11ca695292a5884fa3cbaddb6"
+      },
+      "leanchecker-paranoid": {
+        "status": "ACCEPT",
+        "expected": "ACCEPT",
+        "export_sha256": "248174fa07162ca1dd6d2e71a2032a17e3282f26d8eb754c34f76c39805d9533",
+        "binary_sha256": "ca74d1e9a856149ed05acb600d8931a574dd9f465745beeaf93e3de7b7cbe274"
+      }
+    },
+    "type-change": {
+      "leanchecker": {
+        "status": "ACCEPT",
+        "expected": "ACCEPT",
+        "export_sha256": "5dc73c594674cf2f342c72275d5f21da73fbb5c0f131ee4a002d8392aefb1705",
+        "binary_sha256": "12c38901cdbfab178f1bf6145dd30012e9a3b2c11ca695292a5884fa3cbaddb6"
+      },
+      "leanchecker-paranoid": {
+        "status": "ACCEPT",
+        "expected": "ACCEPT",
+        "export_sha256": "5dc73c594674cf2f342c72275d5f21da73fbb5c0f131ee4a002d8392aefb1705",
+        "binary_sha256": "ca74d1e9a856149ed05acb600d8931a574dd9f465745beeaf93e3de7b7cbe274"
+      }
+    },
+    "invalid-proof": {
+      "leanchecker": {
+        "status": "REJECT",
+        "expected": "REJECT",
+        "export_sha256": "24729cd9b45f4e84b97950e4b9c85a3a42508ee98165dd818ad52553aa231eb7",
+        "binary_sha256": "12c38901cdbfab178f1bf6145dd30012e9a3b2c11ca695292a5884fa3cbaddb6"
+      },
+      "leanchecker-paranoid": {
+        "status": "REJECT",
+        "expected": "REJECT",
+        "export_sha256": "24729cd9b45f4e84b97950e4b9c85a3a42508ee98165dd818ad52553aa231eb7",
+        "binary_sha256": "ca74d1e9a856149ed05acb600d8931a574dd9f465745beeaf93e3de7b7cbe274"
+      }
+    },
+    "axiom-type": {
+      "leanchecker": {
+        "status": "REJECT",
+        "expected": "REJECT",
+        "export_sha256": "051ebd71fb7faf08382ebc9e96fe7f46367348c40dfc0f82b3022e3e274a6950",
+        "binary_sha256": "12c38901cdbfab178f1bf6145dd30012e9a3b2c11ca695292a5884fa3cbaddb6"
+      },
+      "leanchecker-paranoid": {
+        "status": "REJECT",
+        "expected": "REJECT",
+        "export_sha256": "051ebd71fb7faf08382ebc9e96fe7f46367348c40dfc0f82b3022e3e274a6950",
+        "binary_sha256": "ca74d1e9a856149ed05acb600d8931a574dd9f465745beeaf93e3de7b7cbe274"
+      }
+    },
+    "toolchain-metadata": {
+      "leanchecker": {
+        "status": "ACCEPT",
+        "expected": "ACCEPT",
+        "export_sha256": "b69cc459be067625c8d9555ada3bccb39207cd06d685823ac955af8f2c2f8530",
+        "binary_sha256": "12c38901cdbfab178f1bf6145dd30012e9a3b2c11ca695292a5884fa3cbaddb6"
+      },
+      "leanchecker-paranoid": {
+        "status": "ACCEPT",
+        "expected": "ACCEPT",
+        "export_sha256": "b69cc459be067625c8d9555ada3bccb39207cd06d685823ac955af8f2c2f8530",
+        "binary_sha256": "ca74d1e9a856149ed05acb600d8931a574dd9f465745beeaf93e3de7b7cbe274"
+      }
+    },
+    "malformed-unused-dag": {
+      "leanchecker": {
+        "status": "REJECT",
+        "expected": "REJECT",
+        "export_sha256": "eba1c5f9cc4390eea7213a3ddee83fc7d2359dd565c25407b20062e0de024fcc",
+        "binary_sha256": "12c38901cdbfab178f1bf6145dd30012e9a3b2c11ca695292a5884fa3cbaddb6"
+      },
+      "leanchecker-paranoid": {
+        "status": "REJECT",
+        "expected": "REJECT",
+        "export_sha256": "eba1c5f9cc4390eea7213a3ddee83fc7d2359dd565c25407b20062e0de024fcc",
+        "binary_sha256": "ca74d1e9a856149ed05acb600d8931a574dd9f465745beeaf93e3de7b7cbe274"
+      }
+    },
+    "malformed-unused-typed-node": {
+      "leanchecker": {
+        "status": "REJECT",
+        "expected": "REJECT",
+        "export_sha256": "dcd0bb965b428f88c4579a97eac43057afebfe5e0c3ca91b02bebc6b995cfdce",
+        "binary_sha256": "12c38901cdbfab178f1bf6145dd30012e9a3b2c11ca695292a5884fa3cbaddb6"
+      },
+      "leanchecker-paranoid": {
+        "status": "REJECT",
+        "expected": "REJECT",
+        "export_sha256": "dcd0bb965b428f88c4579a97eac43057afebfe5e0c3ca91b02bebc6b995cfdce",
+        "binary_sha256": "ca74d1e9a856149ed05acb600d8931a574dd9f465745beeaf93e3de7b7cbe274"
+      }
+    }
+  },
+  "optional_kernels": {
+    "lean4lean": {
+      "status": "ACCEPT",
+      "binary_sha256": "baaec030a70c78562ced2c75866ab0d2410e81ce680b835179ed16570ad5ef97"
+    },
+    "con-leche": {
+      "status": "ACCEPT",
+      "binary_sha256": "23a32522ea2c79f4ec8b48916272b37a423bda171e57cd83cfcf142eec50e621"
+    },
+    "con-ron": {
+      "status": "ACCEPT",
+      "binary_sha256": "60f4ca9fb9436c323789fa49aae33af6dcd1b9b54b43a66b461779ce79fd8eec"
+    },
+    "nanoda_bin": {
+      "status": "ACCEPT",
+      "binary_sha256": "cbf13950fc4a48f635a0beceeb5ed32dd82568b870cfd081b6391c1f2cf02ba5"
+    }
+  },
+  "lake_check_paranoid": {
+    "status": "ACCEPT",
+    "scope": "Lake also enforces standard axioms; direct exact-export kernel runs remain mandatory below"
+  },
+  "lake_check_paranoid_unsandboxed": {
+    "status": "ACCEPT",
+    "sandbox": false,
+    "scope": "Explicit expert diagnostic; sandboxed command above is the stronger Lake result"
+  },
+  "native_full": {
+    "status": "ACCEPT",
+    "resources": {
+      "command": [
+        "/workspace/mathgraph-lean-kernel/target/release/sokonanoda",
+        "/workspace/kernel-audit/qualification-final-v2/full-checker-config.json"
+      ],
+      "cwd": null,
+      "returncode": 0,
+      "timed_out": false,
+      "wall_seconds": 0.294340990000137,
+      "cpu_seconds": 0.288214,
+      "max_rss_kib": 108640,
+      "stdout_path": "/workspace/kernel-audit/qualification-final-v2/native-full.stdout",
+      "stderr_path": "/workspace/kernel-audit/qualification-final-v2/native-full.stderr"
+    }
+  },
+  "native_parse_only": {
+    "status": "ACCEPT",
+    "resources": {
+      "command": [
+        "/workspace/mathgraph-lean-kernel/target/release/sokonanoda",
+        "/workspace/kernel-audit/qualification-final-v2/parse-only-config.json"
+      ],
+      "cwd": null,
+      "returncode": 0,
+      "timed_out": false,
+      "wall_seconds": 0.02055060600014258,
+      "cpu_seconds": 0.015878,
+      "max_rss_kib": 52400,
+      "stdout_path": "/workspace/kernel-audit/qualification-final-v2/native-parse-only.stdout",
+      "stderr_path": "/workspace/kernel-audit/qualification-final-v2/native-parse-only.stderr"
+    }
+  },
+  "scope": "Authenticated selected-obligation work reduction and exact-export oracle agreement. Timing medians are observations; edit speedup is not assumed. The bounded Lean theorem does not verify the NDJSON dependency extractor or production kernel locality."
+}

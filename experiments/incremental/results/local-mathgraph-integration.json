@@ -1,0 +1,65 @@
+{
+  "action_authorization": "NONE",
+  "admission": {
+    "boundary": "COMPLETE_RESULT_QUALIFIED_BY_LOCAL_ORACLE_HARNESS",
+    "engine_hmac_checked_in_this_consumer": false,
+    "expected_evidence_id": "40eda60aeaf6e8e95875d828297b87981f584ced73d5ae6ee2657edb95576e92",
+    "expected_export_sha256": "13323bf721599b9b77fe0ea94da5c4632edd2a25188842fb09738bfdf74fdd9f",
+    "oracle_sources": [
+      "leanchecker",
+      "leanchecker-paranoid"
+    ],
+    "qualification_gates": 197,
+    "result_path": "/workspace/kernel-audit/qualification-final-v2/scenarios/early-definition/0/incremental.json",
+    "result_sha256": "5ea296d47a9dd9f0dd8ecf94318aea71ef3c9918e28df7bc3678f26470bb9858"
+  },
+  "mathgraph_commit": "cf359686c74549a132c7a651cd7aabc7c1a870fe",
+  "production_check_binder": false,
+  "qualification_passed": true,
+  "resolver_source_sha256": "9cc64455621d3169cf43b48ed9cd98069a5d4cb82dece8903dcbbf087a1344b0",
+  "schema": "mathgraph.incremental-lean.mathgraph-integration-qualification.v1",
+  "scope": "Caller-qualified early-edit checking obligations imported into the unchanged pinned MathGraph resolver. Receipt-origin preservation and declared support-projection withdrawal are bounded conformance observations, not new Lean checking or a production Check adapter.",
+  "source_qualification": {
+    "boundary": "TRUSTED_LOCAL_QUALIFIER_OUTPUT_NOT_SELF_AUTHENTICATING_RECEIPT",
+    "path": "/workspace/kernel-audit/qualification-final-v2/summary.json",
+    "sha256": "0fc2a61ada2cb8fb3ee494ee009723216cefe2fb4f04a8212d53d97ba0c50a89"
+  },
+  "status": "QUALIFIED_BOUNDED_EXISTING_MATHGRAPH_IMPORT",
+  "cases": [
+    {
+      "name": "qualified-import",
+      "passed": true,
+      "input_sha256": "5ea296d47a9dd9f0dd8ecf94318aea71ef3c9918e28df7bc3678f26470bb9858",
+      "status": "WARRANTED_BOUNDED_CALLER_QUALIFIED_IMPORT",
+      "result_path": "/workspace/kernel-audit/mathgraph-integration-final/cases/qualified-import/result.json"
+    },
+    {
+      "name": "changed-bytes-same-evidence-id",
+      "passed": true,
+      "input_sha256": "588895e4abe05a0d7a47ed9617d1801e1c99d730ca16ba16dc159ee2d4e05e22",
+      "status": "UNKNOWN",
+      "result_path": "/workspace/kernel-audit/mathgraph-integration-final/cases/changed-bytes-same-evidence-id/result.json"
+    },
+    {
+      "name": "wrong-export-root",
+      "passed": true,
+      "input_sha256": "5ea296d47a9dd9f0dd8ecf94318aea71ef3c9918e28df7bc3678f26470bb9858",
+      "status": "UNKNOWN",
+      "result_path": "/workspace/kernel-audit/mathgraph-integration-final/cases/wrong-export-root/result.json"
+    },
+    {
+      "name": "wrong-evidence-root",
+      "passed": true,
+      "input_sha256": "5ea296d47a9dd9f0dd8ecf94318aea71ef3c9918e28df7bc3678f26470bb9858",
+      "status": "UNKNOWN",
+      "result_path": "/workspace/kernel-audit/mathgraph-integration-final/cases/wrong-evidence-root/result.json"
+    },
+    {
+      "name": "unknown-result",
+      "passed": true,
+      "input_sha256": "e6091994cb59169f4e6b992b73b57e4e1ebac794fdbff511bf920409209058f8",
+      "status": "UNKNOWN",
+      "result_path": "/workspace/kernel-audit/mathgraph-integration-final/cases/unknown-result/result.json"
+    }
+  ]
+}
