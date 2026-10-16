@@ -257,7 +257,22 @@ def audit_receipt(root, result, current_index, key):
             raise ValueError('persisted issuer authentication mismatch')
         return payload
     raw_receipt = read('records', result['evidence_id'], '.json')
-    accepted = authenticated(raw_receipt, 'mathgraph.incremental-lean.v1')
+    envelope = json.loads(raw_receipt, object_pairs_hook=__import__('engine').strict_object)
+    signed_schema = envelope.get('payload', {}).get('schema')
+    if signed_schema == 'mathgraph.incremental-lean.sparse-accepted.v1':
+        # The independently reconstructed full composite index is this
+        # auditor's authority. The sparse receipt may not substitute an
+        # unverified local patch for either actual checking or this oracle.
+        from producer_delta import authenticate_sparse_acceptance
+        prior_id = result['previous_evidence']
+        prior = Path(root) / 'baseline-cache' / 'records' / (prior_id + '.json')
+        raw_prior = prior.read_bytes()
+        original = __import__('engine').authenticate_record(raw_prior, prior_id, key)
+        accepted = authenticate_sparse_acceptance(raw_receipt, result['evidence_id'], key, original)
+        contains_complete_index = False
+    else:
+        accepted = authenticated(raw_receipt, 'mathgraph.incremental-lean.v1')
+        contains_complete_index = True
     if (accepted['status'] != 'VERIFIED' or
             accepted['export_sha256'] != result['export_sha256'] or
             canonical(accepted['index']) != canonical(current_index)):
@@ -280,7 +295,8 @@ def audit_receipt(root, result, current_index, key):
         raise ValueError('persisted source transition does not bind actual delta/provenance')
     return dict(issuer_hmac_valid=True, all_content_addresses_valid=True,
                 receipt_bytes=len(raw_receipt), delta_bytes=len(delta),
-                contains_complete_index=True,
+                contains_complete_index=contains_complete_index,
+                receipt_schema=signed_schema,
                 scope='authenticates issued acceptance, not a proof of producer correctness')
 
 
