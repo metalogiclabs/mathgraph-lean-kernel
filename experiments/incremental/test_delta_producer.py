@@ -25,7 +25,30 @@ def sha(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
+def pinned_runtime_environment(workload):
+    """Launch Lean helpers from the exact release without a default elan toolchain."""
+    here = Path(__file__).resolve().parent
+    pins = json.loads((here / "pins.json").read_text())
+    manifest = workload.parents[1] / "manifest.json"
+    if manifest.is_file():
+        lean = Path(json.loads(manifest.read_text())["tools"]["lean"]["path"]).resolve()
+    else:
+        prefix = subprocess.check_output([os.environ.get("ELAN", "elan"), "run",
+            pins["lean_toolchain"], "lean", "--print-prefix"], text=True).strip()
+        lean = Path(prefix).resolve() / "bin" / "lean"
+    if sha(lean) != pins["lean_release_binaries_sha256"]["lean"]:
+        raise ValueError("producer test Lean runtime differs from exact release pin")
+    env = dict(os.environ, LEAN_SYSROOT=str(lean.parent.parent), LEAN_PATH="",
+               PATH=str(lean.parent) + os.pathsep + os.environ.get("PATH", ""))
+    revision = subprocess.check_output([str(lean), "--githash"], env=env, text=True).strip()
+    if revision != pins["lean_githash"]:
+        raise ValueError("producer test Lean revision differs from exact release pin")
+    return env, dict(path=str(lean), sha256=sha(lean), githash=revision,
+                     toolchain=pins["lean_toolchain"])
+
+
 def run(binary, workload, output, profile="original-v1"):
+    producer_env, runtime = pinned_runtime_environment(workload)
     roots, baseline_sha, early_sha, delta_bytes = ROOTS, BASE_SHA, EARLY_SHA, 271
     if profile == "std-hashmap-expanded-v1":
         here = Path(__file__).resolve().parent
@@ -44,7 +67,8 @@ def run(binary, workload, output, profile="original-v1"):
     start = time.monotonic()
     with open(output / "daemon.stderr", "w") as err:
         proc = subprocess.Popen([str(binary), str(init_path)], stdin=subprocess.PIPE,
-                                stdout=subprocess.PIPE, stderr=err, text=True, bufsize=1)
+                                stdout=subprocess.PIPE, stderr=err, text=True, bufsize=1,
+                                env=producer_env)
         def receive():
             line = proc.stdout.readline()
             assert line, f"daemon exited: {proc.poll()}"
@@ -120,6 +144,7 @@ def run(binary, workload, output, profile="original-v1"):
             proc.stdin.close()
             assert proc.wait(timeout=15) == 0
             report = {"schema": "mathgraph.delta-producer-probe.v1", "profile": profile, "ready": ready,
+                      "runtime": runtime,
                       "cold_wall_seconds": cold_wall, "delta_receipts": receipts,
                       "fresh": fresh, "negative_controls": controls,
                       "baseline_sha256": sha(baseline), "fresh_sha256": sha(path),

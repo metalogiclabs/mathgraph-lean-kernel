@@ -54,7 +54,7 @@ jobs:
           test -x artifacts/delta-build/delta-producer
           test -x target/release/index-session
           sha256sum artifacts/delta-build/delta-producer target/release/index-session \
-            > artifacts/delta-binaries-SHA256SUMS
+            > artifacts/delta-binaries-pretests-SHA256SUMS
       - name: Preserve separately compiled original checker binaries
         env:
           BASELINE_REF: 9ac04033b51703fb135ec3c28621d44b183944fe
@@ -83,6 +83,14 @@ jobs:
           python3 experiments/incremental/test_native_identity.py 2>&1 | tee artifacts/native-identity-tests.log
           python3 experiments/incremental/test_native_adapter.py \
             --checker target/release/check-selected 2>&1 | tee artifacts/native-adapter-tests.log
+      - name: Freeze ordinary release executables after Cargo test builds
+        run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          cargo +1.95.0 build --release --locked --bins \
+            2>&1 | tee artifacts/post-test-release-build.log
+          sha256sum artifacts/delta-build/delta-producer target/release/index-session \
+            target/release/export-index target/release/check-selected target/release/sokonanoda \
+            > artifacts/delta-binaries-SHA256SUMS
       - name: Compile unchanged pinned Std workloads and exact exports
         run: |
           export PATH="$HOME/.elan/bin:$PATH"
@@ -321,6 +329,7 @@ jobs:
             artifacts/source-SHA256SUMS
             artifacts/source-stability.json
             artifacts/delta-binaries-SHA256SUMS
+            artifacts/delta-binaries-pretests-SHA256SUMS
             artifacts/delta-qualification/summary.json
             artifacts/delta-qualification/summary.md
             artifacts/delta-expanded-qualification/summary.json
