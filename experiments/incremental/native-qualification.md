@@ -131,11 +131,21 @@ restart, cache corruption, missing evidence, foreign authority, policy/toolchain
 drift, checker drift and no-evidence-on-failure controls remain required.
 Optional checker failures retain their actual classification and raw logs.
 
+CI runs the original 197 gates as a separate step at
+`artifacts/original-qualification/` and passes that path to the native matrix
+with `--original-qualification`. It deliberately makes the release executables
+read-only first. The checker-provenance negative control makes only its
+disposable copy writable to append the marker, then restores read-only mode.
+The default nested local invocation above remains supported and has also been
+replayed with read-only captured executables.
+
 CI also runs `replay_native.py` before benchmarking. It independently checks the
 original gate names against `results/local-qualified.json`, authenticates the
 retained acceptance records, and launches 21 fresh full-oracle processes. The
-qualification authority lives under `$RUNNER_TEMP/native-index-authority`,
-outside uploaded artifacts; replay receives the original issuer key path.
+original qualification authority lives under
+`$RUNNER_TEMP/native-index-original-authority`, outside uploaded artifacts;
+replay receives that original issuer key path. The matrix uses a separate
+`$RUNNER_TEMP/native-index-authority` directory.
 
 The existing integration harness consumes that original qualification output:
 
@@ -210,3 +220,25 @@ correctness qualification succeeded. Local results and CI results must each
 name their actual source SHA, binary hashes and artifact provenance; neither a
 workflow definition nor prior Python qualification constitutes a new native
 success claim.
+
+
+## CI failure retention and shell boundary
+
+Runs [38879576999](https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/38879576999)
+and [38881665840](https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/38881665840)
+displayed success but **are not qualification evidence**. Decoded job logs
+revealed that the checker-provenance control could not append to a copied
+read-only binary; the resulting missing original summary caused the native
+matrix, independent replay and integration to fail. Unspecified GitHub shell
+commands piped through `tee` masked those failures. Local suites with a writable
+source executable had passed, exposing a real local/CI permission difference.
+The economic observations in those logs remain observations, not acceptance
+qualification.
+
+The repaired workflow selects explicit `bash` (GitHub's `-e -o pipefail`
+invocation), executes a deliberate failing-pipeline control, separates the
+original qualification step, and requires nonempty passing reports in its final
+summary check. The original 197 gate definitions remain unchanged. Both the
+full evidence archive and a small summary/log archive upload even after failure.
+A successful workflow status must still be checked against decoded logs and
+actual report contents; it is not itself a kernel verdict.

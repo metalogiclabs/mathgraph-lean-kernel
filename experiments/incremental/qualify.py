@@ -277,8 +277,12 @@ def qualify(args):
     # A real ELF with an appended section still runs, but its identity changed.
     changed_checker = out / 'changed-checker'
     shutil.copy2(selected, changed_checker)
+    # Captured checker inputs are deliberately read-only. Only this disposable
+    # provenance-control copy is made writable for the intentional mutation.
+    changed_checker.chmod(0o700)
     with changed_checker.open('ab') as stream:
         stream.write(b'\nqualification executable provenance control\n')
+    changed_checker.chmod(0o500)
     changed = invoke_engine(baseline,changed_checker,cache,key,out/'controls'/'checker-change.json',base_id)
     summary['scenarios']['checker-change'] = changed
     result = changed['result']

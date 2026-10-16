@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 concurrency:
   group: incremental-native-index-${{ github.ref }}
   cancel-in-progress: false
@@ -21,6 +25,14 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
+      - name: Verify piped failures fail the shell
+        run: |
+          set +e
+          (false | tee "$RUNNER_TEMP/native-index-pipeline-negative.log")
+          task_pipeline_status=$?
+          set -e
+          test "$task_pipeline_status" -ne 0
+          printf 'Pipeline negative control returned %s\n' "$task_pipeline_status"
       - name: Install exact compilers and build release binaries
         run: |
           mkdir -p artifacts
@@ -58,7 +70,18 @@ jobs:
           export PATH="$HOME/.elan/bin:$PATH"
           python3 experiments/incremental/build_workloads.py \
             --out artifacts/workloads 2>&1 | tee artifacts/workload-build.log
-      - name: Qualify native identity and preserve the original correctness gates
+      - name: Run all original correctness gates in a separate process
+        run: |
+          chmod 500 target/release/check-selected target/release/sokonanoda target/release/export-index
+          python3 experiments/incremental/qualify.py \
+            --workloads artifacts/workloads --out artifacts/original-qualification \
+            --checker target/release/check-selected \
+            --full-checker target/release/sokonanoda \
+            --identity-backend native --indexer target/release/export-index \
+            --authority-dir "$RUNNER_TEMP/native-index-original-authority" \
+            --repetitions 3 --optional-kernels \
+            2>&1 | tee artifacts/original-qualification.log
+      - name: Qualify native identity against all original correctness gates
         id: native_qualification
         run: |
           python3 experiments/incremental/qualify_native.py \
@@ -67,14 +90,15 @@ jobs:
             --full-checker target/release/sokonanoda \
             --indexer target/release/export-index \
             --authority-dir "$RUNNER_TEMP/native-index-authority" \
+            --original-qualification artifacts/original-qualification \
             2>&1 | tee artifacts/native-qualification.log
       - name: Independently replay native qualification and full oracles
         id: native_replay
         run: |
           python3 experiments/incremental/replay_native.py \
-            --qualification artifacts/native-qualification/original-qualification \
+            --qualification artifacts/original-qualification \
             --workloads artifacts/workloads \
-            --authority-key "$RUNNER_TEMP/native-index-authority/original/issuer.key" \
+            --authority-key "$RUNNER_TEMP/native-index-original-authority/issuer.key" \
             --checker target/release/sokonanoda \
             --indexer target/release/export-index \
             --reference experiments/incremental/results/local-qualified.json \
@@ -94,7 +118,7 @@ jobs:
           git clone --no-checkout https://github.com/metalogiclabs/mathgraph.git "$RUNNER_TEMP/mathgraph-native-index-consumer"
           git -C "$RUNNER_TEMP/mathgraph-native-index-consumer" checkout --detach cf359686c74549a132c7a651cd7aabc7c1a870fe
           python3 experiments/incremental/qualify_integration.py \
-            --qualification artifacts/native-qualification/original-qualification \
+            --qualification artifacts/original-qualification \
             --mathgraph "$RUNNER_TEMP/mathgraph-native-index-consumer" \
             --out artifacts/mathgraph-integration \
             2>&1 | tee artifacts/mathgraph-integration.log
@@ -111,7 +135,7 @@ jobs:
         if: always()
         run: |
           for summary in artifacts/native-qualification/summary.md \
-            artifacts/native-qualification/original-qualification/summary.md \
+            artifacts/original-qualification/summary.md \
             artifacts/native-benchmark/summary.md; do
             if [ -f "$summary" ]; then
               cat "$summary" >> "$GITHUB_STEP_SUMMARY"
@@ -121,30 +145,60 @@ jobs:
           import hashlib, json, os
           from pathlib import Path
           observations = {'source_sha': os.environ['GITHUB_SHA'], 'reports': {}}
-          for label, location in (
-              ('native-correctness', 'artifacts/native-qualification/summary.json'),
-              ('independent-replay', 'artifacts/native-independent-replay/summary.json'),
-              ('native-economics', 'artifacts/native-benchmark/summary.json')):
+          failures = []
+          for label, location, acceptance_flag in (
+              ('original-correctness', 'artifacts/original-qualification/summary.json', 'qualification_passed'),
+              ('native-correctness', 'artifacts/native-qualification/summary.json', 'qualification_passed'),
+              ('independent-replay', 'artifacts/native-independent-replay/summary.json', 'passed'),
+              ('native-economics', 'artifacts/native-benchmark/summary.json', 'correctness_passed')):
               path = Path(location)
               if not path.exists():
+                  failures.append(label + ': missing report')
                   continue
               report = json.loads(path.read_bytes())
+              gates = report.get('gates', [])
+              report_passed = (bool(gates) and all(g['passed'] for g in gates)
+                               and report.get(acceptance_flag) is True)
+              if not report_passed:
+                  failures.append(label + ': correctness failure')
               value = {'source_sha': observations['source_sha'],
                        'summary_sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
-                       'gates': len(report.get('gates', [])),
-                       'all_gates_passed': all(g['passed'] for g in report.get('gates', []))}
+                       'gates': len(gates),
+                       'all_gates_passed': bool(gates) and all(g['passed'] for g in gates),
+                       'report_passed': report_passed}
               if label == 'native-economics':
                   value.update(economic_status=report['economic_status'],
                       primary={variant: {arm: data['resources'] for arm, data in report['medians'][variant].items()}
                                for variant in ('early-definition', 'unrelated-definition')})
               observations['reports'][label] = value
               print('::notice title=' + label + '::' + json.dumps(value, separators=(',', ':')))
+          observations['failures'] = failures
           Path('artifacts/ci-observations.json').write_text(json.dumps(observations, indent=2) + '\n')
+          if failures:
+              raise SystemExit('; '.join(failures))
           PY
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: incremental-native-index-${{ github.sha }}
           path: artifacts/
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: incremental-native-index-summaries-${{ github.sha }}
+          path: |
+            artifacts/ci-observations.json
+            artifacts/original-qualification/summary.json
+            artifacts/original-qualification/summary.md
+            artifacts/native-qualification/summary.json
+            artifacts/native-qualification/summary.md
+            artifacts/native-independent-replay/summary.json
+            artifacts/native-benchmark/summary.json
+            artifacts/native-benchmark/summary.md
+            artifacts/native-phase-memory/summary.json
+            artifacts/mathgraph-integration/summary.json
+            artifacts/*.log
           if-no-files-found: error
           retention-days: 30

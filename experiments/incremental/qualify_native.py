@@ -402,6 +402,12 @@ def qualify(args):
             '--authority-dir', str(authority / 'original'), '--identity-backend', 'native',
             '--indexer', str(indexer), '--repetitions', '3', '--optional-kernels']
         report['original_qualification_process'] = run(command, out / 'original-qualification-process', timeout=3600)
+        child = report['original_qualification_process']
+        if child['returncode'] != 0 or child['timed_out']:
+            print('Original qualification failed: ' + json.dumps(
+                {key: child[key] for key in ('returncode', 'timed_out')}), flush=True)
+            for stream in ('stdout_path', 'stderr_path'):
+                print(Path(child[stream]).read_text(errors='replace')[-8192:], flush=True)
     original_summary = original / 'summary.json'
     original_data = json.loads(original_summary.read_text()) if original_summary.exists() else {}
     report['original_qualification'] = dict(path=str(original),
@@ -409,6 +415,9 @@ def qualify(args):
         gates=len(original_data.get('gates', [])), passed=original_data.get('qualification_passed') is True)
     report['gates'].append(dict(name='all-original-qualification-gates', passed=
         original_data.get('qualification_passed') is True and len(original_data.get('gates', [])) >= 197
+        and (args.original_qualification is not None or
+             (report['original_qualification_process']['returncode'] == 0 and
+              not report['original_qualification_process']['timed_out']))
         and all(g.get('passed') is True for g in original_data.get('gates', []))))
     report['gates'].append(dict(name='original-qualification-used-captured-native-tools', passed=
         original_data.get('identity_backend') == 'native'
