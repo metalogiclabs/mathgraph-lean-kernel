@@ -10,6 +10,33 @@ const SESSION_BUDGET: usize = 16 * 1024 * 1024;
 
 const CHUNK_SIZE: usize = 64;
 
+fn validate_selection(indices: &[usize], total: usize) -> Result<(), String> {
+    for (position, &index) in indices.iter().enumerate() {
+        if index >= total {
+            return Err(format!("selected declaration index {index} is outside 0..{total}"));
+        }
+        if position > 0 && indices[position - 1] >= index {
+            return Err("selected declaration indices must be sorted and unique".to_string());
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod selected_declaration_tests {
+    use super::validate_selection;
+
+    #[test]
+    fn rejects_invalid_selection_before_checking() {
+        assert!(validate_selection(&[], 0).is_ok());
+        assert!(validate_selection(&[0, 2], 3).is_ok());
+        assert!(validate_selection(&[3], 3).is_err());
+        assert!(validate_selection(&[0, 0], 3).is_err());
+        assert!(validate_selection(&[2, 1], 3).is_err());
+        assert!(validate_selection(&[usize::MAX], 3).is_err());
+    }
+}
+
 /// An enum for type safety and convenience; used during nat literal reduction, and also for testing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum NatBinOp {
@@ -66,6 +93,42 @@ pub struct TypeChecker<'x, 't, 'p> {
 }
 
 impl<'p> ExportFile<'p> {
+    /// Number of flattened declarations in parser order.
+    pub fn declaration_count(&self) -> usize { self.declars.len() }
+
+    /// Check selected declarations under a caller-trusted accepted environment.
+    ///
+    /// This low-level operation is NOT a certificate for the complete export.
+    /// The caller must independently establish that every omitted declaration is
+    /// unchanged from an accepted environment, with the same kernel and policy,
+    /// and must include all affected mutual-inductive block obligations. Each
+    /// selected declaration retains the full checker's prefix-visibility rules.
+    /// Indices must be strictly increasing flattened declaration indices.
+    pub fn check_selected_declars(&self, indices: &[usize]) -> Result<usize, String> {
+        validate_selection(indices, self.declars.len())?;
+        let mut ranges = indices.iter().copied().peekable();
+        let mut next_range = || {
+            let start = ranges.next()?;
+            let mut end = start + 1;
+            while ranges.peek() == Some(&end) {
+                ranges.next();
+                end += 1;
+            }
+            Some((start, end))
+        };
+        if let Some(first) = next_range() {
+            std::thread::scope(|scope| {
+                std::thread::Builder::new()
+                    .stack_size(crate::STACK_SIZE)
+                    .spawn_scoped(scope, || self.run_session(first, &mut next_range))
+                    .unwrap()
+                    .join()
+                    .expect("selected declaration checker thread panicked");
+            });
+        }
+        Ok(indices.len())
+    }
+
     /// The entry point for checking a declaration `d`.
     pub fn check_declar(&self, d: &Declar<'p>) {
         self.with_ctx(|ctx, cache, bump| self.check_declar_with(ctx, cache, bump, d))

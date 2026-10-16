@@ -45,3 +45,8 @@ top-byte-ignore = []
 name = "sokonanoda"
 path = "src/main.rs"
 bench = false
+
+[[bin]]
+name = "check-selected"
+path = "src/bin/check_selected.rs"
+bench = false

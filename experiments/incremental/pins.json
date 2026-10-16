@@ -1,0 +1,39 @@
+{
+  "schema": "mathgraph.incremental-qualification-pins.v1",
+  "lean_toolchain": "leanprover/lean4:v4.35.0",
+  "lean_githash": "eb6cafb7290e8bd5f2937522d8d804f58f02bafc",
+  "exporter": "bundled leanexport",
+  "export_format": "3.1.0",
+  "rust_toolchain": "1.95.0",
+  "base_kernel_commit": "78c7502bac8a5ba000057b3f083bc0595ac65750",
+  "elan_version": "v4.2.4",
+  "elan_linux_x86_64_sha256": "42b94d4244e8353142c456ec0e4ca6528fd898a6c604d4059f494e706e431f63",
+  "bundled_kernels": {
+    "con-ron": "dd8d8218892c871276b1e569d3decbb368bba1b6",
+    "con-leche": "67f04630d88718e81aa4d07ab64501f68f105398",
+    "nanoda": "3a2407216ee84a75f9e1aead6803d0578be06ae7",
+    "lean4lean": "Kha/lean4lean:lean4-bundle-4.35"
+  },
+  "actions": {
+    "checkout": "11bd71901bbe5b1630ceea73d27597364c9af683",
+    "upload-artifact": "ea165f8d65b6e75b540449e92b4886f43607fa02"
+  },
+  "workload_sources_sha256": {
+    "IncrementalWorkload/Base.lean": "fcbfb9a2ac5ed377fd712f30835f082ad3b1673c014012ff62780c9828ab2b5c",
+    "IncrementalWorkload/Derived.lean": "d6bc528f30ffdd5e20f771049dac8bb8ecb1dd1351dfd964f8e1970820ab4001",
+    "IncrementalWorkload/Leaves.lean": "398fb983de2acec3a4096f3971f0f0fdf9148aeafefce4548febf655e55e4a91",
+    "Workload.lean": "b0f4850771ede35ec836f3eece4c43ce8016806062268f5c8b412a5a52b1428f",
+    "lakefile.toml": "1ad9f20a1f415a69de4b886e0fd510f8ee34eb833f1536f9200dc9e78271ed98",
+    "lean-toolchain": "ca5f1f601d34c49079e38d7e7041eb0f2a9c227fbc1df0f404820069a052330c"
+  },
+  "lean_release_binaries_sha256": {
+    "lean": "bf8d54e4714cc4b03d3f6bb34c83b7202b87e49c8bfcbff6895c085bb90ceb38",
+    "leanexport": "f6a6483d518a11b323c28b9bac176d2220df0e9fc3230833815db9586669c074",
+    "leanchecker": "12c38901cdbfab178f1bf6145dd30012e9a3b2c11ca695292a5884fa3cbaddb6",
+    "leanchecker-paranoid": "ca74d1e9a856149ed05acb600d8931a574dd9f465745beeaf93e3de7b7cbe274",
+    "lean4lean": "baaec030a70c78562ced2c75866ab0d2410e81ce680b835179ed16570ad5ef97",
+    "nanoda_bin": "cbf13950fc4a48f635a0beceeb5ed32dd82568b870cfd081b6391c1f2cf02ba5",
+    "con-leche": "23a32522ea2c79f4ec8b48916272b37a423bda171e57cd83cfcf142eec50e621",
+    "con-ron": "60f4ca9fb9436c323789fa49aae33af6dcd1b9b54b43a66b461779ce79fd8eec"
+  }
+}

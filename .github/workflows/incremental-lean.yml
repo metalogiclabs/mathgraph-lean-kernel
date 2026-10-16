@@ -1,0 +1,65 @@
+name: Incremental Lean exact-export qualification
+
+on:
+  push:
+    branches:
+      - research/incremental-lean-evidence-20261016
+
+permissions:
+  contents: read
+
+concurrency:
+  group: incremental-lean-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  qualification:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Install exact compiler and build checker
+        run: bash experiments/incremental/setup.sh
+      - name: Test native checker and adversarial identity predicate
+        run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          cargo +1.95.0 test --locked
+          python3 experiments/incremental/test_predicate.py
+      - name: Compile genuine Std source workloads and export dependency cones
+        run: |
+          export PATH="$HOME/.elan/bin:$PATH"
+          python3 experiments/incremental/build_workloads.py --out results/workloads
+      - name: Qualify fresh and authenticated incremental checking
+        run: |
+          python3 experiments/incremental/qualify.py \
+            --workloads results/workloads --out results/qualification \
+            --authority-dir "$RUNNER_TEMP/incremental-private-authority" \
+            --repetitions 3 --optional-kernels
+      - name: Publish concise measurement table
+        if: always()
+        run: |
+          if [ -f results/qualification/summary.md ]; then
+            cat results/qualification/summary.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Qualify consumption by the pinned existing MathGraph warrant resolver
+        run: |
+          git clone --no-checkout https://github.com/metalogiclabs/mathgraph.git "$RUNNER_TEMP/mathgraph-receipt-consumer"
+          git -C "$RUNNER_TEMP/mathgraph-receipt-consumer" checkout --detach cf359686c74549a132c7a651cd7aabc7c1a870fe
+          python3 experiments/incremental/qualify_integration.py \
+            --qualification results/qualification \
+            --mathgraph "$RUNNER_TEMP/mathgraph-receipt-consumer" \
+            --out results/mathgraph-integration
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: incremental-lean-${{ github.sha }}
+          path: |
+            results/workloads/manifest.json
+            results/workloads/*/export.ndjson
+            results/workloads/*/source/**/*.lean
+            results/workloads/*/build.*
+            results/workloads/*/export.*
+            results/qualification/
+            results/mathgraph-integration/
+          if-no-files-found: error
+          retention-days: 30

@@ -1,0 +1,9 @@
+name = "incremental_qualification"
+version = "0.1.0"
+defaultTargets = ["Workload"]
+
+[[lean_lib]]
+name = "Workload"
+
+[[lean_lib]]
+name = "IncrementalWorkload"
