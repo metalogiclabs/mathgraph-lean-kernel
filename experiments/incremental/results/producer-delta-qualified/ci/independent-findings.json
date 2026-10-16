@@ -1,0 +1,784 @@
+{
+  "schema": "mathgraph.producer-delta-ci-findings.v1",
+  "source": "4496042c75368f6c35675a9b131c960080afa518",
+  "run": 38945728644,
+  "compact_artifact_id": 12067972795,
+  "archive": {
+    "bytes": 4289544,
+    "sha256": "961abb3e6834443dab2cc86eedaf27420c41f52b50d5cbe6c28455ddbd8f2ea5",
+    "artifact_id": 12067972795
+  },
+  "reviews": {
+    "original": {
+      "status": "PASS_WITH_STATED_LIMITS",
+      "passed": true,
+      "check_count": 1570,
+      "summary_sha256": "307ff401051a927ae4954d2be566dc08cc135907e4390453b109253c808d9359",
+      "reviewer_sha256": "ee46a394b83190677a76c8735ec423b292864efcc23a308cf66932283bbd3bb9",
+      "available_retained_files": 0,
+      "absent_retained_files": 206,
+      "falsifiers": "PASS_FALSIFIERS"
+    },
+    "expanded": {
+      "status": "PASS_WITH_STATED_LIMITS",
+      "passed": true,
+      "check_count": 1534,
+      "summary_sha256": "f3c2460c47edb868edef0c5be63be72d1d36064988c4f15e72d58badee79e564",
+      "reviewer_sha256": "ee46a394b83190677a76c8735ec423b292864efcc23a308cf66932283bbd3bb9",
+      "available_retained_files": 0,
+      "absent_retained_files": 206,
+      "falsifiers": "PASS_FALSIFIERS"
+    }
+  },
+  "profiles": {
+    "original": {
+      "profile": "original-qualified-3436",
+      "host": {
+        "hostname": "runnervm8k3b6",
+        "system": "Linux",
+        "kernel": "6.17.0-1022-azure",
+        "machine": "x86_64",
+        "cpu_model": "Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz"
+      },
+      "gates": 243,
+      "controls": 21,
+      "economics": {
+        "early-definition": {
+          "apply_median_wall_seconds": 0.2813307320000149,
+          "direct_median_wall_seconds": 0.3396545440000409,
+          "median_ratio": 0.8282849058541699,
+          "paired_wins": 5,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.8016232361252589,
+            0.840696800734238
+          ],
+          "bootstrap_repetitions": 10000,
+          "bootstrap_seed": 20261016,
+          "passed": true,
+          "status": "SPEEDUP",
+          "median_setup_wall_seconds": 3.879251962000126,
+          "median_setup_plus_apply_component_sum": 4.162081739000087,
+          "wall_reduction_percent": 17.171509414583007,
+          "cpu_median_seconds": 0.2819539999999989,
+          "direct_cpu_median_seconds": 0.3392010000000045,
+          "cpu_median_ratio": 0.8312298607610095,
+          "cpu_reduction_percent": 16.877013923899053,
+          "checked": 413,
+          "reused": 3023,
+          "total": 3436,
+          "receipt_bytes": 4295008,
+          "delta_bytes": 271,
+          "composite_bytes": 15922194
+        },
+        "unrelated-definition": {
+          "apply_median_wall_seconds": 0.24183454299986806,
+          "direct_median_wall_seconds": 0.34793210699990595,
+          "median_ratio": 0.6950624507899567,
+          "paired_wins": 5,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.6867309248225132,
+            0.7736488862561518
+          ],
+          "bootstrap_repetitions": 10000,
+          "bootstrap_seed": 20261016,
+          "passed": true,
+          "status": "SPEEDUP",
+          "median_setup_wall_seconds": 3.884775469000033,
+          "median_setup_plus_apply_component_sum": 4.130686830999821,
+          "wall_reduction_percent": 30.493754921004335,
+          "cpu_median_seconds": 0.24061000000000377,
+          "direct_cpu_median_seconds": 0.34771899999998457,
+          "cpu_median_ratio": 0.6919667892752897,
+          "cpu_reduction_percent": 30.803321072471036,
+          "checked": 1,
+          "reused": 3435,
+          "total": 3436,
+          "receipt_bytes": 4295008,
+          "delta_bytes": 239,
+          "composite_bytes": 15922152
+        }
+      },
+      "cold_replay": {
+        "setup_wall_seconds": 3.231330244999981,
+        "apply_wall_seconds": 0.30064115199979824,
+        "direct_wall_seconds": 0.340516555000022,
+        "timings": {
+          "producer_seconds": 0,
+          "baseline_validation_seconds": 0.05643729700000222,
+          "identity_update_seconds": 0.05913706199999069,
+          "materialization_and_hash_seconds": 0.025768600999981572,
+          "checking_seconds": 0.0651580759999888,
+          "persistence_seconds": 0.0403072770000108,
+          "consumer_seconds": 0.25615024799981256,
+          "consumer_cpu_seconds": 0.2565490000000068,
+          "baseline_validation_cpu_seconds": 0.056443000000001575,
+          "identity_update_cpu_seconds": 0.05939300000000003,
+          "materialization_and_hash_cpu_seconds": 0.025771999999989248,
+          "checking_cpu_seconds": 0.06532999999998879,
+          "persistence_cpu_seconds": 0.040310000000005175,
+          "end_to_end_seconds": 0.25615024799981256,
+          "end_to_end_cpu_seconds": 0.2565490000000068
+        }
+      },
+      "phase_medians": {
+        "early-definition": {
+          "timings": {
+            "baseline_validation_cpu_seconds": 0.05347600000000341,
+            "baseline_validation_seconds": 0.053497984000159704,
+            "checking_cpu_seconds": 0.06554499999998598,
+            "checking_seconds": 0.06537248900008308,
+            "consumer_cpu_seconds": 0.25537699999998154,
+            "consumer_seconds": 0.25477421599998706,
+            "end_to_end_cpu_seconds": 0.2819539999999989,
+            "end_to_end_seconds": 0.2811699870001121,
+            "identity_update_cpu_seconds": 0.060102000000000544,
+            "identity_update_seconds": 0.057703583999909824,
+            "materialization_and_hash_cpu_seconds": 0.025622999999995955,
+            "materialization_and_hash_seconds": 0.025619230999836873,
+            "persistence_cpu_seconds": 0.041168000000002536,
+            "persistence_seconds": 0.044095254000012574,
+            "producer_seconds": 0.024339524999959394
+          },
+          "observed_wall_and_cpu": {
+            "apply_wall_seconds": 0.2813307320000149,
+            "direct_completed_child_cpu_seconds": 0.3392010000000045,
+            "direct_wall_seconds": 0.3396545440000409,
+            "session_constructor_wall_seconds": 0.30966597199994794,
+            "setup_wall_seconds": 3.879251962000126,
+            "start_report_cpu_seconds": 3.5546179999999765,
+            "start_wall_seconds": 3.5699949499999093
+          },
+          "remaining_wall_phase_order": [
+            "checking_seconds",
+            "identity_update_seconds",
+            "baseline_validation_seconds",
+            "persistence_seconds",
+            "materialization_and_hash_seconds",
+            "producer_seconds"
+          ],
+          "observed_memory_KiB": {
+            "adapter": {
+              "VmRSS_sample_range": [
+                111596,
+                150836
+              ],
+              "VmHWM_cumulative_sample_range": [
+                305136,
+                375544
+              ]
+            },
+            "producer": {
+              "VmRSS_sample_range": [
+                585808,
+                587524
+              ],
+              "VmHWM_cumulative_sample_range": [
+                585808,
+                587524
+              ]
+            },
+            "index": {
+              "VmRSS_sample_range": [
+                89424,
+                89480
+              ],
+              "VmHWM_cumulative_sample_range": [
+                89424,
+                89480
+              ]
+            }
+          }
+        },
+        "unrelated-definition": {
+          "timings": {
+            "baseline_validation_cpu_seconds": 0.05297000000000196,
+            "baseline_validation_seconds": 0.05303300900004615,
+            "checking_cpu_seconds": 0.024973999999986063,
+            "checking_seconds": 0.024818622999873696,
+            "consumer_cpu_seconds": 0.21707600000000582,
+            "consumer_seconds": 0.2153225479999037,
+            "end_to_end_cpu_seconds": 0.24061000000000377,
+            "end_to_end_seconds": 0.24167142800001784,
+            "identity_update_cpu_seconds": 0.05836799999998732,
+            "identity_update_seconds": 0.05756935999988855,
+            "materialization_and_hash_cpu_seconds": 0.025560000000012906,
+            "materialization_and_hash_seconds": 0.025554497000030096,
+            "persistence_cpu_seconds": 0.04100300000000345,
+            "persistence_seconds": 0.04413096400003269,
+            "producer_seconds": 0.024259364000045025
+          },
+          "observed_wall_and_cpu": {
+            "apply_wall_seconds": 0.24183454299986806,
+            "direct_completed_child_cpu_seconds": 0.34771899999998457,
+            "direct_wall_seconds": 0.34793210699990595,
+            "session_constructor_wall_seconds": 0.30925572899991494,
+            "setup_wall_seconds": 3.884775469000033,
+            "start_report_cpu_seconds": 3.560711999999995,
+            "start_wall_seconds": 3.575516005000054
+          },
+          "remaining_wall_phase_order": [
+            "identity_update_seconds",
+            "baseline_validation_seconds",
+            "persistence_seconds",
+            "materialization_and_hash_seconds",
+            "checking_seconds",
+            "producer_seconds"
+          ],
+          "observed_memory_KiB": {
+            "adapter": {
+              "VmRSS_sample_range": [
+                127904,
+                150988
+              ],
+              "VmHWM_cumulative_sample_range": [
+                368016,
+                375544
+              ]
+            },
+            "producer": {
+              "VmRSS_sample_range": [
+                585608,
+                587860
+              ],
+              "VmHWM_cumulative_sample_range": [
+                585608,
+                587860
+              ]
+            },
+            "index": {
+              "VmRSS_sample_range": [
+                89428,
+                89472
+              ],
+              "VmHWM_cumulative_sample_range": [
+                89428,
+                89472
+              ]
+            }
+          }
+        },
+        "theorem-leaf": {
+          "timings": {
+            "baseline_validation_cpu_seconds": 0.053421000000014374,
+            "baseline_validation_seconds": 0.05342816100005621,
+            "checking_cpu_seconds": 0.02576100000001702,
+            "checking_seconds": 0.025603548000162846,
+            "consumer_cpu_seconds": 0.23133400000000393,
+            "consumer_seconds": 0.23091807600007996,
+            "end_to_end_cpu_seconds": 0.25528999999999513,
+            "end_to_end_seconds": 0.25618555100004414,
+            "identity_update_cpu_seconds": 0.06922000000000139,
+            "identity_update_seconds": 0.05781619899994439,
+            "materialization_and_hash_cpu_seconds": 0.025582999999983258,
+            "materialization_and_hash_seconds": 0.025589392000028965,
+            "persistence_cpu_seconds": 0.04087299999999061,
+            "persistence_seconds": 0.043803629999956684,
+            "producer_seconds": 0.02452139999991232
+          },
+          "observed_wall_and_cpu": {
+            "apply_wall_seconds": 0.2563243639999655,
+            "direct_completed_child_cpu_seconds": 0.3282929999999986,
+            "direct_wall_seconds": 0.328678267999976,
+            "session_constructor_wall_seconds": 0.30851699400000143,
+            "setup_wall_seconds": 3.8770316860000094,
+            "start_report_cpu_seconds": 3.5448349999999778,
+            "start_wall_seconds": 3.5733767280000848
+          },
+          "remaining_wall_phase_order": [
+            "identity_update_seconds",
+            "baseline_validation_seconds",
+            "persistence_seconds",
+            "checking_seconds",
+            "materialization_and_hash_seconds",
+            "producer_seconds"
+          ],
+          "observed_memory_KiB": {
+            "adapter": {
+              "VmRSS_sample_range": [
+                126108,
+                151148
+              ],
+              "VmHWM_cumulative_sample_range": [
+                368016,
+                375544
+              ]
+            },
+            "producer": {
+              "VmRSS_sample_range": [
+                585016,
+                587392
+              ],
+              "VmHWM_cumulative_sample_range": [
+                585016,
+                587392
+              ]
+            },
+            "index": {
+              "VmRSS_sample_range": [
+                89436,
+                89480
+              ],
+              "VmHWM_cumulative_sample_range": [
+                89436,
+                89480
+              ]
+            }
+          }
+        },
+        "baseline": {
+          "timings": {
+            "baseline_validation_cpu_seconds": 0.05270999999999049,
+            "baseline_validation_seconds": 0.052704023999922356,
+            "checking_cpu_seconds": 0.021359000000003903,
+            "checking_seconds": 0.02120953999997255,
+            "consumer_cpu_seconds": 0.21794999999997344,
+            "consumer_seconds": 0.2103899950000141,
+            "end_to_end_cpu_seconds": 0.23242000000001894,
+            "end_to_end_seconds": 0.22676982599978146,
+            "identity_update_cpu_seconds": 0.06798100000000318,
+            "identity_update_seconds": 0.05732390499997564,
+            "materialization_and_hash_cpu_seconds": 0.02542900000000259,
+            "materialization_and_hash_seconds": 0.025424175999887666,
+            "persistence_cpu_seconds": 0.04154400000001601,
+            "persistence_seconds": 0.04428707299985035,
+            "producer_seconds": 0.014805111999976361
+          },
+          "observed_wall_and_cpu": {
+            "apply_wall_seconds": 0.2269052300000567,
+            "direct_completed_child_cpu_seconds": 0.33471199999999734,
+            "direct_wall_seconds": 0.33491266200007885,
+            "session_constructor_wall_seconds": 0.30888768599993455,
+            "setup_wall_seconds": 3.8878365069999745,
+            "start_report_cpu_seconds": 3.563065999999992,
+            "start_wall_seconds": 3.5810933769998883
+          },
+          "remaining_wall_phase_order": [
+            "identity_update_seconds",
+            "baseline_validation_seconds",
+            "persistence_seconds",
+            "materialization_and_hash_seconds",
+            "checking_seconds",
+            "producer_seconds"
+          ],
+          "observed_memory_KiB": {
+            "adapter": {
+              "VmRSS_sample_range": [
+                120988,
+                151268
+              ],
+              "VmHWM_cumulative_sample_range": [
+                358648,
+                375544
+              ]
+            },
+            "producer": {
+              "VmRSS_sample_range": [
+                578468,
+                579476
+              ],
+              "VmHWM_cumulative_sample_range": [
+                579292,
+                580408
+              ]
+            },
+            "index": {
+              "VmRSS_sample_range": [
+                89436,
+                89476
+              ],
+              "VmHWM_cumulative_sample_range": [
+                89436,
+                89476
+              ]
+            }
+          }
+        }
+      }
+    },
+    "expanded": {
+      "profile": "std-hashmap-expanded-v1",
+      "host": {
+        "hostname": "runnervm8k3b6",
+        "system": "Linux",
+        "kernel": "6.17.0-1022-azure",
+        "machine": "x86_64",
+        "cpu_model": "Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz"
+      },
+      "gates": 226,
+      "controls": 21,
+      "economics": {
+        "early-definition": {
+          "apply_median_wall_seconds": 1.102488122000068,
+          "direct_median_wall_seconds": 1.415305331000127,
+          "median_ratio": 0.7789754605255346,
+          "paired_wins": 5,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.7332686886977989,
+            0.8271349585466196
+          ],
+          "bootstrap_repetitions": 10000,
+          "bootstrap_seed": 20261016,
+          "passed": true,
+          "status": "SPEEDUP",
+          "median_setup_wall_seconds": 14.245238111000162,
+          "median_setup_plus_apply_component_sum": 15.388791160000437,
+          "wall_reduction_percent": 22.10245394744654,
+          "cpu_median_seconds": 1.1495980000001964,
+          "direct_cpu_median_seconds": 1.4149970000000351,
+          "cpu_median_ratio": 0.8124384716011185,
+          "cpu_reduction_percent": 18.756152839888152,
+          "checked": 672,
+          "reused": 10981,
+          "total": 11653,
+          "receipt_bytes": 20409254,
+          "delta_bytes": 280,
+          "composite_bytes": 64116034
+        },
+        "unrelated-definition": {
+          "apply_median_wall_seconds": 1.1287602620000143,
+          "direct_median_wall_seconds": 1.428212302999782,
+          "median_ratio": 0.7903308630160895,
+          "paired_wins": 5,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.7061293354643214,
+            0.8141533943904228
+          ],
+          "bootstrap_repetitions": 10000,
+          "bootstrap_seed": 20261016,
+          "passed": true,
+          "status": "SPEEDUP",
+          "median_setup_wall_seconds": 14.260904134000157,
+          "median_setup_plus_apply_component_sum": 15.373876798999845,
+          "wall_reduction_percent": 20.966913698391053,
+          "cpu_median_seconds": 1.1579619999999409,
+          "direct_cpu_median_seconds": 1.4278949999999817,
+          "cpu_median_ratio": 0.8109573883233401,
+          "cpu_reduction_percent": 18.904261167665993,
+          "checked": 260,
+          "reused": 11393,
+          "total": 11653,
+          "receipt_bytes": 20409254,
+          "delta_bytes": 243,
+          "composite_bytes": 64115987
+        }
+      },
+      "cold_replay": {
+        "setup_wall_seconds": 11.535685084000306,
+        "apply_wall_seconds": 1.2562517740002477,
+        "direct_wall_seconds": 1.4000605710002674,
+        "timings": {
+          "producer_seconds": 0,
+          "baseline_validation_seconds": 0.2927433629997722,
+          "identity_update_seconds": 0.3239438139999038,
+          "materialization_and_hash_seconds": 0.09797777800031326,
+          "checking_seconds": 0.15537460399991687,
+          "persistence_seconds": 0.17017540500000905,
+          "consumer_seconds": 1.0645860919998995,
+          "consumer_cpu_seconds": 1.1010919999999942,
+          "baseline_validation_cpu_seconds": 0.29274899999995796,
+          "identity_update_cpu_seconds": 0.360328000000095,
+          "materialization_and_hash_cpu_seconds": 0.09796600000004219,
+          "checking_cpu_seconds": 0.15554099999997106,
+          "persistence_cpu_seconds": 0.17017900000007558,
+          "end_to_end_seconds": 1.0645860919998995,
+          "end_to_end_cpu_seconds": 1.1010919999999942
+        }
+      },
+      "phase_medians": {
+        "early-definition": {
+          "timings": {
+            "baseline_validation_cpu_seconds": 0.23707500000000437,
+            "baseline_validation_seconds": 0.23710634600001868,
+            "checking_cpu_seconds": 0.18152899999995498,
+            "checking_seconds": 0.18144668699960675,
+            "consumer_cpu_seconds": 1.0942680000000564,
+            "consumer_seconds": 1.0553706890000285,
+            "end_to_end_cpu_seconds": 1.1495980000001964,
+            "end_to_end_seconds": 1.1023235369998474,
+            "identity_update_cpu_seconds": 0.3809269999999856,
+            "identity_update_seconds": 0.33412737999969977,
+            "materialization_and_hash_cpu_seconds": 0.09770700000001398,
+            "materialization_and_hash_seconds": 0.09775863400000162,
+            "persistence_cpu_seconds": 0.17298999999999864,
+            "persistence_seconds": 0.17943258100012827,
+            "producer_seconds": 0.04098864700017657
+          },
+          "observed_wall_and_cpu": {
+            "apply_wall_seconds": 1.102488122000068,
+            "direct_completed_child_cpu_seconds": 1.4149970000000351,
+            "direct_wall_seconds": 1.415305331000127,
+            "session_constructor_wall_seconds": 0.31005615499998385,
+            "setup_wall_seconds": 14.245238111000162,
+            "start_report_cpu_seconds": 13.924840000000017,
+            "start_wall_seconds": 13.936297716999889
+          },
+          "remaining_wall_phase_order": [
+            "identity_update_seconds",
+            "baseline_validation_seconds",
+            "checking_seconds",
+            "persistence_seconds",
+            "materialization_and_hash_seconds",
+            "producer_seconds"
+          ],
+          "observed_memory_KiB": {
+            "adapter": {
+              "VmRSS_sample_range": [
+                336932,
+                540028
+              ],
+              "VmHWM_cumulative_sample_range": [
+                483252,
+                688676
+              ]
+            },
+            "producer": {
+              "VmRSS_sample_range": [
+                656072,
+                660756
+              ],
+              "VmHWM_cumulative_sample_range": [
+                656072,
+                660756
+              ]
+            },
+            "index": {
+              "VmRSS_sample_range": [
+                177624,
+                245140
+              ],
+              "VmHWM_cumulative_sample_range": [
+                274760,
+                274896
+              ]
+            }
+          }
+        },
+        "unrelated-definition": {
+          "timings": {
+            "baseline_validation_cpu_seconds": 0.23208099999999376,
+            "baseline_validation_seconds": 0.23216157800015935,
+            "checking_cpu_seconds": 0.1498149999999896,
+            "checking_seconds": 0.14967460500020024,
+            "consumer_cpu_seconds": 1.109747000000084,
+            "consumer_seconds": 1.081528229000014,
+            "end_to_end_cpu_seconds": 1.1579619999999409,
+            "end_to_end_seconds": 1.128589304000343,
+            "identity_update_cpu_seconds": 0.37061900000003334,
+            "identity_update_seconds": 0.3240251629999875,
+            "materialization_and_hash_cpu_seconds": 0.09746499999999969,
+            "materialization_and_hash_seconds": 0.09745902000031492,
+            "persistence_cpu_seconds": 0.17139400000007754,
+            "persistence_seconds": 0.17795565200003693,
+            "producer_seconds": 0.04380131000016263
+          },
+          "observed_wall_and_cpu": {
+            "apply_wall_seconds": 1.1287602620000143,
+            "direct_completed_child_cpu_seconds": 1.4278949999999817,
+            "direct_wall_seconds": 1.428212302999782,
+            "session_constructor_wall_seconds": 0.313455100000283,
+            "setup_wall_seconds": 14.260904134000157,
+            "start_report_cpu_seconds": 13.948765999999978,
+            "start_wall_seconds": 13.946350694999637
+          },
+          "remaining_wall_phase_order": [
+            "identity_update_seconds",
+            "baseline_validation_seconds",
+            "persistence_seconds",
+            "checking_seconds",
+            "materialization_and_hash_seconds",
+            "producer_seconds"
+          ],
+          "observed_memory_KiB": {
+            "adapter": {
+              "VmRSS_sample_range": [
+                428096,
+                541844
+              ],
+              "VmHWM_cumulative_sample_range": [
+                588168,
+                693788
+              ]
+            },
+            "producer": {
+              "VmRSS_sample_range": [
+                658052,
+                660564
+              ],
+              "VmHWM_cumulative_sample_range": [
+                658052,
+                660564
+              ]
+            },
+            "index": {
+              "VmRSS_sample_range": [
+                177620,
+                245140
+              ],
+              "VmHWM_cumulative_sample_range": [
+                274824,
+                274936
+              ]
+            }
+          }
+        },
+        "theorem-leaf": {
+          "timings": {
+            "baseline_validation_cpu_seconds": 0.23199900000003026,
+            "baseline_validation_seconds": 0.2320405639998171,
+            "checking_cpu_seconds": 0.13774000000000797,
+            "checking_seconds": 0.1375919749998502,
+            "consumer_cpu_seconds": 1.0872939999999858,
+            "consumer_seconds": 1.0559248239997032,
+            "end_to_end_cpu_seconds": 1.1338529999999878,
+            "end_to_end_seconds": 1.1012916800000312,
+            "identity_update_cpu_seconds": 0.3787320000000136,
+            "identity_update_seconds": 0.33659026399982395,
+            "materialization_and_hash_cpu_seconds": 0.09805699999992612,
+            "materialization_and_hash_seconds": 0.09805041899971911,
+            "persistence_cpu_seconds": 0.172424000000035,
+            "persistence_seconds": 0.17875619599999482,
+            "producer_seconds": 0.04351376700014953
+          },
+          "observed_wall_and_cpu": {
+            "apply_wall_seconds": 1.101456954999776,
+            "direct_completed_child_cpu_seconds": 1.4063659999999931,
+            "direct_wall_seconds": 1.4069500949999565,
+            "session_constructor_wall_seconds": 0.3129614700001184,
+            "setup_wall_seconds": 14.288174731000254,
+            "start_report_cpu_seconds": 13.98043400000006,
+            "start_wall_seconds": 13.979796971999804
+          },
+          "remaining_wall_phase_order": [
+            "identity_update_seconds",
+            "baseline_validation_seconds",
+            "persistence_seconds",
+            "checking_seconds",
+            "materialization_and_hash_seconds",
+            "producer_seconds"
+          ],
+          "observed_memory_KiB": {
+            "adapter": {
+              "VmRSS_sample_range": [
+                399404,
+                544024
+              ],
+              "VmHWM_cumulative_sample_range": [
+                558388,
+                695496
+              ]
+            },
+            "producer": {
+              "VmRSS_sample_range": [
+                656060,
+                660960
+              ],
+              "VmHWM_cumulative_sample_range": [
+                656060,
+                660960
+              ]
+            },
+            "index": {
+              "VmRSS_sample_range": [
+                177616,
+                245136
+              ],
+              "VmHWM_cumulative_sample_range": [
+                274756,
+                274936
+              ]
+            }
+          }
+        },
+        "baseline": {
+          "timings": {
+            "baseline_validation_cpu_seconds": 0.2344190000000026,
+            "baseline_validation_seconds": 0.23441252300017368,
+            "checking_cpu_seconds": 0.07640300000002753,
+            "checking_seconds": 0.07627489500009688,
+            "consumer_cpu_seconds": 1.0536930000000098,
+            "consumer_seconds": 1.015413695999996,
+            "end_to_end_cpu_seconds": 1.0690630000000283,
+            "end_to_end_seconds": 1.0351163329999054,
+            "identity_update_cpu_seconds": 0.37030000000004293,
+            "identity_update_seconds": 0.3306168130002334,
+            "materialization_and_hash_cpu_seconds": 0.09784500000000662,
+            "materialization_and_hash_seconds": 0.09783956799992666,
+            "persistence_cpu_seconds": 0.17196000000001277,
+            "persistence_seconds": 0.17762432700010322,
+            "producer_seconds": 0.015010819000053743
+          },
+          "observed_wall_and_cpu": {
+            "apply_wall_seconds": 1.0352727010001672,
+            "direct_completed_child_cpu_seconds": 1.458354999999985,
+            "direct_wall_seconds": 1.4588211020000017,
+            "session_constructor_wall_seconds": 0.3122024040001179,
+            "setup_wall_seconds": 14.227639567000097,
+            "start_report_cpu_seconds": 13.91614199999998,
+            "start_wall_seconds": 13.9137819030002
+          },
+          "remaining_wall_phase_order": [
+            "identity_update_seconds",
+            "baseline_validation_seconds",
+            "persistence_seconds",
+            "materialization_and_hash_seconds",
+            "checking_seconds",
+            "producer_seconds"
+          ],
+          "observed_memory_KiB": {
+            "adapter": {
+              "VmRSS_sample_range": [
+                365476,
+                545304
+              ],
+              "VmHWM_cumulative_sample_range": [
+                514008,
+                700424
+              ]
+            },
+            "producer": {
+              "VmRSS_sample_range": [
+                638236,
+                642328
+              ],
+              "VmHWM_cumulative_sample_range": [
+                641644,
+                643748
+              ]
+            },
+            "index": {
+              "VmRSS_sample_range": [
+                177624,
+                245136
+              ],
+              "VmHWM_cumulative_sample_range": [
+                274764,
+                274948
+              ]
+            }
+          }
+        }
+      }
+    }
+  },
+  "scope_limits": [
+    "No kernel execution or historical issuer HMAC reauthentication.",
+    "Supplement to the frozen summary/economic reviewer, not a replacement for its qualification and bootstrap checks.",
+    "No omitted full sample result JSON was read; result digests are frozen publisher projections.",
+    "Phase CPU includes the recorded live-daemon procfs tick method with SC_CLK_TCK granularity.",
+    "Verbatim post-phase procfs samples in KiB. VmHWM is cumulative since process startup; no exact phase peak or aggregate RSS is inferred.",
+    "Warm timings exclude constructor, imported baseline and initial full verification.",
+    "Full baseline hashing, SCC/declaration reclosure, full composite hashing/parsing and full receipt remain O(total)."
+  ],
+  "review_total_checks": 11344,
+  "retained_original_suites": {
+    "original-correctness": 197,
+    "native-correctness": 335,
+    "independent-replay": 719,
+    "native-economics": 251
+  },
+  "native_adapter_economic_status": "NO_SPEEDUP"
+}

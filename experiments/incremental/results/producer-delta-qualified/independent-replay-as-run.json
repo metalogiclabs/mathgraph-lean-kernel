@@ -1,0 +1,428 @@
+{
+  "actual_tool_pins": {
+    "checker": {
+      "path": "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+      "sha256": "656c38d147833d2b08caea1829950e0ce631a44e0f8f10641fbc7201c85be6e9"
+    },
+    "full_checker": {
+      "path": "/workspace/mathgraph-lean-kernel/target/release/sokonanoda",
+      "sha256": "e813211867f7e555f44e35f0a8b1e143be5ffbea5f7548e99022e704f3f7b441"
+    },
+    "index_session": {
+      "path": "/workspace/mathgraph-lean-kernel/target/release/index-session",
+      "sha256": "84faeb542f56b4ade123e85b24e9af31c82d1ff363408fa5d171b49dfdb40ee5"
+    },
+    "indexer": {
+      "path": "/workspace/mathgraph-lean-kernel/target/release/export-index",
+      "sha256": "c3e3ce6ac29a5b7e17b3a0a1ecc9c20166d9ea713748c4cd6a1bc77fedb2f698"
+    },
+    "leanchecker": {
+      "path": "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+      "sha256": "12c38901cdbfab178f1bf6145dd30012e9a3b2c11ca695292a5884fa3cbaddb6"
+    },
+    "leanchecker-paranoid": {
+      "path": "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker-paranoid",
+      "sha256": "ca74d1e9a856149ed05acb600d8931a574dd9f465745beeaf93e3de7b7cbe274"
+    },
+    "producer": {
+      "path": "/workspace/kernel-audit/delta-qualified-tools/delta-producer",
+      "sha256": "2ac39b616a6d658c91c6ccb5b5b4061f7a6e684c5e67ae92466231cf418db8f3"
+    }
+  },
+  "baseline": {
+    "path": "/workspace/kernel-audit/delta-expanded-qualified-v2/samples/early-definition-0/session/baseline-cache/exports/91bfde11f02d7278e4fce3644276ff58e8a32601cfe843f790f8cad6868c0912.ndjson",
+    "sha256": "91bfde11f02d7278e4fce3644276ff58e8a32601cfe843f790f8cad6868c0912"
+  },
+  "cases": [
+    {
+      "kernels": [
+        {
+          "command": [
+            "/workspace/mathgraph-lean-kernel/target/release/sokonanoda",
+            "/workspace/kernel-audit/delta-expanded-independent-final/early-definition.config.json"
+          ],
+          "elapsed_seconds": 1.211817998999777,
+          "expected_returncode": 0,
+          "returncode": 0,
+          "stderr_path": "/workspace/kernel-audit/delta-expanded-independent-final/early-definition-rust.stderr",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_path": "/workspace/kernel-audit/delta-expanded-independent-final/early-definition-rust.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/delta-expanded-independent-final/early-definition.ndjson"
+          ],
+          "elapsed_seconds": 9.59492193799997,
+          "expected_returncode": 0,
+          "returncode": 0,
+          "stderr_path": "/workspace/kernel-audit/delta-expanded-independent-final/early-definition-leanchecker.stderr",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_path": "/workspace/kernel-audit/delta-expanded-independent-final/early-definition-leanchecker.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker-paranoid",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/delta-expanded-independent-final/early-definition.ndjson"
+          ],
+          "elapsed_seconds": 12.234406747999856,
+          "expected_returncode": 0,
+          "returncode": 0,
+          "stderr_path": "/workspace/kernel-audit/delta-expanded-independent-final/early-definition-leanchecker-paranoid.stderr",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_path": "/workspace/kernel-audit/delta-expanded-independent-final/early-definition-leanchecker-paranoid.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "name": "early-definition",
+      "no_new_acceptance": false,
+      "reconstruction": {
+        "appended_rows": 4,
+        "bytes": 64116034,
+        "delta_bytes": 280,
+        "delta_path": "/workspace/kernel-audit/delta-expanded-qualified-v2/samples/early-definition-0/session/cache/deltas/0c5bcf2490822935ae4fe2166a82777a3eaca2e7f4eea4a2f4981ac829912ab7.ndjson",
+        "delta_sha256": "0c5bcf2490822935ae4fe2166a82777a3eaca2e7f4eea4a2f4981ac829912ab7",
+        "path": "/workspace/kernel-audit/delta-expanded-independent-final/early-definition.ndjson",
+        "replacements": 1,
+        "sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76"
+      },
+      "zero_selection_verified": false
+    },
+    {
+      "kernels": [
+        {
+          "command": [
+            "/workspace/mathgraph-lean-kernel/target/release/sokonanoda",
+            "/workspace/kernel-audit/delta-expanded-independent-final/signed-invalid-proof.config.json"
+          ],
+          "elapsed_seconds": 0.4090197860000444,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/delta-expanded-independent-final/signed-invalid-proof-rust.stderr",
+          "stderr_sha256": "d2405fd64a565ca8a4ae59ae60d54295974cbcdfd5d140428cf21784f2195402",
+          "stdout_path": "/workspace/kernel-audit/delta-expanded-independent-final/signed-invalid-proof-rust.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/delta-expanded-independent-final/signed-invalid-proof.ndjson"
+          ],
+          "elapsed_seconds": 9.244416693000403,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/delta-expanded-independent-final/signed-invalid-proof-leanchecker.stderr",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_path": "/workspace/kernel-audit/delta-expanded-independent-final/signed-invalid-proof-leanchecker.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker-paranoid",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/delta-expanded-independent-final/signed-invalid-proof.ndjson"
+          ],
+          "elapsed_seconds": 10.462894662000053,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/delta-expanded-independent-final/signed-invalid-proof-leanchecker-paranoid.stderr",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_path": "/workspace/kernel-audit/delta-expanded-independent-final/signed-invalid-proof-leanchecker-paranoid.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "name": "signed-invalid-proof",
+      "no_new_acceptance": true,
+      "reconstruction": {
+        "appended_rows": 0,
+        "bytes": 64115856,
+        "delta_bytes": 79,
+        "delta_path": "/workspace/kernel-audit/delta-expanded-qualified-v2/controls/signed-invalid-proof/fixture-delta.ndjson",
+        "delta_sha256": "a3e3c89873713e99aed8646f0ae8c99d918279941f5da30595b3653fe6c1bb5f",
+        "path": "/workspace/kernel-audit/delta-expanded-independent-final/signed-invalid-proof.ndjson",
+        "replacements": 1,
+        "sha256": "58f8091201c291c6ec490ceb82db1803221902cf0ca0f708a5c5c352da59ec08"
+      },
+      "zero_selection_verified": false
+    },
+    {
+      "kernels": [
+        {
+          "command": [
+            "/workspace/mathgraph-lean-kernel/target/release/sokonanoda",
+            "/workspace/kernel-audit/delta-expanded-independent-final/signed-invalid-axiom.config.json"
+          ],
+          "elapsed_seconds": 0.06329916899994714,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/delta-expanded-independent-final/signed-invalid-axiom-rust.stderr",
+          "stderr_sha256": "cc8b425deab5d2b43c2071170c5e0cc5b15bd840751500e1d834209666bc34b4",
+          "stdout_path": "/workspace/kernel-audit/delta-expanded-independent-final/signed-invalid-axiom-rust.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/delta-expanded-independent-final/signed-invalid-axiom.ndjson"
+          ],
+          "elapsed_seconds": 1.8767402990001756,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/delta-expanded-independent-final/signed-invalid-axiom-leanchecker.stderr",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_path": "/workspace/kernel-audit/delta-expanded-independent-final/signed-invalid-axiom-leanchecker.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker-paranoid",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/delta-expanded-independent-final/signed-invalid-axiom.ndjson"
+          ],
+          "elapsed_seconds": 2.325532259999818,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/delta-expanded-independent-final/signed-invalid-axiom-leanchecker-paranoid.stderr",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_path": "/workspace/kernel-audit/delta-expanded-independent-final/signed-invalid-axiom-leanchecker-paranoid.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "name": "signed-invalid-axiom",
+      "no_new_acceptance": true,
+      "reconstruction": {
+        "appended_rows": 0,
+        "bytes": 64115859,
+        "delta_bytes": 69,
+        "delta_path": "/workspace/kernel-audit/delta-expanded-qualified-v2/controls/signed-invalid-axiom/fixture-delta.ndjson",
+        "delta_sha256": "699a6f1ef5daa34beadb3d4fda2a94742198f3fc4ae2263cbba381f9ff64af5a",
+        "path": "/workspace/kernel-audit/delta-expanded-independent-final/signed-invalid-axiom.ndjson",
+        "replacements": 1,
+        "sha256": "ac4ace2468a0bb7e02b74f7d41131f9182dcba3d931758eda41394a89b9e2c92"
+      },
+      "zero_selection_verified": false
+    },
+    {
+      "kernels": [
+        {
+          "command": [
+            "/workspace/mathgraph-lean-kernel/target/release/sokonanoda",
+            "/workspace/kernel-audit/delta-expanded-independent-final/unused-invalid-node-zero-selection-parser.config.json"
+          ],
+          "elapsed_seconds": 0.05831534900016777,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/delta-expanded-independent-final/unused-invalid-node-zero-selection-parser-rust.stderr",
+          "stderr_sha256": "b0bdb276876ba924db0d709cd41caad33bed735cb926a7dd960f1e964f65f716",
+          "stdout_path": "/workspace/kernel-audit/delta-expanded-independent-final/unused-invalid-node-zero-selection-parser-rust.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/delta-expanded-independent-final/unused-invalid-node-zero-selection-parser.ndjson"
+          ],
+          "elapsed_seconds": 1.8988562380000076,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/delta-expanded-independent-final/unused-invalid-node-zero-selection-parser-leanchecker.stderr",
+          "stderr_sha256": "74ffa5806ba620027c25f9a5494051d48b6aab6372cd3dacf9da624cce5ce1a6",
+          "stdout_path": "/workspace/kernel-audit/delta-expanded-independent-final/unused-invalid-node-zero-selection-parser-leanchecker.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker-paranoid",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/delta-expanded-independent-final/unused-invalid-node-zero-selection-parser.ndjson"
+          ],
+          "elapsed_seconds": 2.1739636620000056,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/delta-expanded-independent-final/unused-invalid-node-zero-selection-parser-leanchecker-paranoid.stderr",
+          "stderr_sha256": "74ffa5806ba620027c25f9a5494051d48b6aab6372cd3dacf9da624cce5ce1a6",
+          "stdout_path": "/workspace/kernel-audit/delta-expanded-independent-final/unused-invalid-node-zero-selection-parser-leanchecker-paranoid.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "command": [
+            "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+            "/workspace/kernel-audit/delta-expanded-independent-final/unused-invalid-node-zero-selection-parser.config.json",
+            "/workspace/kernel-audit/delta-expanded-independent-final/unused-invalid-node-zero-selection-parser.indices.json"
+          ],
+          "elapsed_seconds": 0.05120289900014541,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/delta-expanded-independent-final/unused-invalid-node-zero-selection-parser-zero-selected.stderr",
+          "stderr_sha256": "af110d98c0f6142d3400c71b5c9d3c8775d54b225d4637e6c74d216737f1c31d",
+          "stdout_path": "/workspace/kernel-audit/delta-expanded-independent-final/unused-invalid-node-zero-selection-parser-zero-selected.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "name": "unused-invalid-node-zero-selection-parser",
+      "no_new_acceptance": true,
+      "reconstruction": {
+        "appended_rows": 1,
+        "bytes": 64115899,
+        "delta_bytes": 122,
+        "delta_path": "/workspace/kernel-audit/delta-expanded-qualified-v2/controls/unused-invalid-node-zero-selection-parser/fixture-delta.ndjson",
+        "delta_sha256": "2014b92938083238a899a128428650166f5d02cfdd602b2b53bfb36e90f8b507",
+        "path": "/workspace/kernel-audit/delta-expanded-independent-final/unused-invalid-node-zero-selection-parser.ndjson",
+        "replacements": 1,
+        "sha256": "2ba6049b33587cf12b458afaa439741b56c7f1cca7bfe1150c5972533b377e2f"
+      },
+      "zero_selection_verified": true
+    },
+    {
+      "kernels": [
+        {
+          "command": [
+            "/workspace/mathgraph-lean-kernel/target/release/sokonanoda",
+            "/workspace/kernel-audit/delta-expanded-independent-final/unused-invalid-node-dag-only-zero-selection-parser.config.json"
+          ],
+          "elapsed_seconds": 0.05726129899994703,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/delta-expanded-independent-final/unused-invalid-node-dag-only-zero-selection-parser-rust.stderr",
+          "stderr_sha256": "b0bdb276876ba924db0d709cd41caad33bed735cb926a7dd960f1e964f65f716",
+          "stdout_path": "/workspace/kernel-audit/delta-expanded-independent-final/unused-invalid-node-dag-only-zero-selection-parser-rust.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/delta-expanded-independent-final/unused-invalid-node-dag-only-zero-selection-parser.ndjson"
+          ],
+          "elapsed_seconds": 1.908040013000118,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/delta-expanded-independent-final/unused-invalid-node-dag-only-zero-selection-parser-leanchecker.stderr",
+          "stderr_sha256": "74ffa5806ba620027c25f9a5494051d48b6aab6372cd3dacf9da624cce5ce1a6",
+          "stdout_path": "/workspace/kernel-audit/delta-expanded-independent-final/unused-invalid-node-dag-only-zero-selection-parser-leanchecker.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker-paranoid",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/delta-expanded-independent-final/unused-invalid-node-dag-only-zero-selection-parser.ndjson"
+          ],
+          "elapsed_seconds": 2.515530622999904,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/delta-expanded-independent-final/unused-invalid-node-dag-only-zero-selection-parser-leanchecker-paranoid.stderr",
+          "stderr_sha256": "74ffa5806ba620027c25f9a5494051d48b6aab6372cd3dacf9da624cce5ce1a6",
+          "stdout_path": "/workspace/kernel-audit/delta-expanded-independent-final/unused-invalid-node-dag-only-zero-selection-parser-leanchecker-paranoid.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "command": [
+            "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+            "/workspace/kernel-audit/delta-expanded-independent-final/unused-invalid-node-dag-only-zero-selection-parser.config.json",
+            "/workspace/kernel-audit/delta-expanded-independent-final/unused-invalid-node-dag-only-zero-selection-parser.indices.json"
+          ],
+          "elapsed_seconds": 0.06862628799990489,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/delta-expanded-independent-final/unused-invalid-node-dag-only-zero-selection-parser-zero-selected.stderr",
+          "stderr_sha256": "af110d98c0f6142d3400c71b5c9d3c8775d54b225d4637e6c74d216737f1c31d",
+          "stdout_path": "/workspace/kernel-audit/delta-expanded-independent-final/unused-invalid-node-dag-only-zero-selection-parser-zero-selected.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "name": "unused-invalid-node-dag-only-zero-selection-parser",
+      "no_new_acceptance": true,
+      "reconstruction": {
+        "appended_rows": 1,
+        "bytes": 64115899,
+        "delta_bytes": 39,
+        "delta_path": "/workspace/kernel-audit/delta-expanded-qualified-v2/controls/unused-invalid-node-dag-only-zero-selection-parser/fixture-delta.ndjson",
+        "delta_sha256": "2178551a8530a842b34f5f0786b703914fa2207bef29509ffe912b0d45ac99ed",
+        "path": "/workspace/kernel-audit/delta-expanded-independent-final/unused-invalid-node-dag-only-zero-selection-parser.ndjson",
+        "replacements": 0,
+        "sha256": "2ba6049b33587cf12b458afaa439741b56c7f1cca7bfe1150c5972533b377e2f"
+      },
+      "zero_selection_verified": true
+    }
+  ],
+  "critical_source_matches_qualified": {
+    "experiments/incremental/DeltaProducer.lean": "16afdba77404a279805e72ef110c5e0bd8c513fb504f53f600ee1a51a79b82fc",
+    "experiments/incremental/delta-pins.json": "b46450d6f844c3b8e62457f53159e6977fff99971acf84dcadac78d64c3398d1",
+    "experiments/incremental/engine.py": "216662587fafcb6880f4354e3794dcd766cb305d4c098e348dcf33326c513905",
+    "experiments/incremental/producer_delta.py": "cd1a5351b8da0a4a7735d744d63c726bac14f418655073ed4e68f4d0f7bb1bc6",
+    "src/bin/index_session.rs": "a8934a51aaa7aafb2c9f0cfe838a49d7bcafd0ebb4ae1701c55ea1bfecd7d784",
+    "src/identity.rs": "10133a9c42fc9cb5b34a07a803dd006bea61454c6fcd19951276fe7842537397",
+    "src/parser.rs": "200d307e803304a335f6938cbeb5386d3ecbe5150d8aa28c2d194fc3db71d5b5"
+  },
+  "current_git_commit": "4496042c75368f6c35675a9b131c960080afa518",
+  "decoder_script_sha256": "8ade40675bb919a3fcc2a8b0ffd1bfeec2a1976a56277b03ac5669bd0294e350",
+  "input_report": "/workspace/kernel-audit/delta-expanded-qualified-v2/summary.json",
+  "input_report_sha256": "aebe74da431811a0528101cf743f0572dc9e4261b11d385ae761f8783164deac",
+  "limitations": [
+    "Independent exact-byte reconstruction/full checking; not a new economic benchmark.",
+    "No producer_delta or incremental verifier or retained-index APIs executed.",
+    "Signed envelope content addresses checked; no independent old-secret HMAC authentication performed.",
+    "No general completeness theorem or unrestricted source replacement claim."
+  ],
+  "positive_fresh_index_commands": [
+    {
+      "command": [
+        "/workspace/mathgraph-lean-kernel/target/release/export-index",
+        "/workspace/kernel-audit/delta-expanded-independent-final/composite.index-config.json"
+      ],
+      "elapsed_seconds": 0.8822574209998493,
+      "expected_returncode": 0,
+      "returncode": 0,
+      "stderr_path": "/workspace/kernel-audit/delta-expanded-independent-final/composite-fresh-native-index.stderr",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_path": "/workspace/kernel-audit/delta-expanded-independent-final/composite-fresh-native-index.stdout",
+      "stdout_sha256": "148de39194cf02e54e21bebb0058054300cb359d1b5ae73918ba98a6f28b92d0"
+    },
+    {
+      "command": [
+        "/workspace/mathgraph-lean-kernel/target/release/export-index",
+        "/workspace/kernel-audit/delta-expanded-independent-final/original-source-export.index-config.json"
+      ],
+      "elapsed_seconds": 0.7319434599999113,
+      "expected_returncode": 0,
+      "returncode": 0,
+      "stderr_path": "/workspace/kernel-audit/delta-expanded-independent-final/original-source-export-fresh-native-index.stderr",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_path": "/workspace/kernel-audit/delta-expanded-independent-final/original-source-export-fresh-native-index.stdout",
+      "stdout_sha256": "148de39194cf02e54e21bebb0058054300cb359d1b5ae73918ba98a6f28b92d0"
+    }
+  ],
+  "positive_index_equality": {
+    "accepted_receipt_equals_full_index": true,
+    "count": 11653,
+    "native_reconstruction_equals_native_pinned_source_export": true,
+    "original_c5_python_equals_native_reconstruction": true,
+    "original_python_source_commit": "c5ab12699338aa57b7e9d48b15d4a7409e453c7b",
+    "original_python_source_sha256": "650aa6f8eb49083ea867d30a85c3aedee1581b605cba7672e15ffc7fe6b1c4c2",
+    "typed_index_sha256": "b77ea4534db5e5ca46d20e286f5371aa2fa8cabdf4bed90fd22400491fbf9ba5"
+  },
+  "qualified_source": "f39715431251c8009849eb62c107e79131b4b3df",
+  "source_export": {
+    "path": "/workspace/kernel-audit/delta-expanded-workloads-first/early-definition/export.ndjson",
+    "sha256": "60d16dbc287d26de773b90b96cad02c0c0d76cb1db3a91d8ddcb2fbf33bd4edb"
+  },
+  "status": "PASS_INDEPENDENT_EXPANDED_RECONSTRUCTION_INDEX_AND_KERNEL_REPLAY"
+}

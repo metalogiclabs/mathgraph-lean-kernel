@@ -1,0 +1,332 @@
+{
+  "source_sha": "4496042c75368f6c35675a9b131c960080afa518",
+  "run_id": 38945728644,
+  "job_id": 117124962584,
+  "status": "SUCCESS",
+  "actual_log_sha256": "d38a1d72a95ed73b788822261d4f289333b1d4e16689c8cfda40744544355262",
+  "source_and_binary_stability_step": "success",
+  "failed_or_skipped_steps": [],
+  "job_error_lines": [],
+  "reports": {
+    "original-correctness": {
+      "source_sha": "4496042c75368f6c35675a9b131c960080afa518",
+      "summary_sha256": "0aa3c34d15d7a55f504d41e9875447eb2f80995e8139736e4b061cd90ac6a29a",
+      "gates": 197,
+      "required_gates": 197,
+      "minimum_gates": 197,
+      "all_gates_passed": true,
+      "report_passed": true
+    },
+    "native-correctness": {
+      "source_sha": "4496042c75368f6c35675a9b131c960080afa518",
+      "summary_sha256": "81a22d84081f5fc1bcc9cc7024d7d151155f5c37cea9caa1cc1ad340f2525b85",
+      "gates": 335,
+      "required_gates": 335,
+      "minimum_gates": 335,
+      "all_gates_passed": true,
+      "report_passed": true
+    },
+    "independent-replay": {
+      "source_sha": "4496042c75368f6c35675a9b131c960080afa518",
+      "summary_sha256": "2aa4a989eeeb4fe18bfbe58b21ae094d8634e2872294885379e3047dd48fba18",
+      "gates": 719,
+      "required_gates": 719,
+      "minimum_gates": 719,
+      "all_gates_passed": true,
+      "report_passed": true
+    },
+    "native-economics": {
+      "source_sha": "4496042c75368f6c35675a9b131c960080afa518",
+      "summary_sha256": "11241ff8e169103efb4a056cd833513839dd5140438f6ecce55f68b541358db8",
+      "gates": 251,
+      "required_gates": 251,
+      "minimum_gates": 251,
+      "all_gates_passed": true,
+      "report_passed": true,
+      "economic_status": "NO_SPEEDUP",
+      "primary": {
+        "early-definition": {
+          "baseline-python-full": {
+            "wall_seconds": 5.781616526000107,
+            "cpu_seconds": 5.766315,
+            "max_rss_kib": 283172
+          },
+          "baseline-python-incremental": {
+            "wall_seconds": 5.532644614999981,
+            "cpu_seconds": 5.519309,
+            "max_rss_kib": 294932
+          },
+          "native-full": {
+            "wall_seconds": 0.727672388999963,
+            "cpu_seconds": 0.7149129999999999,
+            "max_rss_kib": 274108
+          },
+          "native-incremental": {
+            "wall_seconds": 0.5060858819999794,
+            "cpu_seconds": 0.49574799999999997,
+            "max_rss_kib": 274108
+          },
+          "baseline-direct-full": {
+            "wall_seconds": 0.3438012389999585,
+            "cpu_seconds": 0.33952699999999997,
+            "max_rss_kib": 274108
+          },
+          "current-direct-full": {
+            "wall_seconds": 0.3438295209998614,
+            "cpu_seconds": 0.340227,
+            "max_rss_kib": 274108
+          }
+        },
+        "unrelated-definition": {
+          "baseline-python-full": {
+            "wall_seconds": 5.76360385299995,
+            "cpu_seconds": 5.751385,
+            "max_rss_kib": 287236
+          },
+          "baseline-python-incremental": {
+            "wall_seconds": 5.436022828999967,
+            "cpu_seconds": 5.421088,
+            "max_rss_kib": 294944
+          },
+          "native-full": {
+            "wall_seconds": 0.7177847650000331,
+            "cpu_seconds": 0.7078099999999999,
+            "max_rss_kib": 274108
+          },
+          "native-incremental": {
+            "wall_seconds": 0.46502799599988975,
+            "cpu_seconds": 0.45569299999999996,
+            "max_rss_kib": 274108
+          },
+          "baseline-direct-full": {
+            "wall_seconds": 0.33365806099982365,
+            "cpu_seconds": 0.331111,
+            "max_rss_kib": 274108
+          },
+          "current-direct-full": {
+            "wall_seconds": 0.34345804299982774,
+            "cpu_seconds": 0.336281,
+            "max_rss_kib": 274108
+          }
+        }
+      }
+    },
+    "producer-delta": {
+      "source_sha": "4496042c75368f6c35675a9b131c960080afa518",
+      "summary_sha256": "307ff401051a927ae4954d2be566dc08cc135907e4390453b109253c808d9359",
+      "gates": 243,
+      "required_gates": 243,
+      "minimum_gates": 1,
+      "all_gates_passed": true,
+      "report_passed": true,
+      "economic_status": "SPEEDUP",
+      "economics": {
+        "early-definition": {
+          "passed": true,
+          "status": "SPEEDUP",
+          "apply_median_wall_seconds": 0.2813307320000149,
+          "direct_median_wall_seconds": 0.3396545440000409,
+          "median_ratio": 0.8282849058541699,
+          "paired_wins": 5,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.8016232361252589,
+            0.840696800734238
+          ],
+          "bootstrap_repetitions": 10000,
+          "bootstrap_seed": 20261016,
+          "setup_in_timed_update": false,
+          "scope": "warm authenticated session update versus fresh full Rust command"
+        },
+        "unrelated-definition": {
+          "passed": true,
+          "status": "SPEEDUP",
+          "apply_median_wall_seconds": 0.24183454299986806,
+          "direct_median_wall_seconds": 0.34793210699990595,
+          "median_ratio": 0.6950624507899567,
+          "paired_wins": 5,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.6867309248225132,
+            0.7736488862561518
+          ],
+          "bootstrap_repetitions": 10000,
+          "bootstrap_seed": 20261016,
+          "setup_in_timed_update": false,
+          "scope": "warm authenticated session update versus fresh full Rust command"
+        },
+        "theorem-leaf": {
+          "passed": true,
+          "status": "SPEEDUP",
+          "apply_median_wall_seconds": 0.2563243639999655,
+          "direct_median_wall_seconds": 0.328678267999976,
+          "median_ratio": 0.779864046259317,
+          "paired_wins": 5,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.7025408110415691,
+            0.815207485418792
+          ],
+          "bootstrap_repetitions": 10000,
+          "bootstrap_seed": 20261016,
+          "setup_in_timed_update": false,
+          "scope": "warm authenticated session update versus fresh full Rust command"
+        },
+        "baseline": {
+          "passed": true,
+          "status": "SPEEDUP",
+          "apply_median_wall_seconds": 0.2269052300000567,
+          "direct_median_wall_seconds": 0.33491266200007885,
+          "median_ratio": 0.677505677584693,
+          "paired_wins": 5,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.6497551876114956,
+            0.6830459004061135
+          ],
+          "bootstrap_repetitions": 10000,
+          "bootstrap_seed": 20261016,
+          "setup_in_timed_update": false,
+          "scope": "warm authenticated session update versus fresh full Rust command"
+        }
+      },
+      "profile": "original-qualified-3436",
+      "qualification_status": "PASS",
+      "compact_phases": {
+        "path": "artifacts/delta-qualification/compact-phases.json",
+        "sha256": "bf0cd24a926a3e795a22e2122edab203c66f7fb5b0a721a1048bedd2be6b2967",
+        "samples": 21,
+        "cold_samples": 1
+      }
+    },
+    "producer-delta-expanded": {
+      "source_sha": "4496042c75368f6c35675a9b131c960080afa518",
+      "summary_sha256": "f3c2460c47edb868edef0c5be63be72d1d36064988c4f15e72d58badee79e564",
+      "gates": 226,
+      "required_gates": 226,
+      "minimum_gates": 1,
+      "all_gates_passed": true,
+      "report_passed": true,
+      "economic_status": "SPEEDUP",
+      "economics": {
+        "early-definition": {
+          "passed": true,
+          "status": "SPEEDUP",
+          "apply_median_wall_seconds": 1.102488122000068,
+          "direct_median_wall_seconds": 1.415305331000127,
+          "median_ratio": 0.7789754605255346,
+          "paired_wins": 5,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.7332686886977989,
+            0.8271349585466196
+          ],
+          "bootstrap_repetitions": 10000,
+          "bootstrap_seed": 20261016,
+          "setup_in_timed_update": false,
+          "scope": "warm authenticated session update versus fresh full Rust command"
+        },
+        "unrelated-definition": {
+          "passed": true,
+          "status": "SPEEDUP",
+          "apply_median_wall_seconds": 1.1287602620000143,
+          "direct_median_wall_seconds": 1.428212302999782,
+          "median_ratio": 0.7903308630160895,
+          "paired_wins": 5,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.7061293354643214,
+            0.8141533943904228
+          ],
+          "bootstrap_repetitions": 10000,
+          "bootstrap_seed": 20261016,
+          "setup_in_timed_update": false,
+          "scope": "warm authenticated session update versus fresh full Rust command"
+        },
+        "theorem-leaf": {
+          "passed": true,
+          "status": "SPEEDUP",
+          "apply_median_wall_seconds": 1.101456954999776,
+          "direct_median_wall_seconds": 1.4069500949999565,
+          "median_ratio": 0.7828685316658726,
+          "paired_wins": 5,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.7196431082176685,
+            0.8134530421328012
+          ],
+          "bootstrap_repetitions": 10000,
+          "bootstrap_seed": 20261016,
+          "setup_in_timed_update": false,
+          "scope": "warm authenticated session update versus fresh full Rust command"
+        },
+        "baseline": {
+          "passed": true,
+          "status": "SPEEDUP",
+          "apply_median_wall_seconds": 1.0352727010001672,
+          "direct_median_wall_seconds": 1.4588211020000017,
+          "median_ratio": 0.7096639194352469,
+          "paired_wins": 5,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.6601134783824413,
+            0.7450608911346593
+          ],
+          "bootstrap_repetitions": 10000,
+          "bootstrap_seed": 20261016,
+          "setup_in_timed_update": false,
+          "scope": "warm authenticated session update versus fresh full Rust command"
+        }
+      },
+      "profile": "std-hashmap-expanded-v1",
+      "qualification_status": "PASS",
+      "compact_phases": {
+        "path": "artifacts/delta-expanded-qualification/compact-phases.json",
+        "sha256": "fb80efdc519edc22e5622a7ab1880c0b95ae0805f74f65319029b2dbe088a35d",
+        "samples": 21,
+        "cold_samples": 1
+      }
+    }
+  },
+  "artifacts": [
+    {
+      "id": 12067972795,
+      "name": "incremental-producer-delta-summaries-4496042c75368f6c35675a9b131c960080afa518",
+      "size_in_bytes": 4289544,
+      "url": "https://api.github.com/repos/metalogiclabs/mathgraph-lean-kernel/actions/artifacts/12067972795",
+      "archive_download_url": "https://api.github.com/repos/metalogiclabs/mathgraph-lean-kernel/actions/artifacts/12067972795/zip",
+      "expired": false,
+      "created_at": "2026-10-16T18:56:51Z",
+      "expires_at": "2026-11-15T18:56:49Z",
+      "updated_at": "2026-10-16T18:56:51Z",
+      "digest": "sha256:961abb3e6834443dab2cc86eedaf27420c41f52b50d5cbe6c28455ddbd8f2ea5",
+      "workflow_run": {
+        "id": 38945728644,
+        "repository_id": 1335626675,
+        "head_repository_id": 1335626675,
+        "head_branch": "research/incremental-producer-delta-20261016",
+        "head_sha": "4496042c75368f6c35675a9b131c960080afa518"
+      }
+    },
+    {
+      "id": 12067792895,
+      "name": "incremental-producer-delta-4496042c75368f6c35675a9b131c960080afa518",
+      "size_in_bytes": 2174807684,
+      "url": "https://api.github.com/repos/metalogiclabs/mathgraph-lean-kernel/actions/artifacts/12067792895",
+      "archive_download_url": "https://api.github.com/repos/metalogiclabs/mathgraph-lean-kernel/actions/artifacts/12067792895/zip",
+      "expired": false,
+      "created_at": "2026-10-16T18:56:49Z",
+      "expires_at": "2026-11-15T18:52:57Z",
+      "updated_at": "2026-10-16T18:56:49Z",
+      "digest": "sha256:a2fa6f111a5bf26178226eb357931856f83c548a983b42602a294e64d2915811",
+      "workflow_run": {
+        "id": 38945728644,
+        "repository_id": 1335626675,
+        "head_repository_id": 1335626675,
+        "head_branch": "research/incremental-producer-delta-20261016",
+        "head_sha": "4496042c75368f6c35675a9b131c960080afa518"
+      }
+    }
+  ],
+  "scope": "Decoded actual CI log and metadata review; archive not downloaded"
+}

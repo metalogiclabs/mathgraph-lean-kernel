@@ -1,0 +1,41 @@
+{
+  "schema": "mathgraph.producer-delta-failures.v1",
+  "events": [
+    {
+      "source": "d15209f4e610f2ef7bfe23e2b6fca37423ef5220",
+      "run": 38943181948,
+      "verdict": "FAIL_CLOSED",
+      "reason": "Pinned Elan v4.2.4 rejects elan which --toolchain during producer build; no qualification executed."
+    },
+    {
+      "source": "04fe7df491f0613b71b5dba53ce65a175d317e27",
+      "run": 38943244220,
+      "verdict": "FAIL_CLOSED",
+      "reason": "Same unsupported Elan bootstrap option; source authority controls had been added but did not execute."
+    },
+    {
+      "source": "764d62c9950e78d4a10fe29deaf34d22ecf2647e",
+      "run": 38943492862,
+      "verdict": "CANCELLED_NOT_QUALIFIED",
+      "reason": "Superseded after local preflight exposed relative CLI paths interpreted in oracle subprocess cwd; run cancelled before acceptance promotion."
+    },
+    {
+      "source": "f39715431251c8009849eb62c107e79131b4b3df",
+      "run": 38943815186,
+      "verdict": "FAIL_CLOSED",
+      "reason": "Standalone producer test inherited unconfigured Elan default; final executable stability check also detected index-session rebuild after initial hash capture. All tracked source hashes remained equal. Required qualification reports absent; publisher failed."
+    },
+    {
+      "source": "cfaf8682ed4757f404407c2331a07c0061591a9a",
+      "run": 38945014634,
+      "verdict": "CANCELLED_NOT_QUALIFIED",
+      "reason": "Superseded by compact phase-publication workflow; original197 gates passed and repaired test/runtime/binary-stability controls passed, but remaining gates did not finish."
+    },
+    {
+      "source": "38930b802e0665506a2fcfc75b6f94ef2251a33e",
+      "run": 38945631214,
+      "verdict": "CANCELLED_BEFORE_EXECUTION",
+      "reason": "Pending publication-only run superseded by dedicated-branch cancellation policy update4496042; no qualification issued."
+    }
+  ]
+}

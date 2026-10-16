@@ -1,0 +1,14 @@
+{
+  "command": [
+    "python",
+    "/tmp/replay-delta-evidence.py",
+    "--repo",
+    "/workspace/mathgraph-lean-kernel",
+    "--evidence",
+    "/workspace/kernel-audit/delta-expanded-qualified-v2",
+    "--out",
+    "/workspace/kernel-audit/delta-expanded-independent-portable-final"
+  ],
+  "helper_sha256": "9d56a48a80695a697a8eed0c3bfd71966a1d3d8e94edb065b0c74bdd5dc60107",
+  "scope": "Actual portable expanded replay; diagnostic kernel times, not benchmarks"
+}

@@ -1,0 +1,259 @@
+{
+  "archive": {
+    "path": "/workspace/kernel-audit/delta-ci-latest/ci-4496042-summaries.zip",
+    "sha256": "961abb3e6834443dab2cc86eedaf27420c41f52b50d5cbe6c28455ddbd8f2ea5"
+  },
+  "audit_script_sha256": "b8826b9ae0f297de17c3231826885c82b19ef71a94740dca36f820082f39a191",
+  "ci_report": {
+    "all_gates_passed": true,
+    "completed": true,
+    "gates": 226,
+    "member": "delta-expanded-qualification/summary.json",
+    "sha256": "f3c2460c47edb868edef0c5be63be72d1d36064988c4f15e72d58badee79e564",
+    "source_clean": true
+  },
+  "ci_run_id": 38945728644,
+  "ci_source": "4496042c75368f6c35675a9b131c960080afa518",
+  "controls": [
+    {
+      "bytes": 64115856,
+      "ci_all_three_full_kernels_reject": true,
+      "ci_no_evidence_id": true,
+      "ci_no_new_persisted_acceptance_gate": true,
+      "ci_selected_returncode": 1,
+      "ci_status": "REJECTED",
+      "exact_local_input_parity": true,
+      "independent_local_kernel_codes": [
+        1,
+        1,
+        1
+      ],
+      "name": "signed-invalid-proof",
+      "scheduled": 260,
+      "sha256": "58f8091201c291c6ec490ceb82db1803221902cf0ca0f708a5c5c352da59ec08",
+      "zero_selected_parser_rejection": false
+    },
+    {
+      "bytes": 64115859,
+      "ci_all_three_full_kernels_reject": true,
+      "ci_no_evidence_id": true,
+      "ci_no_new_persisted_acceptance_gate": true,
+      "ci_selected_returncode": 1,
+      "ci_status": "REJECTED",
+      "exact_local_input_parity": true,
+      "independent_local_kernel_codes": [
+        1,
+        1,
+        1
+      ],
+      "name": "signed-invalid-axiom",
+      "scheduled": 11653,
+      "sha256": "ac4ace2468a0bb7e02b74f7d41131f9182dcba3d931758eda41394a89b9e2c92",
+      "zero_selected_parser_rejection": false
+    },
+    {
+      "bytes": 64115899,
+      "ci_all_three_full_kernels_reject": true,
+      "ci_no_evidence_id": true,
+      "ci_no_new_persisted_acceptance_gate": true,
+      "ci_selected_returncode": 1,
+      "ci_status": "REJECTED",
+      "exact_local_input_parity": true,
+      "independent_local_kernel_codes": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "name": "unused-invalid-node-zero-selection-parser",
+      "scheduled": 0,
+      "sha256": "2ba6049b33587cf12b458afaa439741b56c7f1cca7bfe1150c5972533b377e2f",
+      "zero_selected_parser_rejection": true
+    },
+    {
+      "bytes": 64115899,
+      "ci_all_three_full_kernels_reject": true,
+      "ci_no_evidence_id": true,
+      "ci_no_new_persisted_acceptance_gate": true,
+      "ci_selected_returncode": 1,
+      "ci_status": "REJECTED",
+      "exact_local_input_parity": true,
+      "independent_local_kernel_codes": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "name": "unused-invalid-node-dag-only-zero-selection-parser",
+      "scheduled": 0,
+      "sha256": "2ba6049b33587cf12b458afaa439741b56c7f1cca7bfe1150c5972533b377e2f",
+      "zero_selected_parser_rejection": true
+    }
+  ],
+  "critical_source_parity": {
+    "experiments/incremental/DeltaProducer.lean": {
+      "ci_sha256": "16afdba77404a279805e72ef110c5e0bd8c513fb504f53f600ee1a51a79b82fc",
+      "equal": true,
+      "independent_local_sha256": "16afdba77404a279805e72ef110c5e0bd8c513fb504f53f600ee1a51a79b82fc"
+    },
+    "experiments/incremental/delta-pins.json": {
+      "ci_sha256": "b46450d6f844c3b8e62457f53159e6977fff99971acf84dcadac78d64c3398d1",
+      "equal": true,
+      "independent_local_sha256": "b46450d6f844c3b8e62457f53159e6977fff99971acf84dcadac78d64c3398d1"
+    },
+    "experiments/incremental/engine.py": {
+      "ci_sha256": "216662587fafcb6880f4354e3794dcd766cb305d4c098e348dcf33326c513905",
+      "equal": true,
+      "independent_local_sha256": "216662587fafcb6880f4354e3794dcd766cb305d4c098e348dcf33326c513905"
+    },
+    "experiments/incremental/producer_delta.py": {
+      "ci_sha256": "cd1a5351b8da0a4a7735d744d63c726bac14f418655073ed4e68f4d0f7bb1bc6",
+      "equal": true,
+      "independent_local_sha256": "cd1a5351b8da0a4a7735d744d63c726bac14f418655073ed4e68f4d0f7bb1bc6"
+    },
+    "src/bin/index_session.rs": {
+      "ci_sha256": "a8934a51aaa7aafb2c9f0cfe838a49d7bcafd0ebb4ae1701c55ea1bfecd7d784",
+      "equal": true,
+      "independent_local_sha256": "a8934a51aaa7aafb2c9f0cfe838a49d7bcafd0ebb4ae1701c55ea1bfecd7d784"
+    },
+    "src/identity.rs": {
+      "ci_sha256": "10133a9c42fc9cb5b34a07a803dd006bea61454c6fcd19951276fe7842537397",
+      "equal": true,
+      "independent_local_sha256": "10133a9c42fc9cb5b34a07a803dd006bea61454c6fcd19951276fe7842537397"
+    },
+    "src/parser.rs": {
+      "ci_sha256": "200d307e803304a335f6938cbeb5386d3ecbe5150d8aa28c2d194fc3db71d5b5",
+      "equal": true,
+      "independent_local_sha256": "200d307e803304a335f6938cbeb5386d3ecbe5150d8aa28c2d194fc3db71d5b5"
+    }
+  },
+  "independent_replay": {
+    "actual_command_count": 17,
+    "helper_sha256": "9d56a48a80695a697a8eed0c3bfd71966a1d3d8e94edb065b0c74bdd5dc60107",
+    "raw_command_output_hashes_revalidated": true,
+    "reconstructed_input_hashes_revalidated": true,
+    "summary": "/workspace/kernel-audit/delta-expanded-independent-portable-final/summary.json",
+    "summary_sha256": "0d267eba51ba10c1641a2e0958ebdb91294912966e118d3c0bb341929411e1c8"
+  },
+  "positive_typed_index_sha256": "b77ea4534db5e5ca46d20e286f5371aa2fa8cabdf4bed90fd22400491fbf9ba5",
+  "positives": [
+    {
+      "actual_ci_checked": 672,
+      "actual_ci_total": 11653,
+      "bytes": 64116034,
+      "ci_direct_rust_returncode": 0,
+      "ci_reused": 10981,
+      "cold_replay": false,
+      "complete_partition_equal_local": true,
+      "exact_local_input_parity": true,
+      "repetition": 0,
+      "sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76"
+    },
+    {
+      "actual_ci_checked": 672,
+      "actual_ci_total": 11653,
+      "bytes": 64116034,
+      "ci_direct_rust_returncode": 0,
+      "ci_reused": 10981,
+      "cold_replay": false,
+      "complete_partition_equal_local": true,
+      "exact_local_input_parity": true,
+      "repetition": 1,
+      "sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76"
+    },
+    {
+      "actual_ci_checked": 672,
+      "actual_ci_total": 11653,
+      "bytes": 64116034,
+      "ci_direct_rust_returncode": 0,
+      "ci_reused": 10981,
+      "cold_replay": false,
+      "complete_partition_equal_local": true,
+      "exact_local_input_parity": true,
+      "repetition": 2,
+      "sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76"
+    },
+    {
+      "actual_ci_checked": 672,
+      "actual_ci_total": 11653,
+      "bytes": 64116034,
+      "ci_direct_rust_returncode": 0,
+      "ci_reused": 10981,
+      "cold_replay": false,
+      "complete_partition_equal_local": true,
+      "exact_local_input_parity": true,
+      "repetition": 3,
+      "sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76"
+    },
+    {
+      "actual_ci_checked": 672,
+      "actual_ci_total": 11653,
+      "bytes": 64116034,
+      "ci_direct_rust_returncode": 0,
+      "ci_reused": 10981,
+      "cold_replay": false,
+      "complete_partition_equal_local": true,
+      "exact_local_input_parity": true,
+      "repetition": 4,
+      "sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76"
+    },
+    {
+      "actual_ci_checked": 672,
+      "actual_ci_total": 11653,
+      "bytes": 64116034,
+      "ci_direct_rust_returncode": 0,
+      "ci_reused": 10981,
+      "cold_replay": true,
+      "complete_partition_equal_local": true,
+      "exact_local_input_parity": true,
+      "repetition": "cold-restart",
+      "sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76"
+    }
+  ],
+  "schema": "mathgraph.independent-ci-kernel-input-parity.v1",
+  "scope": [
+    "CI compact archive reports the same five distinct case roles as the independently reconstructed local inputs; both unused-node roles have identical bytes.",
+    "All five warm accepted early-edit samples and its cold replay match the independently checked positive bytes and complete checked/reused partition.",
+    "Normal/paranoid C++ executable SHA256s also match local independent replay. Rust/producer/index executables differ across builds; exact binary parity is not claimed for them.",
+    "Compact ZIP includes summary metadata, not live CI memfd bytes or complete issuer caches. SHA256 input identity relies on reported CI hashes and collision resistance; no fresh CI-byte extraction or independent CI HMAC-secret validation is claimed.",
+    "This comparison supplies input/outcome correspondence, not an independent rerun of CI economics, remote runner attestation, or a general correctness theorem."
+  ],
+  "status": "PASS_EXACT_EXPANDED_CI_INPUT_PARITY_WITH_INDEPENDENT_LOCAL_REPLAY",
+  "tool_binary_parity": {
+    "checker": {
+      "ci_sha256": "0e087214e99f151842888eb842ab308062ae393b3629c702a1fb1aa663904f7b",
+      "equal": false,
+      "independent_local_sha256": "656c38d147833d2b08caea1829950e0ce631a44e0f8f10641fbc7201c85be6e9"
+    },
+    "full_checker": {
+      "ci_sha256": "c4ff978db1994c43590637231ec86c4016e6ac44afd9e2b536885c30e8eb24cc",
+      "equal": false,
+      "independent_local_sha256": "e813211867f7e555f44e35f0a8b1e143be5ffbea5f7548e99022e704f3f7b441"
+    },
+    "index_session": {
+      "ci_sha256": "48b71fbe2fc02dd1351bbdd3eac38b5e93331f2044ec74ddee2487e12c81e680",
+      "equal": false,
+      "independent_local_sha256": "84faeb542f56b4ade123e85b24e9af31c82d1ff363408fa5d171b49dfdb40ee5"
+    },
+    "indexer": {
+      "ci_sha256": "fcdd8fa797ab212be18f708af556d0c038650547c20694f3014e057e68ddb48f",
+      "equal": false,
+      "independent_local_sha256": "c3e3ce6ac29a5b7e17b3a0a1ecc9c20166d9ea713748c4cd6a1bc77fedb2f698"
+    },
+    "leanchecker": {
+      "ci_sha256": "12c38901cdbfab178f1bf6145dd30012e9a3b2c11ca695292a5884fa3cbaddb6",
+      "equal": true,
+      "independent_local_sha256": "12c38901cdbfab178f1bf6145dd30012e9a3b2c11ca695292a5884fa3cbaddb6"
+    },
+    "leanchecker-paranoid": {
+      "ci_sha256": "ca74d1e9a856149ed05acb600d8931a574dd9f465745beeaf93e3de7b7cbe274",
+      "equal": true,
+      "independent_local_sha256": "ca74d1e9a856149ed05acb600d8931a574dd9f465745beeaf93e3de7b7cbe274"
+    },
+    "producer": {
+      "ci_sha256": "6ba0753d0899868106ee9cfc07f4ab5693c5658a9ed51a60c452b92607891ed1",
+      "equal": false,
+      "independent_local_sha256": "2ac39b616a6d658c91c6ccb5b5b4061f7a6e684c5e67ae92466231cf418db8f3"
+    }
+  }
+}

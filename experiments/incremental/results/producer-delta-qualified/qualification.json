@@ -1,0 +1,484 @@
+{
+  "schema": "mathgraph.producer-delta-qualified-publication.v1",
+  "qualified_source": "4496042c75368f6c35675a9b131c960080afa518",
+  "continued_source": "c5ab12699338aa57b7e9d48b15d4a7409e453c7b",
+  "run_url": "https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/38945728644",
+  "status": "WARRANTED_BOUNDED_WARM_SPEEDUP",
+  "artifacts": [
+    {
+      "id": 12067972795,
+      "name": "incremental-producer-delta-summaries-4496042c75368f6c35675a9b131c960080afa518",
+      "size_in_bytes": 4289544,
+      "url": "https://api.github.com/repos/metalogiclabs/mathgraph-lean-kernel/actions/artifacts/12067972795",
+      "archive_download_url": "https://api.github.com/repos/metalogiclabs/mathgraph-lean-kernel/actions/artifacts/12067972795/zip",
+      "expired": false,
+      "created_at": "2026-10-16T18:56:51Z",
+      "expires_at": "2026-11-15T18:56:49Z",
+      "updated_at": "2026-10-16T18:56:51Z",
+      "digest": "sha256:961abb3e6834443dab2cc86eedaf27420c41f52b50d5cbe6c28455ddbd8f2ea5",
+      "workflow_run": {
+        "id": 38945728644,
+        "repository_id": 1335626675,
+        "head_repository_id": 1335626675,
+        "head_branch": "research/incremental-producer-delta-20261016",
+        "head_sha": "4496042c75368f6c35675a9b131c960080afa518"
+      }
+    },
+    {
+      "id": 12067792895,
+      "name": "incremental-producer-delta-4496042c75368f6c35675a9b131c960080afa518",
+      "size_in_bytes": 2174807684,
+      "url": "https://api.github.com/repos/metalogiclabs/mathgraph-lean-kernel/actions/artifacts/12067792895",
+      "archive_download_url": "https://api.github.com/repos/metalogiclabs/mathgraph-lean-kernel/actions/artifacts/12067792895/zip",
+      "expired": false,
+      "created_at": "2026-10-16T18:56:49Z",
+      "expires_at": "2026-11-15T18:52:57Z",
+      "updated_at": "2026-10-16T18:56:49Z",
+      "digest": "sha256:a2fa6f111a5bf26178226eb357931856f83c548a983b42602a294e64d2915811",
+      "workflow_run": {
+        "id": 38945728644,
+        "repository_id": 1335626675,
+        "head_repository_id": 1335626675,
+        "head_branch": "research/incremental-producer-delta-20261016",
+        "head_sha": "4496042c75368f6c35675a9b131c960080afa518"
+      }
+    }
+  ],
+  "profiles": {
+    "3436": {
+      "profile": "original-qualified-3436",
+      "summary_sha256": "307ff401051a927ae4954d2be566dc08cc135907e4390453b109253c808d9359",
+      "economics": {
+        "early-definition": {
+          "passed": true,
+          "status": "SPEEDUP",
+          "apply_median_wall_seconds": 0.2813307320000149,
+          "direct_median_wall_seconds": 0.3396545440000409,
+          "median_ratio": 0.8282849058541699,
+          "paired_wins": 5,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.8016232361252589,
+            0.840696800734238
+          ],
+          "bootstrap_repetitions": 10000,
+          "bootstrap_seed": 20261016,
+          "setup_in_timed_update": false,
+          "scope": "warm authenticated session update versus fresh full Rust command"
+        },
+        "unrelated-definition": {
+          "passed": true,
+          "status": "SPEEDUP",
+          "apply_median_wall_seconds": 0.24183454299986806,
+          "direct_median_wall_seconds": 0.34793210699990595,
+          "median_ratio": 0.6950624507899567,
+          "paired_wins": 5,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.6867309248225132,
+            0.7736488862561518
+          ],
+          "bootstrap_repetitions": 10000,
+          "bootstrap_seed": 20261016,
+          "setup_in_timed_update": false,
+          "scope": "warm authenticated session update versus fresh full Rust command"
+        },
+        "theorem-leaf": {
+          "passed": true,
+          "status": "SPEEDUP",
+          "apply_median_wall_seconds": 0.2563243639999655,
+          "direct_median_wall_seconds": 0.328678267999976,
+          "median_ratio": 0.779864046259317,
+          "paired_wins": 5,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.7025408110415691,
+            0.815207485418792
+          ],
+          "bootstrap_repetitions": 10000,
+          "bootstrap_seed": 20261016,
+          "setup_in_timed_update": false,
+          "scope": "warm authenticated session update versus fresh full Rust command"
+        },
+        "baseline": {
+          "passed": true,
+          "status": "SPEEDUP",
+          "apply_median_wall_seconds": 0.2269052300000567,
+          "direct_median_wall_seconds": 0.33491266200007885,
+          "median_ratio": 0.677505677584693,
+          "paired_wins": 5,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.6497551876114956,
+            0.6830459004061135
+          ],
+          "bootstrap_repetitions": 10000,
+          "bootstrap_seed": 20261016,
+          "setup_in_timed_update": false,
+          "scope": "warm authenticated session update versus fresh full Rust command"
+        }
+      },
+      "setup_medians_wall_seconds": {
+        "early-definition": 3.879251962000126,
+        "unrelated-definition": 3.884775469000033,
+        "theorem-leaf": 3.8770316860000094,
+        "baseline": 3.8878365069999745
+      },
+      "phase_medians": {
+        "baseline": {
+          "sample_count": 5,
+          "timings": {
+            "baseline_validation_cpu_seconds": 0.05270999999999049,
+            "baseline_validation_seconds": 0.052704023999922356,
+            "checking_cpu_seconds": 0.021359000000003903,
+            "checking_seconds": 0.02120953999997255,
+            "consumer_cpu_seconds": 0.21794999999997344,
+            "consumer_seconds": 0.2103899950000141,
+            "end_to_end_cpu_seconds": 0.23242000000001894,
+            "end_to_end_seconds": 0.22676982599978146,
+            "identity_update_cpu_seconds": 0.06798100000000318,
+            "identity_update_seconds": 0.05732390499997564,
+            "materialization_and_hash_cpu_seconds": 0.02542900000000259,
+            "materialization_and_hash_seconds": 0.025424175999887666,
+            "persistence_cpu_seconds": 0.04154400000001601,
+            "persistence_seconds": 0.04428707299985035,
+            "producer_seconds": 0.014805111999976361
+          },
+          "observed_wall_and_cpu": {
+            "apply_wall_seconds": 0.2269052300000567,
+            "direct_completed_child_cpu_seconds": 0.33471199999999734,
+            "direct_wall_seconds": 0.33491266200007885,
+            "session_constructor_wall_seconds": 0.30888768599993455,
+            "setup_wall_seconds": 3.8878365069999745,
+            "start_report_cpu_seconds": 3.563065999999992,
+            "start_wall_seconds": 3.5810933769998883
+          }
+        },
+        "early-definition": {
+          "sample_count": 5,
+          "timings": {
+            "baseline_validation_cpu_seconds": 0.05347600000000341,
+            "baseline_validation_seconds": 0.053497984000159704,
+            "checking_cpu_seconds": 0.06554499999998598,
+            "checking_seconds": 0.06537248900008308,
+            "consumer_cpu_seconds": 0.25537699999998154,
+            "consumer_seconds": 0.25477421599998706,
+            "end_to_end_cpu_seconds": 0.2819539999999989,
+            "end_to_end_seconds": 0.2811699870001121,
+            "identity_update_cpu_seconds": 0.060102000000000544,
+            "identity_update_seconds": 0.057703583999909824,
+            "materialization_and_hash_cpu_seconds": 0.025622999999995955,
+            "materialization_and_hash_seconds": 0.025619230999836873,
+            "persistence_cpu_seconds": 0.041168000000002536,
+            "persistence_seconds": 0.044095254000012574,
+            "producer_seconds": 0.024339524999959394
+          },
+          "observed_wall_and_cpu": {
+            "apply_wall_seconds": 0.2813307320000149,
+            "direct_completed_child_cpu_seconds": 0.3392010000000045,
+            "direct_wall_seconds": 0.3396545440000409,
+            "session_constructor_wall_seconds": 0.30966597199994794,
+            "setup_wall_seconds": 3.879251962000126,
+            "start_report_cpu_seconds": 3.5546179999999765,
+            "start_wall_seconds": 3.5699949499999093
+          }
+        },
+        "theorem-leaf": {
+          "sample_count": 5,
+          "timings": {
+            "baseline_validation_cpu_seconds": 0.053421000000014374,
+            "baseline_validation_seconds": 0.05342816100005621,
+            "checking_cpu_seconds": 0.02576100000001702,
+            "checking_seconds": 0.025603548000162846,
+            "consumer_cpu_seconds": 0.23133400000000393,
+            "consumer_seconds": 0.23091807600007996,
+            "end_to_end_cpu_seconds": 0.25528999999999513,
+            "end_to_end_seconds": 0.25618555100004414,
+            "identity_update_cpu_seconds": 0.06922000000000139,
+            "identity_update_seconds": 0.05781619899994439,
+            "materialization_and_hash_cpu_seconds": 0.025582999999983258,
+            "materialization_and_hash_seconds": 0.025589392000028965,
+            "persistence_cpu_seconds": 0.04087299999999061,
+            "persistence_seconds": 0.043803629999956684,
+            "producer_seconds": 0.02452139999991232
+          },
+          "observed_wall_and_cpu": {
+            "apply_wall_seconds": 0.2563243639999655,
+            "direct_completed_child_cpu_seconds": 0.3282929999999986,
+            "direct_wall_seconds": 0.328678267999976,
+            "session_constructor_wall_seconds": 0.30851699400000143,
+            "setup_wall_seconds": 3.8770316860000094,
+            "start_report_cpu_seconds": 3.5448349999999778,
+            "start_wall_seconds": 3.5733767280000848
+          }
+        },
+        "unrelated-definition": {
+          "sample_count": 5,
+          "timings": {
+            "baseline_validation_cpu_seconds": 0.05297000000000196,
+            "baseline_validation_seconds": 0.05303300900004615,
+            "checking_cpu_seconds": 0.024973999999986063,
+            "checking_seconds": 0.024818622999873696,
+            "consumer_cpu_seconds": 0.21707600000000582,
+            "consumer_seconds": 0.2153225479999037,
+            "end_to_end_cpu_seconds": 0.24061000000000377,
+            "end_to_end_seconds": 0.24167142800001784,
+            "identity_update_cpu_seconds": 0.05836799999998732,
+            "identity_update_seconds": 0.05756935999988855,
+            "materialization_and_hash_cpu_seconds": 0.025560000000012906,
+            "materialization_and_hash_seconds": 0.025554497000030096,
+            "persistence_cpu_seconds": 0.04100300000000345,
+            "persistence_seconds": 0.04413096400003269,
+            "producer_seconds": 0.024259364000045025
+          },
+          "observed_wall_and_cpu": {
+            "apply_wall_seconds": 0.24183454299986806,
+            "direct_completed_child_cpu_seconds": 0.34771899999998457,
+            "direct_wall_seconds": 0.34793210699990595,
+            "session_constructor_wall_seconds": 0.30925572899991494,
+            "setup_wall_seconds": 3.884775469000033,
+            "start_report_cpu_seconds": 3.560711999999995,
+            "start_wall_seconds": 3.575516005000054
+          }
+        }
+      }
+    },
+    "11653": {
+      "profile": "std-hashmap-expanded-v1",
+      "summary_sha256": "f3c2460c47edb868edef0c5be63be72d1d36064988c4f15e72d58badee79e564",
+      "economics": {
+        "early-definition": {
+          "passed": true,
+          "status": "SPEEDUP",
+          "apply_median_wall_seconds": 1.102488122000068,
+          "direct_median_wall_seconds": 1.415305331000127,
+          "median_ratio": 0.7789754605255346,
+          "paired_wins": 5,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.7332686886977989,
+            0.8271349585466196
+          ],
+          "bootstrap_repetitions": 10000,
+          "bootstrap_seed": 20261016,
+          "setup_in_timed_update": false,
+          "scope": "warm authenticated session update versus fresh full Rust command"
+        },
+        "unrelated-definition": {
+          "passed": true,
+          "status": "SPEEDUP",
+          "apply_median_wall_seconds": 1.1287602620000143,
+          "direct_median_wall_seconds": 1.428212302999782,
+          "median_ratio": 0.7903308630160895,
+          "paired_wins": 5,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.7061293354643214,
+            0.8141533943904228
+          ],
+          "bootstrap_repetitions": 10000,
+          "bootstrap_seed": 20261016,
+          "setup_in_timed_update": false,
+          "scope": "warm authenticated session update versus fresh full Rust command"
+        },
+        "theorem-leaf": {
+          "passed": true,
+          "status": "SPEEDUP",
+          "apply_median_wall_seconds": 1.101456954999776,
+          "direct_median_wall_seconds": 1.4069500949999565,
+          "median_ratio": 0.7828685316658726,
+          "paired_wins": 5,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.7196431082176685,
+            0.8134530421328012
+          ],
+          "bootstrap_repetitions": 10000,
+          "bootstrap_seed": 20261016,
+          "setup_in_timed_update": false,
+          "scope": "warm authenticated session update versus fresh full Rust command"
+        },
+        "baseline": {
+          "passed": true,
+          "status": "SPEEDUP",
+          "apply_median_wall_seconds": 1.0352727010001672,
+          "direct_median_wall_seconds": 1.4588211020000017,
+          "median_ratio": 0.7096639194352469,
+          "paired_wins": 5,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.6601134783824413,
+            0.7450608911346593
+          ],
+          "bootstrap_repetitions": 10000,
+          "bootstrap_seed": 20261016,
+          "setup_in_timed_update": false,
+          "scope": "warm authenticated session update versus fresh full Rust command"
+        }
+      },
+      "setup_medians_wall_seconds": {
+        "early-definition": 14.245238111000162,
+        "unrelated-definition": 14.260904134000157,
+        "theorem-leaf": 14.288174731000254,
+        "baseline": 14.227639567000097
+      },
+      "phase_medians": {
+        "baseline": {
+          "sample_count": 5,
+          "timings": {
+            "baseline_validation_cpu_seconds": 0.2344190000000026,
+            "baseline_validation_seconds": 0.23441252300017368,
+            "checking_cpu_seconds": 0.07640300000002753,
+            "checking_seconds": 0.07627489500009688,
+            "consumer_cpu_seconds": 1.0536930000000098,
+            "consumer_seconds": 1.015413695999996,
+            "end_to_end_cpu_seconds": 1.0690630000000283,
+            "end_to_end_seconds": 1.0351163329999054,
+            "identity_update_cpu_seconds": 0.37030000000004293,
+            "identity_update_seconds": 0.3306168130002334,
+            "materialization_and_hash_cpu_seconds": 0.09784500000000662,
+            "materialization_and_hash_seconds": 0.09783956799992666,
+            "persistence_cpu_seconds": 0.17196000000001277,
+            "persistence_seconds": 0.17762432700010322,
+            "producer_seconds": 0.015010819000053743
+          },
+          "observed_wall_and_cpu": {
+            "apply_wall_seconds": 1.0352727010001672,
+            "direct_completed_child_cpu_seconds": 1.458354999999985,
+            "direct_wall_seconds": 1.4588211020000017,
+            "session_constructor_wall_seconds": 0.3122024040001179,
+            "setup_wall_seconds": 14.227639567000097,
+            "start_report_cpu_seconds": 13.91614199999998,
+            "start_wall_seconds": 13.9137819030002
+          }
+        },
+        "early-definition": {
+          "sample_count": 5,
+          "timings": {
+            "baseline_validation_cpu_seconds": 0.23707500000000437,
+            "baseline_validation_seconds": 0.23710634600001868,
+            "checking_cpu_seconds": 0.18152899999995498,
+            "checking_seconds": 0.18144668699960675,
+            "consumer_cpu_seconds": 1.0942680000000564,
+            "consumer_seconds": 1.0553706890000285,
+            "end_to_end_cpu_seconds": 1.1495980000001964,
+            "end_to_end_seconds": 1.1023235369998474,
+            "identity_update_cpu_seconds": 0.3809269999999856,
+            "identity_update_seconds": 0.33412737999969977,
+            "materialization_and_hash_cpu_seconds": 0.09770700000001398,
+            "materialization_and_hash_seconds": 0.09775863400000162,
+            "persistence_cpu_seconds": 0.17298999999999864,
+            "persistence_seconds": 0.17943258100012827,
+            "producer_seconds": 0.04098864700017657
+          },
+          "observed_wall_and_cpu": {
+            "apply_wall_seconds": 1.102488122000068,
+            "direct_completed_child_cpu_seconds": 1.4149970000000351,
+            "direct_wall_seconds": 1.415305331000127,
+            "session_constructor_wall_seconds": 0.31005615499998385,
+            "setup_wall_seconds": 14.245238111000162,
+            "start_report_cpu_seconds": 13.924840000000017,
+            "start_wall_seconds": 13.936297716999889
+          }
+        },
+        "theorem-leaf": {
+          "sample_count": 5,
+          "timings": {
+            "baseline_validation_cpu_seconds": 0.23199900000003026,
+            "baseline_validation_seconds": 0.2320405639998171,
+            "checking_cpu_seconds": 0.13774000000000797,
+            "checking_seconds": 0.1375919749998502,
+            "consumer_cpu_seconds": 1.0872939999999858,
+            "consumer_seconds": 1.0559248239997032,
+            "end_to_end_cpu_seconds": 1.1338529999999878,
+            "end_to_end_seconds": 1.1012916800000312,
+            "identity_update_cpu_seconds": 0.3787320000000136,
+            "identity_update_seconds": 0.33659026399982395,
+            "materialization_and_hash_cpu_seconds": 0.09805699999992612,
+            "materialization_and_hash_seconds": 0.09805041899971911,
+            "persistence_cpu_seconds": 0.172424000000035,
+            "persistence_seconds": 0.17875619599999482,
+            "producer_seconds": 0.04351376700014953
+          },
+          "observed_wall_and_cpu": {
+            "apply_wall_seconds": 1.101456954999776,
+            "direct_completed_child_cpu_seconds": 1.4063659999999931,
+            "direct_wall_seconds": 1.4069500949999565,
+            "session_constructor_wall_seconds": 0.3129614700001184,
+            "setup_wall_seconds": 14.288174731000254,
+            "start_report_cpu_seconds": 13.98043400000006,
+            "start_wall_seconds": 13.979796971999804
+          }
+        },
+        "unrelated-definition": {
+          "sample_count": 5,
+          "timings": {
+            "baseline_validation_cpu_seconds": 0.23208099999999376,
+            "baseline_validation_seconds": 0.23216157800015935,
+            "checking_cpu_seconds": 0.1498149999999896,
+            "checking_seconds": 0.14967460500020024,
+            "consumer_cpu_seconds": 1.109747000000084,
+            "consumer_seconds": 1.081528229000014,
+            "end_to_end_cpu_seconds": 1.1579619999999409,
+            "end_to_end_seconds": 1.128589304000343,
+            "identity_update_cpu_seconds": 0.37061900000003334,
+            "identity_update_seconds": 0.3240251629999875,
+            "materialization_and_hash_cpu_seconds": 0.09746499999999969,
+            "materialization_and_hash_seconds": 0.09745902000031492,
+            "persistence_cpu_seconds": 0.17139400000007754,
+            "persistence_seconds": 0.17795565200003693,
+            "producer_seconds": 0.04380131000016263
+          },
+          "observed_wall_and_cpu": {
+            "apply_wall_seconds": 1.1287602620000143,
+            "direct_completed_child_cpu_seconds": 1.4278949999999817,
+            "direct_wall_seconds": 1.428212302999782,
+            "session_constructor_wall_seconds": 0.313455100000283,
+            "setup_wall_seconds": 14.260904134000157,
+            "start_report_cpu_seconds": 13.948765999999978,
+            "start_wall_seconds": 13.946350694999637
+          }
+        }
+      }
+    }
+  },
+  "gates": {
+    "original-correctness": {
+      "gates": 197,
+      "passed": true
+    },
+    "native-correctness": {
+      "gates": 335,
+      "passed": true
+    },
+    "independent-replay": {
+      "gates": 719,
+      "passed": true
+    },
+    "native-economics": {
+      "gates": 251,
+      "passed": true
+    },
+    "producer-delta": {
+      "gates": 243,
+      "passed": true
+    },
+    "producer-delta-expanded": {
+      "gates": 226,
+      "passed": true
+    }
+  },
+  "trust_additions": [
+    "source-owned Lean producer",
+    "complete-source attestation bridge",
+    "retained typed delta decoder"
+  ],
+  "unchanged_authority": [
+    "HMAC issuer",
+    "verifier policy",
+    "kernel inference/conversion",
+    "conservative reuse predicate",
+    "MathGraph receipt consumer"
+  ],
+  "remaining_unknown": "Change-proportional total verification including full declaration SCC/index serialization, baseline authentication, full-byte materialization/hash/parsing and receipt persistence; cold setup and arbitrary revision streams are not qualified wins."
+}

@@ -1,0 +1,32 @@
+{
+  "schema": "mathgraph.producer-delta-development-failures.v1",
+  "records": [
+    {
+      "case": "Linux memfd seals",
+      "observed": "Initial local prototype raised AttributeError because this Python build omitted F_ADD_SEALS names; no accepted verification record was issued.",
+      "repair": "Use Linux UAPI fallback constants and verify all four seals; real write/resize/seal-removal refusal tests pass."
+    },
+    {
+      "case": "Relative oracle CLI paths",
+      "observed": "Full local qualification preflight failed to find target/release/export-index after changing subprocess cwd. No baseline acceptance was established.",
+      "repair": "Resolve all eight CLI paths before spawning index/oracle commands (f397154).",
+      "retained_log": "local-path-failure.log.gz"
+    },
+    {
+      "case": "Source-policy boundary",
+      "observed": "Review found explicit patch policy was broader than the three editable Lean bodies.",
+      "repair": "Restrict patch filenames to the three local module bodies. Tests explicitly refuse lakefile.toml and lean-toolchain changes before producer launch."
+    },
+    {
+      "case": "Zero-selected malformed-row fixture",
+      "observed": "An earlier sparse-ID fixture stopped at identity refusal before proving actual parser execution. It did not establish the required zero-selected parser control.",
+      "repair": "Use a genuine appended expression ID and qualify both replacement and DAG-only malformed-row forms through actual selected parser plus three independent full kernels."
+    },
+    {
+      "case": "Incomplete or wrong-cause qualification reports",
+      "observed": "Partial observed-gate success and generic execution failures were insufficient qualification evidence.",
+      "repair": "Require run_completed, all required cases and five pairs; require intended refusal causes; timeout, malformed protocol and missing reports fail closed. Eight independently mutating reviewer falsifiers also fail closed."
+    }
+  ],
+  "qualification": "Only completed exact-source qualified results may be promoted; these failures are retained causal history."
+}

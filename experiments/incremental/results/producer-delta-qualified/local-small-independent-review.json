@@ -1,0 +1,225 @@
+{
+  "schema": "mathgraph.producer-delta-independent-report-review.v1",
+  "passed": true,
+  "status": "PASS_WITH_STATED_LIMITS",
+  "reviewer_sha256": "ee46a394b83190677a76c8735ec423b292864efcc23a308cf66932283bbd3bb9",
+  "input_object_sha256": "9335b3cae9bd79df46ec12a9f8f9809320a81da64b3f48686e0926cb8e4e69be",
+  "expected_source": "4496042c75368f6c35675a9b131c960080afa518",
+  "summary_path": "/workspace/kernel-audit/delta-small-qualified-v1/summary.json",
+  "summary_sha256": "fd5bb1fcc9dd9c383ba72eef6ae1122c51c5a278559a95a99cc55e368e8e4a7a",
+  "mode": "retained-files-and-report",
+  "check_count": 74139,
+  "failed_checks": [],
+  "economics": {
+    "early-definition": {
+      "apply_median_wall_seconds": 0.2457144830004836,
+      "direct_median_wall_seconds": 0.33015387500017823,
+      "median_ratio": 0.7442423112566858,
+      "paired_wins": 5,
+      "paired_count": 5,
+      "bootstrap_ratio_interval_95": [
+        0.7199664129693092,
+        0.9283867642272791
+      ],
+      "bootstrap_repetitions": 10000,
+      "bootstrap_seed": 20261016,
+      "passed": true,
+      "status": "SPEEDUP",
+      "median_setup_wall_seconds": 3.5988190040006884,
+      "median_setup_plus_apply_component_sum": 3.848272285999883
+    },
+    "unrelated-definition": {
+      "apply_median_wall_seconds": 0.22155854900029226,
+      "direct_median_wall_seconds": 0.29362689000026876,
+      "median_ratio": 0.754558102631845,
+      "paired_wins": 5,
+      "paired_count": 5,
+      "bootstrap_ratio_interval_95": [
+        0.6638005324967833,
+        0.8320427430845032
+      ],
+      "bootstrap_repetitions": 10000,
+      "bootstrap_seed": 20261016,
+      "passed": true,
+      "status": "SPEEDUP",
+      "median_setup_wall_seconds": 3.4029367220000495,
+      "median_setup_plus_apply_component_sum": 3.6244952710003417
+    },
+    "theorem-leaf": {
+      "apply_median_wall_seconds": 0.23673082999994222,
+      "direct_median_wall_seconds": 0.29976227299994207,
+      "median_ratio": 0.7897285660093322,
+      "paired_wins": 5,
+      "paired_count": 5,
+      "bootstrap_ratio_interval_95": [
+        0.6958500497250012,
+        0.8821614207833143
+      ],
+      "bootstrap_repetitions": 10000,
+      "bootstrap_seed": 20261016,
+      "passed": true,
+      "status": "SPEEDUP",
+      "median_setup_wall_seconds": 3.539973732999897,
+      "median_setup_plus_apply_component_sum": 3.741645315999449
+    },
+    "baseline": {
+      "apply_median_wall_seconds": 0.19680389999939507,
+      "direct_median_wall_seconds": 0.3019998209992991,
+      "median_ratio": 0.6516689292999674,
+      "paired_wins": 5,
+      "paired_count": 5,
+      "bootstrap_ratio_interval_95": [
+        0.6228345214823687,
+        0.728542677721794
+      ],
+      "bootstrap_repetitions": 10000,
+      "bootstrap_seed": 20261016,
+      "passed": true,
+      "status": "SPEEDUP",
+      "median_setup_wall_seconds": 3.5146066299994345,
+      "median_setup_plus_apply_component_sum": 3.737358222999319
+    }
+  },
+  "available_retained_files": 252,
+  "absent_retained_files": 0,
+  "limits": [
+    "No kernels were executed by this review.",
+    "No historical issuer HMAC was reauthenticated; live issuer audit status is checked.",
+    "Compact mode checks reported commands/verdicts; missing raw outputs are not invented.",
+    "Warm authenticated update excludes constructor/startup/baseline costs.",
+    "Setup-plus-apply values are sums of separately measured components, not a cold command.",
+    "Fixed apply-then-direct ordering, warm OS cache and each profile/host remain separate.",
+    "Full baseline authentication/hash, SCC reclosure, composite hashing/parsing and full receipt remain O(total)."
+  ],
+  "falsifiers": {
+    "status": "PASS_FALSIFIERS",
+    "cases": {
+      "missing-gates": {
+        "refused": true,
+        "failed_checks": [
+          {
+            "name": "nonempty-gates",
+            "passed": false,
+            "detail": null
+          },
+          {
+            "name": "review-completed-without-missing-malformed-or-false-evidence",
+            "passed": false,
+            "detail": "ValueError('nonempty-gates')"
+          }
+        ]
+      },
+      "incomplete-run": {
+        "refused": true,
+        "failed_checks": [
+          {
+            "name": "completed-qualification",
+            "passed": false,
+            "detail": null
+          },
+          {
+            "name": "review-completed-without-missing-malformed-or-false-evidence",
+            "passed": false,
+            "detail": "ValueError('completed-qualification')"
+          }
+        ]
+      },
+      "altered-direct-timing": {
+        "refused": true,
+        "failed_checks": [
+          {
+            "name": "early-definition:0:direct-measurement-consistency",
+            "passed": false,
+            "detail": {
+              "recorded": 0.6694750940005179,
+              "recomputed": 0.33473754700025893
+            }
+          },
+          {
+            "name": "review-completed-without-missing-malformed-or-false-evidence",
+            "passed": false,
+            "detail": "ValueError('early-definition:0:direct-measurement-consistency')"
+          }
+        ]
+      },
+      "wrong-source": {
+        "refused": true,
+        "failed_checks": [
+          {
+            "name": "exact-source",
+            "passed": false,
+            "detail": null
+          },
+          {
+            "name": "review-completed-without-missing-malformed-or-false-evidence",
+            "passed": false,
+            "detail": "ValueError('exact-source')"
+          }
+        ]
+      },
+      "wrong-control-cause": {
+        "refused": true,
+        "failed_checks": [
+          {
+            "name": "forged-attestation:specific-refusal",
+            "passed": false,
+            "detail": null
+          },
+          {
+            "name": "review-completed-without-missing-malformed-or-false-evidence",
+            "passed": false,
+            "detail": "ValueError('forged-attestation:specific-refusal')"
+          }
+        ]
+      },
+      "false-issuer-audit": {
+        "refused": true,
+        "failed_checks": [
+          {
+            "name": "early-definition:0:record-authentication-observed",
+            "passed": false,
+            "detail": null
+          },
+          {
+            "name": "review-completed-without-missing-malformed-or-false-evidence",
+            "passed": false,
+            "detail": "ValueError('early-definition:0:record-authentication-observed')"
+          }
+        ]
+      },
+      "altered-bootstrap": {
+        "refused": true,
+        "failed_checks": [
+          {
+            "name": "recomputed:early-definition:bootstrap:0",
+            "passed": false,
+            "detail": {
+              "recorded": 1e-05,
+              "recomputed": 0.7199664129693092
+            }
+          },
+          {
+            "name": "review-completed-without-missing-malformed-or-false-evidence",
+            "passed": false,
+            "detail": "ValueError('recomputed:early-definition:bootstrap:0')"
+          }
+        ]
+      },
+      "overlapping-partition": {
+        "refused": true,
+        "failed_checks": [
+          {
+            "name": "early-definition:0:disjoint-complete-partition",
+            "passed": false,
+            "detail": null
+          },
+          {
+            "name": "review-completed-without-missing-malformed-or-false-evidence",
+            "passed": false,
+            "detail": "ValueError('early-definition:0:disjoint-complete-partition')"
+          }
+        ]
+      }
+    }
+  }
+}
