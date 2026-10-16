@@ -1,0 +1,531 @@
+{
+  "audit_utc": "2026-10-16T19:10:22.319278+00:00",
+  "status": "PASS",
+  "method": "Anonymous remote Git ls-remote; public GitHub REST commit/run/artifact metadata; exact-commit raw archive download independently hashed; local content-addressed Git diff with remote-confirmed tree. No Git refs changed.",
+  "branch": "research/incremental-producer-delta-20261016",
+  "public_remote": "341ab72166f933f1f7d72cb008b21daeb427b49f\trefs/heads/research/incremental-producer-delta-20261016",
+  "commit": "341ab72166f933f1f7d72cb008b21daeb427b49f",
+  "parent": "4496042c75368f6c35675a9b131c960080afa518",
+  "tree": "58b7f4db9f477b4cb060999ef32ce77169d8990c",
+  "changed_file_count": 117,
+  "changes": [
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/MANIFEST.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/README.md"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/SHA256SUMS"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/ci-failure-chronology-initial.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/ci-failures.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/ci/artifacts.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/ci/check-independent-kernel-input-parity.py"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/ci/ci-4496042-summaries.zip"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/ci/ci-observations.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/ci/compact-artifact-metadata.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/ci/decoded-job-117124962584.log.gz"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/ci/delta-binaries-SHA256SUMS"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/ci/delta-binaries-verified.log"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/ci/final-jobs.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/ci/final-run.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/ci/independent-ci-log-review.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/ci/independent-compact-review.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/ci/independent-expanded-review.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/ci/independent-findings.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/ci/independent-findings.md"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/ci/independent-kernel-input-parity.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/ci/independent-small-review.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/ci/source-SHA256SUMS"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/ci/source-checksums-verified.log"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/ci/source-ref.txt"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/compact-review-self-test.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/delta-ci-cfaf868-decoded-job-117121829904.log.gz"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/development-failures.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/failed-decoded-job-117115649174.log.gz"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/failed-decoded-job-117116124557.log.gz"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/failed-decoded-job-117117789889.log.gz"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/failed-f397-compact.zip"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/failed-f397-delta-binaries-verified.log"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/failed-f397-source-checksums-verified.log"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/composite-fresh-native-index.command.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/composite-fresh-native-index.stderr"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/composite.index-config.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/early-definition-leanchecker-paranoid.command.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/early-definition-leanchecker-paranoid.stderr"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/early-definition-leanchecker-paranoid.stdout"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/early-definition-leanchecker.command.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/early-definition-leanchecker.stderr"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/early-definition-leanchecker.stdout"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/early-definition-rust.command.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/early-definition-rust.stderr"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/early-definition-rust.stdout"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/early-definition.config.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/invocation.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/original-source-export-fresh-native-index.command.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/original-source-export-fresh-native-index.stderr"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/original-source-export.index-config.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/progress.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/signed-invalid-axiom-leanchecker-paranoid.command.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/signed-invalid-axiom-leanchecker-paranoid.stderr"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/signed-invalid-axiom-leanchecker-paranoid.stdout"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/signed-invalid-axiom-leanchecker.command.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/signed-invalid-axiom-leanchecker.stderr"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/signed-invalid-axiom-leanchecker.stdout"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/signed-invalid-axiom-rust.command.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/signed-invalid-axiom-rust.stderr"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/signed-invalid-axiom-rust.stdout"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/signed-invalid-axiom.config.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/signed-invalid-proof-leanchecker-paranoid.command.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/signed-invalid-proof-leanchecker-paranoid.stderr"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/signed-invalid-proof-leanchecker-paranoid.stdout"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/signed-invalid-proof-leanchecker.command.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/signed-invalid-proof-leanchecker.stderr"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/signed-invalid-proof-leanchecker.stdout"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/signed-invalid-proof-rust.command.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/signed-invalid-proof-rust.stderr"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/signed-invalid-proof-rust.stdout"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/signed-invalid-proof.config.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/summary.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/unused-invalid-node-dag-only-zero-selection-parser-leanchecker-paranoid.command.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/unused-invalid-node-dag-only-zero-selection-parser-leanchecker-paranoid.stderr"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/unused-invalid-node-dag-only-zero-selection-parser-leanchecker-paranoid.stdout"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/unused-invalid-node-dag-only-zero-selection-parser-leanchecker.command.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/unused-invalid-node-dag-only-zero-selection-parser-leanchecker.stderr"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/unused-invalid-node-dag-only-zero-selection-parser-leanchecker.stdout"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/unused-invalid-node-dag-only-zero-selection-parser-rust.command.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/unused-invalid-node-dag-only-zero-selection-parser-rust.stderr"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/unused-invalid-node-dag-only-zero-selection-parser-rust.stdout"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/unused-invalid-node-dag-only-zero-selection-parser-zero-selected.command.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/unused-invalid-node-dag-only-zero-selection-parser-zero-selected.stderr"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/unused-invalid-node-dag-only-zero-selection-parser-zero-selected.stdout"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/unused-invalid-node-dag-only-zero-selection-parser.config.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/unused-invalid-node-dag-only-zero-selection-parser.indices.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/unused-invalid-node-zero-selection-parser-leanchecker-paranoid.command.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/unused-invalid-node-zero-selection-parser-leanchecker-paranoid.stderr"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/unused-invalid-node-zero-selection-parser-leanchecker-paranoid.stdout"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/unused-invalid-node-zero-selection-parser-leanchecker.command.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/unused-invalid-node-zero-selection-parser-leanchecker.stderr"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/unused-invalid-node-zero-selection-parser-leanchecker.stdout"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/unused-invalid-node-zero-selection-parser-rust.command.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/unused-invalid-node-zero-selection-parser-rust.stderr"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/unused-invalid-node-zero-selection-parser-rust.stdout"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/unused-invalid-node-zero-selection-parser-zero-selected.command.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/unused-invalid-node-zero-selection-parser-zero-selected.stderr"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/unused-invalid-node-zero-selection-parser-zero-selected.stdout"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/unused-invalid-node-zero-selection-parser.config.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-kernel-logs/unused-invalid-node-zero-selection-parser.indices.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-portable-invocation.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-portable-replay.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-replay-as-run.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/independent-replay-as-run.py"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/local-expanded-independent-review.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/local-expanded.json.xz"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/local-path-failure.log.gz"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/local-small-independent-review.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/local-small.json.xz"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/python-tests.log.gz"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/qualification.json"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/replay-delta-evidence.py"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/research-checkpoint.md"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/review-compact-ci.py"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/review-evidence.py"
+    ],
+    [
+      "A",
+      "experiments/incremental/results/producer-delta-qualified/rust-tests.log.gz"
+    ]
+  ],
+  "no_runtime_changes": true,
+  "archive": {
+    "url": "https://raw.githubusercontent.com/metalogiclabs/mathgraph-lean-kernel/341ab72166f933f1f7d72cb008b21daeb427b49f/experiments/incremental/results/producer-delta-qualified/ci/ci-4496042-summaries.zip",
+    "path": "experiments/incremental/results/producer-delta-qualified/ci/ci-4496042-summaries.zip",
+    "bytes": 4289544,
+    "sha256": "961abb3e6834443dab2cc86eedaf27420c41f52b50d5cbe6c28455ddbd8f2ea5",
+    "git_blob_sha1": "215205ad21cc3802713ea9a4c257f7b11e1c3752"
+  },
+  "ci_run": {
+    "id": 38945728644,
+    "head_sha": "4496042c75368f6c35675a9b131c960080afa518",
+    "status": "completed",
+    "conclusion": "success",
+    "url": "https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/38945728644"
+  },
+  "artifacts": [
+    {
+      "id": 12067972795,
+      "name": "incremental-producer-delta-summaries-4496042c75368f6c35675a9b131c960080afa518",
+      "size_in_bytes": 4289544,
+      "digest": "sha256:961abb3e6834443dab2cc86eedaf27420c41f52b50d5cbe6c28455ddbd8f2ea5",
+      "expired": false
+    },
+    {
+      "id": 12067792895,
+      "name": "incremental-producer-delta-4496042c75368f6c35675a9b131c960080afa518",
+      "size_in_bytes": 2174807684,
+      "digest": "sha256:a2fa6f111a5bf26178226eb357931856f83c548a983b42602a294e64d2915811",
+      "expired": false
+    }
+  ],
+  "gates": {
+    "public_remote_head": true,
+    "public_commit_exact_sha": true,
+    "public_commit_exact_parent": true,
+    "public_commit_exact_tree": true,
+    "local_commit_matches_remote": true,
+    "results_only_all_added": true,
+    "public_archive_git_blob": true,
+    "public_archive_exact_artifact_sha256": true,
+    "public_archive_exact_artifact_bytes": true,
+    "local_archive_blob_matches_public": true,
+    "ci_exact_source": true,
+    "ci_completed_success": true,
+    "ci_expected_artifacts": true
+  },
+  "limitations": [
+    "Full 2.17GB evidence artifact not downloaded; its immutable artifact metadata and digest were independently verified.",
+    "The archived compact artifact was downloaded from its committed public Git path and hashed; existing independent qualification review covers report contents and decoded job evidence."
+  ]
+}
