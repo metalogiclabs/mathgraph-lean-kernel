@@ -1,0 +1,42 @@
+{
+  "root_cause": "The two negative-test fixture directories were absent, and the helper silently returned upon config or export loading failure.",
+  "repair": "Restore the four exact fixture blobs from e4ba5230f2d13ea86d8bbf71df134b446456793c and require negative fixtures to load before invoking the existing checker. No core proof rule change.",
+  "fixture_source_commit": "e4ba5230f2d13ea86d8bbf71df134b446456793c",
+  "before": {
+    "passed": 44,
+    "failed": 2,
+    "log": "preexisting-failures.txt"
+  },
+  "after": {
+    "command": "/home/agent/.cargo/bin/cargo +1.95.0 test --locked --lib -- --test-threads=1",
+    "passed": 47,
+    "failed": 0,
+    "ignored": 0
+  },
+  "oracle": [
+    {
+      "case": "RuleDomainMismatch",
+      "input_sha256": "fbf6bb379da79d0df0d31daaa7f8ed5fcab038b729917935f9d7fbc292208565",
+      "argv": [
+        "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+        "--from-export",
+        "/workspace/mathgraph-lean-kernel/test_resources/RuleDomainMismatch/export"
+      ],
+      "returncode": 1,
+      "stdout": "Lean default kernel rejects the solution: Invalid recursor Nat.rec\n",
+      "stderr": ""
+    },
+    {
+      "case": "UnlistedRecursor",
+      "input_sha256": "36e799154fbd29dd09f9060da5b70ec0b387f28a401ba58384243d4d6570f17b",
+      "argv": [
+        "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+        "--from-export",
+        "/workspace/mathgraph-lean-kernel/test_resources/UnlistedRecursor/export"
+      ],
+      "returncode": 1,
+      "stdout": "Lean default kernel rejects the solution: No such recursor Nat.unlistedRec\n",
+      "stderr": ""
+    }
+  ]
+}

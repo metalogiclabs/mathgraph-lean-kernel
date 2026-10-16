@@ -36,12 +36,12 @@ pub(crate) fn test_export_file<A>(
 
 #[allow(dead_code)]
 pub(crate) fn test_export_file_should_panic<A>(config_path: Option<&Path>, f: impl FnOnce(&ExportFile) -> A) {
-    let Ok(config) = test_config(config_path) else { return };
+    // Loading a fixture is mandatory: only the kernel's expected panic may
+    // satisfy the caller's should_panic assertion.
+    let config = test_config(config_path).expect("negative test fixture configuration failed");
     let arena = Arena::new();
-    let result = config.to_export_file(arena.as_arena_ref());
-    if let Ok((export_file, _)) = result {
-        f(&export_file);
-    }
+    let (export_file, _) = config.to_export_file(arena.as_arena_ref()).expect("negative test fixture failed to load");
+    f(&export_file);
 }
 
 pub(crate) fn test_ctx<'p, A>(path: Option<&Path>, f: impl FnOnce(&mut TcCtx) -> A) -> Result<A, Box<dyn Error>> {
@@ -147,6 +147,15 @@ fn reject_unlisted_recursor() {
             export.check_declar(declar);
         }
     })
+}
+
+#[test]
+#[should_panic(expected = "negative test fixture configuration failed")]
+fn reject_missing_negative_fixture() {
+    test_export_file_should_panic(
+        Some(Path::new("test_resources/DefinitelyMissingNegativeFixture/config.json")),
+        |_| (),
+    )
 }
 
 #[test]
