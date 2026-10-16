@@ -1128,9 +1128,9 @@ mod session_tests {
 
     #[test]
     fn sparse_transport_patch_matches_full_index_and_refuses_topology_drift() {
-        let mut builder = builder();
-        let baseline = builder.prepare_retained().unwrap();
-        let delta = builder.apply_delta(
+        let mut retained_builder = builder();
+        let baseline = retained_builder.prepare_retained().unwrap();
+        let delta = retained_builder.apply_delta(
             &("{\"il\":1,\"succ\":0}\n{\"ie\":2,\"sort\":1}\n".to_owned()
               + &replacement(2) + "\n")
         ).unwrap();
