@@ -1,0 +1,266 @@
+{
+  "action_authorization": "NONE",
+  "admission": {
+    "boundary": "COMPLETE_RESULT_QUALIFIED_BY_LOCAL_ORACLE_HARNESS",
+    "engine_hmac_checked_in_this_consumer": false,
+    "expected_evidence_id": "6d58d2f592fc391f660d3577f85b42807557d68de6dc701a53ad2461106ca36a",
+    "expected_export_sha256": "13323bf721599b9b77fe0ea94da5c4632edd2a25188842fb09738bfdf74fdd9f",
+    "oracle_sources": [
+      "leanchecker",
+      "leanchecker-paranoid"
+    ],
+    "qualification_gates": 197,
+    "result_path": "/workspace/kernel-audit/native-original-qualification-v1/scenarios/early-definition/0/incremental.json",
+    "result_sha256": "3a34814828eece6fc47f0e906f3fb5c663aba2eaf0ae0754b0bc840fbcde66bb"
+  },
+  "mathgraph_commit": "cf359686c74549a132c7a651cd7aabc7c1a870fe",
+  "production_check_binder": false,
+  "qualification_passed": true,
+  "resolver_source_sha256": "9cc64455621d3169cf43b48ed9cd98069a5d4cb82dece8903dcbbf087a1344b0",
+  "schema": "mathgraph.incremental-lean.mathgraph-integration-qualification.v1",
+  "scope": "Caller-qualified early-edit checking obligations imported into the unchanged pinned MathGraph resolver. Receipt-origin preservation and declared support-projection withdrawal are bounded conformance observations, not new Lean checking or a production Check adapter.",
+  "source_qualification": {
+    "boundary": "TRUSTED_LOCAL_QUALIFIER_OUTPUT_NOT_SELF_AUTHENTICATING_RECEIPT",
+    "path": "/workspace/kernel-audit/native-original-qualification-v1/summary.json",
+    "sha256": "3b57ea86f9cb4d5b15d537df6bea77a58f4e680cc84f9d7f34edce9c2e80328e"
+  },
+  "status": "QUALIFIED_BOUNDED_EXISTING_MATHGRAPH_IMPORT",
+  "cases": [
+    {
+      "input_path": "/workspace/kernel-audit/native-mathgraph-integration-final/qualified-result.json",
+      "input_sha256": "3a34814828eece6fc47f0e906f3fb5c663aba2eaf0ae0754b0bc840fbcde66bb",
+      "name": "qualified-import",
+      "passed": true,
+      "resources": {
+        "command": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+          "/workspace/mathgraph-lean-kernel/experiments/incremental/mathgraph_integration.py",
+          "--mathgraph",
+          "/workspace/mathgraph",
+          "--result",
+          "/workspace/kernel-audit/native-mathgraph-integration-final/qualified-result.json",
+          "--output",
+          "/workspace/kernel-audit/native-mathgraph-integration-final/cases/qualified-import/result.json",
+          "--expected-evidence-id",
+          "6d58d2f592fc391f660d3577f85b42807557d68de6dc701a53ad2461106ca36a",
+          "--expected-export-sha256",
+          "13323bf721599b9b77fe0ea94da5c4632edd2a25188842fb09738bfdf74fdd9f",
+          "--expected-result-sha256",
+          "3a34814828eece6fc47f0e906f3fb5c663aba2eaf0ae0754b0bc840fbcde66bb"
+        ],
+        "cpu_seconds": 0.26933999999999997,
+        "cwd": null,
+        "max_rss_kib": 46572,
+        "returncode": 0,
+        "stderr_path": "/workspace/kernel-audit/native-mathgraph-integration-final/cases/qualified-import/process.stderr",
+        "stdout_path": "/workspace/kernel-audit/native-mathgraph-integration-final/cases/qualified-import/process.stdout",
+        "timed_out": false,
+        "wall_seconds": 0.27471893100027955
+      },
+      "result_path": "/workspace/kernel-audit/native-mathgraph-integration-final/cases/qualified-import/result.json",
+      "result": {
+        "action_authorization": "NONE",
+        "admission": {
+          "authentication_performed_here": false,
+          "boundary": "EXTERNAL_CALLER_QUALIFIED_RESULT",
+          "expected_evidence_id": "6d58d2f592fc391f660d3577f85b42807557d68de6dc701a53ad2461106ca36a",
+          "expected_export_sha256": "13323bf721599b9b77fe0ea94da5c4632edd2a25188842fb09738bfdf74fdd9f",
+          "original_lean_rerun": false,
+          "result_byte_pin_supplied_externally": true,
+          "result_contents": "CALLER_MUST_QUALIFY_COMPLETE_DECISIONS_AND_EVIDENCE",
+          "result_sha256": "3a34814828eece6fc47f0e906f3fb5c663aba2eaf0ae0754b0bc840fbcde66bb"
+        },
+        "current_source_freshness": "NOT_CHECKED",
+        "environment_sha256": "2fc69c1febaf9f293c1824b793367c23fa184a0e1338f08ad564948eeb173c4c",
+        "mathgraph": {
+          "commit": "cf359686c74549a132c7a651cd7aabc7c1a870fe",
+          "path": "mathgraph_check/warrant_resolution.py",
+          "source_sha256": "9cc64455621d3169cf43b48ed9cd98069a5d4cb82dece8903dcbbf087a1344b0"
+        },
+        "production_mathgraph_check_binder": false,
+        "schema": "mathgraph.incremental-lean.warrant-integration.v1",
+        "status": "WARRANTED_BOUNDED_CALLER_QUALIFIED_IMPORT",
+        "obligation_count": 3436,
+        "origins": {
+          "REUSED_PREVIOUS_EVIDENCE": 3023,
+          "CHECKED_THIS_RUN": 413
+        },
+        "warrant_states": {
+          "WARRANTED_BOUNDED": 3436
+        },
+        "withdrawal": {
+          "affected_after": "UNKNOWN",
+          "affected_claim": "lean-obligation:bd4644fdf88ee5d730a0de0a94bcc1c38fbadebbe3ec6df98308c704f75a1b23",
+          "dependent_after": "UNKNOWN",
+          "dependent_claim": "support-projection:lean-obligation:bd4644fdf88ee5d730a0de0a94bcc1c38fbadebbe3ec6df98308c704f75a1b23",
+          "descendant_basis": "DECLARED_CONFORMANCE_SUPPORT_PROJECTION_NOT_LEAN_DEPENDENCY",
+          "independent_after": "WARRANTED_BOUNDED",
+          "independent_claim": "lean-obligation:f4ff0173c4b9291e38c1f0ae99bf79a65f94a69eb4d2c512e27a88b5bfd5889b",
+          "kind": "HYPOTHETICAL_SINGLE_OBLIGATION_ADMISSION_WITHDRAWAL",
+          "source_withdrawal_observed": false,
+          "withdrawn_receipt": "qualified-lean-receipt:b7152061d306c123917c5d3a89fa88cfbcb82ef6c4356cd68357facc1c0a8c52"
+        }
+      }
+    },
+    {
+      "input_path": "/workspace/kernel-audit/native-mathgraph-integration-final/same-id-changed-result.json",
+      "input_sha256": "3bae6faf492340aa31c4e805bc3aac77d9e33a0216911c85e34962523cdc0e4c",
+      "name": "changed-bytes-same-evidence-id",
+      "passed": true,
+      "resources": {
+        "command": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+          "/workspace/mathgraph-lean-kernel/experiments/incremental/mathgraph_integration.py",
+          "--mathgraph",
+          "/workspace/mathgraph",
+          "--result",
+          "/workspace/kernel-audit/native-mathgraph-integration-final/same-id-changed-result.json",
+          "--output",
+          "/workspace/kernel-audit/native-mathgraph-integration-final/cases/changed-bytes-same-evidence-id/result.json",
+          "--expected-evidence-id",
+          "6d58d2f592fc391f660d3577f85b42807557d68de6dc701a53ad2461106ca36a",
+          "--expected-export-sha256",
+          "13323bf721599b9b77fe0ea94da5c4632edd2a25188842fb09738bfdf74fdd9f",
+          "--expected-result-sha256",
+          "3a34814828eece6fc47f0e906f3fb5c663aba2eaf0ae0754b0bc840fbcde66bb"
+        ],
+        "cpu_seconds": 0.038752999999999996,
+        "cwd": null,
+        "max_rss_kib": 62288,
+        "returncode": 2,
+        "stderr_path": "/workspace/kernel-audit/native-mathgraph-integration-final/cases/changed-bytes-same-evidence-id/process.stderr",
+        "stdout_path": "/workspace/kernel-audit/native-mathgraph-integration-final/cases/changed-bytes-same-evidence-id/process.stdout",
+        "timed_out": false,
+        "wall_seconds": 0.04083420200004184
+      },
+      "result_path": "/workspace/kernel-audit/native-mathgraph-integration-final/cases/changed-bytes-same-evidence-id/result.json",
+      "result": {
+        "action_authorization": "NONE",
+        "error": "QUALIFIED_RESULT_BYTES_CHANGED",
+        "production_mathgraph_check_binder": false,
+        "schema": "mathgraph.incremental-lean.warrant-integration.v1",
+        "status": "UNKNOWN"
+      }
+    },
+    {
+      "input_path": "/workspace/kernel-audit/native-mathgraph-integration-final/qualified-result.json",
+      "input_sha256": "3a34814828eece6fc47f0e906f3fb5c663aba2eaf0ae0754b0bc840fbcde66bb",
+      "name": "wrong-export-root",
+      "passed": true,
+      "resources": {
+        "command": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+          "/workspace/mathgraph-lean-kernel/experiments/incremental/mathgraph_integration.py",
+          "--mathgraph",
+          "/workspace/mathgraph",
+          "--result",
+          "/workspace/kernel-audit/native-mathgraph-integration-final/qualified-result.json",
+          "--output",
+          "/workspace/kernel-audit/native-mathgraph-integration-final/cases/wrong-export-root/result.json",
+          "--expected-evidence-id",
+          "6d58d2f592fc391f660d3577f85b42807557d68de6dc701a53ad2461106ca36a",
+          "--expected-export-sha256",
+          "0000000000000000000000000000000000000000000000000000000000000000",
+          "--expected-result-sha256",
+          "3a34814828eece6fc47f0e906f3fb5c663aba2eaf0ae0754b0bc840fbcde66bb"
+        ],
+        "cpu_seconds": 0.086458,
+        "cwd": null,
+        "max_rss_kib": 62288,
+        "returncode": 2,
+        "stderr_path": "/workspace/kernel-audit/native-mathgraph-integration-final/cases/wrong-export-root/process.stderr",
+        "stdout_path": "/workspace/kernel-audit/native-mathgraph-integration-final/cases/wrong-export-root/process.stdout",
+        "timed_out": false,
+        "wall_seconds": 0.09148892400025943
+      },
+      "result_path": "/workspace/kernel-audit/native-mathgraph-integration-final/cases/wrong-export-root/result.json",
+      "result": {
+        "action_authorization": "NONE",
+        "error": "EXPORT_PIN_MISMATCH",
+        "production_mathgraph_check_binder": false,
+        "schema": "mathgraph.incremental-lean.warrant-integration.v1",
+        "status": "UNKNOWN"
+      }
+    },
+    {
+      "input_path": "/workspace/kernel-audit/native-mathgraph-integration-final/qualified-result.json",
+      "input_sha256": "3a34814828eece6fc47f0e906f3fb5c663aba2eaf0ae0754b0bc840fbcde66bb",
+      "name": "wrong-evidence-root",
+      "passed": true,
+      "resources": {
+        "command": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+          "/workspace/mathgraph-lean-kernel/experiments/incremental/mathgraph_integration.py",
+          "--mathgraph",
+          "/workspace/mathgraph",
+          "--result",
+          "/workspace/kernel-audit/native-mathgraph-integration-final/qualified-result.json",
+          "--output",
+          "/workspace/kernel-audit/native-mathgraph-integration-final/cases/wrong-evidence-root/result.json",
+          "--expected-evidence-id",
+          "0000000000000000000000000000000000000000000000000000000000000000",
+          "--expected-export-sha256",
+          "13323bf721599b9b77fe0ea94da5c4632edd2a25188842fb09738bfdf74fdd9f",
+          "--expected-result-sha256",
+          "3a34814828eece6fc47f0e906f3fb5c663aba2eaf0ae0754b0bc840fbcde66bb"
+        ],
+        "cpu_seconds": 0.08316599999999999,
+        "cwd": null,
+        "max_rss_kib": 62288,
+        "returncode": 2,
+        "stderr_path": "/workspace/kernel-audit/native-mathgraph-integration-final/cases/wrong-evidence-root/process.stderr",
+        "stdout_path": "/workspace/kernel-audit/native-mathgraph-integration-final/cases/wrong-evidence-root/process.stdout",
+        "timed_out": false,
+        "wall_seconds": 0.09170378700036963
+      },
+      "result_path": "/workspace/kernel-audit/native-mathgraph-integration-final/cases/wrong-evidence-root/result.json",
+      "result": {
+        "action_authorization": "NONE",
+        "error": "EVIDENCE_PIN_MISMATCH",
+        "production_mathgraph_check_binder": false,
+        "schema": "mathgraph.incremental-lean.warrant-integration.v1",
+        "status": "UNKNOWN"
+      }
+    },
+    {
+      "input_path": "/workspace/kernel-audit/native-mathgraph-integration-final/unknown-result.json",
+      "input_sha256": "584ec5f727e11096f3914e7fb9c4e4a402be1ab536459ed23a763a384ec30650",
+      "name": "unknown-result",
+      "passed": true,
+      "resources": {
+        "command": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+          "/workspace/mathgraph-lean-kernel/experiments/incremental/mathgraph_integration.py",
+          "--mathgraph",
+          "/workspace/mathgraph",
+          "--result",
+          "/workspace/kernel-audit/native-mathgraph-integration-final/unknown-result.json",
+          "--output",
+          "/workspace/kernel-audit/native-mathgraph-integration-final/cases/unknown-result/result.json",
+          "--expected-evidence-id",
+          "6d58d2f592fc391f660d3577f85b42807557d68de6dc701a53ad2461106ca36a",
+          "--expected-export-sha256",
+          "13323bf721599b9b77fe0ea94da5c4632edd2a25188842fb09738bfdf74fdd9f",
+          "--expected-result-sha256",
+          "584ec5f727e11096f3914e7fb9c4e4a402be1ab536459ed23a763a384ec30650"
+        ],
+        "cpu_seconds": 0.07775299999999999,
+        "cwd": null,
+        "max_rss_kib": 62288,
+        "returncode": 2,
+        "stderr_path": "/workspace/kernel-audit/native-mathgraph-integration-final/cases/unknown-result/process.stderr",
+        "stdout_path": "/workspace/kernel-audit/native-mathgraph-integration-final/cases/unknown-result/process.stdout",
+        "timed_out": false,
+        "wall_seconds": 0.08137962799992238
+      },
+      "result_path": "/workspace/kernel-audit/native-mathgraph-integration-final/cases/unknown-result/result.json",
+      "result": {
+        "action_authorization": "NONE",
+        "error": "ENGINE_RESULT_NOT_QUALIFIED",
+        "production_mathgraph_check_binder": false,
+        "schema": "mathgraph.incremental-lean.warrant-integration.v1",
+        "status": "UNKNOWN"
+      }
+    }
+  ]
+}

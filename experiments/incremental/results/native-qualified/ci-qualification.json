@@ -1,0 +1,1482 @@
+{
+  "schema": "mathgraph.native-ci-qualified-evidence.v1",
+  "source_sha": "c5ab12699338aa57b7e9d48b15d4a7409e453c7b",
+  "run_id": 38885278602,
+  "run_url": "https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/38885278602",
+  "job_id": 116921400922,
+  "conclusion": "success",
+  "qualification_status": "WARRANTED_BOUNDED_CORRECTNESS",
+  "economic_status": "NO_SPEEDUP",
+  "economic_passed": false,
+  "started_at": "2026-10-16T10:08:52Z",
+  "completed_at": "2026-10-16T10:22:53Z",
+  "artifacts": [
+    {
+      "id": 12039976400,
+      "node_id": "MDg6QXJ0aWZhY3QxMjAzOTk3NjQwMA==",
+      "name": "incremental-native-index-c5ab12699338aa57b7e9d48b15d4a7409e453c7b",
+      "size_in_bytes": 802162434,
+      "url": "https://api.github.com/repos/metalogiclabs/mathgraph-lean-kernel/actions/artifacts/12039976400",
+      "archive_download_url": "https://api.github.com/repos/metalogiclabs/mathgraph-lean-kernel/actions/artifacts/12039976400/zip",
+      "expired": false,
+      "digest": "sha256:1993750aa7cf5373b51c3315d4f3c3c15796fd5a55aa7af0d352b485dbf0ba79",
+      "created_at": "2026-10-16T10:22:48Z",
+      "updated_at": "2026-10-16T10:22:48Z",
+      "expires_at": "2026-11-15T10:21:33Z",
+      "workflow_run": {
+        "id": 38885278602,
+        "repository_id": 1335626675,
+        "head_repository_id": 1335626675,
+        "head_branch": "research/incremental-native-index-20261016",
+        "head_sha": "c5ab12699338aa57b7e9d48b15d4a7409e453c7b"
+      }
+    },
+    {
+      "id": 12039714166,
+      "node_id": "MDg6QXJ0aWZhY3QxMjAzOTcxNDE2Ng==",
+      "name": "incremental-native-index-summaries-c5ab12699338aa57b7e9d48b15d4a7409e453c7b",
+      "size_in_bytes": 1434999,
+      "url": "https://api.github.com/repos/metalogiclabs/mathgraph-lean-kernel/actions/artifacts/12039714166",
+      "archive_download_url": "https://api.github.com/repos/metalogiclabs/mathgraph-lean-kernel/actions/artifacts/12039714166/zip",
+      "expired": false,
+      "digest": "sha256:a9d73d4c1185d02da21ed53021ba58f651e28733d3e29125363dcea196daefa4",
+      "created_at": "2026-10-16T10:22:50Z",
+      "updated_at": "2026-10-16T10:22:50Z",
+      "expires_at": "2026-11-15T10:22:49Z",
+      "workflow_run": {
+        "id": 38885278602,
+        "repository_id": 1335626675,
+        "head_repository_id": 1335626675,
+        "head_branch": "research/incremental-native-index-20261016",
+        "head_sha": "c5ab12699338aa57b7e9d48b15d4a7409e453c7b"
+      }
+    }
+  ],
+  "compact_archive": {
+    "file": "ci-c5ab126-summaries.zip",
+    "bytes": 1434999,
+    "sha256": "a9d73d4c1185d02da21ed53021ba58f651e28733d3e29125363dcea196daefa4",
+    "downloaded_and_provider_digest_verified": true
+  },
+  "full_archive": {
+    "independently_downloaded": false,
+    "limitation": "Full802162434byte ZIP exceeds connector512MiB cap; workspace HTTPS proxy rejects GitHub artifact-storage CONNECT. Full provider metadata/digest and decoded actual job logs verified; compact archive downloaded, verified and committed."
+  },
+  "decoded_log": {
+    "file": "ci-c5ab126-decoded.log.gz",
+    "decoded_sha256": "0daae298dca22f5cb5ee37dd091f82eac7bfb589f6c252ebc0c1f1dbb01281b1",
+    "compressed_sha256": "dbadf2751245fd9780b9f1c6d998ce8640ed49826e0bb48ba0b1b5244c1ca48b",
+    "pipeline_negative_control_exit": 1,
+    "shell": "/usr/bin/bash --noprofile --norc -e -o pipefail {0}"
+  },
+  "observations": {
+    "source_sha": "c5ab12699338aa57b7e9d48b15d4a7409e453c7b",
+    "reports": {
+      "original-correctness": {
+        "source_sha": "c5ab12699338aa57b7e9d48b15d4a7409e453c7b",
+        "summary_sha256": "d298aa4bf423a2e25cc2ab7c78e29631bde8adf9f53829f54825d7f229f84d28",
+        "gates": 197,
+        "all_gates_passed": true,
+        "report_passed": true
+      },
+      "native-correctness": {
+        "source_sha": "c5ab12699338aa57b7e9d48b15d4a7409e453c7b",
+        "summary_sha256": "15478fbe8232e93974e2ce169b97477158825f4c62f3c0f29d9d879f652a885b",
+        "gates": 335,
+        "all_gates_passed": true,
+        "report_passed": true
+      },
+      "independent-replay": {
+        "source_sha": "c5ab12699338aa57b7e9d48b15d4a7409e453c7b",
+        "summary_sha256": "55742a6a24ae350daa7ab527e1edde3aede3aa37b9850e4363dae990ee26ab65",
+        "gates": 719,
+        "all_gates_passed": true,
+        "report_passed": true
+      },
+      "native-economics": {
+        "source_sha": "c5ab12699338aa57b7e9d48b15d4a7409e453c7b",
+        "summary_sha256": "091a319365a4a086cddac253cdb9db0ddc69ab6116d6cbcbbf09d18ea546526e",
+        "gates": 251,
+        "all_gates_passed": true,
+        "report_passed": true,
+        "economic_status": "NO_SPEEDUP",
+        "primary": {
+          "early-definition": {
+            "baseline-python-full": {
+              "wall_seconds": 4.339892775999999,
+              "cpu_seconds": 4.2358340000000005,
+              "max_rss_kib": 284052
+            },
+            "baseline-python-incremental": {
+              "wall_seconds": 4.179579891000003,
+              "cpu_seconds": 4.071494,
+              "max_rss_kib": 293424
+            },
+            "native-full": {
+              "wall_seconds": 0.635886045999996,
+              "cpu_seconds": 0.524923,
+              "max_rss_kib": 274720
+            },
+            "native-incremental": {
+              "wall_seconds": 0.4742427810000436,
+              "cpu_seconds": 0.369741,
+              "max_rss_kib": 274720
+            },
+            "baseline-direct-full": {
+              "wall_seconds": 0.23263325199997098,
+              "cpu_seconds": 0.229902,
+              "max_rss_kib": 274720
+            },
+            "current-direct-full": {
+              "wall_seconds": 0.23277207199998884,
+              "cpu_seconds": 0.225714,
+              "max_rss_kib": 274720
+            }
+          },
+          "unrelated-definition": {
+            "baseline-python-full": {
+              "wall_seconds": 4.331821863999949,
+              "cpu_seconds": 4.230306,
+              "max_rss_kib": 287244
+            },
+            "baseline-python-incremental": {
+              "wall_seconds": 4.158965974000012,
+              "cpu_seconds": 4.0528249999999995,
+              "max_rss_kib": 293960
+            },
+            "native-full": {
+              "wall_seconds": 0.6261728219999441,
+              "cpu_seconds": 0.522709,
+              "max_rss_kib": 274720
+            },
+            "native-incremental": {
+              "wall_seconds": 0.45468095400008224,
+              "cpu_seconds": 0.351083,
+              "max_rss_kib": 274720
+            },
+            "baseline-direct-full": {
+              "wall_seconds": 0.2328256149999106,
+              "cpu_seconds": 0.22351,
+              "max_rss_kib": 274720
+            },
+            "current-direct-full": {
+              "wall_seconds": 0.23264183600002752,
+              "cpu_seconds": 0.22666799999999998,
+              "max_rss_kib": 274720
+            }
+          }
+        }
+      }
+    },
+    "failures": []
+  },
+  "workflow_steps": [
+    {
+      "name": "Set up job",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 1,
+      "started_at": "2026-10-16T10:08:55Z",
+      "completed_at": "2026-10-16T10:08:57Z"
+    },
+    {
+      "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 2,
+      "started_at": "2026-10-16T10:08:57Z",
+      "completed_at": "2026-10-16T10:08:59Z"
+    },
+    {
+      "name": "Verify piped failures fail the shell",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 3,
+      "started_at": "2026-10-16T10:08:59Z",
+      "completed_at": "2026-10-16T10:08:59Z"
+    },
+    {
+      "name": "Install exact compilers and build release binaries",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 4,
+      "started_at": "2026-10-16T10:08:59Z",
+      "completed_at": "2026-10-16T10:09:51Z"
+    },
+    {
+      "name": "Preserve separately compiled original checker binaries",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 5,
+      "started_at": "2026-10-16T10:09:51Z",
+      "completed_at": "2026-10-16T10:10:12Z"
+    },
+    {
+      "name": "Test release checker and adversarial identity predicate",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 6,
+      "started_at": "2026-10-16T10:10:12Z",
+      "completed_at": "2026-10-16T10:10:48Z"
+    },
+    {
+      "name": "Compile unchanged pinned Std workloads and exact exports",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 7,
+      "started_at": "2026-10-16T10:10:48Z",
+      "completed_at": "2026-10-16T10:11:10Z"
+    },
+    {
+      "name": "Run all original correctness gates in a separate process",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 8,
+      "started_at": "2026-10-16T10:11:10Z",
+      "completed_at": "2026-10-16T10:13:06Z"
+    },
+    {
+      "name": "Qualify native identity against all original correctness gates",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 9,
+      "started_at": "2026-10-16T10:13:06Z",
+      "completed_at": "2026-10-16T10:15:54Z"
+    },
+    {
+      "name": "Independently replay native qualification and full oracles",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 10,
+      "started_at": "2026-10-16T10:15:54Z",
+      "completed_at": "2026-10-16T10:16:20Z"
+    },
+    {
+      "name": "Benchmark complete verification against the preserved original binaries",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 11,
+      "started_at": "2026-10-16T10:16:20Z",
+      "completed_at": "2026-10-16T10:21:24Z"
+    },
+    {
+      "name": "Qualify pinned MathGraph receipt consumption",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 12,
+      "started_at": "2026-10-16T10:21:24Z",
+      "completed_at": "2026-10-16T10:21:27Z"
+    },
+    {
+      "name": "Collect separate phase memory diagnostics",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 13,
+      "started_at": "2026-10-16T10:21:27Z",
+      "completed_at": "2026-10-16T10:21:32Z"
+    },
+    {
+      "name": "Publish correctness and economic summaries",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 14,
+      "started_at": "2026-10-16T10:21:32Z",
+      "completed_at": "2026-10-16T10:21:32Z"
+    },
+    {
+      "name": "Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 15,
+      "started_at": "2026-10-16T10:21:32Z",
+      "completed_at": "2026-10-16T10:22:49Z"
+    },
+    {
+      "name": "Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 16,
+      "started_at": "2026-10-16T10:22:49Z",
+      "completed_at": "2026-10-16T10:22:50Z"
+    },
+    {
+      "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 32,
+      "started_at": "2026-10-16T10:22:50Z",
+      "completed_at": "2026-10-16T10:22:50Z"
+    },
+    {
+      "name": "Complete job",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 33,
+      "started_at": "2026-10-16T10:22:50Z",
+      "completed_at": "2026-10-16T10:22:50Z"
+    }
+  ],
+  "medians": {
+    "baseline": {
+      "baseline-python-full": {
+        "resources": {
+          "wall_seconds": 4.320825031000027,
+          "cpu_seconds": 4.2219,
+          "max_rss_kib": 287308
+        },
+        "phases": {
+          "cache_validation_seconds": 1.9000003703695256e-07,
+          "checking_seconds": 0.24037781599997743,
+          "identity_seconds": 3.8548803810000436,
+          "total_seconds": 4.241926379999995
+        },
+        "statuses": [
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED"
+        ],
+        "repetitions": 5
+      },
+      "baseline-python-incremental": {
+        "resources": {
+          "wall_seconds": 0.1818892879999794,
+          "cpu_seconds": 0.15211,
+          "max_rss_kib": 274720
+        },
+        "phases": {
+          "cache_validation_seconds": 0.04329265800004123,
+          "checking_seconds": 9.409999393028556e-07,
+          "identity_seconds": 0.009694967000086763,
+          "total_seconds": 0.1173526979999906
+        },
+        "statuses": [
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED"
+        ],
+        "repetitions": 5
+      },
+      "native-full": {
+        "resources": {
+          "wall_seconds": 0.6361727759999667,
+          "cpu_seconds": 0.527968,
+          "max_rss_kib": 274720
+        },
+        "phases": {
+          "cache_validation_cpu_seconds": 5.999999999999062e-06,
+          "cache_validation_seconds": 6.849999977021071e-06,
+          "checking_cpu_seconds": 0.239292,
+          "checking_seconds": 0.23913787499998307,
+          "export_hash_cpu_seconds": 0.010355999999999997,
+          "export_hash_seconds": 0.010354628000015964,
+          "identity_cpu_seconds": 0.18031699999999998,
+          "identity_seconds": 0.1792788580000888,
+          "native_index_cpu_seconds": 0.151969,
+          "native_index_seconds": 0.15093315199999324,
+          "receipt_persistence_cpu_seconds": 0.03769800000000001,
+          "receipt_persistence_seconds": 0.13590821700006472,
+          "snapshot_copy_cpu_seconds": 0.0038000000000000048,
+          "snapshot_copy_seconds": 0.003798349000021517,
+          "total_seconds": 0.5709729890000972
+        },
+        "statuses": [
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED"
+        ],
+        "repetitions": 5
+      },
+      "native-incremental": {
+        "resources": {
+          "wall_seconds": 0.18191081299994494,
+          "cpu_seconds": 0.155219,
+          "max_rss_kib": 274720
+        },
+        "phases": {
+          "cache_validation_cpu_seconds": 0.043969,
+          "cache_validation_seconds": 0.043966201999978693,
+          "checking_cpu_seconds": 4.000000000004e-06,
+          "checking_seconds": 5.168000029698305e-06,
+          "export_hash_cpu_seconds": 0.009688000000000002,
+          "export_hash_seconds": 0.009686403999921822,
+          "identity_cpu_seconds": 0.009694999999999995,
+          "identity_seconds": 0.009693954999875132,
+          "receipt_persistence_cpu_seconds": 0.032161999999999996,
+          "receipt_persistence_seconds": 0.054262774999983776,
+          "snapshot_copy_cpu_seconds": 0.0038710000000000133,
+          "snapshot_copy_seconds": 0.0038694849999956205,
+          "total_seconds": 0.12112015700006395
+        },
+        "statuses": [
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED"
+        ],
+        "repetitions": 5
+      },
+      "baseline-direct-full": {
+        "resources": {
+          "wall_seconds": 0.2325440949999802,
+          "cpu_seconds": 0.223001,
+          "max_rss_kib": 274720
+        },
+        "phases": {},
+        "statuses": [
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED"
+        ],
+        "repetitions": 5
+      },
+      "current-direct-full": {
+        "resources": {
+          "wall_seconds": 0.22253016699994532,
+          "cpu_seconds": 0.221906,
+          "max_rss_kib": 274720
+        },
+        "phases": {},
+        "statuses": [
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED"
+        ],
+        "repetitions": 5
+      }
+    },
+    "early-definition": {
+      "baseline-python-full": {
+        "resources": {
+          "wall_seconds": 4.339892775999999,
+          "cpu_seconds": 4.2358340000000005,
+          "max_rss_kib": 284052
+        },
+        "phases": {
+          "cache_validation_seconds": 2.2000006083544577e-07,
+          "checking_seconds": 0.2425774170000068,
+          "identity_seconds": 3.873639448000006,
+          "total_seconds": 4.260093323999968
+        },
+        "statuses": [
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED"
+        ],
+        "repetitions": 5
+      },
+      "baseline-python-incremental": {
+        "resources": {
+          "wall_seconds": 4.179579891000003,
+          "cpu_seconds": 4.071494,
+          "max_rss_kib": 293424
+        },
+        "phases": {
+          "cache_validation_seconds": 0.04325865900000281,
+          "checking_seconds": 0.041361639999990985,
+          "identity_seconds": 3.8483431660000633,
+          "total_seconds": 4.092237603000058
+        },
+        "statuses": [
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED"
+        ],
+        "repetitions": 5
+      },
+      "native-full": {
+        "resources": {
+          "wall_seconds": 0.635886045999996,
+          "cpu_seconds": 0.524923,
+          "max_rss_kib": 274720
+        },
+        "phases": {
+          "cache_validation_cpu_seconds": 5.0000000000050004e-06,
+          "cache_validation_seconds": 6.459000019276573e-06,
+          "checking_cpu_seconds": 0.24390500000000004,
+          "checking_seconds": 0.24376500099992882,
+          "export_hash_cpu_seconds": 0.010402999999999996,
+          "export_hash_seconds": 0.010401708000017607,
+          "identity_cpu_seconds": 0.18295,
+          "identity_seconds": 0.1819394190000594,
+          "native_index_cpu_seconds": 0.15490199999999998,
+          "native_index_seconds": 0.15386086000000887,
+          "receipt_persistence_cpu_seconds": 0.037402000000000046,
+          "receipt_persistence_seconds": 0.13311850499997036,
+          "snapshot_copy_cpu_seconds": 0.003841000000000004,
+          "snapshot_copy_seconds": 0.0038408719999551977,
+          "total_seconds": 0.5718600369999649
+        },
+        "statuses": [
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED"
+        ],
+        "repetitions": 5
+      },
+      "native-incremental": {
+        "resources": {
+          "wall_seconds": 0.4742427810000436,
+          "cpu_seconds": 0.369741,
+          "max_rss_kib": 274720
+        },
+        "phases": {
+          "cache_validation_cpu_seconds": 0.044531999999999995,
+          "cache_validation_seconds": 0.0445282439999346,
+          "checking_cpu_seconds": 0.04226599999999997,
+          "checking_seconds": 0.042100357000038,
+          "export_hash_cpu_seconds": 0.009650000000000006,
+          "export_hash_seconds": 0.009648987999980818,
+          "identity_cpu_seconds": 0.177787,
+          "identity_seconds": 0.17664081800000986,
+          "native_index_cpu_seconds": 0.15051699999999996,
+          "native_index_seconds": 0.14935280199995304,
+          "receipt_persistence_cpu_seconds": 0.033941,
+          "receipt_persistence_seconds": 0.13099184199995761,
+          "snapshot_copy_cpu_seconds": 0.0038699999999999846,
+          "snapshot_copy_seconds": 0.0038689940000722345,
+          "total_seconds": 0.4061384799999814
+        },
+        "statuses": [
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED"
+        ],
+        "repetitions": 5
+      },
+      "baseline-direct-full": {
+        "resources": {
+          "wall_seconds": 0.23263325199997098,
+          "cpu_seconds": 0.229902,
+          "max_rss_kib": 274720
+        },
+        "phases": {},
+        "statuses": [
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED"
+        ],
+        "repetitions": 5
+      },
+      "current-direct-full": {
+        "resources": {
+          "wall_seconds": 0.23277207199998884,
+          "cpu_seconds": 0.225714,
+          "max_rss_kib": 274720
+        },
+        "phases": {},
+        "statuses": [
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED"
+        ],
+        "repetitions": 5
+      }
+    },
+    "unrelated-definition": {
+      "baseline-python-full": {
+        "resources": {
+          "wall_seconds": 4.331821863999949,
+          "cpu_seconds": 4.230306,
+          "max_rss_kib": 287244
+        },
+        "phases": {
+          "cache_validation_seconds": 2.2099999341662624e-07,
+          "checking_seconds": 0.2378820999999789,
+          "identity_seconds": 3.8615732740000794,
+          "total_seconds": 4.248199541000076
+        },
+        "statuses": [
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED"
+        ],
+        "repetitions": 5
+      },
+      "baseline-python-incremental": {
+        "resources": {
+          "wall_seconds": 4.158965974000012,
+          "cpu_seconds": 4.0528249999999995,
+          "max_rss_kib": 293960
+        },
+        "phases": {
+          "cache_validation_seconds": 0.0435107150000249,
+          "checking_seconds": 0.014382679000050302,
+          "identity_seconds": 3.8665642550000143,
+          "total_seconds": 4.071091237000019
+        },
+        "statuses": [
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED"
+        ],
+        "repetitions": 5
+      },
+      "native-full": {
+        "resources": {
+          "wall_seconds": 0.6261728219999441,
+          "cpu_seconds": 0.522709,
+          "max_rss_kib": 274720
+        },
+        "phases": {
+          "cache_validation_cpu_seconds": 4.9999999999980616e-06,
+          "cache_validation_seconds": 6.900000016685226e-06,
+          "checking_cpu_seconds": 0.23781399999999997,
+          "checking_seconds": 0.23767365800000562,
+          "export_hash_cpu_seconds": 0.010419999999999999,
+          "export_hash_seconds": 0.010420187000022452,
+          "identity_cpu_seconds": 0.18045699999999998,
+          "identity_seconds": 0.17936343199994553,
+          "native_index_cpu_seconds": 0.15243500000000001,
+          "native_index_seconds": 0.1513037519999898,
+          "receipt_persistence_cpu_seconds": 0.03771399999999997,
+          "receipt_persistence_seconds": 0.13399466900000334,
+          "snapshot_copy_cpu_seconds": 0.003811000000000002,
+          "snapshot_copy_seconds": 0.003810547000000497,
+          "total_seconds": 0.5631207359999735
+        },
+        "statuses": [
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED"
+        ],
+        "repetitions": 5
+      },
+      "native-incremental": {
+        "resources": {
+          "wall_seconds": 0.45468095400008224,
+          "cpu_seconds": 0.351083,
+          "max_rss_kib": 274720
+        },
+        "phases": {
+          "cache_validation_cpu_seconds": 0.044475,
+          "cache_validation_seconds": 0.044473978000041825,
+          "checking_cpu_seconds": 0.019124999999999948,
+          "checking_seconds": 0.01896266099998911,
+          "export_hash_cpu_seconds": 0.009670999999999999,
+          "export_hash_seconds": 0.00966991100000314,
+          "identity_cpu_seconds": 0.18266199999999994,
+          "identity_seconds": 0.18166437399997903,
+          "native_index_cpu_seconds": 0.154949,
+          "native_index_seconds": 0.1539536609999459,
+          "receipt_persistence_cpu_seconds": 0.034353999999999996,
+          "receipt_persistence_seconds": 0.13007913100000223,
+          "snapshot_copy_cpu_seconds": 0.0038789999999999936,
+          "snapshot_copy_seconds": 0.0038763139999673513,
+          "total_seconds": 0.38834487200000467
+        },
+        "statuses": [
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED"
+        ],
+        "repetitions": 5
+      },
+      "baseline-direct-full": {
+        "resources": {
+          "wall_seconds": 0.2328256149999106,
+          "cpu_seconds": 0.22351,
+          "max_rss_kib": 274720
+        },
+        "phases": {},
+        "statuses": [
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED"
+        ],
+        "repetitions": 5
+      },
+      "current-direct-full": {
+        "resources": {
+          "wall_seconds": 0.23264183600002752,
+          "cpu_seconds": 0.22666799999999998,
+          "max_rss_kib": 274720
+        },
+        "phases": {},
+        "statuses": [
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED"
+        ],
+        "repetitions": 5
+      }
+    },
+    "theorem-leaf": {
+      "baseline-python-full": {
+        "resources": {
+          "wall_seconds": 4.348201125999935,
+          "cpu_seconds": 4.244833,
+          "max_rss_kib": 287328
+        },
+        "phases": {
+          "cache_validation_seconds": 2.100000529026147e-07,
+          "checking_seconds": 0.245610690000035,
+          "identity_seconds": 3.864045285999964,
+          "total_seconds": 4.2643876560000535
+        },
+        "statuses": [
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED"
+        ],
+        "repetitions": 5
+      },
+      "baseline-python-incremental": {
+        "resources": {
+          "wall_seconds": 4.159230532000038,
+          "cpu_seconds": 4.0632,
+          "max_rss_kib": 297172
+        },
+        "phases": {
+          "cache_validation_seconds": 0.04380610300006538,
+          "checking_seconds": 0.014693629000021247,
+          "identity_seconds": 3.8702388330000304,
+          "total_seconds": 4.077324867000016
+        },
+        "statuses": [
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED"
+        ],
+        "repetitions": 5
+      },
+      "native-full": {
+        "resources": {
+          "wall_seconds": 0.6157515990000775,
+          "cpu_seconds": 0.521393,
+          "max_rss_kib": 274720
+        },
+        "phases": {
+          "cache_validation_cpu_seconds": 4.9999999999980616e-06,
+          "cache_validation_seconds": 6.77000002724526e-06,
+          "checking_cpu_seconds": 0.23564800000000005,
+          "checking_seconds": 0.2355026339999995,
+          "export_hash_cpu_seconds": 0.010358,
+          "export_hash_seconds": 0.010369781000008516,
+          "identity_cpu_seconds": 0.180216,
+          "identity_seconds": 0.17933297599995512,
+          "native_index_cpu_seconds": 0.152616,
+          "native_index_seconds": 0.15169362900007854,
+          "receipt_persistence_cpu_seconds": 0.03733299999999995,
+          "receipt_persistence_seconds": 0.13177845400002752,
+          "snapshot_copy_cpu_seconds": 0.003812999999999997,
+          "snapshot_copy_seconds": 0.0038123299999597293,
+          "total_seconds": 0.5590896029999612
+        },
+        "statuses": [
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED"
+        ],
+        "repetitions": 5
+      },
+      "native-incremental": {
+        "resources": {
+          "wall_seconds": 0.45415905400000156,
+          "cpu_seconds": 0.34620999999999996,
+          "max_rss_kib": 274720
+        },
+        "phases": {
+          "cache_validation_cpu_seconds": 0.04413500000000001,
+          "cache_validation_seconds": 0.044149278000077175,
+          "checking_cpu_seconds": 0.014467000000000008,
+          "checking_seconds": 0.014940140000021529,
+          "export_hash_cpu_seconds": 0.009622999999999993,
+          "export_hash_seconds": 0.009622049000029165,
+          "identity_cpu_seconds": 0.180977,
+          "identity_seconds": 0.17992297800003598,
+          "native_index_cpu_seconds": 0.15277199999999996,
+          "native_index_seconds": 0.1517199749999918,
+          "receipt_persistence_cpu_seconds": 0.034865000000000035,
+          "receipt_persistence_seconds": 0.13363976800008004,
+          "snapshot_copy_cpu_seconds": 0.0038709999999999994,
+          "snapshot_copy_seconds": 0.0038696240000035687,
+          "total_seconds": 0.3871337340000309
+        },
+        "statuses": [
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED"
+        ],
+        "repetitions": 5
+      },
+      "baseline-direct-full": {
+        "resources": {
+          "wall_seconds": 0.23257914800001345,
+          "cpu_seconds": 0.227166,
+          "max_rss_kib": 274720
+        },
+        "phases": {},
+        "statuses": [
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED"
+        ],
+        "repetitions": 5
+      },
+      "current-direct-full": {
+        "resources": {
+          "wall_seconds": 0.23260786599996663,
+          "cpu_seconds": 0.222487,
+          "max_rss_kib": 274720
+        },
+        "phases": {},
+        "statuses": [
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED",
+          "VERIFIED"
+        ],
+        "repetitions": 5
+      }
+    },
+    "invalid-proof": {
+      "baseline-python-full": {
+        "resources": {
+          "wall_seconds": 4.199176292000061,
+          "cpu_seconds": 4.195871,
+          "max_rss_kib": 279320
+        },
+        "phases": {
+          "cache_validation_seconds": 2.9099999210302485e-07,
+          "checking_seconds": 0.23639107099995726,
+          "identity_seconds": 3.8708444290000443,
+          "total_seconds": 4.120501420999972
+        },
+        "statuses": [
+          "REJECTED",
+          "REJECTED",
+          "REJECTED",
+          "REJECTED",
+          "REJECTED"
+        ],
+        "repetitions": 5
+      },
+      "baseline-python-incremental": {
+        "resources": {
+          "wall_seconds": 4.017905368000015,
+          "cpu_seconds": 4.01612,
+          "max_rss_kib": 288100
+        },
+        "phases": {
+          "cache_validation_seconds": 0.04282557699991685,
+          "checking_seconds": 0.014274174999968636,
+          "identity_seconds": 3.8652202690000195,
+          "total_seconds": 3.935552241000096
+        },
+        "statuses": [
+          "REJECTED",
+          "REJECTED",
+          "REJECTED",
+          "REJECTED",
+          "REJECTED"
+        ],
+        "repetitions": 5
+      },
+      "native-full": {
+        "resources": {
+          "wall_seconds": 0.5049230890000445,
+          "cpu_seconds": 0.501977,
+          "max_rss_kib": 274720
+        },
+        "phases": {
+          "cache_validation_cpu_seconds": 5.999999999999062e-06,
+          "cache_validation_seconds": 7.871999969211174e-06,
+          "checking_cpu_seconds": 0.24737199999999998,
+          "checking_seconds": 0.24725606599997718,
+          "export_hash_cpu_seconds": 0.010467000000000004,
+          "export_hash_seconds": 0.010465211999985513,
+          "identity_cpu_seconds": 0.183728,
+          "identity_seconds": 0.18261547099996278,
+          "native_index_cpu_seconds": 0.15556199999999998,
+          "native_index_seconds": 0.1544504659999575,
+          "receipt_persistence_cpu_seconds": 4.000000000004e-06,
+          "receipt_persistence_seconds": 3.855000045405177e-06,
+          "snapshot_copy_cpu_seconds": 0.003932999999999999,
+          "snapshot_copy_seconds": 0.00393138699996598,
+          "total_seconds": 0.4423882500000218
+        },
+        "statuses": [
+          "REJECTED",
+          "REJECTED",
+          "REJECTED",
+          "REJECTED",
+          "REJECTED"
+        ],
+        "repetitions": 5
+      },
+      "native-incremental": {
+        "resources": {
+          "wall_seconds": 0.31299890699995103,
+          "cpu_seconds": 0.31011500000000003,
+          "max_rss_kib": 274720
+        },
+        "phases": {
+          "cache_validation_cpu_seconds": 0.04409600000000001,
+          "cache_validation_seconds": 0.04409353400001237,
+          "checking_cpu_seconds": 0.014799000000000007,
+          "checking_seconds": 0.014632586999937303,
+          "export_hash_cpu_seconds": 0.009647000000000003,
+          "export_hash_seconds": 0.00964567400001215,
+          "identity_cpu_seconds": 0.178599,
+          "identity_seconds": 0.1775880089999191,
+          "native_index_cpu_seconds": 0.151389,
+          "native_index_seconds": 0.15037885499998538,
+          "receipt_persistence_cpu_seconds": 4.000000000004e-06,
+          "receipt_persistence_seconds": 3.876000050695438e-06,
+          "snapshot_copy_cpu_seconds": 0.003953999999999999,
+          "snapshot_copy_seconds": 0.003953058999968562,
+          "total_seconds": 0.24967451300005905
+        },
+        "statuses": [
+          "REJECTED",
+          "REJECTED",
+          "REJECTED",
+          "REJECTED",
+          "REJECTED"
+        ],
+        "repetitions": 5
+      },
+      "baseline-direct-full": {
+        "resources": {
+          "wall_seconds": 0.23259137599995938,
+          "cpu_seconds": 0.22591,
+          "max_rss_kib": 274720
+        },
+        "phases": {},
+        "statuses": [
+          "REJECTED",
+          "REJECTED",
+          "REJECTED",
+          "REJECTED",
+          "REJECTED"
+        ],
+        "repetitions": 5
+      },
+      "current-direct-full": {
+        "resources": {
+          "wall_seconds": 0.2326253260000044,
+          "cpu_seconds": 0.225245,
+          "max_rss_kib": 274720
+        },
+        "phases": {},
+        "statuses": [
+          "REJECTED",
+          "REJECTED",
+          "REJECTED",
+          "REJECTED",
+          "REJECTED"
+        ],
+        "repetitions": 5
+      }
+    },
+    "axiom-type": {
+      "baseline-python-full": {
+        "resources": {
+          "wall_seconds": 4.036072709999985,
+          "cpu_seconds": 4.035664000000001,
+          "max_rss_kib": 279320
+        },
+        "phases": {
+          "cache_validation_seconds": 2.210000502600451e-07,
+          "checking_seconds": 0.03324698599999465,
+          "identity_seconds": 3.907805135999979,
+          "total_seconds": 3.9562857500000064
+        },
+        "statuses": [
+          "REJECTED",
+          "REJECTED",
+          "REJECTED",
+          "REJECTED",
+          "REJECTED"
+        ],
+        "repetitions": 5
+      },
+      "baseline-python-incremental": {
+        "resources": {
+          "wall_seconds": 4.069817826000076,
+          "cpu_seconds": 4.05917,
+          "max_rss_kib": 288088
+        },
+        "phases": {
+          "cache_validation_seconds": 0.042617506999988564,
+          "checking_seconds": 0.033846283000002586,
+          "identity_seconds": 3.8945177840000724,
+          "total_seconds": 3.9831114559999605
+        },
+        "statuses": [
+          "REJECTED",
+          "REJECTED",
+          "REJECTED",
+          "REJECTED",
+          "REJECTED"
+        ],
+        "repetitions": 5
+      },
+      "native-full": {
+        "resources": {
+          "wall_seconds": 0.29285776100005023,
+          "cpu_seconds": 0.28429099999999996,
+          "max_rss_kib": 274720
+        },
+        "phases": {
+          "cache_validation_cpu_seconds": 5.999999999999062e-06,
+          "cache_validation_seconds": 6.789999929424084e-06,
+          "checking_cpu_seconds": 0.03428999999999996,
+          "checking_seconds": 0.0341084660000206,
+          "export_hash_cpu_seconds": 0.010467000000000004,
+          "export_hash_seconds": 0.01046562500005166,
+          "identity_cpu_seconds": 0.179445,
+          "identity_seconds": 0.17829589400002988,
+          "native_index_cpu_seconds": 0.15190199999999998,
+          "native_index_seconds": 0.15074796700002935,
+          "receipt_persistence_cpu_seconds": 4.999999999977245e-06,
+          "receipt_persistence_seconds": 3.945999992538418e-06,
+          "snapshot_copy_cpu_seconds": 0.0039869999999999975,
+          "snapshot_copy_seconds": 0.003985907000014777,
+          "total_seconds": 0.2240447110000332
+        },
+        "statuses": [
+          "REJECTED",
+          "REJECTED",
+          "REJECTED",
+          "REJECTED",
+          "REJECTED"
+        ],
+        "repetitions": 5
+      },
+      "native-incremental": {
+        "resources": {
+          "wall_seconds": 0.3332854310000357,
+          "cpu_seconds": 0.32945399999999997,
+          "max_rss_kib": 274720
+        },
+        "phases": {
+          "cache_validation_cpu_seconds": 0.044107,
+          "cache_validation_seconds": 0.04410553900004288,
+          "checking_cpu_seconds": 0.03352000000000005,
+          "checking_seconds": 0.033345237000048655,
+          "export_hash_cpu_seconds": 0.009690999999999991,
+          "export_hash_seconds": 0.009689579999985654,
+          "identity_cpu_seconds": 0.17808399999999996,
+          "identity_seconds": 0.17707994100010183,
+          "native_index_cpu_seconds": 0.15072499999999997,
+          "native_index_seconds": 0.14968997999994826,
+          "receipt_persistence_cpu_seconds": 4.000000000004e-06,
+          "receipt_persistence_seconds": 4.10599989209004e-06,
+          "snapshot_copy_cpu_seconds": 0.004018999999999995,
+          "snapshot_copy_seconds": 0.00401755499990486,
+          "total_seconds": 0.26718339699993976
+        },
+        "statuses": [
+          "REJECTED",
+          "REJECTED",
+          "REJECTED",
+          "REJECTED",
+          "REJECTED"
+        ],
+        "repetitions": 5
+      },
+      "baseline-direct-full": {
+        "resources": {
+          "wall_seconds": 0.03071155700001782,
+          "cpu_seconds": 0.023356,
+          "max_rss_kib": 274720
+        },
+        "phases": {},
+        "statuses": [
+          "REJECTED",
+          "REJECTED",
+          "REJECTED",
+          "REJECTED",
+          "REJECTED"
+        ],
+        "repetitions": 5
+      },
+      "current-direct-full": {
+        "resources": {
+          "wall_seconds": 0.030726514999969368,
+          "cpu_seconds": 0.024474,
+          "max_rss_kib": 274720
+        },
+        "phases": {},
+        "statuses": [
+          "REJECTED",
+          "REJECTED",
+          "REJECTED",
+          "REJECTED",
+          "REJECTED"
+        ],
+        "repetitions": 5
+      }
+    }
+  },
+  "primary_economics": {
+    "early-definition": {
+      "pairs": [
+        {
+          "repetition": 0,
+          "native_wall_seconds": 0.4641555739999603,
+          "direct_wall_seconds": 0.23325576400003456,
+          "native_position": 10,
+          "direct_position": 16
+        },
+        {
+          "repetition": 1,
+          "native_wall_seconds": 0.4742427810000436,
+          "direct_wall_seconds": 0.23277207199998884,
+          "native_position": 31,
+          "direct_position": 7
+        },
+        {
+          "repetition": 2,
+          "native_wall_seconds": 0.46419628200010266,
+          "direct_wall_seconds": 0.2531158450000248,
+          "native_position": 24,
+          "direct_position": 8
+        },
+        {
+          "repetition": 3,
+          "native_wall_seconds": 0.47449807399993915,
+          "direct_wall_seconds": 0.23269006199996056,
+          "native_position": 14,
+          "direct_position": 23
+        },
+        {
+          "repetition": 4,
+          "native_wall_seconds": 0.47457409100002224,
+          "direct_wall_seconds": 0.22251596900002824,
+          "native_position": 8,
+          "direct_position": 33
+        }
+      ],
+      "native_median_wall_seconds": 0.4742427810000436,
+      "direct_median_wall_seconds": 0.23277207199998884,
+      "median_ratio": 2.0373697622971982,
+      "paired_wins": 0,
+      "paired_count": 5,
+      "bootstrap_ratio_interval_95": [
+        1.833928184148476,
+        2.1327641927576084
+      ],
+      "bootstrap_repetitions": 10000,
+      "bootstrap_seed": 20261016,
+      "median_lower": false,
+      "paired_majority": false,
+      "bootstrap_upper_lower": false,
+      "passed": false
+    },
+    "unrelated-definition": {
+      "pairs": [
+        {
+          "repetition": 0,
+          "native_wall_seconds": 0.454823489999967,
+          "direct_wall_seconds": 0.23264183600002752,
+          "native_position": 17,
+          "direct_position": 12
+        },
+        {
+          "repetition": 1,
+          "native_wall_seconds": 0.45468095400008224,
+          "direct_wall_seconds": 0.23235442899999725,
+          "native_position": 20,
+          "direct_position": 25
+        },
+        {
+          "repetition": 2,
+          "native_wall_seconds": 0.46468236200007595,
+          "direct_wall_seconds": 0.23236915300003602,
+          "native_position": 6,
+          "direct_position": 0
+        },
+        {
+          "repetition": 3,
+          "native_wall_seconds": 0.4542651309999428,
+          "direct_wall_seconds": 0.23266762900004778,
+          "native_position": 1,
+          "direct_position": 7
+        },
+        {
+          "repetition": 4,
+          "native_wall_seconds": 0.4441208529999585,
+          "direct_wall_seconds": 0.23271602900001653,
+          "native_position": 3,
+          "direct_position": 21
+        }
+      ],
+      "native_median_wall_seconds": 0.45468095400008224,
+      "direct_median_wall_seconds": 0.23264183600002752,
+      "median_ratio": 1.9544247149082354,
+      "paired_wins": 0,
+      "paired_count": 5,
+      "bootstrap_ratio_interval_95": [
+        1.908423991713639,
+        1.999759245152492
+      ],
+      "bootstrap_repetitions": 10000,
+      "bootstrap_seed": 20261017,
+      "median_lower": false,
+      "paired_majority": false,
+      "bootstrap_upper_lower": false,
+      "passed": false
+    }
+  },
+  "comparisons": {
+    "baseline": {
+      "baseline-python-full": {
+        "full_median_seconds": 4.320825031000027,
+        "incremental_median_seconds": 0.18191081299994494,
+        "full_over_incremental_speedup": 23.752436481064677,
+        "wall_reduction_percent": 95.78990559222336
+      },
+      "baseline-python-incremental": {
+        "full_median_seconds": 0.1818892879999794,
+        "incremental_median_seconds": 0.18191081299994494,
+        "full_over_incremental_speedup": 0.9998816727845334,
+        "wall_reduction_percent": -0.011834121845355483
+      },
+      "native-full": {
+        "full_median_seconds": 0.6361727759999667,
+        "incremental_median_seconds": 0.18191081299994494,
+        "full_over_incremental_speedup": 3.4971685602887126,
+        "wall_reduction_percent": 71.40543892120992
+      },
+      "baseline-direct-full": {
+        "full_median_seconds": 0.2325440949999802,
+        "incremental_median_seconds": 0.18191081299994494,
+        "full_over_incremental_speedup": 1.2783412440691504,
+        "wall_reduction_percent": 21.773626201963793
+      },
+      "current-direct-full": {
+        "full_median_seconds": 0.22253016699994532,
+        "incremental_median_seconds": 0.18191081299994494,
+        "full_over_incremental_speedup": 1.2232926857405264,
+        "wall_reduction_percent": 18.25341460333797
+      }
+    },
+    "early-definition": {
+      "baseline-python-full": {
+        "full_median_seconds": 4.339892775999999,
+        "incremental_median_seconds": 0.4742427810000436,
+        "full_over_incremental_speedup": 9.151204720182342,
+        "wall_reduction_percent": 89.07247700628345
+      },
+      "baseline-python-incremental": {
+        "full_median_seconds": 4.179579891000003,
+        "incremental_median_seconds": 0.4742427810000436,
+        "full_over_incremental_speedup": 8.813165025277673,
+        "wall_reduction_percent": 88.65333853239072
+      },
+      "native-full": {
+        "full_median_seconds": 0.635886045999996,
+        "incremental_median_seconds": 0.4742427810000436,
+        "full_over_incremental_speedup": 1.3408449669156641,
+        "wall_reduction_percent": 25.420162310017634
+      },
+      "baseline-direct-full": {
+        "full_median_seconds": 0.23263325199997098,
+        "incremental_median_seconds": 0.4742427810000436,
+        "full_over_incremental_speedup": 0.4905362006974854,
+        "wall_reduction_percent": -103.85855286075044
+      },
+      "current-direct-full": {
+        "full_median_seconds": 0.23277207199998884,
+        "incremental_median_seconds": 0.4742427810000436,
+        "full_over_incremental_speedup": 0.4908289199661374,
+        "wall_reduction_percent": -103.73697622971983
+      }
+    },
+    "unrelated-definition": {
+      "baseline-python-full": {
+        "full_median_seconds": 4.331821863999949,
+        "incremental_median_seconds": 0.45468095400008224,
+        "full_over_incremental_speedup": 9.527168063431056,
+        "wall_reduction_percent": 89.50370148461656
+      },
+      "baseline-python-incremental": {
+        "full_median_seconds": 4.158965974000012,
+        "incremental_median_seconds": 0.45468095400008224,
+        "full_over_incremental_speedup": 9.14699843354173,
+        "wall_reduction_percent": 89.06745193775222
+      },
+      "native-full": {
+        "full_median_seconds": 0.6261728219999441,
+        "incremental_median_seconds": 0.45468095400008224,
+        "full_over_incremental_speedup": 1.3771696757718839,
+        "wall_reduction_percent": 27.387306183639694
+      },
+      "baseline-direct-full": {
+        "full_median_seconds": 0.2328256149999106,
+        "incremental_median_seconds": 0.45468095400008224,
+        "full_over_incremental_speedup": 0.5120637074230043,
+        "wall_reduction_percent": -95.28820057030958
+      },
+      "current-direct-full": {
+        "full_median_seconds": 0.23264183600002752,
+        "incremental_median_seconds": 0.45468095400008224,
+        "full_over_incremental_speedup": 0.5116595141128024,
+        "wall_reduction_percent": -95.44247149082355
+      }
+    },
+    "theorem-leaf": {
+      "baseline-python-full": {
+        "full_median_seconds": 4.348201125999935,
+        "incremental_median_seconds": 0.45415905400000156,
+        "full_over_incremental_speedup": 9.574181308735772,
+        "wall_reduction_percent": 89.5552427121098
+      },
+      "baseline-python-incremental": {
+        "full_median_seconds": 4.159230532000038,
+        "incremental_median_seconds": 0.45415905400000156,
+        "full_over_incremental_speedup": 9.158092292485758,
+        "wall_reduction_percent": 89.0806953231897
+      },
+      "native-full": {
+        "full_median_seconds": 0.6157515990000775,
+        "incremental_median_seconds": 0.45415905400000156,
+        "full_over_incremental_speedup": 1.3558060630452065,
+        "wall_reduction_percent": 26.243138509503993
+      },
+      "baseline-direct-full": {
+        "full_median_seconds": 0.23257914800001345,
+        "incremental_median_seconds": 0.45415905400000156,
+        "full_over_incremental_speedup": 0.5121094602245069,
+        "wall_reduction_percent": -95.27075316312335
+      },
+      "current-direct-full": {
+        "full_median_seconds": 0.23260786599996663,
+        "incremental_median_seconds": 0.45415905400000156,
+        "full_over_incremental_speedup": 0.5121726935778887,
+        "wall_reduction_percent": -95.24664484049164
+      }
+    },
+    "invalid-proof": {
+      "baseline-python-full": {
+        "full_median_seconds": 4.199176292000061,
+        "incremental_median_seconds": 0.31299890699995103,
+        "full_over_incremental_speedup": 13.415945545141211,
+        "wall_reduction_percent": 92.54618322178443
+      },
+      "baseline-python-incremental": {
+        "full_median_seconds": 4.017905368000015,
+        "incremental_median_seconds": 0.31299890699995103,
+        "full_over_incremental_speedup": 12.836803190500099,
+        "wall_reduction_percent": 92.20989848360337
+      },
+      "native-full": {
+        "full_median_seconds": 0.5049230890000445,
+        "incremental_median_seconds": 0.31299890699995103,
+        "full_over_incremental_speedup": 1.6131784415468373,
+        "wall_reduction_percent": 38.01057748818385
+      },
+      "baseline-direct-full": {
+        "full_median_seconds": 0.23259137599995938,
+        "incremental_median_seconds": 0.31299890699995103,
+        "full_over_incremental_speedup": 0.7431060326354295,
+        "wall_reduction_percent": -34.57029765368673
+      },
+      "current-direct-full": {
+        "full_median_seconds": 0.2326253260000044,
+        "incremental_median_seconds": 0.31299890699995103,
+        "full_over_incremental_speedup": 0.7432144994680151,
+        "wall_reduction_percent": -34.55065808266513
+      }
+    },
+    "axiom-type": {
+      "baseline-python-full": {
+        "full_median_seconds": 4.036072709999985,
+        "incremental_median_seconds": 0.3332854310000357,
+        "full_over_incremental_speedup": 12.109958415792715,
+        "wall_reduction_percent": 91.742333328776
+      },
+      "baseline-python-incremental": {
+        "full_median_seconds": 4.069817826000076,
+        "incremental_median_seconds": 0.3332854310000357,
+        "full_over_incremental_speedup": 12.211208314112115,
+        "wall_reduction_percent": 91.8108022213958
+      },
+      "native-full": {
+        "full_median_seconds": 0.29285776100005023,
+        "incremental_median_seconds": 0.3332854310000357,
+        "full_over_incremental_speedup": 0.8786995582774779,
+        "wall_reduction_percent": -13.804541106212497
+      },
+      "baseline-direct-full": {
+        "full_median_seconds": 0.03071155700001782,
+        "incremental_median_seconds": 0.3332854310000357,
+        "full_over_incremental_speedup": 0.09214791330022022,
+        "wall_reduction_percent": -985.2117689762272
+      },
+      "current-direct-full": {
+        "full_median_seconds": 0.030726514999969368,
+        "incremental_median_seconds": 0.3332854310000357,
+        "full_over_incremental_speedup": 0.09219279374970961,
+        "wall_reduction_percent": -984.6834761454984
+      }
+    }
+  },
+  "scope": "Exact-source CI correctness with21fresh full oracles, immutable HMAC controls and unchanged integration. No direct-Rust speedup. Native parser/indexer trusted applicability extractor, not a proof of the executable bridge. OS cache warm; five paired fresh-process repetitions; memory diagnostic separate from timing economics.",
+  "independent_archive_review": {
+    "review-ci-archive.py": {
+      "file": "review-ci-archive.py",
+      "sha256": "7c0f5fb60eed47521fc6382a2efd63da15a25810940fe43b2c0f0338a0668701"
+    },
+    "ci-independent-archive-review.json": {
+      "file": "ci-independent-archive-review.json",
+      "sha256": "f33eec2328bc63c449e315ff6b161104c6d7897d1e7b70720951b8b82b2e2561"
+    },
+    "ci-archive-review-negative-controls.json": {
+      "file": "ci-archive-review-negative-controls.json",
+      "sha256": "0bac0266067cd03466b4b3f66bb93d80a62d8c9e8b32fcd322c6e35a811d35fc"
+    },
+    "passed": true,
+    "check_count": 26753,
+    "negative_controls_failed_closed": 10,
+    "scope": "Provider-bound content/source/report/arithmetic audit; no new kernels and no historical issuer key. Actual independent full checks and HMAC replay ran in qualified CI and repaired local suites."
+  }
+}

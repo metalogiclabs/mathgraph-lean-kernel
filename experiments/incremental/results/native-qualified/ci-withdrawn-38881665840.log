@@ -1,0 +1,115 @@
+2026-10-16T09:38:05.5305230Z ##[group]Run mkdir -p artifacts
+2026-10-16T09:38:05.5306449Z [36;1mmkdir -p artifacts[0m
+2026-10-16T09:38:05.5307887Z [36;1mbash experiments/incremental/setup.sh 2>&1 | tee artifacts/setup.log[0m
+2026-10-16T09:38:05.5602232Z shell: /usr/bin/bash -e {0}
+2026-10-16T09:38:05.5603392Z ##[endgroup]
+2026-10-16T09:38:05.5878934Z   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+2026-10-16T09:38:05.5882840Z                                  Dload  Upload   Total   Spent    Left  Speed
+2026-10-16T09:38:05.5884167Z 
+2026-10-16T09:38:05.6449395Z   0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+2026-10-16T09:39:00.8772398Z [36;1mcp "$baseline_target/release/sokonanoda" artifacts/native-baseline-bin/sokonanoda[0m
+2026-10-16T09:39:00.8772915Z [36;1msha256sum artifacts/native-baseline-bin/check-selected \[0m
+2026-10-16T09:39:00.8773443Z [36;1m  artifacts/native-baseline-bin/sokonanoda > artifacts/native-baseline-bin/SHA256SUMS[0m
+2026-10-16T09:39:00.8838766Z shell: /usr/bin/bash -e {0}
+2026-10-16T09:39:00.8839339Z env:
+2026-10-16T09:39:00.8839609Z   BASELINE_REF: 9ac04033b51703fb135ec3c28621d44b183944fe
+2026-10-16T09:39:00.8839935Z ##[endgroup]
+2026-10-16T09:39:00.8952343Z Preparing worktree (detached HEAD 9ac0403)
+2026-10-16T09:39:00.9094243Z HEAD is now at 9ac0403 Pin exact exports and qualify parser, provenance, and restored-dependency controls
+2026-10-16T09:39:26.9891453Z [36;1mpython3 experiments/incremental/test_native_identity.py 2>&1 | tee artifacts/native-identity-tests.log[0m
+2026-10-16T09:39:26.9892054Z [36;1mpython3 experiments/incremental/test_native_adapter.py \[0m
+2026-10-16T09:39:26.9892587Z [36;1m  --checker target/release/check-selected 2>&1 | tee artifacts/native-adapter-tests.log[0m
+2026-10-16T09:39:26.9955296Z shell: /usr/bin/bash -e {0}
+2026-10-16T09:39:26.9955545Z ##[endgroup]
+2026-10-16T09:39:27.0444957Z    Compiling getrandom v0.2.11
+2026-10-16T09:39:27.0446876Z    Compiling ppv-lite86 v0.2.17
+2026-10-16T09:39:27.0464130Z    Compiling num-bigint v0.4.4
+2026-10-16T09:39:27.1345519Z    Compiling rand_core v0.6.4
+2026-10-16T09:40:13.8535831Z [36;1mexport PATH="$HOME/.elan/bin:$PATH"[0m
+2026-10-16T09:40:13.8536218Z [36;1mpython3 experiments/incremental/build_workloads.py \[0m
+2026-10-16T09:40:13.8536715Z [36;1m  --out artifacts/workloads 2>&1 | tee artifacts/workload-build.log[0m
+2026-10-16T09:40:13.8600276Z shell: /usr/bin/bash -e {0}
+2026-10-16T09:40:13.8600537Z ##[endgroup]
+2026-10-16T09:40:40.0486450Z {
+2026-10-16T09:40:40.0486945Z   "baseline": {
+2026-10-16T09:40:40.0487561Z     "sha256": "d81ecde8f818ed8d8748b476e22412ec74820a49edbe7986c2c3633a3d66bef0",
+2026-10-16T09:40:40.0488289Z     "bytes": 15922029,
+2026-10-16T09:40:40.0689238Z [36;1m  --indexer target/release/export-index \[0m
+2026-10-16T09:40:40.0689892Z [36;1m  --authority-dir "$RUNNER_TEMP/native-index-authority" \[0m
+2026-10-16T09:40:40.0690578Z [36;1m  2>&1 | tee artifacts/native-qualification.log[0m
+2026-10-16T09:40:40.0764063Z shell: /usr/bin/bash -e {0}
+2026-10-16T09:40:40.0764331Z ##[endgroup]
+2026-10-16T09:40:46.1821027Z index baseline PASS
+2026-10-16T09:40:52.0547212Z index early-definition PASS
+2026-10-16T09:40:57.9711899Z index unrelated-definition PASS
+2026-10-16T09:41:03.8185997Z index theorem-leaf PASS
+2026-10-16T09:44:26.7080193Z backend json-array-row PASS
+2026-10-16T09:44:27.0809916Z backend truncated-json PASS
+2026-10-16T09:44:27.4643013Z backend sparse-indices PASS
+2026-10-16T09:46:55.8437100Z {"correctness_passed": false, "failed_gates": ["all-original-qualification-gates", "original-qualification-used-captured-native-tools"]}
+2026-10-16T09:46:55.9246625Z ##[group]Run python3 experiments/incremental/replay_native.py \
+2026-10-16T09:46:55.9247119Z [36;1mpython3 experiments/incremental/replay_native.py \[0m
+2026-10-16T09:46:55.9247606Z [36;1m  --qualification artifacts/native-qualification/original-qualification \[0m
+2026-10-16T09:46:55.9248049Z [36;1m  --workloads artifacts/workloads \[0m
+2026-10-16T09:46:55.9248497Z [36;1m  --authority-key "$RUNNER_TEMP/native-index-authority/original/issuer.key" \[0m
+2026-10-16T09:46:55.9249994Z [36;1m  --reference experiments/incremental/results/local-qualified.json \[0m
+2026-10-16T09:46:55.9250438Z [36;1m  --out artifacts/native-independent-replay \[0m
+2026-10-16T09:46:55.9250808Z [36;1m  2>&1 | tee artifacts/native-independent-replay.log[0m
+2026-10-16T09:46:55.9311776Z shell: /usr/bin/bash -e {0}
+2026-10-16T09:46:55.9312058Z ##[endgroup]
+2026-10-16T09:46:56.0294058Z Traceback (most recent call last):
+2026-10-16T09:46:56.0295303Z   File "/home/runner/work/mathgraph-lean-kernel/mathgraph-lean-kernel/experiments/incremental/replay_native.py", line 261, in <module>
+2026-10-16T09:46:56.0296530Z     raise SystemExit(evaluate(arguments))
+2026-10-16T09:46:56.0297047Z                      ^^^^^^^^^^^^^^^^^^^
+2026-10-16T09:46:56.0298184Z   File "/home/runner/work/mathgraph-lean-kernel/mathgraph-lean-kernel/experiments/incremental/replay_native.py", line 68, in evaluate
+2026-10-16T09:46:56.0299645Z     current = read(qualification / 'summary.json')
+2026-10-16T09:46:56.0305783Z   File "/usr/lib/python3.12/pathlib.py", line 1015, in open
+2026-10-16T09:46:56.0306416Z     return io.open(self, mode, buffering, encoding, errors, newline)
+2026-10-16T09:46:56.0307022Z            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-10-16T09:46:56.0308405Z FileNotFoundError: [Errno 2] No such file or directory: '/home/runner/work/mathgraph-lean-kernel/mathgraph-lean-kernel/artifacts/native-qualification/original-qualification/summary.json'
+2026-10-16T09:46:56.0460609Z ##[group]Run python3 experiments/incremental/benchmark_native.py \
+2026-10-16T09:46:56.0461124Z [36;1mpython3 experiments/incremental/benchmark_native.py \[0m
+2026-10-16T09:46:56.0461615Z [36;1m  --workloads artifacts/workloads --out artifacts/native-benchmark \[0m
+2026-10-16T09:46:56.0462080Z [36;1m  --baseline-bin artifacts/native-baseline-bin \[0m
+2026-10-16T09:46:56.0462501Z [36;1m  --baseline-ref 9ac04033b51703fb135ec3c28621d44b183944fe \[0m
+2026-10-16T09:46:56.0462857Z [36;1m  --repetitions 5 \[0m
+2026-10-16T09:46:56.0463142Z [36;1m  2>&1 | tee artifacts/native-benchmark.log[0m
+2026-10-16T09:46:56.0523260Z shell: /usr/bin/bash -e {0}
+2026-10-16T09:46:56.0523523Z ##[endgroup]
+2026-10-16T09:53:43.6176185Z {"status": "NO_SPEEDUP", "correctness_passed": true, "economic_passed": false}
+2026-10-16T09:53:43.7016692Z ##[group]Run git clone --no-checkout https://github.com/metalogiclabs/mathgraph.git "$RUNNER_TEMP/mathgraph-native-index-consumer"
+2026-10-16T09:53:43.7017658Z [36;1mgit clone --no-checkout https://github.com/metalogiclabs/mathgraph.git "$RUNNER_TEMP/mathgraph-native-index-consumer"[0m
+2026-10-16T09:53:43.7018528Z [36;1mgit -C "$RUNNER_TEMP/mathgraph-native-index-consumer" checkout --detach cf359686c74549a132c7a651cd7aabc7c1a870fe[0m
+2026-10-16T09:53:43.7019523Z [36;1mpython3 experiments/incremental/qualify_integration.py \[0m
+2026-10-16T09:53:43.7020036Z [36;1m  --qualification artifacts/native-qualification/original-qualification \[0m
+2026-10-16T09:53:43.7020552Z [36;1m  --mathgraph "$RUNNER_TEMP/mathgraph-native-index-consumer" \[0m
+2026-10-16T09:53:43.7020968Z [36;1m  --out artifacts/mathgraph-integration \[0m
+2026-10-16T09:53:43.7021314Z [36;1m  2>&1 | tee artifacts/mathgraph-integration.log[0m
+2026-10-16T09:53:43.7082924Z shell: /usr/bin/bash -e {0}
+2026-10-16T09:53:43.7083210Z ##[endgroup]
+2026-10-16T09:53:43.7171936Z Cloning into '/home/runner/work/_temp/mathgraph-native-index-consumer'...
+2026-10-16T09:53:45.4701098Z HEAD is now at cf359686 Refine public MathGraph materials to supported scope
+2026-10-16T09:53:45.5104850Z {"schema": "mathgraph.incremental-lean.mathgraph-integration-qualification.v1", "status": "UNKNOWN", "qualification_passed": false}
+2026-10-16T09:53:45.5193855Z ##[group]Run python3 experiments/incremental/profile_native_phases.py \
+2026-10-16T09:53:45.5194417Z [36;1mpython3 experiments/incremental/profile_native_phases.py \[0m
+2026-10-16T09:53:45.5194820Z [36;1m  --workloads artifacts/workloads \[0m
+2026-10-16T09:53:45.5195151Z [36;1m  --checker target/release/check-selected \[0m
+2026-10-16T09:53:45.5195485Z [36;1m  --indexer target/release/export-index \[0m
+2026-10-16T09:53:45.5195805Z [36;1m  --parser target/release/sokonanoda \[0m
+2026-10-16T09:53:45.5196122Z [36;1m  --out artifacts/native-phase-memory \[0m
+2026-10-16T09:53:45.5196456Z [36;1m  2>&1 | tee artifacts/native-phase-memory.log[0m
+2026-10-16T09:53:45.5257950Z shell: /usr/bin/bash -e {0}
+2026-10-16T09:53:45.5258207Z ##[endgroup]
+2026-10-16T09:53:50.6704594Z {"summary": "/home/runner/work/mathgraph-lean-kernel/mathgraph-lean-kernel/artifacts/native-phase-memory/summary.json"}
+2026-10-16T09:53:50.6833033Z ##[group]Run for summary in artifacts/native-qualification/summary.md \
+2026-10-16T09:53:50.6833635Z [36;1mfor summary in artifacts/native-qualification/summary.md \[0m
+2026-10-16T09:53:50.6834153Z [36;1m  artifacts/native-qualification/original-qualification/summary.md \[0m
+2026-10-16T09:53:50.6844626Z [36;1m    print('::notice title=' + label + '::' + json.dumps(value, separators=(',', ':')))[0m
+2026-10-16T09:53:50.6845255Z [36;1mPath('artifacts/ci-observations.json').write_text(json.dumps(observations, indent=2) + '\n')[0m
+2026-10-16T09:53:50.6845730Z [36;1mPY[0m
+2026-10-16T09:53:50.6907627Z shell: /usr/bin/bash -e {0}
+2026-10-16T09:53:50.6907891Z ##[endgroup]
+2026-10-16T09:53:50.7420168Z ##[notice]{"source_sha":"f6eaaff3128efc352da4e5942fa755eff9f3c907","summary_sha256":"bccfb7a525c981ac6f313212317b471c9e1e80e0ee4399701df8aa5407a08d01","gates":335,"all_gates_passed":false}
+2026-10-16T09:53:50.7448888Z ##[notice]{"source_sha":"f6eaaff3128efc352da4e5942fa755eff9f3c907","summary_sha256":"8f1d701c9ebd2433a2e40d6b6cf5ea31b4ddcf52836b8a3a5f324d364fbe8ce4","gates":251,"all_gates_passed":true,"economic_status":"NO_SPEEDUP","primary":{"early-definition":{"baseline-python-full":{"wall_seconds":5.932231985000044,"cpu_seconds":5.925535,"max_rss_kib":283984},"baseline-python-incremental":{"wall_seconds":5.777573863999919,"cpu_seconds":5.766119,"max_rss_kib":293824},"native-full":{"wall_seconds":0.6458099019999963,"cpu_seconds":0.631927,"max_rss_kib":274100},"native-incremental":{"wall_seconds":0.46625153399998,"cpu_seconds":0.457095,"max_rss_kib":274100},"baseline-direct-full":{"wall_seconds":0.28307880499994553,"cpu_seconds":0.276101,"max_rss_kib":274100},"current-direct-full":{"wall_seconds":0.27307223100001465,"cpu_seconds":0.272489,"max_rss_kib":274100}},"unrelated-definition":{"baseline-python-full":{"wall_seconds":5.92435222600011,"cpu_seconds":5.908422,"max_rss_kib":287224},"baseline-python-incremental":{"wall_seconds":5.732573338000066,"cpu_seconds":5.722176,"max_rss_kib":292920},"native-full":{"wall_seconds":0.646741651999946,"cpu_seconds":0.632656,"max_rss_kib":274100},"native-incremental":{"wall_seconds":0.4344330720000471,"cpu_seconds":0.422058,"max_rss_kib":274100},"baseline-direct-full":{"wall_seconds":0.28312101699998493,"cpu_seconds":0.277985,"max_rss_kib":274100},"current-direct-full":{"wall_seconds":0.2830059689999871,"cpu_seconds":0.274124,"max_rss_kib":274100}}}}
+2026-10-16T09:53:50.7580126Z ##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+2026-10-16T09:53:50.7580557Z with:

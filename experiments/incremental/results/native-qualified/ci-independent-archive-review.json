@@ -1,0 +1,101 @@
+{
+  "artifact_metadata_sha256": "139518ab824ec451070941bf136b55ee3082dcaff376d7dcbacc00060b58ba04",
+  "check_count": 26753,
+  "checks_sha256": "7bcf43b8c23db65487892dd4e82b662448dbe9501bb396234e04ca3082b784ef",
+  "failed_count": 0,
+  "failures": [],
+  "passed": true,
+  "report_sha256": {
+    "independent-replay": "55742a6a24ae350daa7ab527e1edde3aede3aa37b9850e4363dae990ee26ab65",
+    "integration": "3d9eb8282492f1e91124ee44580017a56f8eeaef67b2c689895d2752e56e5f4a",
+    "memory": "0f54cc0b8c75d4d64e5102ec041057aa534ae2d6e53955dab947c44a2e6faea1",
+    "native-correctness": "15478fbe8232e93974e2ce169b97477158825f4c62f3c0f29d9d879f652a885b",
+    "native-economics": "091a319365a4a086cddac253cdb9db0ddc69ab6116d6cbcbbf09d18ea546526e",
+    "observations": "318ad01e50072ced9660cd6425ac1f2b1818e4be35d3e23d622321e868a47d80",
+    "original-correctness": "d298aa4bf423a2e25cc2ab7c78e29631bde8adf9f53829f54825d7f229f84d28"
+  },
+  "reviewer_sha256": "7c0f5fb60eed47521fc6382a2efd63da15a25810940fe43b2c0f0338a0668701",
+  "schema": "mathgraph.native-ci-archive-independent-review.v1",
+  "scope": "Read-only provider-bound compact ZIP, source attribution, report/protocol consistency, obligation import identities, and arithmetic review. No kernels or producer modules executed. No independent old-secret HMAC verification; caches, original receipt bodies, exporter inputs and built binaries are absent from this compact archive. Reported replay checks retain their original trust boundary.",
+  "source_sha": "c5ab12699338aa57b7e9d48b15d4a7409e453c7b",
+  "summary": {
+    "archive": {
+      "artifact_id": 12039714166,
+      "artifact_name": "incremental-native-index-summaries-c5ab12699338aa57b7e9d48b15d4a7409e453c7b",
+      "bytes": 1434999,
+      "member_count": 22,
+      "path": "/workspace/kernel-audit/native-ci-c5ab126/summaries.zip",
+      "provider_digest": "sha256:a9d73d4c1185d02da21ed53021ba58f651e28733d3e29125363dcea196daefa4",
+      "sha256": "a9d73d4c1185d02da21ed53021ba58f651e28733d3e29125363dcea196daefa4",
+      "uncompressed_bytes": 9407464
+    },
+    "benchmark": {
+      "economic_passed": false,
+      "economic_status": "NO_SPEEDUP",
+      "phase_medians_checked": 226,
+      "primary": {
+        "early-definition": {
+          "bootstrap_ratio_interval_95": [
+            1.833928184148476,
+            2.1327641927576084
+          ],
+          "bootstrap_repetitions": 10000,
+          "bootstrap_seed": 20261016,
+          "bootstrap_upper_lower": false,
+          "direct_median_wall_seconds": 0.23277207199998884,
+          "median_lower": false,
+          "median_ratio": 2.0373697622971982,
+          "native_median_wall_seconds": 0.4742427810000436,
+          "paired_count": 5,
+          "paired_majority": false,
+          "paired_wins": 0,
+          "passed": false
+        },
+        "unrelated-definition": {
+          "bootstrap_ratio_interval_95": [
+            1.908423991713639,
+            1.999759245152492
+          ],
+          "bootstrap_repetitions": 10000,
+          "bootstrap_seed": 20261017,
+          "bootstrap_upper_lower": false,
+          "direct_median_wall_seconds": 0.23264183600002752,
+          "median_lower": false,
+          "median_ratio": 1.9544247149082354,
+          "native_median_wall_seconds": 0.45468095400008224,
+          "paired_count": 5,
+          "paired_majority": false,
+          "paired_wins": 0,
+          "passed": false
+        }
+      },
+      "resource_medians_checked": 108,
+      "samples": 180
+    },
+    "fresh_oracle_processes": 21,
+    "integration": {
+      "cases": 5,
+      "checked_origins": 413,
+      "obligations": 3436,
+      "reused_origins": 3023
+    },
+    "memory": {
+      "cases": 5,
+      "counts_validated": true,
+      "runs": 10,
+      "use": "Separate sampled diagnostic; not economics or exact memory savings"
+    },
+    "source": {
+      "commit": "c5ab12699338aa57b7e9d48b15d4a7409e453c7b",
+      "engine_sha256": "650aa6f8eb49083ea867d30a85c3aedee1581b605cba7672e15ffc7fe6b1c4c2",
+      "manifest_sha256": "0ed2409c7e80c935636dd9771ee647575dd9e48496b1b8158b6485ec99feef1c",
+      "pins_sha256": "08015efcd86f129fbc8eaa64354825a1e42d331e64daf55ed8a3cbd3a9cb2b82",
+      "replay_sha256": "1b539f02c53c8781c23d3931565935bed806814c1c5b59468ec94bed14c4ea8e",
+      "reported_binary_sha256": {
+        "checker_sha256": "90c0b9c64e16e9b37d2e609f8af1de6cab108c6b97ce9459be0cac232124678d",
+        "full_checker_sha256": "cc84a09b15025c43adaffbe3abb31e34bed3cde19fd97920f24725c1470e1bf9",
+        "indexer_sha256": "2e195b5cd4b0a151554010b685143d7ed741862c1477640d90df8330fc51a2b8"
+      }
+    }
+  }
+}

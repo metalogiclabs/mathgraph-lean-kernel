@@ -1,0 +1,111 @@
+{
+  "schema": "mathgraph.native-ci-failure-retention.v1",
+  "withdrawn_runs": [
+    {
+      "run_id": 38879576999,
+      "source": "1445e293238abedfb9f0cf727f6c5e17fd685184",
+      "job_id": 116902790238,
+      "url": "https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/38879576999",
+      "provider_conclusion": "success",
+      "qualification_status": "WITHDRAWN_NOT_QUALIFYING",
+      "reason": "tee masked original qualification failure; native original197 gate failed, replay lacked summary, integration UNKNOWN",
+      "decoded_log_sha256": "025d2d805408509b8b79597717022b693d33c66a35747b72c70e0cc6cf78a8ef",
+      "retained_excerpt": "ci-withdrawn-38879576999.log",
+      "excerpt_sha256": "20f758a89a9b17d1df6341789caf51250776a52b150ebff6b079a6d326dc22e2",
+      "artifact": {
+        "id": 12038156020,
+        "bytes": 724628600,
+        "provider_digest": "sha256:f9edd5ec24ce97ab2238c70bc706d13e1ac1c9707b0fe4809e3f46a462c2493c",
+        "independently_downloaded": false,
+        "blocker": "HTTPS proxy CONNECT403; connector512MiB transfer cap exceeded"
+      },
+      "retained_full_decoded_log": "ci-withdrawn-38879576999-full.log.gz",
+      "compressed_log_sha256": "2e013b81942e56100758e8afe8e7061b6e0da2c97de51125ef47bf4763f8fc5d"
+    },
+    {
+      "run_id": 38881665840,
+      "source": "f6eaaff3128efc352da4e5942fa755eff9f3c907",
+      "job_id": 116909992979,
+      "url": "https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/38881665840",
+      "provider_conclusion": "success",
+      "qualification_status": "WITHDRAWN_NOT_QUALIFYING",
+      "reason": "tee masked original qualification failure; native original197 gate failed, replay lacked summary, integration UNKNOWN",
+      "decoded_log_sha256": "21f73da9b7590f7daf0ad4cf2652429524e866f4d88a4aa4f0332106c8ff6f12",
+      "retained_excerpt": "ci-withdrawn-38881665840.log",
+      "excerpt_sha256": "f8e06f1f1b6130a04f187fada785d15643688caac560da6688275460c1cbb485",
+      "artifact": {
+        "id": 12038965539,
+        "bytes": 795663964,
+        "provider_digest": "sha256:622d2f19b7b2ff0b68df5cbef0da9e534fb6096281b8f63c08298fcdb2e7ded3",
+        "independently_downloaded": false,
+        "blocker": "HTTPS proxy CONNECT403; connector512MiB transfer cap exceeded"
+      },
+      "retained_full_decoded_log": "ci-withdrawn-38881665840-full.log.gz",
+      "compressed_log_sha256": "8d3b577ba9a664a4363026ba17beabba72ea6ed3060366e589dcd3a93f985c96"
+    }
+  ],
+  "cancelled_run": {
+    "id": 38881148457,
+    "source": "c424f8d74318e56422f3aa4efc78ba4b74564b57",
+    "reason": "Preflight found diagnostic rejected isolated artifact output under repository; unnecessary guard removed before retry."
+  },
+  "root_cause": "Original qualification copies a read-only captured checker with copy2, then provenance negative control appends; copied0500 mode caused PermissionError. Missing summary exposed failures in decoded CI logs. GitHub unspecified bash-e did not propagate piped command failures through tee.",
+  "repair": {
+    "source": "c5ab12699338aa57b7e9d48b15d4a7409e453c7b",
+    "pipeline_failure_control": {
+      "legacy_bash_e_pipeline_exit": 0,
+      "explicit_bash_pipefail_pipeline_exit": 1
+    },
+    "readonly_nested_qualification": {
+      "native": {
+        "path": "/workspace/kernel-audit/native-qualification-nested-fixed/summary.json",
+        "source_git_commit_reported": "f6eaaff3128efc352da4e5942fa755eff9f3c907",
+        "harness_sha256": "c5bdc1690b9a321054ec0e5ccca3b9ba4e8f64f7516f7d579ca00cda9b9c33c3",
+        "summary_sha256": "3527edd5f351286d0a00faf04c771e3e5d619f40ab09929ce0c379c452b9b0bc",
+        "compressed_file": "readonly-repair-native.json.gz",
+        "compressed_sha256": "e9e54b05210fbfcf2c715f83c069eebb6bbbe591eb1109b4b56636392be02179",
+        "gates": 335,
+        "all_gates_passed": true,
+        "child_exit": 0,
+        "harness_matches_committed_repair": true
+      },
+      "original": {
+        "path": "/workspace/kernel-audit/native-qualification-nested-fixed/original-qualification/summary.json",
+        "source_git_commit_reported": "f6eaaff3128efc352da4e5942fa755eff9f3c907",
+        "harness_sha256": null,
+        "summary_sha256": "5f46133db5a8b3dcb19243c87711faacb9ac38a84658bbf507a7310bb6746321",
+        "compressed_file": "readonly-repair-original.json.gz",
+        "compressed_sha256": "5ad6180c5510c2e15c5e4a089372ed7f6bdd7bcab0f35b0f21070662df7fc03f",
+        "gates": 197,
+        "all_gates_passed": true
+      },
+      "independent_replay": {
+        "path": "/workspace/kernel-audit/native-repaired-independent-replay/summary.json",
+        "source_git_commit_reported": null,
+        "harness_sha256": null,
+        "summary_sha256": "5c3c39e59fae8ac959cbdb35f715064cc475575b3e7441f085a59ec8672b7532",
+        "compressed_file": "readonly-repair-independent_replay.json.gz",
+        "compressed_sha256": "191915c9a7b679b9eb0669a047d5125f445dcda016a906d50be562b0dc909261",
+        "gates": 719,
+        "all_gates_passed": true
+      },
+      "attribution": "Run before repair commit, so reported Git parentf6eaaff; harness bytes equal committedc5ab126. Production engine/indexer/checker hashes are unchanged and recorded in the full summaries."
+    },
+    "publication_controls": {
+      "correct_NO_SPEEDUP": 0,
+      "missing_original_report": 1,
+      "empty_native_gates": 1,
+      "native_qualification_false": 1,
+      "replay_passed_false": 1,
+      "economics_correctness_false": 1
+    },
+    "scope": "Harness/workflow repair only; engine and Rust bytes unchanged since1445e293.",
+    "committed_source_digests": {
+      "qualify_native": "c5bdc1690b9a321054ec0e5ccca3b9ba4e8f64f7516f7d579ca00cda9b9c33c3",
+      "qualify_original": "fe2dad0befb77682709b41dce54ba5f4834353f4e8a371ff2ac46aa2a33d1c45",
+      "workflow": "09f6fa304c36a4aadfbd33a344f2cec1a295b8ac535cf92de7aa32498562af46"
+    },
+    "qualified_ci_source": "c5ab12699338aa57b7e9d48b15d4a7409e453c7b",
+    "qualified_ci_run": "https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/38885278602"
+  }
+}

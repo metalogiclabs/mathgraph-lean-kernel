@@ -1,0 +1,76 @@
+{
+  "schema": "mathgraph.native-ci-archive-review-negative-controls.v1",
+  "all_failed_closed": true,
+  "controls": {
+    "wrong-provider-digest": {
+      "expected_passed": false,
+      "observed_passed": false,
+      "exitcode": 1,
+      "failed_checks": 2,
+      "first_failed_check": "provider-ZIP-sha256"
+    },
+    "missing-original": {
+      "expected_passed": false,
+      "observed_passed": false,
+      "exitcode": 1,
+      "failed_checks": 2,
+      "first_failed_check": "one-required-member:original-qualification/summary.json"
+    },
+    "empty-original-gates": {
+      "expected_passed": false,
+      "observed_passed": false,
+      "exitcode": 1,
+      "failed_checks": 3,
+      "first_failed_check": "original-correctness:nonempty-exact-gates"
+    },
+    "false-original-gate": {
+      "expected_passed": false,
+      "observed_passed": false,
+      "exitcode": 1,
+      "failed_checks": 4,
+      "first_failed_check": "original-correctness:strict-gates-pass"
+    },
+    "duplicate-ZIP-member": {
+      "expected_passed": false,
+      "observed_passed": false,
+      "exitcode": 1,
+      "failed_checks": 2,
+      "first_failed_check": "unique-ZIP-member:mathgraph-integration/summary.json"
+    },
+    "traversal-ZIP-member": {
+      "expected_passed": false,
+      "observed_passed": false,
+      "exitcode": 1,
+      "failed_checks": 2,
+      "first_failed_check": "safe-ZIP-member:../unsafe.txt"
+    },
+    "wrong-direct-oracle-exit": {
+      "expected_passed": false,
+      "observed_passed": false,
+      "exitcode": 1,
+      "failed_checks": 1,
+      "first_failed_check": "fresh-replay:baseline:rust:actual-process"
+    },
+    "wrong-resource-median": {
+      "expected_passed": false,
+      "observed_passed": false,
+      "exitcode": 1,
+      "failed_checks": 3,
+      "first_failed_check": "benchmark-median:early-definition:native-incremental:wall_seconds"
+    },
+    "wrong-memory-count": {
+      "expected_passed": false,
+      "observed_passed": false,
+      "exitcode": 1,
+      "failed_checks": 1,
+      "first_failed_check": "memory:early:0:counts"
+    },
+    "missing-source-SHA": {
+      "expected_passed": false,
+      "observed_passed": false,
+      "exitcode": 1,
+      "failed_checks": 1,
+      "first_failed_check": "sources:complete"
+    }
+  }
+}

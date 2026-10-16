@@ -1,0 +1,103 @@
+{
+  "schema": "mathgraph.native-ordered-input-supplemental-audit.v1",
+  "scope": "Supplemental ordered-visibility audit outside the pinned197/335gate matrix; not a backend equivalence or logical rejection claim for reordered inputs.",
+  "hypothesis": "Could a forward declaration dependency first be accepted by selected Rust, then later changed while its earlier proof was reused?",
+  "source": "def Pivot.val : Nat := 17\ntheorem Pivot.cert : Pivot.val = 17 := rfl\n",
+  "construction": "Genuine export from source; move Pivot.val declaration record after Pivot.cert, preserve the typed DAG. Changed case substitutes23 for17 in that late definition.",
+  "cases": {
+    "ordered-probe": {
+      "export_sha256": "3a3718c7950a4b898b0b507beb6c58d562d9c37396fd4d48085140f87a1ad8fe",
+      "compressed_file": "ordered-probe.ndjson.gz",
+      "compressed_sha256": "cb20f542cd6d4108822b8eca9f2fbc94e937b3f9047694e1ff2547c0836a24ea",
+      "oracles": {
+        "rust": {
+          "command": [
+            "/workspace/mathgraph-lean-kernel/target/release/sokonanoda",
+            "/workspace/kernel-audit/prefix-order-proof/ordered-probe.json"
+          ],
+          "binary_sha256": "37af7860da9da9425aef25b3a94825fe83ae26f23a013f2246a161e4cf9a40b8",
+          "returncode": 1,
+          "stdout": "",
+          "stderr": "\nthread '<unnamed>' (22671) panicked at src/eval.rs:866:21:\nconst_head_type: unknown const NamePtr(0x24aa1eb1110)\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'main' (22670) panicked at src/tc.rs:242:18:\nserial checker thread panicked: Any { .. }\n",
+          "status": "ORDER_REFUSAL_PANIC"
+        },
+        "cpp": {
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+            "--from-export",
+            "/workspace/kernel-audit/prefix-order-proof/ordered-probe.ndjson"
+          ],
+          "binary_sha256": "12c38901cdbfab178f1bf6145dd30012e9a3b2c11ca695292a5884fa3cbaddb6",
+          "returncode": 0,
+          "stdout": "Lean default kernel accepts the solution\n",
+          "stderr": "",
+          "status": "ACCEPT"
+        },
+        "paranoid": {
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker-paranoid",
+            "--from-export",
+            "/workspace/kernel-audit/prefix-order-proof/ordered-probe.ndjson"
+          ],
+          "binary_sha256": "ca74d1e9a856149ed05acb600d8931a574dd9f465745beeaf93e3de7b7cbe274",
+          "returncode": 0,
+          "stdout": "Lean default kernel accepts the solution\n",
+          "stderr": "",
+          "status": "ACCEPT"
+        }
+      }
+    },
+    "changed-probe": {
+      "export_sha256": "6f8380c9f2ace8b094ae4be95299293eaf186a64def242fb9e8242bcfc2c70ec",
+      "compressed_file": "changed-probe.ndjson.gz",
+      "compressed_sha256": "cb0ad1e39499454e7858e20c313238fe910a9acd0ec6e5edf4a995944f97043c",
+      "oracles": {
+        "rust": {
+          "command": [
+            "/workspace/mathgraph-lean-kernel/target/release/sokonanoda",
+            "/workspace/kernel-audit/prefix-order-proof/changed-probe.json"
+          ],
+          "binary_sha256": "37af7860da9da9425aef25b3a94825fe83ae26f23a013f2246a161e4cf9a40b8",
+          "returncode": 1,
+          "stdout": "",
+          "stderr": "\nthread '<unnamed>' (22681) panicked at src/eval.rs:866:21:\nconst_head_type: unknown const NamePtr(0x5d309eb1110)\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'main' (22680) panicked at src/tc.rs:242:18:\nserial checker thread panicked: Any { .. }\n",
+          "status": "ORDER_REFUSAL_PANIC"
+        },
+        "cpp": {
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+            "--from-export",
+            "/workspace/kernel-audit/prefix-order-proof/changed-probe.ndjson"
+          ],
+          "binary_sha256": "12c38901cdbfab178f1bf6145dd30012e9a3b2c11ca695292a5884fa3cbaddb6",
+          "returncode": 1,
+          "stdout": "Lean default kernel rejects the solution: while replaying declaration 'Pivot.cert':\n(kernel) declaration type mismatch, 'Pivot.cert' has type\n  Eq Pivot.val Pivot.val\nbut it is expected to have type\n  Eq Pivot.val 17\n",
+          "stderr": "",
+          "status": "REJECT"
+        },
+        "paranoid": {
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker-paranoid",
+            "--from-export",
+            "/workspace/kernel-audit/prefix-order-proof/changed-probe.ndjson"
+          ],
+          "binary_sha256": "ca74d1e9a856149ed05acb600d8931a574dd9f465745beeaf93e3de7b7cbe274",
+          "returncode": 1,
+          "stdout": "Lean default kernel rejects the solution: while replaying declaration 'Pivot.cert':\n(kernel) declaration type mismatch, 'Pivot.cert' has type\n  Eq.{1} Nat Pivot.val Pivot.val\nbut it is expected to have type\n  Eq.{1} Nat Pivot.val (OfNat.ofNat.{0} Nat 17 (instOfNatNat 17))\n",
+          "stderr": "",
+          "status": "REJECT"
+        }
+      }
+    }
+  },
+  "evidence": {},
+  "selected_baseline": {
+    "status": "REJECTED",
+    "evidence_id": null,
+    "rechecked": null,
+    "reused": null,
+    "checking": null,
+    "reason": null
+  },
+  "conclusion": "The forward-reference baseline is refused by real Rust before any acceptance receipt; therefore it cannot seed the hypothesized reuse. C++ normal/paranoid accept the unchanged reordered logical environment and reject its changed proof. This is an explicit conservative ordered-input limitation/disagreement, not an unsound acceptance and not a newly supported input class."
+}

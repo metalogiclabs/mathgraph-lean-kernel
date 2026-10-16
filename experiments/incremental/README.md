@@ -9,6 +9,16 @@ The implemented reuse rule and its explicit assumptions are in [design.md](desig
 [reconstruction.md](reconstruction.md), [kernel-audit.md](kernel-audit.md), and
 [mathgraph-audit.md](mathgraph-audit.md) preserve the prior MathGraph lineage.
 
+The optional [native identity path](native-qualification.md) uses the existing
+Rust export parser to accelerate the same adapter. Add
+`--identity-backend native --indexer target/release/export-index` to both the
+initial and changed verification commands below. Use `differential` in place
+of `native` to compare complete Python and Rust identities before admission.
+The indexer executable is captured and authenticated as provenance; changing
+backends or indexer bytes invalidates incompatible prior evidence. Python
+remains the default. [Measured native results](results/native-qualified/summary.md)
+distinguish adapter acceleration from the still-unmet direct-Rust timing target.
+
 ## Reproduce qualification from a clean Linux x86_64 checkout
 
 ```sh
