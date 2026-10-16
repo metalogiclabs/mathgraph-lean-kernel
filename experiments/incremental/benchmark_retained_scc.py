@@ -82,10 +82,22 @@ def one_mode(args, variant, repetition, mode, expected_index, baseline_index,
         sealed = sealed_snapshot(snapshot)
         require(sealed["sha256"] == result["export_sha256"],
                 "sealed exact export hash mismatched")
-        require(result["export_sha256"] == args.export_pins[variant],
-                "source-owned composite mismatched independent pinned export")
-        partition = audit_partition(result, baseline_index, expected_index)
-        receipt = audit_receipt(root, result, expected_index, args.authority_key.read_bytes())
+        # The authenticated delta may use different NDJSON DAG numbering from
+        # the ordinary fresh-export serialization. Byte equality is not the
+        # criterion for kernel-equivalent declaration identity. Reparse the
+        # exact *sealed changed composite* independently, then require its
+        # entire typed index to equal the separately pinned full-export index.
+        # This detects missing/unreported changes without requiring transport
+        # serialization identity.
+        composite_index, composite_index_process = fresh_index(
+            snapshot, args.indexer, root / "composite-fresh-index")
+        require(not composite_index_process["timed_out"] and
+                composite_index_process["returncode"] == 0,
+                "independent full-index oracle refused delta composite")
+        require(canonical(composite_index) == canonical(expected_index),
+                "source-owned composite differs from pinned full-export typed identity")
+        partition = audit_partition(result, baseline_index, composite_index)
+        receipt = audit_receipt(root, result, composite_index, args.authority_key.read_bytes())
         require(receipt["issuer_hmac_valid"] and receipt["all_content_addresses_valid"],
                 "persisted receipt not authenticated")
         require(partition["actual_kernel_checked"] == result["counts"]["rechecked"],
