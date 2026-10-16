@@ -275,6 +275,7 @@ def audit_receipt(root, result, current_index, key):
         contains_complete_index = True
     if (accepted['status'] != 'VERIFIED' or
             accepted['export_sha256'] != result['export_sha256'] or
+            accepted['previous_evidence'] != result['previous_evidence'] or
             canonical(accepted['index']) != canonical(current_index)):
         raise ValueError('persisted acceptance does not name actual full-index result')
     checked = [row['index'] for row in result['decisions'] if row['status'] == 'VERIFIED_NEW']
