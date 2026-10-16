@@ -9,7 +9,8 @@ if [[ -n "${LEAN_SYSROOT:-}" ]]; then
   leanc_bin="${LEAN_SYSROOT}/bin/leanc"
 else
   elan_bin="${ELAN:-elan}"
-  lean_bin="$("$elan_bin" which --toolchain leanprover/lean4:v4.35.0 lean)"
+  lean_prefix="$("$elan_bin" run leanprover/lean4:v4.35.0 lean --print-prefix)"
+  lean_bin="${lean_prefix}/bin/lean"
   leanc_bin="$(dirname "$lean_bin")/leanc"
 fi
 export PATH="$(dirname "$lean_bin"):$PATH"
