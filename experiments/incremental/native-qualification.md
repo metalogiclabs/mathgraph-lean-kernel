@@ -99,11 +99,19 @@ python3 experiments/incremental/test_predicate.py
 python3 experiments/incremental/test_native_identity.py
 python3 experiments/incremental/test_native_adapter.py --checker target/release/check-selected
 python3 experiments/incremental/build_workloads.py --out artifacts/workloads
+task_authority="$(mktemp -d)" # Keep outside artifacts, for independent replay.
 python3 experiments/incremental/qualify_native.py \
   --workloads artifacts/workloads --out artifacts/native-qualification \
   --checker target/release/check-selected \
   --full-checker target/release/sokonanoda \
-  --indexer target/release/export-index
+  --indexer target/release/export-index --authority-dir "$task_authority"
+python3 experiments/incremental/replay_native.py \
+  --qualification artifacts/native-qualification/original-qualification \
+  --workloads artifacts/workloads \
+  --authority-key "$task_authority/original/issuer.key" \
+  --checker target/release/sokonanoda --indexer target/release/export-index \
+  --reference experiments/incremental/results/local-qualified.json \
+  --out artifacts/native-independent-replay
 ```
 
 The release test run includes the original 47 checker tests, and the predicate
@@ -162,8 +170,8 @@ engine is preserved under `source-snapshot/`, and a final source-stability gate
 checks that its live bytes did not change during measurement. The original
 engine is copied verbatim from the pinned Git revision under `baseline-source/`.
 
-Every timed sample is a fresh whole process. Wall time, child-inclusive CPU
-time and peak RSS cover startup, parsing/indexing, old-evidence validation,
+Every timed sample is a fresh whole process. Wall time and child-inclusive CPU
+time cover startup, parsing/indexing, old-evidence validation,
 selected kernel work, signing and persistence for the incremental command.
 Index-only and selected-kernel phase timings may help explain cost, but cannot
 replace whole-process measurements. Each repetition independently seeds one
@@ -172,6 +180,12 @@ seed. A fixed recorded random seed shuffles measurement order within each
 repetition. Retained seeds and execution order make pairing reviewable. Seed cost is
 reported separately from a warm incremental verification and must be included
 when making lifecycle claims.
+
+The benchmark retains raw `wait4` RSS highwaters. They can include the large
+Python launcher's inherited pre-exec RSS and cannot support memory-saving claims.
+The separate `profile_native_phases.py` diagnostic samples post-exec parent and
+descendant RSS by phase. Its sampled sums can count shared pages twice and are
+not exact aggregate peaks; its instrumented timings are excluded from economics.
 
 The primary economic criterion is strict: the robust median complete native
 incremental wall time must be lower than direct raw full checking for **both**

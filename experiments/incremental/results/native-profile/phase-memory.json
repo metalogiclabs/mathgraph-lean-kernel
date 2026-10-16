@@ -1,0 +1,3643 @@
+{
+  "authority_handling": "Original engine initializes a temporary external issuer key; the key is not copied into output and is deleted after collection.",
+  "baseline_counts": {
+    "invalidated": 0,
+    "rechecked": 3436,
+    "reused": 0,
+    "scheduled": 3436,
+    "total": 3436
+  },
+  "baseline_evidence_id": "62580a33435b85bf10b430e9feadb4a3ddf340e93e9aaf80074e315ab9765a8c",
+  "captured_sha256": {
+    "check-selected": "da21e6a02048039921bbbc33e935cc37c41d84785782fdb95832bb2936da808f",
+    "engine.py": "650aa6f8eb49083ea867d30a85c3aedee1581b605cba7672e15ffc7fe6b1c4c2",
+    "export-index": "daca81e13e52edfaa6dacaa7741565f49d1af109dc7ffa23aaea4a6e724137de",
+    "parse-only-checker": "37af7860da9da9425aef25b3a94825fe83ae26f23a013f2246a161e4cf9a40b8",
+    "pins.json": "08015efcd86f129fbc8eaa64354825a1e42d331e64daf55ed8a3cbd3a9cb2b82",
+    "workload-manifest.json": "bcf2730fd7ac9044ce864ba7f0e9d62acfabaa6c1f79b371962c3235f0e12456"
+  },
+  "cases": {
+    "early": [
+      {
+        "classification_and_counts_validated": true,
+        "counts": {
+          "invalidated": 413,
+          "rechecked": 413,
+          "reused": 3023,
+          "scheduled": 413,
+          "total": 3436
+        },
+        "cpu_seconds": 0.541819,
+        "engine_timings": {
+          "cache_validation_cpu_seconds": 0.048086,
+          "cache_validation_seconds": 0.04703428500033624,
+          "checking_cpu_seconds": 0.07590800000000003,
+          "checking_seconds": 0.07038394000028347,
+          "export_hash_cpu_seconds": 0.013494000000000006,
+          "export_hash_seconds": 0.01270009800009575,
+          "identity_cpu_seconds": 0.266401,
+          "identity_seconds": 0.24977185200077656,
+          "native_index_cpu_seconds": 0.22155599999999998,
+          "native_index_seconds": 0.20579487799932394,
+          "receipt_persistence_cpu_seconds": 0.056448999999999916,
+          "receipt_persistence_seconds": 0.06681683500028157,
+          "snapshot_copy_cpu_seconds": 0.0043310000000000015,
+          "snapshot_copy_seconds": 0.004073470999173878,
+          "total_seconds": 0.4497276440006317
+        },
+        "instrumented_wall_seconds": 0.5284083770002326,
+        "memory": {
+          "measurement_use": "MEMORY_DIAGNOSTIC_NOT_PERFORMANCE_ECONOMICS",
+          "phases": {
+            "complete_instrumented_cli": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.262996,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 97240,
+                "live_descendants_rss_sum_kib": 97240,
+                "self_observed_highwater_kib": 59348,
+                "self_plus_live_descendants_rss_sum_kib": 130004,
+                "self_rss_kib": 59348
+              },
+              "self_cpu_seconds": 0.22725399999999998,
+              "wall_seconds": 0.4761343449999913
+            },
+            "copy_check-selected": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.0005739999999999981,
+              "wall_seconds": 0.000575295999624359
+            },
+            "copy_current.ndjson": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 35348,
+                "self_plus_live_descendants_rss_sum_kib": 24924,
+                "self_rss_kib": 24924
+              },
+              "self_cpu_seconds": 0.004282999999999995,
+              "wall_seconds": 0.004024048000246694
+            },
+            "copy_export-index": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.00034899999999999515,
+              "wall_seconds": 0.00034881300052802544
+            },
+            "decode_checker_report": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 2.3999999999996247e-05,
+              "wall_seconds": 2.3926000721985474e-05
+            },
+            "decode_native_index": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.03112000000000001,
+              "wall_seconds": 0.031038845000693982
+            },
+            "decode_prior_receipt": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.015635000000000003,
+              "wall_seconds": 0.01556561200050055
+            },
+            "encode_configuration_or_selection": {
+              "calls": 3,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.00011199999999997323,
+              "wall_seconds": 0.00011439799891377334
+            },
+            "encode_final_result": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.017177000000000026,
+              "wall_seconds": 0.017153954000605154
+            },
+            "encode_new_hmac_payload": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.013826000000000005,
+              "wall_seconds": 0.013791422999929637
+            },
+            "encode_prior_hmac_payload": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.013871999999999995,
+              "wall_seconds": 0.013842098000168335
+            },
+            "encode_signed_receipt": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.01255199999999998,
+              "wall_seconds": 0.012516988999777823
+            },
+            "hash_check-selected": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 15072,
+                "self_plus_live_descendants_rss_sum_kib": 15072,
+                "self_rss_kib": 15072
+              },
+              "self_cpu_seconds": 0.002356999999999998,
+              "wall_seconds": 0.0021157909995963564
+            },
+            "hash_current_export": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 35348,
+                "self_plus_live_descendants_rss_sum_kib": 24924,
+                "self_rss_kib": 24924
+              },
+              "self_cpu_seconds": 0.013453000000000007,
+              "wall_seconds": 0.01265631400019629
+            },
+            "hash_engine.py": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 5.7000000000001494e-05,
+              "wall_seconds": 5.7174000176019035e-05
+            },
+            "hash_export-index": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 15616,
+                "self_plus_live_descendants_rss_sum_kib": 15072,
+                "self_rss_kib": 15072
+              },
+              "self_cpu_seconds": 0.001466000000000002,
+              "wall_seconds": 0.001366219000374258
+            },
+            "hash_prior_export": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 35348,
+                "self_plus_live_descendants_rss_sum_kib": 29108,
+                "self_rss_kib": 29108
+              },
+              "self_cpu_seconds": 0.011144000000000001,
+              "wall_seconds": 0.010603984999761451
+            },
+            "indexed_export": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.19458699999999998,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 97240,
+                "live_descendants_rss_sum_kib": 97240,
+                "self_observed_highwater_kib": 35348,
+                "self_plus_live_descendants_rss_sum_kib": 122284,
+                "self_rss_kib": 29100
+              },
+              "self_cpu_seconds": 0.058296000000000014,
+              "wall_seconds": 0.2370488300002762
+            },
+            "load_evidence": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 35420,
+                "self_plus_live_descendants_rss_sum_kib": 35420,
+                "self_rss_kib": 35420
+              },
+              "self_cpu_seconds": 0.04806999999999999,
+              "wall_seconds": 0.04701968399967882
+            },
+            "persist_export": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 59348,
+                "self_plus_live_descendants_rss_sum_kib": 59348,
+                "self_rss_kib": 59348
+              },
+              "self_cpu_seconds": 0.010412000000000032,
+              "wall_seconds": 0.01986663400020916
+            },
+            "persist_receipt": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 59120,
+                "self_plus_live_descendants_rss_sum_kib": 43796,
+                "self_rss_kib": 43796
+              },
+              "self_cpu_seconds": 0.0027379999999999904,
+              "wall_seconds": 0.005161552000572556
+            },
+            "subprocess_check-selected": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.06840900000000003,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 86276,
+                "live_descendants_rss_sum_kib": 86276,
+                "self_observed_highwater_kib": 50296,
+                "self_plus_live_descendants_rss_sum_kib": 130004,
+                "self_rss_kib": 48960
+              },
+              "self_cpu_seconds": 0.006961000000000023,
+              "wall_seconds": 0.0699015000000145
+            },
+            "subprocess_export-index": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.19458699999999998,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 97240,
+                "live_descendants_rss_sum_kib": 97240,
+                "self_observed_highwater_kib": 35348,
+                "self_plus_live_descendants_rss_sum_kib": 122284,
+                "self_rss_kib": 29100
+              },
+              "self_cpu_seconds": 0.02693200000000001,
+              "wall_seconds": 0.20575745399946754
+            },
+            "verify_incremental": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.262996,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 97240,
+                "live_descendants_rss_sum_kib": 97240,
+                "self_observed_highwater_kib": 59348,
+                "self_plus_live_descendants_rss_sum_kib": 130004,
+                "self_rss_kib": 59348
+              },
+              "self_cpu_seconds": 0.204921,
+              "wall_seconds": 0.45415716800016526
+            }
+          },
+          "returncode": 0,
+          "sample_interval_seconds": 0.002,
+          "sampler_semantics": "RSS values are periodic /proc samples, not exact phase peaks. Descendant sums count shared pages in each process. Highwaters are cumulative process observations; wait4 child maxima may include pre-exec fork memory. Nested phases overlap.",
+          "self_usage": {
+            "cpu_seconds": 0.26556399999999997,
+            "highwater_kib": 59680
+          },
+          "subprocess_wait4": [
+            {
+              "confirmed_post_exec_sample_count": 89,
+              "cpu_seconds": 0.19458699999999998,
+              "exitcode": 0,
+              "pid": 20004,
+              "role": "export-index",
+              "sampled_post_exec_hwm_peak_kib": 97240,
+              "sampled_post_exec_rss_peak_kib": 97240,
+              "system_cpu_seconds": 0.003359,
+              "user_cpu_seconds": 0.19122799999999998,
+              "wait4_max_rss_kib": 97216
+            },
+            {
+              "confirmed_post_exec_sample_count": 30,
+              "cpu_seconds": 0.068408,
+              "exitcode": 0,
+              "pid": 20005,
+              "role": "check-selected",
+              "sampled_post_exec_hwm_peak_kib": 86276,
+              "sampled_post_exec_rss_peak_kib": 86276,
+              "system_cpu_seconds": 0.01372,
+              "user_cpu_seconds": 0.054688,
+              "wait4_max_rss_kib": 86140
+            }
+          ]
+        },
+        "raw_directory": "/workspace/kernel-audit/native-phase-memory-1445-qualified/early/0",
+        "returncode": 0,
+        "status": "VERIFIED",
+        "subprocess_sampling_complete": true,
+        "wait4_max_rss_kib": 97216
+      },
+      {
+        "classification_and_counts_validated": true,
+        "counts": {
+          "invalidated": 413,
+          "rechecked": 413,
+          "reused": 3023,
+          "scheduled": 413,
+          "total": 3436
+        },
+        "cpu_seconds": 0.528829,
+        "engine_timings": {
+          "cache_validation_cpu_seconds": 0.05784099999999999,
+          "cache_validation_seconds": 0.05604676000075415,
+          "checking_cpu_seconds": 0.057593000000000005,
+          "checking_seconds": 0.05366095099998347,
+          "export_hash_cpu_seconds": 0.01745499999999997,
+          "export_hash_seconds": 0.01655503799975122,
+          "identity_cpu_seconds": 0.2509219999999999,
+          "identity_seconds": 0.2326197799993679,
+          "native_index_cpu_seconds": 0.206705,
+          "native_index_seconds": 0.18941558400001668,
+          "receipt_persistence_cpu_seconds": 0.056678000000000006,
+          "receipt_persistence_seconds": 0.06413233700004639,
+          "snapshot_copy_cpu_seconds": 0.005150000000000016,
+          "snapshot_copy_seconds": 0.0048319060006178916,
+          "total_seconds": 0.42360340199957136
+        },
+        "instrumented_wall_seconds": 0.5116585119994852,
+        "memory": {
+          "measurement_use": "MEMORY_DIAGNOSTIC_NOT_PERFORMANCE_ECONOMICS",
+          "phases": {
+            "complete_instrumented_cli": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.237283,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 97240,
+                "live_descendants_rss_sum_kib": 97240,
+                "self_observed_highwater_kib": 57488,
+                "self_plus_live_descendants_rss_sum_kib": 127844,
+                "self_rss_kib": 57488
+              },
+              "self_cpu_seconds": 0.230991,
+              "wall_seconds": 0.45059532899995247
+            },
+            "copy_check-selected": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.0006149999999999975,
+              "wall_seconds": 0.0006161569999676431
+            },
+            "copy_current.ndjson": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 35356,
+                "self_plus_live_descendants_rss_sum_kib": 24936,
+                "self_rss_kib": 24936
+              },
+              "self_cpu_seconds": 0.005104999999999998,
+              "wall_seconds": 0.004785958999491413
+            },
+            "copy_export-index": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.00044299999999999895,
+              "wall_seconds": 0.00043955700039077783
+            },
+            "decode_checker_report": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 2.4000000000024002e-05,
+              "wall_seconds": 2.357500034122495e-05
+            },
+            "decode_native_index": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.02654300000000001,
+              "wall_seconds": 0.02642509900033474
+            },
+            "decode_prior_receipt": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.018247,
+              "wall_seconds": 0.01817013300023973
+            },
+            "encode_configuration_or_selection": {
+              "calls": 3,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.00016999999999994797,
+              "wall_seconds": 0.0001738359997034422
+            },
+            "encode_final_result": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.016867999999999994,
+              "wall_seconds": 0.01682276199971966
+            },
+            "encode_new_hmac_payload": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.013805000000000012,
+              "wall_seconds": 0.013774048000414041
+            },
+            "encode_prior_hmac_payload": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.016295999999999977,
+              "wall_seconds": 0.01625102100024378
+            },
+            "encode_signed_receipt": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.013317000000000023,
+              "wall_seconds": 0.013283346999742207
+            },
+            "hash_check-selected": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 15044,
+                "self_plus_live_descendants_rss_sum_kib": 15044,
+                "self_rss_kib": 15044
+              },
+              "self_cpu_seconds": 0.002597000000000002,
+              "wall_seconds": 0.0025121339995166636
+            },
+            "hash_current_export": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 35356,
+                "self_plus_live_descendants_rss_sum_kib": 24936,
+                "self_rss_kib": 24936
+              },
+              "self_cpu_seconds": 0.017416999999999988,
+              "wall_seconds": 0.01651342700006353
+            },
+            "hash_engine.py": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 5.6000000000000494e-05,
+              "wall_seconds": 5.5481999879702926e-05
+            },
+            "hash_export-index": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 15616,
+                "self_plus_live_descendants_rss_sum_kib": 15064,
+                "self_rss_kib": 15064
+              },
+              "self_cpu_seconds": 0.0015610000000000068,
+              "wall_seconds": 0.00143722400025581
+            },
+            "hash_prior_export": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 35356,
+                "self_plus_live_descendants_rss_sum_kib": 29120,
+                "self_rss_kib": 29120
+              },
+              "self_cpu_seconds": 0.013320000000000012,
+              "wall_seconds": 0.01256113399995229
+            },
+            "indexed_export": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.18553499999999998,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 97240,
+                "live_descendants_rss_sum_kib": 97240,
+                "self_observed_highwater_kib": 35356,
+                "self_plus_live_descendants_rss_sum_kib": 122296,
+                "self_rss_kib": 27836
+              },
+              "self_cpu_seconds": 0.047907000000000005,
+              "wall_seconds": 0.21604327100067167
+            },
+            "load_evidence": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 35436,
+                "self_plus_live_descendants_rss_sum_kib": 35436,
+                "self_rss_kib": 35436
+              },
+              "self_cpu_seconds": 0.057821000000000004,
+              "wall_seconds": 0.056028584000159753
+            },
+            "persist_export": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 57488,
+                "self_plus_live_descendants_rss_sum_kib": 57488,
+                "self_rss_kib": 57488
+              },
+              "self_cpu_seconds": 0.009818999999999994,
+              "wall_seconds": 0.01720598100018833
+            },
+            "persist_receipt": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 57288,
+                "self_plus_live_descendants_rss_sum_kib": 41936,
+                "self_rss_kib": 41936
+              },
+              "self_cpu_seconds": 0.0026459999999999817,
+              "wall_seconds": 0.003965281999626313
+            },
+            "subprocess_check-selected": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.051748000000000016,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 86212,
+                "live_descendants_rss_sum_kib": 86212,
+                "self_observed_highwater_kib": 48136,
+                "self_plus_live_descendants_rss_sum_kib": 127844,
+                "self_rss_kib": 41632
+              },
+              "self_cpu_seconds": 0.005136000000000002,
+              "wall_seconds": 0.05296034100047109
+            },
+            "subprocess_export-index": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.18553499999999998,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 97240,
+                "live_descendants_rss_sum_kib": 97240,
+                "self_observed_highwater_kib": 35356,
+                "self_plus_live_descendants_rss_sum_kib": 122296,
+                "self_rss_kib": 27836
+              },
+              "self_cpu_seconds": 0.021136000000000016,
+              "wall_seconds": 0.18938071299999137
+            },
+            "verify_incremental": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.237283,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 97240,
+                "live_descendants_rss_sum_kib": 97240,
+                "self_observed_highwater_kib": 57488,
+                "self_plus_live_descendants_rss_sum_kib": 127844,
+                "self_rss_kib": 57488
+              },
+              "self_cpu_seconds": 0.20825500000000002,
+              "wall_seconds": 0.42804655700001604
+            }
+          },
+          "returncode": 0,
+          "sample_interval_seconds": 0.002,
+          "sampler_semantics": "RSS values are periodic /proc samples, not exact phase peaks. Descendant sums count shared pages in each process. Highwaters are cumulative process observations; wait4 child maxima may include pre-exec fork memory. Nested phases overlap.",
+          "self_usage": {
+            "cpu_seconds": 0.280013,
+            "highwater_kib": 59876
+          },
+          "subprocess_wait4": [
+            {
+              "confirmed_post_exec_sample_count": 83,
+              "cpu_seconds": 0.18553499999999998,
+              "exitcode": 0,
+              "pid": 20009,
+              "role": "export-index",
+              "sampled_post_exec_hwm_peak_kib": 97240,
+              "sampled_post_exec_rss_peak_kib": 97240,
+              "system_cpu_seconds": 0.012098,
+              "user_cpu_seconds": 0.17343699999999998,
+              "wait4_max_rss_kib": 97116
+            },
+            {
+              "confirmed_post_exec_sample_count": 23,
+              "cpu_seconds": 0.051747,
+              "exitcode": 0,
+              "pid": 20010,
+              "role": "check-selected",
+              "sampled_post_exec_hwm_peak_kib": 86212,
+              "sampled_post_exec_rss_peak_kib": 86212,
+              "system_cpu_seconds": 0.004254,
+              "user_cpu_seconds": 0.047493,
+              "wait4_max_rss_kib": 86140
+            }
+          ]
+        },
+        "raw_directory": "/workspace/kernel-audit/native-phase-memory-1445-qualified/early/1",
+        "returncode": 0,
+        "status": "VERIFIED",
+        "subprocess_sampling_complete": true,
+        "wait4_max_rss_kib": 97116
+      }
+    ],
+    "invalid": [
+      {
+        "classification_and_counts_validated": true,
+        "counts": {
+          "invalidated": 1,
+          "rechecked": null,
+          "reused": 3435,
+          "scheduled": 1,
+          "total": 3436
+        },
+        "cpu_seconds": 0.425432,
+        "engine_timings": {
+          "cache_validation_cpu_seconds": 0.052566,
+          "cache_validation_seconds": 0.05128101099944615,
+          "checking_cpu_seconds": 0.030871000000000093,
+          "checking_seconds": 0.028661242999987735,
+          "export_hash_cpu_seconds": 0.013835,
+          "export_hash_seconds": 0.013124021999828983,
+          "identity_cpu_seconds": 0.25003899999999996,
+          "identity_seconds": 0.23236060499948508,
+          "native_index_cpu_seconds": 0.20575,
+          "native_index_seconds": 0.18888631600020744,
+          "receipt_persistence_cpu_seconds": 2.000000000002e-06,
+          "receipt_persistence_seconds": 2.564000169513747e-06,
+          "snapshot_copy_cpu_seconds": 0.00509699999999999,
+          "snapshot_copy_seconds": 0.004887928999778524,
+          "total_seconds": 0.3288076380003986
+        },
+        "instrumented_wall_seconds": 0.40387830100007704,
+        "memory": {
+          "measurement_use": "MEMORY_DIAGNOSTIC_NOT_PERFORMANCE_ECONOMICS",
+          "phases": {
+            "complete_instrumented_cli": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.211209,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 97272,
+                "live_descendants_rss_sum_kib": 97272,
+                "self_observed_highwater_kib": 48136,
+                "self_plus_live_descendants_rss_sum_kib": 122332,
+                "self_rss_kib": 41616
+              },
+              "self_cpu_seconds": 0.162855,
+              "wall_seconds": 0.3520091299997148
+            },
+            "copy_check-selected": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.0004969999999999974,
+              "wall_seconds": 0.00049920400033443
+            },
+            "copy_current.ndjson": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 35356,
+                "self_plus_live_descendants_rss_sum_kib": 24940,
+                "self_rss_kib": 24940
+              },
+              "self_cpu_seconds": 0.005057999999999993,
+              "wall_seconds": 0.004848259999562288
+            },
+            "copy_export-index": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.0004030000000000006,
+              "wall_seconds": 0.0004026929991596262
+            },
+            "decode_native_index": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 40476,
+                "self_plus_live_descendants_rss_sum_kib": 40476,
+                "self_rss_kib": 40476
+              },
+              "self_cpu_seconds": 0.030085,
+              "wall_seconds": 0.030020122000678384
+            },
+            "decode_prior_receipt": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.017493999999999996,
+              "wall_seconds": 0.017426939999495517
+            },
+            "encode_configuration_or_selection": {
+              "calls": 3,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 8.60000000000305e-05,
+              "wall_seconds": 8.764899939706083e-05
+            },
+            "encode_final_result": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.014899999999999997,
+              "wall_seconds": 0.014865663999444223
+            },
+            "encode_prior_hmac_payload": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.014347000000000013,
+              "wall_seconds": 0.014327312000204984
+            },
+            "hash_check-selected": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 15080,
+                "self_plus_live_descendants_rss_sum_kib": 15080,
+                "self_rss_kib": 15080
+              },
+              "self_cpu_seconds": 0.0022109999999999977,
+              "wall_seconds": 0.002101619999848481
+            },
+            "hash_current_export": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 35356,
+                "self_plus_live_descendants_rss_sum_kib": 24940,
+                "self_rss_kib": 24940
+              },
+              "self_cpu_seconds": 0.013798999999999992,
+              "wall_seconds": 0.01308584499929566
+            },
+            "hash_engine.py": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 5.8000000000002494e-05,
+              "wall_seconds": 5.7705000472196843e-05
+            },
+            "hash_export-index": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 15616,
+                "self_plus_live_descendants_rss_sum_kib": 15080,
+                "self_rss_kib": 15080
+              },
+              "self_cpu_seconds": 0.001458000000000001,
+              "wall_seconds": 0.0013400910002019373
+            },
+            "hash_prior_export": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 35356,
+                "self_plus_live_descendants_rss_sum_kib": 29124,
+                "self_rss_kib": 29124
+              },
+              "self_cpu_seconds": 0.012184,
+              "wall_seconds": 0.011511920999510039
+            },
+            "indexed_export": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.183755,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 97272,
+                "live_descendants_rss_sum_kib": 97272,
+                "self_observed_highwater_kib": 40476,
+                "self_plus_live_descendants_rss_sum_kib": 122332,
+                "self_rss_kib": 40476
+              },
+              "self_cpu_seconds": 0.05242500000000001,
+              "wall_seconds": 0.2192165139995268
+            },
+            "load_evidence": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 35440,
+                "self_plus_live_descendants_rss_sum_kib": 35440,
+                "self_rss_kib": 35440
+              },
+              "self_cpu_seconds": 0.052550000000000006,
+              "wall_seconds": 0.051265867999973125
+            },
+            "subprocess_check-selected": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.027454000000000006,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 51912,
+                "live_descendants_rss_sum_kib": 51912,
+                "self_observed_highwater_kib": 48136,
+                "self_plus_live_descendants_rss_sum_kib": 93524,
+                "self_rss_kib": 41616
+              },
+              "self_cpu_seconds": 0.002798999999999996,
+              "wall_seconds": 0.02811018300053547
+            },
+            "subprocess_export-index": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.183755,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 97272,
+                "live_descendants_rss_sum_kib": 97272,
+                "self_observed_highwater_kib": 35356,
+                "self_plus_live_descendants_rss_sum_kib": 122332,
+                "self_rss_kib": 29316
+              },
+              "self_cpu_seconds": 0.021951,
+              "wall_seconds": 0.18883925699992687
+            },
+            "verify_incremental": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.211209,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 97272,
+                "live_descendants_rss_sum_kib": 97272,
+                "self_observed_highwater_kib": 48136,
+                "self_plus_live_descendants_rss_sum_kib": 122332,
+                "self_rss_kib": 41616
+              },
+              "self_cpu_seconds": 0.143698,
+              "wall_seconds": 0.33299045900002966
+            }
+          },
+          "returncode": 1,
+          "sample_interval_seconds": 0.002,
+          "sampler_semantics": "RSS values are periodic /proc samples, not exact phase peaks. Descendant sums count shared pages in each process. Highwaters are cumulative process observations; wait4 child maxima may include pre-exec fork memory. Nested phases overlap.",
+          "self_usage": {
+            "cpu_seconds": 0.20243,
+            "highwater_kib": 60436
+          },
+          "subprocess_wait4": [
+            {
+              "confirmed_post_exec_sample_count": 82,
+              "cpu_seconds": 0.183755,
+              "exitcode": 0,
+              "pid": 20034,
+              "role": "export-index",
+              "sampled_post_exec_hwm_peak_kib": 97272,
+              "sampled_post_exec_rss_peak_kib": 97272,
+              "system_cpu_seconds": 0.008169,
+              "user_cpu_seconds": 0.175586,
+              "wait4_max_rss_kib": 97188
+            },
+            {
+              "confirmed_post_exec_sample_count": 12,
+              "cpu_seconds": 0.027452999999999998,
+              "exitcode": 1,
+              "pid": 20035,
+              "role": "check-selected",
+              "sampled_post_exec_hwm_peak_kib": 52400,
+              "sampled_post_exec_rss_peak_kib": 51912,
+              "system_cpu_seconds": 0.0055439999999999994,
+              "user_cpu_seconds": 0.021908999999999998,
+              "wait4_max_rss_kib": 53472
+            }
+          ]
+        },
+        "raw_directory": "/workspace/kernel-audit/native-phase-memory-1445-qualified/invalid/0",
+        "returncode": 1,
+        "status": "REJECTED",
+        "subprocess_sampling_complete": true,
+        "wait4_max_rss_kib": 97188
+      },
+      {
+        "classification_and_counts_validated": true,
+        "counts": {
+          "invalidated": 1,
+          "rechecked": null,
+          "reused": 3435,
+          "scheduled": 1,
+          "total": 3436
+        },
+        "cpu_seconds": 0.423449,
+        "engine_timings": {
+          "cache_validation_cpu_seconds": 0.059668,
+          "cache_validation_seconds": 0.05819796300056623,
+          "checking_cpu_seconds": 0.020123000000000002,
+          "checking_seconds": 0.019252735000009125,
+          "export_hash_cpu_seconds": 0.014318000000000011,
+          "export_hash_seconds": 0.01368863199968473,
+          "identity_cpu_seconds": 0.2491799999999999,
+          "identity_seconds": 0.23184332999971957,
+          "native_index_cpu_seconds": 0.20615099999999995,
+          "native_index_seconds": 0.1895289670001148,
+          "receipt_persistence_cpu_seconds": 2.000000000002e-06,
+          "receipt_persistence_seconds": 2.0830002540606074e-06,
+          "snapshot_copy_cpu_seconds": 0.005426999999999987,
+          "snapshot_copy_seconds": 0.0050169379992439644,
+          "total_seconds": 0.32736954299980425
+        },
+        "instrumented_wall_seconds": 0.403502023999863,
+        "memory": {
+          "measurement_use": "MEMORY_DIAGNOSTIC_NOT_PERFORMANCE_ECONOMICS",
+          "phases": {
+            "complete_instrumented_cli": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.202563,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 97256,
+                "live_descendants_rss_sum_kib": 97256,
+                "self_observed_highwater_kib": 48116,
+                "self_plus_live_descendants_rss_sum_kib": 122312,
+                "self_rss_kib": 41612
+              },
+              "self_cpu_seconds": 0.16922500000000001,
+              "wall_seconds": 0.3513294109998242
+            },
+            "copy_check-selected": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 13984,
+                "self_plus_live_descendants_rss_sum_kib": 13984,
+                "self_rss_kib": 13984
+              },
+              "self_cpu_seconds": 0.0006339999999999957,
+              "wall_seconds": 0.0006318089999695076
+            },
+            "copy_current.ndjson": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 35340,
+                "self_plus_live_descendants_rss_sum_kib": 24936,
+                "self_rss_kib": 24936
+              },
+              "self_cpu_seconds": 0.005386000000000002,
+              "wall_seconds": 0.004974425999535015
+            },
+            "copy_export-index": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.00043500000000000483,
+              "wall_seconds": 0.0004338180006016046
+            },
+            "decode_native_index": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 40300,
+                "self_plus_live_descendants_rss_sum_kib": 40300,
+                "self_rss_kib": 40300
+              },
+              "self_cpu_seconds": 0.028506000000000004,
+              "wall_seconds": 0.028416061999450903
+            },
+            "decode_prior_receipt": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 23816,
+                "self_plus_live_descendants_rss_sum_kib": 23816,
+                "self_rss_kib": 23816
+              },
+              "self_cpu_seconds": 0.020587999999999995,
+              "wall_seconds": 0.020467932999963523
+            },
+            "encode_configuration_or_selection": {
+              "calls": 3,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 8.899999999995023e-05,
+              "wall_seconds": 9.419900015927851e-05
+            },
+            "encode_final_result": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.015777000000000013,
+              "wall_seconds": 0.01574505699954898
+            },
+            "encode_prior_hmac_payload": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.017499,
+              "wall_seconds": 0.0174351919995388
+            },
+            "hash_check-selected": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 15084,
+                "self_plus_live_descendants_rss_sum_kib": 15084,
+                "self_rss_kib": 15084
+              },
+              "self_cpu_seconds": 0.002153999999999996,
+              "wall_seconds": 0.002021823000177392
+            },
+            "hash_current_export": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 35340,
+                "self_plus_live_descendants_rss_sum_kib": 24940,
+                "self_rss_kib": 24940
+              },
+              "self_cpu_seconds": 0.014275999999999997,
+              "wall_seconds": 0.013645338000060292
+            },
+            "hash_engine.py": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 5.400000000000543e-05,
+              "wall_seconds": 5.370899998524692e-05
+            },
+            "hash_export-index": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.0011800000000000005,
+              "wall_seconds": 0.0011600059997363132
+            },
+            "hash_prior_export": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 35340,
+                "self_plus_live_descendants_rss_sum_kib": 29124,
+                "self_rss_kib": 29124
+              },
+              "self_cpu_seconds": 0.012400999999999995,
+              "wall_seconds": 0.011785342999246495
+            },
+            "indexed_export": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.18514499999999998,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 97256,
+                "live_descendants_rss_sum_kib": 97256,
+                "self_observed_highwater_kib": 40300,
+                "self_plus_live_descendants_rss_sum_kib": 122312,
+                "self_rss_kib": 40300
+              },
+              "self_cpu_seconds": 0.04969399999999999,
+              "wall_seconds": 0.21813461800047662
+            },
+            "load_evidence": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 35436,
+                "self_plus_live_descendants_rss_sum_kib": 35436,
+                "self_rss_kib": 35436
+              },
+              "self_cpu_seconds": 0.059652999999999984,
+              "wall_seconds": 0.05818469299993012
+            },
+            "subprocess_check-selected": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.017418000000000017,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 53472,
+                "live_descendants_rss_sum_kib": 53472,
+                "self_observed_highwater_kib": 48116,
+                "self_plus_live_descendants_rss_sum_kib": 95084,
+                "self_rss_kib": 41612
+              },
+              "self_cpu_seconds": 0.0022170000000000245,
+              "wall_seconds": 0.018794542000250658
+            },
+            "subprocess_export-index": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.18514499999999998,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 97256,
+                "live_descendants_rss_sum_kib": 97256,
+                "self_observed_highwater_kib": 35340,
+                "self_plus_live_descendants_rss_sum_kib": 122312,
+                "self_rss_kib": 28484
+              },
+              "self_cpu_seconds": 0.020972000000000005,
+              "wall_seconds": 0.18949223300023732
+            },
+            "verify_incremental": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.202563,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 97256,
+                "live_descendants_rss_sum_kib": 97256,
+                "self_observed_highwater_kib": 48116,
+                "self_plus_live_descendants_rss_sum_kib": 122312,
+                "self_rss_kib": 41612
+              },
+              "self_cpu_seconds": 0.149274,
+              "wall_seconds": 0.3315702509999028
+            }
+          },
+          "returncode": 1,
+          "sample_interval_seconds": 0.002,
+          "sampler_semantics": "RSS values are periodic /proc samples, not exact phase peaks. Descendant sums count shared pages in each process. Highwaters are cumulative process observations; wait4 child maxima may include pre-exec fork memory. Nested phases overlap.",
+          "self_usage": {
+            "cpu_seconds": 0.208534,
+            "highwater_kib": 60436
+          },
+          "subprocess_wait4": [
+            {
+              "confirmed_post_exec_sample_count": 83,
+              "cpu_seconds": 0.18514499999999998,
+              "exitcode": 0,
+              "pid": 20039,
+              "role": "export-index",
+              "sampled_post_exec_hwm_peak_kib": 97256,
+              "sampled_post_exec_rss_peak_kib": 97256,
+              "system_cpu_seconds": 0.004071,
+              "user_cpu_seconds": 0.18107399999999998,
+              "wait4_max_rss_kib": 97208
+            },
+            {
+              "confirmed_post_exec_sample_count": 8,
+              "cpu_seconds": 0.017418,
+              "exitcode": 1,
+              "pid": 20040,
+              "role": "check-selected",
+              "sampled_post_exec_hwm_peak_kib": 53472,
+              "sampled_post_exec_rss_peak_kib": 53472,
+              "system_cpu_seconds": 0.010868,
+              "user_cpu_seconds": 0.006549999999999999,
+              "wait4_max_rss_kib": 53468
+            }
+          ]
+        },
+        "raw_directory": "/workspace/kernel-audit/native-phase-memory-1445-qualified/invalid/1",
+        "returncode": 1,
+        "status": "REJECTED",
+        "subprocess_sampling_complete": true,
+        "wait4_max_rss_kib": 97208
+      }
+    ],
+    "leaf": [
+      {
+        "classification_and_counts_validated": true,
+        "counts": {
+          "invalidated": 1,
+          "rechecked": 1,
+          "reused": 3435,
+          "scheduled": 1,
+          "total": 3436
+        },
+        "cpu_seconds": 0.474788,
+        "engine_timings": {
+          "cache_validation_cpu_seconds": 0.05646199999999999,
+          "cache_validation_seconds": 0.055002088000037475,
+          "checking_cpu_seconds": 0.026731999999999978,
+          "checking_seconds": 0.025203117000273778,
+          "export_hash_cpu_seconds": 0.016174999999999995,
+          "export_hash_seconds": 0.014632230000643176,
+          "identity_cpu_seconds": 0.23482700000000006,
+          "identity_seconds": 0.21923669800071366,
+          "native_index_cpu_seconds": 0.19072500000000003,
+          "native_index_seconds": 0.17674762800015742,
+          "receipt_persistence_cpu_seconds": 0.05377500000000002,
+          "receipt_persistence_seconds": 0.06447571199987578,
+          "snapshot_copy_cpu_seconds": 0.007428000000000004,
+          "snapshot_copy_seconds": 0.007079211999553081,
+          "total_seconds": 0.3836663950005459
+        },
+        "instrumented_wall_seconds": 0.4665208079995864,
+        "memory": {
+          "measurement_use": "MEMORY_DIAGNOSTIC_NOT_PERFORMANCE_ECONOMICS",
+          "phases": {
+            "complete_instrumented_cli": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.19640599999999997,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 97220,
+                "live_descendants_rss_sum_kib": 97220,
+                "self_observed_highwater_kib": 57464,
+                "self_plus_live_descendants_rss_sum_kib": 122268,
+                "self_rss_kib": 57464
+              },
+              "self_cpu_seconds": 0.22375799999999998,
+              "wall_seconds": 0.41128857100011373
+            },
+            "copy_check-selected": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.0007129999999999984,
+              "wall_seconds": 0.000713989999894693
+            },
+            "copy_current.ndjson": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 35348,
+                "self_plus_live_descendants_rss_sum_kib": 24932,
+                "self_rss_kib": 24932
+              },
+              "self_cpu_seconds": 0.007374999999999993,
+              "wall_seconds": 0.0070236100000329316
+            },
+            "copy_export-index": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.0004100000000000076,
+              "wall_seconds": 0.00040933199943538057
+            },
+            "decode_checker_report": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 2.1999999999994246e-05,
+              "wall_seconds": 2.2762999833503272e-05
+            },
+            "decode_native_index": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.027356999999999992,
+              "wall_seconds": 0.027318708000166225
+            },
+            "decode_prior_receipt": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.01638600000000001,
+              "wall_seconds": 0.016323247000400443
+            },
+            "encode_configuration_or_selection": {
+              "calls": 3,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.00021299999999993546,
+              "wall_seconds": 0.00019862299996020738
+            },
+            "encode_final_result": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.01843900000000001,
+              "wall_seconds": 0.018437396000081208
+            },
+            "encode_new_hmac_payload": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.013012999999999997,
+              "wall_seconds": 0.012979840000298282
+            },
+            "encode_prior_hmac_payload": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.016133999999999996,
+              "wall_seconds": 0.016110393999952066
+            },
+            "encode_signed_receipt": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.014342999999999995,
+              "wall_seconds": 0.014315078999970865
+            },
+            "hash_check-selected": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 15076,
+                "self_plus_live_descendants_rss_sum_kib": 15076,
+                "self_rss_kib": 15076
+              },
+              "self_cpu_seconds": 0.002482999999999999,
+              "wall_seconds": 0.002323796999917249
+            },
+            "hash_current_export": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 35348,
+                "self_plus_live_descendants_rss_sum_kib": 24936,
+                "self_rss_kib": 24936
+              },
+              "self_cpu_seconds": 0.016125,
+              "wall_seconds": 0.014582015999621945
+            },
+            "hash_engine.py": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 5.9000000000003494e-05,
+              "wall_seconds": 5.829600013385061e-05
+            },
+            "hash_export-index": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 15616,
+                "self_plus_live_descendants_rss_sum_kib": 15076,
+                "self_rss_kib": 15076
+              },
+              "self_cpu_seconds": 0.0017619999999999997,
+              "wall_seconds": 0.0016359310002371785
+            },
+            "hash_prior_export": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 35348,
+                "self_plus_live_descendants_rss_sum_kib": 29120,
+                "self_rss_kib": 29120
+              },
+              "self_cpu_seconds": 0.015133000000000008,
+              "wall_seconds": 0.014243292999708501
+            },
+            "indexed_export": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.17268699999999998,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 97220,
+                "live_descendants_rss_sum_kib": 97220,
+                "self_observed_highwater_kib": 35348,
+                "self_plus_live_descendants_rss_sum_kib": 122268,
+                "self_rss_kib": 29704
+              },
+              "self_cpu_seconds": 0.04594100000000001,
+              "wall_seconds": 0.20458460900044884
+            },
+            "load_evidence": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 35428,
+                "self_plus_live_descendants_rss_sum_kib": 35428,
+                "self_rss_kib": 35428
+              },
+              "self_cpu_seconds": 0.056439,
+              "wall_seconds": 0.054982239000310074
+            },
+            "persist_export": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 57464,
+                "self_plus_live_descendants_rss_sum_kib": 57464,
+                "self_rss_kib": 57464
+              },
+              "self_cpu_seconds": 0.005587000000000009,
+              "wall_seconds": 0.013458013000672508
+            },
+            "persist_receipt": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 57156,
+                "self_plus_live_descendants_rss_sum_kib": 41912,
+                "self_rss_kib": 41912
+              },
+              "self_cpu_seconds": 0.004385,
+              "wall_seconds": 0.008428135000031034
+            },
+            "subprocess_check-selected": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.02371899999999999,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 48092,
+                "live_descendants_rss_sum_kib": 48092,
+                "self_observed_highwater_kib": 48124,
+                "self_plus_live_descendants_rss_sum_kib": 89700,
+                "self_rss_kib": 41608
+              },
+              "self_cpu_seconds": 0.0025509999999999977,
+              "wall_seconds": 0.02475231399967015
+            },
+            "subprocess_export-index": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.17268699999999998,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 97220,
+                "live_descendants_rss_sum_kib": 97220,
+                "self_observed_highwater_kib": 35348,
+                "self_plus_live_descendants_rss_sum_kib": 122268,
+                "self_rss_kib": 29704
+              },
+              "self_cpu_seconds": 0.018001000000000017,
+              "wall_seconds": 0.17670746900057566
+            },
+            "verify_incremental": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.19640599999999997,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 97220,
+                "live_descendants_rss_sum_kib": 97220,
+                "self_observed_highwater_kib": 57464,
+                "self_plus_live_descendants_rss_sum_kib": 122268,
+                "self_rss_kib": 57464
+              },
+              "self_cpu_seconds": 0.200588,
+              "wall_seconds": 0.38830921400040097
+            }
+          },
+          "returncode": 0,
+          "sample_interval_seconds": 0.002,
+          "sampler_semantics": "RSS values are periodic /proc samples, not exact phase peaks. Descendant sums count shared pages in each process. Highwaters are cumulative process observations; wait4 child maxima may include pre-exec fork memory. Nested phases overlap.",
+          "self_usage": {
+            "cpu_seconds": 0.267802,
+            "highwater_kib": 60224
+          },
+          "subprocess_wait4": [
+            {
+              "confirmed_post_exec_sample_count": 78,
+              "cpu_seconds": 0.17268699999999998,
+              "exitcode": 0,
+              "pid": 20024,
+              "role": "export-index",
+              "sampled_post_exec_hwm_peak_kib": 97220,
+              "sampled_post_exec_rss_peak_kib": 97220,
+              "system_cpu_seconds": 0.004437,
+              "user_cpu_seconds": 0.16824999999999998,
+              "wait4_max_rss_kib": 97084
+            },
+            {
+              "confirmed_post_exec_sample_count": 10,
+              "cpu_seconds": 0.023718,
+              "exitcode": 0,
+              "pid": 20025,
+              "role": "check-selected",
+              "sampled_post_exec_hwm_peak_kib": 52420,
+              "sampled_post_exec_rss_peak_kib": 48092,
+              "system_cpu_seconds": 0.010034,
+              "user_cpu_seconds": 0.013684,
+              "wait4_max_rss_kib": 55364
+            }
+          ]
+        },
+        "raw_directory": "/workspace/kernel-audit/native-phase-memory-1445-qualified/leaf/0",
+        "returncode": 0,
+        "status": "VERIFIED",
+        "subprocess_sampling_complete": true,
+        "wait4_max_rss_kib": 97084
+      },
+      {
+        "classification_and_counts_validated": true,
+        "counts": {
+          "invalidated": 1,
+          "rechecked": 1,
+          "reused": 3435,
+          "scheduled": 1,
+          "total": 3436
+        },
+        "cpu_seconds": 0.579223,
+        "engine_timings": {
+          "cache_validation_cpu_seconds": 0.068416,
+          "cache_validation_seconds": 0.06693197900040104,
+          "checking_cpu_seconds": 0.022630999999999957,
+          "checking_seconds": 0.022406063000744325,
+          "export_hash_cpu_seconds": 0.012475999999999987,
+          "export_hash_seconds": 0.011883357999977306,
+          "identity_cpu_seconds": 0.28884000000000004,
+          "identity_seconds": 0.27125910999984626,
+          "native_index_cpu_seconds": 0.23634400000000005,
+          "native_index_seconds": 0.2173924109993095,
+          "receipt_persistence_cpu_seconds": 0.05170599999999992,
+          "receipt_persistence_seconds": 0.05954663200009236,
+          "snapshot_copy_cpu_seconds": 0.007738999999999996,
+          "snapshot_copy_seconds": 0.007229241999993974,
+          "total_seconds": 0.45047518299998046
+        },
+        "instrumented_wall_seconds": 0.5694858859997112,
+        "memory": {
+          "measurement_use": "MEMORY_DIAGNOSTIC_NOT_PERFORMANCE_ECONOMICS",
+          "phases": {
+            "complete_instrumented_cli": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.22509,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 97236,
+                "live_descendants_rss_sum_kib": 97236,
+                "self_observed_highwater_kib": 57472,
+                "self_plus_live_descendants_rss_sum_kib": 122296,
+                "self_rss_kib": 57472
+              },
+              "self_cpu_seconds": 0.262204,
+              "wall_seconds": 0.4742572499999369
+            },
+            "copy_check-selected": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 14016,
+                "self_plus_live_descendants_rss_sum_kib": 14016,
+                "self_rss_kib": 14016
+              },
+              "self_cpu_seconds": 0.003812999999999997,
+              "wall_seconds": 0.003684799000438943
+            },
+            "copy_current.ndjson": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 35340,
+                "self_plus_live_descendants_rss_sum_kib": 24936,
+                "self_rss_kib": 24936
+              },
+              "self_cpu_seconds": 0.007687999999999973,
+              "wall_seconds": 0.0071736709996912396
+            },
+            "copy_export-index": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 14036,
+                "self_plus_live_descendants_rss_sum_kib": 14036,
+                "self_rss_kib": 14036
+              },
+              "self_cpu_seconds": 0.002336999999999992,
+              "wall_seconds": 0.0021817890001329943
+            },
+            "decode_checker_report": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 2.399999999996849e-05,
+              "wall_seconds": 2.377500004513422e-05
+            },
+            "decode_native_index": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 39768,
+                "self_plus_live_descendants_rss_sum_kib": 39768,
+                "self_rss_kib": 39768
+              },
+              "self_cpu_seconds": 0.039522,
+              "wall_seconds": 0.041611705000832444
+            },
+            "decode_prior_receipt": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 22680,
+                "self_plus_live_descendants_rss_sum_kib": 22680,
+                "self_rss_kib": 22680
+              },
+              "self_cpu_seconds": 0.028901999999999997,
+              "wall_seconds": 0.02884880900001008
+            },
+            "encode_configuration_or_selection": {
+              "calls": 3,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.00029999999999996696,
+              "wall_seconds": 0.00029869900026824325
+            },
+            "encode_final_result": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.015044000000000002,
+              "wall_seconds": 0.014999969999735185
+            },
+            "encode_new_hmac_payload": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.013671999999999962,
+              "wall_seconds": 0.01359045800018066
+            },
+            "encode_prior_hmac_payload": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.016175999999999968,
+              "wall_seconds": 0.016200125999603188
+            },
+            "encode_signed_receipt": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.012903999999999971,
+              "wall_seconds": 0.012872641999820189
+            },
+            "hash_check-selected": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 15072,
+                "self_plus_live_descendants_rss_sum_kib": 15072,
+                "self_rss_kib": 15072
+              },
+              "self_cpu_seconds": 0.004968,
+              "wall_seconds": 0.004732289000457968
+            },
+            "hash_current_export": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 35340,
+                "self_plus_live_descendants_rss_sum_kib": 24936,
+                "self_rss_kib": 24936
+              },
+              "self_cpu_seconds": 0.012415999999999983,
+              "wall_seconds": 0.011822387999927741
+            },
+            "hash_engine.py": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 15616,
+                "self_plus_live_descendants_rss_sum_kib": 14080,
+                "self_rss_kib": 14080
+              },
+              "self_cpu_seconds": 0.0003009999999999957,
+              "wall_seconds": 0.00022702400019625202
+            },
+            "hash_export-index": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.001346999999999987,
+              "wall_seconds": 0.001344948000223667
+            },
+            "hash_prior_export": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 35436,
+                "self_plus_live_descendants_rss_sum_kib": 35436,
+                "self_rss_kib": 35436
+              },
+              "self_cpu_seconds": 0.011210999999999999,
+              "wall_seconds": 0.010580660999949032
+            },
+            "indexed_export": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.205321,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 97236,
+                "live_descendants_rss_sum_kib": 97236,
+                "self_observed_highwater_kib": 39768,
+                "self_plus_live_descendants_rss_sum_kib": 122296,
+                "self_rss_kib": 39768
+              },
+              "self_cpu_seconds": 0.071021,
+              "wall_seconds": 0.2593533600002047
+            },
+            "load_evidence": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 35436,
+                "self_plus_live_descendants_rss_sum_kib": 35436,
+                "self_rss_kib": 35436
+              },
+              "self_cpu_seconds": 0.0684,
+              "wall_seconds": 0.06691708799917251
+            },
+            "persist_export": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 57472,
+                "self_plus_live_descendants_rss_sum_kib": 57472,
+                "self_rss_kib": 57472
+              },
+              "self_cpu_seconds": 0.0063650000000000095,
+              "wall_seconds": 0.013024460000451654
+            },
+            "persist_receipt": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 57140,
+                "self_plus_live_descendants_rss_sum_kib": 41920,
+                "self_rss_kib": 41920
+              },
+              "self_cpu_seconds": 0.0012920000000000154,
+              "wall_seconds": 0.003730496000571293
+            },
+            "subprocess_check-selected": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.01976900000000001,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 51728,
+                "live_descendants_rss_sum_kib": 51728,
+                "self_observed_highwater_kib": 48116,
+                "self_plus_live_descendants_rss_sum_kib": 93344,
+                "self_rss_kib": 41616
+              },
+              "self_cpu_seconds": 0.002018999999999993,
+              "wall_seconds": 0.021706903999984206
+            },
+            "subprocess_export-index": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.205321,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 97236,
+                "live_descendants_rss_sum_kib": 97236,
+                "self_observed_highwater_kib": 35340,
+                "self_plus_live_descendants_rss_sum_kib": 122296,
+                "self_rss_kib": 30084
+              },
+              "self_cpu_seconds": 0.030986999999999987,
+              "wall_seconds": 0.217354484999305
+            },
+            "verify_incremental": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.22509,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 97236,
+                "live_descendants_rss_sum_kib": 97236,
+                "self_observed_highwater_kib": 57472,
+                "self_plus_live_descendants_rss_sum_kib": 122296,
+                "self_rss_kib": 57472
+              },
+              "self_cpu_seconds": 0.24252299999999996,
+              "wall_seconds": 0.454843086999972
+            }
+          },
+          "returncode": 0,
+          "sample_interval_seconds": 0.002,
+          "sampler_semantics": "RSS values are periodic /proc samples, not exact phase peaks. Descendant sums count shared pages in each process. Highwaters are cumulative process observations; wait4 child maxima may include pre-exec fork memory. Nested phases overlap.",
+          "self_usage": {
+            "cpu_seconds": 0.34229,
+            "highwater_kib": 60308
+          },
+          "subprocess_wait4": [
+            {
+              "confirmed_post_exec_sample_count": 93,
+              "cpu_seconds": 0.205321,
+              "exitcode": 0,
+              "pid": 20029,
+              "role": "export-index",
+              "sampled_post_exec_hwm_peak_kib": 97236,
+              "sampled_post_exec_rss_peak_kib": 97236,
+              "system_cpu_seconds": 0.012855,
+              "user_cpu_seconds": 0.192466,
+              "wait4_max_rss_kib": 97092
+            },
+            {
+              "confirmed_post_exec_sample_count": 9,
+              "cpu_seconds": 0.019768,
+              "exitcode": 0,
+              "pid": 20030,
+              "role": "check-selected",
+              "sampled_post_exec_hwm_peak_kib": 52408,
+              "sampled_post_exec_rss_peak_kib": 51728,
+              "system_cpu_seconds": 0.004004,
+              "user_cpu_seconds": 0.015764,
+              "wait4_max_rss_kib": 55392
+            }
+          ]
+        },
+        "raw_directory": "/workspace/kernel-audit/native-phase-memory-1445-qualified/leaf/1",
+        "returncode": 0,
+        "status": "VERIFIED",
+        "subprocess_sampling_complete": true,
+        "wait4_max_rss_kib": 97092
+      }
+    ],
+    "unchanged": [
+      {
+        "classification_and_counts_validated": true,
+        "counts": {
+          "invalidated": 0,
+          "rechecked": 0,
+          "reused": 3436,
+          "scheduled": 0,
+          "total": 3436
+        },
+        "cpu_seconds": 0.242641,
+        "engine_timings": {
+          "cache_validation_cpu_seconds": 0.05429199999999999,
+          "cache_validation_seconds": 0.0531293789999836,
+          "checking_cpu_seconds": 6.0000000000060005e-06,
+          "checking_seconds": 8.42200006445637e-06,
+          "export_hash_cpu_seconds": 0.013776999999999998,
+          "export_hash_seconds": 0.013076743000056013,
+          "identity_cpu_seconds": 0.013784999999999978,
+          "identity_seconds": 0.013083873000141466,
+          "receipt_persistence_cpu_seconds": 0.062025000000000025,
+          "receipt_persistence_seconds": 0.0634820450004554,
+          "snapshot_copy_cpu_seconds": 0.005073000000000008,
+          "snapshot_copy_seconds": 0.004764416999933019,
+          "total_seconds": 0.14824794300056965
+        },
+        "instrumented_wall_seconds": 0.24131418300021323,
+        "memory": {
+          "measurement_use": "MEMORY_DIAGNOSTIC_NOT_PERFORMANCE_ECONOMICS",
+          "phases": {
+            "complete_instrumented_cli": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 61484,
+                "self_plus_live_descendants_rss_sum_kib": 58616,
+                "self_rss_kib": 58616
+              },
+              "self_cpu_seconds": 0.17986899999999997,
+              "wall_seconds": 0.17792096399989532
+            },
+            "copy_check-selected": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.0005770000000000011,
+              "wall_seconds": 0.0005764179995821905
+            },
+            "copy_current.ndjson": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 37136,
+                "self_plus_live_descendants_rss_sum_kib": 26812,
+                "self_rss_kib": 26812
+              },
+              "self_cpu_seconds": 0.005031999999999981,
+              "wall_seconds": 0.004715234999821405
+            },
+            "copy_export-index": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.0003090000000000037,
+              "wall_seconds": 0.000308824000057939
+            },
+            "decode_prior_receipt": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 26820,
+                "self_plus_live_descendants_rss_sum_kib": 26820,
+                "self_rss_kib": 26820
+              },
+              "self_cpu_seconds": 0.017381999999999995,
+              "wall_seconds": 0.017328615999758767
+            },
+            "encode_final_result": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.020458999999999977,
+              "wall_seconds": 0.020284664000428165
+            },
+            "encode_new_hmac_payload": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.015943000000000013,
+              "wall_seconds": 0.015894285999820568
+            },
+            "encode_prior_hmac_payload": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.015125,
+              "wall_seconds": 0.01510976200006553
+            },
+            "encode_signed_receipt": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.014324999999999977,
+              "wall_seconds": 0.014306852000117942
+            },
+            "hash_check-selected": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 17616,
+                "self_plus_live_descendants_rss_sum_kib": 17616,
+                "self_rss_kib": 17616
+              },
+              "self_cpu_seconds": 0.0026689999999999978,
+              "wall_seconds": 0.0025477880008111242
+            },
+            "hash_current_export": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 37136,
+                "self_plus_live_descendants_rss_sum_kib": 26820,
+                "self_rss_kib": 26820
+              },
+              "self_cpu_seconds": 0.013739000000000001,
+              "wall_seconds": 0.013037403999987873
+            },
+            "hash_engine.py": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 5.7000000000001494e-05,
+              "wall_seconds": 5.7483999626128934e-05
+            },
+            "hash_export-index": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 18176,
+                "self_plus_live_descendants_rss_sum_kib": 17528,
+                "self_rss_kib": 17528
+              },
+              "self_cpu_seconds": 0.0018619999999999956,
+              "wall_seconds": 0.0017579550003574695
+            },
+            "hash_prior_export": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 37320,
+                "self_plus_live_descendants_rss_sum_kib": 37320,
+                "self_rss_kib": 37320
+              },
+              "self_cpu_seconds": 0.013573000000000002,
+              "wall_seconds": 0.012989904999813007
+            },
+            "load_evidence": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 37320,
+                "self_plus_live_descendants_rss_sum_kib": 37320,
+                "self_rss_kib": 37320
+              },
+              "self_cpu_seconds": 0.054275000000000004,
+              "wall_seconds": 0.053113895999558736
+            },
+            "persist_export": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 58616,
+                "self_plus_live_descendants_rss_sum_kib": 58616,
+                "self_rss_kib": 58616
+              },
+              "self_cpu_seconds": 0.011791000000000024,
+              "wall_seconds": 0.011174233999554417
+            },
+            "persist_receipt": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 61484,
+                "self_plus_live_descendants_rss_sum_kib": 30548,
+                "self_rss_kib": 30548
+              },
+              "self_cpu_seconds": 0.0020640000000000103,
+              "wall_seconds": 0.005425889999969513
+            },
+            "verify_incremental": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 61484,
+                "self_plus_live_descendants_rss_sum_kib": 58616,
+                "self_rss_kib": 58616
+              },
+              "self_cpu_seconds": 0.15192899999999998,
+              "wall_seconds": 0.15081565899981797
+            }
+          },
+          "returncode": 0,
+          "sample_interval_seconds": 0.002,
+          "sampler_semantics": "RSS values are periodic /proc samples, not exact phase peaks. Descendant sums count shared pages in each process. Highwaters are cumulative process observations; wait4 child maxima may include pre-exec fork memory. Nested phases overlap.",
+          "self_usage": {
+            "cpu_seconds": 0.23029299999999997,
+            "highwater_kib": 61484
+          },
+          "subprocess_wait4": []
+        },
+        "raw_directory": "/workspace/kernel-audit/native-phase-memory-1445-qualified/unchanged/0",
+        "returncode": 0,
+        "status": "VERIFIED",
+        "subprocess_sampling_complete": true,
+        "wait4_max_rss_kib": 61484
+      },
+      {
+        "classification_and_counts_validated": true,
+        "counts": {
+          "invalidated": 0,
+          "rechecked": 0,
+          "reused": 3436,
+          "scheduled": 0,
+          "total": 3436
+        },
+        "cpu_seconds": 0.217327,
+        "engine_timings": {
+          "cache_validation_cpu_seconds": 0.05632799999999999,
+          "cache_validation_seconds": 0.05442452300030709,
+          "checking_cpu_seconds": 5.0000000000050004e-06,
+          "checking_seconds": 5.65799928153865e-06,
+          "export_hash_cpu_seconds": 0.013143999999999989,
+          "export_hash_seconds": 0.012527515000329004,
+          "identity_cpu_seconds": 0.013152999999999998,
+          "identity_seconds": 0.012535496000054991,
+          "receipt_persistence_cpu_seconds": 0.056286999999999976,
+          "receipt_persistence_seconds": 0.05902749400047469,
+          "snapshot_copy_cpu_seconds": 0.00425600000000001,
+          "snapshot_copy_seconds": 0.004010558000118181,
+          "total_seconds": 0.14244551000047068
+        },
+        "instrumented_wall_seconds": 0.2169858530005513,
+        "memory": {
+          "measurement_use": "MEMORY_DIAGNOSTIC_NOT_PERFORMANCE_ECONOMICS",
+          "phases": {
+            "complete_instrumented_cli": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 59836,
+                "self_plus_live_descendants_rss_sum_kib": 59020,
+                "self_rss_kib": 59020
+              },
+              "self_cpu_seconds": 0.16653999999999997,
+              "wall_seconds": 0.1655051640000238
+            },
+            "copy_check-selected": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.0007379999999999956,
+              "wall_seconds": 0.000738615999580361
+            },
+            "copy_current.ndjson": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 35348,
+                "self_plus_live_descendants_rss_sum_kib": 24932,
+                "self_rss_kib": 24932
+              },
+              "self_cpu_seconds": 0.0042119999999999935,
+              "wall_seconds": 0.003965942999457184
+            },
+            "copy_export-index": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.0004949999999999954,
+              "wall_seconds": 0.0004940369999530958
+            },
+            "decode_prior_receipt": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.017023999999999997,
+              "wall_seconds": 0.01698403899990808
+            },
+            "encode_final_result": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.015617999999999993,
+              "wall_seconds": 0.015575466999507626
+            },
+            "encode_new_hmac_payload": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.015850000000000003,
+              "wall_seconds": 0.01580539599945041
+            },
+            "encode_prior_hmac_payload": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.017172999999999994,
+              "wall_seconds": 0.017067922000023827
+            },
+            "encode_signed_receipt": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.014401999999999998,
+              "wall_seconds": 0.014380479999999807
+            },
+            "hash_check-selected": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 14968,
+                "self_plus_live_descendants_rss_sum_kib": 14968,
+                "self_rss_kib": 14968
+              },
+              "self_cpu_seconds": 0.0031869999999999954,
+              "wall_seconds": 0.0028885179999633692
+            },
+            "hash_current_export": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 35348,
+                "self_plus_live_descendants_rss_sum_kib": 24932,
+                "self_rss_kib": 24932
+              },
+              "self_cpu_seconds": 0.01311000000000001,
+              "wall_seconds": 0.012491772000430501
+            },
+            "hash_engine.py": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.0002329999999999971,
+              "wall_seconds": 0.0002379300003667595
+            },
+            "hash_export-index": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 15616,
+                "self_plus_live_descendants_rss_sum_kib": 14084,
+                "self_rss_kib": 14084
+              },
+              "self_cpu_seconds": 0.0020820000000000005,
+              "wall_seconds": 0.0020243670005584136
+            },
+            "hash_prior_export": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 35348,
+                "self_plus_live_descendants_rss_sum_kib": 29120,
+                "self_rss_kib": 29120
+              },
+              "self_cpu_seconds": 0.013424999999999992,
+              "wall_seconds": 0.012327841000114859
+            },
+            "load_evidence": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 35432,
+                "self_plus_live_descendants_rss_sum_kib": 35432,
+                "self_rss_kib": 35432
+              },
+              "self_cpu_seconds": 0.056311,
+              "wall_seconds": 0.054409191000559076
+            },
+            "persist_export": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 59020,
+                "self_plus_live_descendants_rss_sum_kib": 59020,
+                "self_rss_kib": 59020
+              },
+              "self_cpu_seconds": 0.009150999999999992,
+              "wall_seconds": 0.00853287000063574
+            },
+            "persist_receipt": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 59836,
+                "self_plus_live_descendants_rss_sum_kib": 28860,
+                "self_rss_kib": 28860
+              },
+              "self_cpu_seconds": 0.0020619999999999805,
+              "wall_seconds": 0.006492639000498457
+            },
+            "verify_incremental": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 59836,
+                "self_plus_live_descendants_rss_sum_kib": 59020,
+                "self_rss_kib": 59020
+              },
+              "self_cpu_seconds": 0.145926,
+              "wall_seconds": 0.14529713399952016
+            }
+          },
+          "returncode": 0,
+          "sample_interval_seconds": 0.002,
+          "sampler_semantics": "RSS values are periodic /proc samples, not exact phase peaks. Descendant sums count shared pages in each process. Highwaters are cumulative process observations; wait4 child maxima may include pre-exec fork memory. Nested phases overlap.",
+          "self_usage": {
+            "cpu_seconds": 0.20667499999999997,
+            "highwater_kib": 59836
+          },
+          "subprocess_wait4": []
+        },
+        "raw_directory": "/workspace/kernel-audit/native-phase-memory-1445-qualified/unchanged/1",
+        "returncode": 0,
+        "status": "VERIFIED",
+        "subprocess_sampling_complete": true,
+        "wait4_max_rss_kib": 59836
+      }
+    ],
+    "unrelated": [
+      {
+        "classification_and_counts_validated": true,
+        "counts": {
+          "invalidated": 1,
+          "rechecked": 1,
+          "reused": 3435,
+          "scheduled": 1,
+          "total": 3436
+        },
+        "cpu_seconds": 0.47516800000000003,
+        "engine_timings": {
+          "cache_validation_cpu_seconds": 0.057285,
+          "cache_validation_seconds": 0.05601408700022148,
+          "checking_cpu_seconds": 0.021679000000000004,
+          "checking_seconds": 0.020748921000631526,
+          "export_hash_cpu_seconds": 0.013860999999999998,
+          "export_hash_seconds": 0.013223969000137004,
+          "identity_cpu_seconds": 0.24088899999999996,
+          "identity_seconds": 0.22617413199986913,
+          "native_index_cpu_seconds": 0.19700099999999998,
+          "native_index_seconds": 0.1830777280001712,
+          "receipt_persistence_cpu_seconds": 0.05573199999999995,
+          "receipt_persistence_seconds": 0.061720859000161,
+          "snapshot_copy_cpu_seconds": 0.004465999999999998,
+          "snapshot_copy_seconds": 0.004331720999289246,
+          "total_seconds": 0.38167496499954723
+        },
+        "instrumented_wall_seconds": 0.46368394500041177,
+        "memory": {
+          "measurement_use": "MEMORY_DIAGNOSTIC_NOT_PERFORMANCE_ECONOMICS",
+          "phases": {
+            "complete_instrumented_cli": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.19646599999999997,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 97272,
+                "live_descendants_rss_sum_kib": 97272,
+                "self_observed_highwater_kib": 57472,
+                "self_plus_live_descendants_rss_sum_kib": 122328,
+                "self_rss_kib": 57472
+              },
+              "self_cpu_seconds": 0.222576,
+              "wall_seconds": 0.406710127000224
+            },
+            "copy_check-selected": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.0007400000000000045,
+              "wall_seconds": 0.000742332000299939
+            },
+            "copy_current.ndjson": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 35348,
+                "self_plus_live_descendants_rss_sum_kib": 24936,
+                "self_rss_kib": 24936
+              },
+              "self_cpu_seconds": 0.004328999999999986,
+              "wall_seconds": 0.004192686000351387
+            },
+            "copy_export-index": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.00039000000000000146,
+              "wall_seconds": 0.00038886200036358787
+            },
+            "decode_checker_report": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 5.7000000000001494e-05,
+              "wall_seconds": 4.649799939215882e-05
+            },
+            "decode_native_index": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.02962400000000001,
+              "wall_seconds": 0.0295099510003638
+            },
+            "decode_prior_receipt": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.017062,
+              "wall_seconds": 0.017009006000080262
+            },
+            "encode_configuration_or_selection": {
+              "calls": 3,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.00011399999999997523,
+              "wall_seconds": 9.239600058208453e-05
+            },
+            "encode_final_result": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 57144,
+                "self_plus_live_descendants_rss_sum_kib": 39892,
+                "self_rss_kib": 39892
+              },
+              "self_cpu_seconds": 0.015944999999999987,
+              "wall_seconds": 0.0157441960000142
+            },
+            "encode_new_hmac_payload": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.01350499999999999,
+              "wall_seconds": 0.013478663000569213
+            },
+            "encode_prior_hmac_payload": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.018373999999999988,
+              "wall_seconds": 0.01832258800004638
+            },
+            "encode_signed_receipt": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.013739000000000001,
+              "wall_seconds": 0.01370127100017271
+            },
+            "hash_check-selected": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 15080,
+                "self_plus_live_descendants_rss_sum_kib": 15080,
+                "self_rss_kib": 15080
+              },
+              "self_cpu_seconds": 0.002827000000000003,
+              "wall_seconds": 0.002671559000191337
+            },
+            "hash_current_export": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 35348,
+                "self_plus_live_descendants_rss_sum_kib": 24936,
+                "self_rss_kib": 24936
+              },
+              "self_cpu_seconds": 0.013806000000000013,
+              "wall_seconds": 0.013166503999855195
+            },
+            "hash_engine.py": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 5.6000000000000494e-05,
+              "wall_seconds": 5.66829994568252e-05
+            },
+            "hash_export-index": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 15616,
+                "self_plus_live_descendants_rss_sum_kib": 14312,
+                "self_rss_kib": 14312
+              },
+              "self_cpu_seconds": 0.001582,
+              "wall_seconds": 0.001447059000383888
+            },
+            "hash_prior_export": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 35348,
+                "self_plus_live_descendants_rss_sum_kib": 29120,
+                "self_rss_kib": 29120
+              },
+              "self_cpu_seconds": 0.012964000000000017,
+              "wall_seconds": 0.01232592799988197
+            },
+            "indexed_export": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.177395,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 97272,
+                "live_descendants_rss_sum_kib": 97272,
+                "self_observed_highwater_kib": 35348,
+                "self_plus_live_descendants_rss_sum_kib": 122328,
+                "self_rss_kib": 27200
+              },
+              "self_cpu_seconds": 0.049607999999999985,
+              "wall_seconds": 0.21292847000040638
+            },
+            "load_evidence": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 35432,
+                "self_plus_live_descendants_rss_sum_kib": 35432,
+                "self_rss_kib": 35432
+              },
+              "self_cpu_seconds": 0.057267000000000005,
+              "wall_seconds": 0.05599821299983887
+            },
+            "persist_export": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 57472,
+                "self_plus_live_descendants_rss_sum_kib": 57472,
+                "self_rss_kib": 57472
+              },
+              "self_cpu_seconds": 0.00978699999999999,
+              "wall_seconds": 0.015971701000125904
+            },
+            "persist_receipt": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 57144,
+                "self_plus_live_descendants_rss_sum_kib": 41920,
+                "self_rss_kib": 41920
+              },
+              "self_cpu_seconds": 0.0017610000000000126,
+              "wall_seconds": 0.003047186000003421
+            },
+            "subprocess_check-selected": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.019070999999999977,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 47996,
+                "live_descendants_rss_sum_kib": 47996,
+                "self_observed_highwater_kib": 48128,
+                "self_plus_live_descendants_rss_sum_kib": 89604,
+                "self_rss_kib": 41608
+              },
+              "self_cpu_seconds": 0.0020710000000000173,
+              "wall_seconds": 0.02027016800002457
+            },
+            "subprocess_export-index": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.177395,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 97272,
+                "live_descendants_rss_sum_kib": 97272,
+                "self_observed_highwater_kib": 35348,
+                "self_plus_live_descendants_rss_sum_kib": 122328,
+                "self_rss_kib": 27200
+              },
+              "self_cpu_seconds": 0.01955599999999999,
+              "wall_seconds": 0.18302693299938255
+            },
+            "verify_incremental": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.19646599999999997,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 97272,
+                "live_descendants_rss_sum_kib": 97272,
+                "self_observed_highwater_kib": 57472,
+                "self_plus_live_descendants_rss_sum_kib": 122328,
+                "self_rss_kib": 57472
+              },
+              "self_cpu_seconds": 0.20137699999999997,
+              "wall_seconds": 0.38628797000001214
+            }
+          },
+          "returncode": 0,
+          "sample_interval_seconds": 0.002,
+          "sampler_semantics": "RSS values are periodic /proc samples, not exact phase peaks. Descendant sums count shared pages in each process. Highwaters are cumulative process observations; wait4 child maxima may include pre-exec fork memory. Nested phases overlap.",
+          "self_usage": {
+            "cpu_seconds": 0.2663,
+            "highwater_kib": 60224
+          },
+          "subprocess_wait4": [
+            {
+              "confirmed_post_exec_sample_count": 81,
+              "cpu_seconds": 0.177395,
+              "exitcode": 0,
+              "pid": 20014,
+              "role": "export-index",
+              "sampled_post_exec_hwm_peak_kib": 97272,
+              "sampled_post_exec_rss_peak_kib": 97272,
+              "system_cpu_seconds": 0.008253,
+              "user_cpu_seconds": 0.169142,
+              "wait4_max_rss_kib": 97208
+            },
+            {
+              "confirmed_post_exec_sample_count": 8,
+              "cpu_seconds": 0.019069999999999997,
+              "exitcode": 0,
+              "pid": 20015,
+              "role": "check-selected",
+              "sampled_post_exec_hwm_peak_kib": 52452,
+              "sampled_post_exec_rss_peak_kib": 47996,
+              "system_cpu_seconds": 0.011408999999999999,
+              "user_cpu_seconds": 0.007660999999999999,
+              "wait4_max_rss_kib": 55388
+            }
+          ]
+        },
+        "raw_directory": "/workspace/kernel-audit/native-phase-memory-1445-qualified/unrelated/0",
+        "returncode": 0,
+        "status": "VERIFIED",
+        "subprocess_sampling_complete": true,
+        "wait4_max_rss_kib": 97208
+      },
+      {
+        "classification_and_counts_validated": true,
+        "counts": {
+          "invalidated": 1,
+          "rechecked": 1,
+          "reused": 3435,
+          "scheduled": 1,
+          "total": 3436
+        },
+        "cpu_seconds": 0.486534,
+        "engine_timings": {
+          "cache_validation_cpu_seconds": 0.060753,
+          "cache_validation_seconds": 0.05927962399982789,
+          "checking_cpu_seconds": 0.019492999999999983,
+          "checking_seconds": 0.019792879999840807,
+          "export_hash_cpu_seconds": 0.01614300000000002,
+          "export_hash_seconds": 0.014976807000493864,
+          "identity_cpu_seconds": 0.25098099999999995,
+          "identity_seconds": 0.23374218700064375,
+          "native_index_cpu_seconds": 0.20407899999999998,
+          "native_index_seconds": 0.18809927300026175,
+          "receipt_persistence_cpu_seconds": 0.050126000000000004,
+          "receipt_persistence_seconds": 0.05773660500017286,
+          "snapshot_copy_cpu_seconds": 0.005590999999999985,
+          "snapshot_copy_seconds": 0.00533167199955642,
+          "total_seconds": 0.38959387300019444
+        },
+        "instrumented_wall_seconds": 0.4751953799996045,
+        "memory": {
+          "measurement_use": "MEMORY_DIAGNOSTIC_NOT_PERFORMANCE_ECONOMICS",
+          "phases": {
+            "complete_instrumented_cli": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.200313,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 97268,
+                "live_descendants_rss_sum_kib": 97268,
+                "self_observed_highwater_kib": 57460,
+                "self_plus_live_descendants_rss_sum_kib": 122320,
+                "self_rss_kib": 57460
+              },
+              "self_cpu_seconds": 0.226385,
+              "wall_seconds": 0.41487279100056185
+            },
+            "copy_check-selected": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.0005979999999999944,
+              "wall_seconds": 0.0005988809998598299
+            },
+            "copy_current.ndjson": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 35336,
+                "self_plus_live_descendants_rss_sum_kib": 24936,
+                "self_rss_kib": 24936
+              },
+              "self_cpu_seconds": 0.005546000000000009,
+              "wall_seconds": 0.005286765999699128
+            },
+            "copy_export-index": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.00037399999999999933,
+              "wall_seconds": 0.0003726579998328816
+            },
+            "decode_checker_report": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 2.3999999999996247e-05,
+              "wall_seconds": 2.4375999601033982e-05
+            },
+            "decode_native_index": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 35336,
+                "self_plus_live_descendants_rss_sum_kib": 31408,
+                "self_rss_kib": 31408
+              },
+              "self_cpu_seconds": 0.030477000000000032,
+              "wall_seconds": 0.03037830399989616
+            },
+            "decode_prior_receipt": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.021044,
+              "wall_seconds": 0.020923497999319807
+            },
+            "encode_configuration_or_selection": {
+              "calls": 3,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 8.70000000000315e-05,
+              "wall_seconds": 8.921199969336158e-05
+            },
+            "encode_final_result": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.014849000000000001,
+              "wall_seconds": 0.014817822999248165
+            },
+            "encode_new_hmac_payload": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.013445999999999986,
+              "wall_seconds": 0.013424574000055145
+            },
+            "encode_prior_hmac_payload": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 23324,
+                "self_plus_live_descendants_rss_sum_kib": 23324,
+                "self_rss_kib": 23324
+              },
+              "self_cpu_seconds": 0.01677400000000001,
+              "wall_seconds": 0.016735954000068887
+            },
+            "encode_signed_receipt": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 0.013193999999999984,
+              "wall_seconds": 0.013155757999811613
+            },
+            "hash_check-selected": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 15080,
+                "self_plus_live_descendants_rss_sum_kib": 15080,
+                "self_rss_kib": 15080
+              },
+              "self_cpu_seconds": 0.002222999999999996,
+              "wall_seconds": 0.0020876500002486864
+            },
+            "hash_current_export": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 35336,
+                "self_plus_live_descendants_rss_sum_kib": 24940,
+                "self_rss_kib": 24940
+              },
+              "self_cpu_seconds": 0.016095000000000026,
+              "wall_seconds": 0.014928456000234291
+            },
+            "hash_engine.py": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": null,
+                "live_descendants_rss_sum_kib": null,
+                "self_observed_highwater_kib": null,
+                "self_plus_live_descendants_rss_sum_kib": null,
+                "self_rss_kib": null
+              },
+              "self_cpu_seconds": 5.7999999999995555e-05,
+              "wall_seconds": 5.828499979543267e-05
+            },
+            "hash_export-index": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 15616,
+                "self_plus_live_descendants_rss_sum_kib": 15080,
+                "self_rss_kib": 15080
+              },
+              "self_cpu_seconds": 0.001463000000000006,
+              "wall_seconds": 0.0013563850006903522
+            },
+            "hash_prior_export": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 35336,
+                "self_plus_live_descendants_rss_sum_kib": 29124,
+                "self_rss_kib": 29124
+              },
+              "self_cpu_seconds": 0.014680000000000012,
+              "wall_seconds": 0.013779610999336
+            },
+            "indexed_export": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.18323199999999998,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 97268,
+                "live_descendants_rss_sum_kib": 97268,
+                "self_observed_highwater_kib": 35336,
+                "self_plus_live_descendants_rss_sum_kib": 122320,
+                "self_rss_kib": 31408
+              },
+              "self_cpu_seconds": 0.051510999999999973,
+              "wall_seconds": 0.21867426599965256
+            },
+            "load_evidence": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 35432,
+                "self_plus_live_descendants_rss_sum_kib": 35432,
+                "self_rss_kib": 35432
+              },
+              "self_cpu_seconds": 0.060737999999999986,
+              "wall_seconds": 0.05926426200039714
+            },
+            "persist_export": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 57460,
+                "self_plus_live_descendants_rss_sum_kib": 57460,
+                "self_rss_kib": 57460
+              },
+              "self_cpu_seconds": 0.005638000000000004,
+              "wall_seconds": 0.011952920000112499
+            },
+            "persist_receipt": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.0,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 0,
+                "live_descendants_rss_sum_kib": 0,
+                "self_observed_highwater_kib": 57124,
+                "self_plus_live_descendants_rss_sum_kib": 41908,
+                "self_rss_kib": 41908
+              },
+              "self_cpu_seconds": 0.0015819999999999723,
+              "wall_seconds": 0.004234498000187159
+            },
+            "subprocess_check-selected": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.017081000000000013,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 51692,
+                "live_descendants_rss_sum_kib": 51692,
+                "self_observed_highwater_kib": 48112,
+                "self_plus_live_descendants_rss_sum_kib": 93288,
+                "self_rss_kib": 41596
+              },
+              "self_cpu_seconds": 0.0020389999999999853,
+              "wall_seconds": 0.01942625100036821
+            },
+            "subprocess_export-index": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.18323199999999998,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 97268,
+                "live_descendants_rss_sum_kib": 97268,
+                "self_observed_highwater_kib": 35336,
+                "self_plus_live_descendants_rss_sum_kib": 122320,
+                "self_rss_kib": 27200
+              },
+              "self_cpu_seconds": 0.020815,
+              "wall_seconds": 0.18806535299972893
+            },
+            "verify_incremental": {
+              "calls": 1,
+              "completed_children_cpu_seconds": 0.200313,
+              "sampled_peaks_kib": {
+                "confirmed_post_exec_descendants_rss_sum_kib": 97268,
+                "live_descendants_rss_sum_kib": 97268,
+                "self_observed_highwater_kib": 57460,
+                "self_plus_live_descendants_rss_sum_kib": 122320,
+                "self_rss_kib": 57460
+              },
+              "self_cpu_seconds": 0.205782,
+              "wall_seconds": 0.3946112109997557
+            }
+          },
+          "returncode": 0,
+          "sample_interval_seconds": 0.002,
+          "sampler_semantics": "RSS values are periodic /proc samples, not exact phase peaks. Descendant sums count shared pages in each process. Highwaters are cumulative process observations; wait4 child maxima may include pre-exec fork memory. Nested phases overlap.",
+          "self_usage": {
+            "cpu_seconds": 0.272183,
+            "highwater_kib": 60224
+          },
+          "subprocess_wait4": [
+            {
+              "confirmed_post_exec_sample_count": 83,
+              "cpu_seconds": 0.18323199999999998,
+              "exitcode": 0,
+              "pid": 20019,
+              "role": "export-index",
+              "sampled_post_exec_hwm_peak_kib": 97268,
+              "sampled_post_exec_rss_peak_kib": 97268,
+              "system_cpu_seconds": 0.008822,
+              "user_cpu_seconds": 0.17440999999999998,
+              "wait4_max_rss_kib": 97120
+            },
+            {
+              "confirmed_post_exec_sample_count": 8,
+              "cpu_seconds": 0.017079999999999998,
+              "exitcode": 0,
+              "pid": 20020,
+              "role": "check-selected",
+              "sampled_post_exec_hwm_peak_kib": 52372,
+              "sampled_post_exec_rss_peak_kib": 51692,
+              "system_cpu_seconds": 0.00842,
+              "user_cpu_seconds": 0.00866,
+              "wait4_max_rss_kib": 55388
+            }
+          ]
+        },
+        "raw_directory": "/workspace/kernel-audit/native-phase-memory-1445-qualified/unrelated/1",
+        "returncode": 0,
+        "status": "VERIFIED",
+        "subprocess_sampling_complete": true,
+        "wait4_max_rss_kib": 97120
+      }
+    ]
+  },
+  "caveats": [
+    "Periodic /proc RSS samples are not exact phase peaks.",
+    "Parent RSS and live descendant RSS sums are separate; shared pages can be counted twice.",
+    "Highwaters are cumulative observations, not reset per phase.",
+    "Instrumented wall/CPU values are diagnostic and must not replace qualification timings.",
+    "Native indexing includes real parser and identity work; parse-only is a separate observation and is never subtracted as marginal work."
+  ],
+  "measurement_use": "MEMORY_DIAGNOSTIC_NOT_PERFORMANCE_ECONOMICS",
+  "profiling_tool_sha256": "5c23f259a1b5d5f3b3aa650dfdb3b91bd61be8756d8798002dfc7cf70703eee3",
+  "qualification_pins_sha256": "08015efcd86f129fbc8eaa64354825a1e42d331e64daf55ed8a3cbd3a9cb2b82",
+  "repetitions": 2,
+  "sampling_interval_ms": 2.0,
+  "schema": "mathgraph.incremental-native-phase-memory.v1",
+  "separate_parse_only_observation": {
+    "cpu_seconds": 0.068259,
+    "instrumented_wall_seconds": 0.06742936299997382,
+    "memory": {
+      "measurement_use": "MEMORY_DIAGNOSTIC_NOT_PERFORMANCE_ECONOMICS",
+      "phases": {
+        "complete_instrumented_cli": {
+          "calls": 1,
+          "completed_children_cpu_seconds": 0.015385999999999999,
+          "sampled_peaks_kib": {
+            "confirmed_post_exec_descendants_rss_sum_kib": 50632,
+            "live_descendants_rss_sum_kib": 50632,
+            "self_observed_highwater_kib": 13992,
+            "self_plus_live_descendants_rss_sum_kib": 64624,
+            "self_rss_kib": 13992
+          },
+          "self_cpu_seconds": 0.001905000000000004,
+          "wall_seconds": 0.015695955999945
+        },
+        "subprocess_parse-only-checker": {
+          "calls": 1,
+          "completed_children_cpu_seconds": 0.015385999999999999,
+          "sampled_peaks_kib": {
+            "confirmed_post_exec_descendants_rss_sum_kib": 50632,
+            "live_descendants_rss_sum_kib": 50632,
+            "self_observed_highwater_kib": 13992,
+            "self_plus_live_descendants_rss_sum_kib": 64624,
+            "self_rss_kib": 13992
+          },
+          "self_cpu_seconds": 0.0016280000000000044,
+          "wall_seconds": 0.015616269000020111
+        }
+      },
+      "returncode": 0,
+      "sample_interval_seconds": 0.002,
+      "sampler_semantics": "RSS values are periodic /proc samples, not exact phase peaks. Descendant sums count shared pages in each process. Highwaters are cumulative process observations; wait4 child maxima may include pre-exec fork memory. Nested phases overlap.",
+      "self_usage": {
+        "cpu_seconds": 0.041966,
+        "highwater_kib": 60436
+      },
+      "subprocess_wait4": [
+        {
+          "confirmed_post_exec_sample_count": 6,
+          "cpu_seconds": 0.015385999999999999,
+          "exitcode": 0,
+          "pid": 20044,
+          "role": "parse-only-checker",
+          "sampled_post_exec_hwm_peak_kib": 50632,
+          "sampled_post_exec_rss_peak_kib": 50632,
+          "system_cpu_seconds": 0.0,
+          "user_cpu_seconds": 0.015385999999999999,
+          "wait4_max_rss_kib": 52488
+        }
+      ]
+    },
+    "raw_directory": "/workspace/kernel-audit/native-phase-memory-1445-qualified/parse-only",
+    "returncode": 0,
+    "wait4_max_rss_kib": 60436
+  },
+  "source_git_commit": "1445e293238abedfb9f0cf727f6c5e17fd685184",
+  "validated_exports": {
+    "early": {
+      "matches_manifest": true,
+      "matches_qualification_pin": true,
+      "path": "/workspace/kernel-audit/workloads-final/early-definition/export.ndjson",
+      "sha256": "13323bf721599b9b77fe0ea94da5c4632edd2a25188842fb09738bfdf74fdd9f",
+      "variant": "early-definition"
+    },
+    "invalid": {
+      "matches_manifest": true,
+      "matches_qualification_pin": true,
+      "path": "/workspace/kernel-audit/workloads-final/invalid-proof/export.ndjson",
+      "sha256": "24729cd9b45f4e84b97950e4b9c85a3a42508ee98165dd818ad52553aa231eb7",
+      "variant": "invalid-proof"
+    },
+    "leaf": {
+      "matches_manifest": true,
+      "matches_qualification_pin": true,
+      "path": "/workspace/kernel-audit/workloads-final/theorem-leaf/export.ndjson",
+      "sha256": "248174fa07162ca1dd6d2e71a2032a17e3282f26d8eb754c34f76c39805d9533",
+      "variant": "theorem-leaf"
+    },
+    "unchanged": {
+      "matches_manifest": true,
+      "matches_qualification_pin": true,
+      "path": "/workspace/kernel-audit/workloads-final/baseline/export.ndjson",
+      "sha256": "d81ecde8f818ed8d8748b476e22412ec74820a49edbe7986c2c3633a3d66bef0",
+      "variant": "baseline"
+    },
+    "unrelated": {
+      "matches_manifest": true,
+      "matches_qualification_pin": true,
+      "path": "/workspace/kernel-audit/workloads-final/unrelated-definition/export.ndjson",
+      "sha256": "3e87c0fdad28a426d73073940ffea9dc03941c274f9c79887765d51f2dcc2ad5",
+      "variant": "unrelated-definition"
+    }
+  },
+  "workload_manifest_sha256": "bcf2730fd7ac9044ce864ba7f0e9d62acfabaa6c1f79b371962c3235f0e12456",
+  "workloads": "/workspace/kernel-audit/workloads-final"
+}

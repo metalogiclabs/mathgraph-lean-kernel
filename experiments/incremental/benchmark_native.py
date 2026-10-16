@@ -184,6 +184,10 @@ def markdown(report):
              'resources and component-addition totals are reported separately; those sums '
              'are not new single-command measurements. Bootstrap stability on this finite '
              'run does not establish cross-host or Mathlib-scale speedup.', '',
+             '`max_rss_kib` is the raw wait4 highwater. It can include memory inherited '
+             'from this Python launcher before exec, so it does not establish checker-only '
+             'or aggregate process-tree peak memory or memory savings. The separate '
+             '`profile_native_phases.py` diagnostic records post-exec RSS samples by phase.', '',
              'Failed correctness gates: ' + ', '.join(gate['name'] for gate in report['gates']
                                                        if not gate['passed'])]
     return '\n'.join(rows) + '\n'
