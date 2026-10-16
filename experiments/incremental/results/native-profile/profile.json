@@ -1,0 +1,1982 @@
+{
+  "adapter": {
+    "cprofile": {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+        "/workspace/kernel-audit/native-profile-20261016-final/profile_identity.py",
+        "--child",
+        "--base",
+        "/workspace/native-profile-base",
+        "--raw",
+        "/workspace/kernel-audit/native-profile-20261016-final/adapter/cprofile",
+        "--kind",
+        "adapter",
+        "--mode",
+        "cprofile",
+        "--arguments",
+        "[\"--mathgraph\", \"/workspace/mathgraph\", \"--result\", \"/workspace/kernel-audit/native-profile-20261016-final/unrelated-definition/0-unprofiled/result.json\", \"--expected-evidence-id\", \"ee36056b0ef19354f206fd3cf5a382d1e5d27495075a3354df4cff78e47eddb8\", \"--expected-export-sha256\", \"3e87c0fdad28a426d73073940ffea9dc03941c274f9c79887765d51f2dcc2ad5\", \"--expected-result-sha256\", \"e319590999df714a5998c62901735db12da704c562a37984df60d5aab205359e\", \"--output\", \"/workspace/kernel-audit/native-profile-20261016-final/adapter/cprofile/result.json\"]"
+      ],
+      "cpu_seconds": 0.362544,
+      "detail": {
+        "children_cpu_seconds": 0.0031699999999999996,
+        "children_max_rss_kib": 37816,
+        "in_process_cpu_seconds": 0.289084356,
+        "in_process_wall_seconds": 0.29196806400068454,
+        "kind": "adapter",
+        "mode": "cprofile",
+        "process_max_rss_kib": 62636,
+        "profile_top_self": [
+          {
+            "calls": 6876,
+            "cumulative_seconds": 0.058888734000000005,
+            "file": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/json/encoder.py",
+            "function": "iterencode",
+            "line": 205,
+            "primitive_calls": 6876,
+            "self_seconds": 0.058888734000000005
+          },
+          {
+            "calls": 1,
+            "cumulative_seconds": 0.214260158,
+            "file": "/workspace/native-profile-base/mathgraph_integration.py",
+            "function": "consume_qualified_result",
+            "line": 78,
+            "primitive_calls": 1,
+            "self_seconds": 0.029143480000000003
+          },
+          {
+            "calls": 58705,
+            "cumulative_seconds": 0.025747653000000002,
+            "file": "~",
+            "function": "<method 'fullmatch' of 're.Pattern' objects>",
+            "line": 0,
+            "primitive_calls": 58705,
+            "self_seconds": 0.025747653000000002
+          },
+          {
+            "calls": 2,
+            "cumulative_seconds": 0.0561545,
+            "file": "/workspace/mathgraph/mathgraph_check/warrant_resolution.py",
+            "function": "resolve_graph",
+            "line": 96,
+            "primitive_calls": 2,
+            "self_seconds": 0.017245451000000002
+          },
+          {
+            "calls": 54985,
+            "cumulative_seconds": 0.06480817700000001,
+            "file": "~",
+            "function": "<built-in method builtins.all>",
+            "line": 0,
+            "primitive_calls": 54985,
+            "self_seconds": 0.016017047
+          },
+          {
+            "calls": 51827,
+            "cumulative_seconds": 0.035702718,
+            "file": "/workspace/native-profile-base/mathgraph_integration.py",
+            "function": "<genexpr>",
+            "line": 126,
+            "primitive_calls": 51827,
+            "self_seconds": 0.012628557
+          },
+          {
+            "calls": 1,
+            "cumulative_seconds": 0.020575508000000003,
+            "file": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/json/decoder.py",
+            "function": "raw_decode",
+            "line": 344,
+            "primitive_calls": 1,
+            "self_seconds": 0.012263932
+          },
+          {
+            "calls": 6875,
+            "cumulative_seconds": 0.0066086930000000006,
+            "file": "~",
+            "function": "<built-in method _hashlib.openssl_sha256>",
+            "line": 0,
+            "primitive_calls": 6875,
+            "self_seconds": 0.0066086930000000006
+          },
+          {
+            "calls": 27496,
+            "cumulative_seconds": 0.009271764,
+            "file": "~",
+            "function": "<built-in method builtins.any>",
+            "line": 0,
+            "primitive_calls": 27496,
+            "self_seconds": 0.006070787
+          },
+          {
+            "calls": 24059,
+            "cumulative_seconds": 0.014578909000000001,
+            "file": "/workspace/mathgraph/mathgraph_check/warrant_resolution.py",
+            "function": "evidence_is_live",
+            "line": 158,
+            "primitive_calls": 24059,
+            "self_seconds": 0.0059597520000000005
+          },
+          {
+            "calls": 6879,
+            "cumulative_seconds": 0.008311576000000001,
+            "file": "/workspace/native-profile-base/mathgraph_integration.py",
+            "function": "pairs",
+            "line": 40,
+            "primitive_calls": 6879,
+            "self_seconds": 0.005590432
+          },
+          {
+            "calls": 6876,
+            "cumulative_seconds": 0.072167457,
+            "file": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/json/__init__.py",
+            "function": "dumps",
+            "line": 183,
+            "primitive_calls": 6876,
+            "self_seconds": 0.005433796
+          },
+          {
+            "calls": 76382,
+            "cumulative_seconds": 0.0051461580000000005,
+            "file": "~",
+            "function": "<built-in method builtins.isinstance>",
+            "line": 0,
+            "primitive_calls": 76382,
+            "self_seconds": 0.005128162
+          },
+          {
+            "calls": 6876,
+            "cumulative_seconds": 0.065644717,
+            "file": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/json/encoder.py",
+            "function": "encode",
+            "line": 183,
+            "primitive_calls": 6876,
+            "self_seconds": 0.004791035
+          },
+          {
+            "calls": 58470,
+            "cumulative_seconds": 0.004304064000000001,
+            "file": "/workspace/native-profile-base/mathgraph_integration.py",
+            "function": "require",
+            "line": 34,
+            "primitive_calls": 58470,
+            "self_seconds": 0.004304064000000001
+          },
+          {
+            "calls": 8,
+            "cumulative_seconds": 0.014550798,
+            "file": "~",
+            "function": "<built-in method builtins.sorted>",
+            "line": 0,
+            "primitive_calls": 8,
+            "self_seconds": 0.00394811
+          },
+          {
+            "calls": 6873,
+            "cumulative_seconds": 0.048489716,
+            "file": "/workspace/native-profile-base/mathgraph_integration.py",
+            "function": "digest",
+            "line": 30,
+            "primitive_calls": 6873,
+            "self_seconds": 0.003677717
+          },
+          {
+            "calls": 1,
+            "cumulative_seconds": 0.286342451,
+            "file": "/workspace/native-profile-base/mathgraph_integration.py",
+            "function": "main",
+            "line": 200,
+            "primitive_calls": 1,
+            "self_seconds": 0.0036758470000000003
+          },
+          {
+            "calls": 6875,
+            "cumulative_seconds": 0.079065889,
+            "file": "/workspace/native-profile-base/mathgraph_integration.py",
+            "function": "canonical",
+            "line": 25,
+            "primitive_calls": 6875,
+            "self_seconds": 0.003589234
+          },
+          {
+            "calls": 27711,
+            "cumulative_seconds": 0.003496392,
+            "file": "~",
+            "function": "<method 'get' of 'dict' objects>",
+            "line": 0,
+            "primitive_calls": 27711,
+            "self_seconds": 0.003496392
+          },
+          {
+            "calls": 10308,
+            "cumulative_seconds": 0.008896657,
+            "file": "/workspace/native-profile-base/mathgraph_integration.py",
+            "function": "<genexpr>",
+            "line": 123,
+            "primitive_calls": 10308,
+            "self_seconds": 0.0033471910000000002
+          },
+          {
+            "calls": 6927,
+            "cumulative_seconds": 0.0033417710000000003,
+            "file": "~",
+            "function": "<method 'encode' of 'str' objects>",
+            "line": 0,
+            "primitive_calls": 6927,
+            "self_seconds": 0.0033417710000000003
+          },
+          {
+            "calls": 48118,
+            "cumulative_seconds": 0.002961673,
+            "file": "/workspace/mathgraph/mathgraph_check/warrant_resolution.py",
+            "function": "<genexpr>",
+            "line": 163,
+            "primitive_calls": 48118,
+            "self_seconds": 0.002961673
+          },
+          {
+            "calls": 4,
+            "cumulative_seconds": 0.002595796,
+            "file": "~",
+            "function": "<method 'poll' of 'select.poll' objects>",
+            "line": 0,
+            "primitive_calls": 4,
+            "self_seconds": 0.002595796
+          },
+          {
+            "calls": 6874,
+            "cumulative_seconds": 0.008434476,
+            "file": "/workspace/mathgraph/mathgraph_check/warrant_resolution.py",
+            "function": "<genexpr>",
+            "line": 178,
+            "primitive_calls": 6874,
+            "self_seconds": 0.002537927
+          },
+          {
+            "calls": 13744,
+            "cumulative_seconds": 0.0033272650000000003,
+            "file": "/workspace/native-profile-base/mathgraph_integration.py",
+            "function": "<genexpr>",
+            "line": 111,
+            "primitive_calls": 13744,
+            "self_seconds": 0.0020548890000000003
+          },
+          {
+            "calls": 6875,
+            "cumulative_seconds": 0.0019660800000000003,
+            "file": "~",
+            "function": "<method 'hexdigest' of '_hashlib.HASH' objects>",
+            "line": 0,
+            "primitive_calls": 6875,
+            "self_seconds": 0.0019660800000000003
+          },
+          {
+            "calls": 6872,
+            "cumulative_seconds": 0.001959176,
+            "file": "/workspace/mathgraph/mathgraph_check/warrant_resolution.py",
+            "function": "<lambda>",
+            "line": 180,
+            "primitive_calls": 6872,
+            "self_seconds": 0.001959176
+          },
+          {
+            "calls": 3436,
+            "cumulative_seconds": 0.002264817,
+            "file": "<string>",
+            "function": "__init__",
+            "line": 2,
+            "primitive_calls": 3436,
+            "self_seconds": 0.001911123
+          },
+          {
+            "calls": 32,
+            "cumulative_seconds": 0.0038627310000000003,
+            "file": "~",
+            "function": "<built-in method builtins.exec>",
+            "line": 0,
+            "primitive_calls": 1,
+            "self_seconds": 0.0017900820000000001
+          },
+          {
+            "calls": 3,
+            "cumulative_seconds": 0.0015520820000000002,
+            "file": "~",
+            "function": "<method 'read' of '_io.BufferedReader' objects>",
+            "line": 0,
+            "primitive_calls": 3,
+            "self_seconds": 0.0015520820000000002
+          },
+          {
+            "calls": 3437,
+            "cumulative_seconds": 0.0014646890000000001,
+            "file": "/workspace/mathgraph/mathgraph_check/warrant_resolution.py",
+            "function": "__post_init__",
+            "line": 48,
+            "primitive_calls": 3437,
+            "self_seconds": 0.0014646890000000001
+          },
+          {
+            "calls": 7,
+            "cumulative_seconds": 0.0014558190000000001,
+            "file": "~",
+            "function": "<method 'decode' of 'bytes' objects>",
+            "line": 0,
+            "primitive_calls": 7,
+            "self_seconds": 0.0014558190000000001
+          },
+          {
+            "calls": 1,
+            "cumulative_seconds": 0.001345178,
+            "file": "~",
+            "function": "<built-in method builtins.compile>",
+            "line": 0,
+            "primitive_calls": 1,
+            "self_seconds": 0.001345178
+          },
+          {
+            "calls": 13900,
+            "cumulative_seconds": 0.001332665,
+            "file": "~",
+            "function": "<method 'append' of 'list' objects>",
+            "line": 0,
+            "primitive_calls": 13900,
+            "self_seconds": 0.001332665
+          }
+        ],
+        "returncode": 0
+      },
+      "max_rss_kib": 62636,
+      "obligations": 3436,
+      "raw_directory": "/workspace/kernel-audit/native-profile-20261016-final/adapter/cprofile",
+      "returncode": 0,
+      "status": "WARRANTED_BOUNDED_CALLER_QUALIFIED_IMPORT",
+      "wall_seconds": 0.36252311099997314
+    },
+    "operations": {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+        "/workspace/kernel-audit/native-profile-20261016-final/profile_identity.py",
+        "--child",
+        "--base",
+        "/workspace/native-profile-base",
+        "--raw",
+        "/workspace/kernel-audit/native-profile-20261016-final/adapter/operations",
+        "--kind",
+        "adapter",
+        "--mode",
+        "operations",
+        "--arguments",
+        "[\"--mathgraph\", \"/workspace/mathgraph\", \"--result\", \"/workspace/kernel-audit/native-profile-20261016-final/unrelated-definition/0-unprofiled/result.json\", \"--expected-evidence-id\", \"ee36056b0ef19354f206fd3cf5a382d1e5d27495075a3354df4cff78e47eddb8\", \"--expected-export-sha256\", \"3e87c0fdad28a426d73073940ffea9dc03941c274f9c79887765d51f2dcc2ad5\", \"--expected-result-sha256\", \"e319590999df714a5998c62901735db12da704c562a37984df60d5aab205359e\", \"--output\", \"/workspace/kernel-audit/native-profile-20261016-final/adapter/operations/result.json\"]"
+      ],
+      "cpu_seconds": 0.276477,
+      "detail": {
+        "caveat": "Operation timers perturb runtime. Exclusive costs exclude nested timers, not instrumentation overhead. RSS phase values are boundary samples; process maxima are measured separately.",
+        "children_cpu_seconds": 0.003328,
+        "children_max_rss_kib": 37892,
+        "counts": {
+          "canonical_json_output_bytes": 16388136,
+          "json_parse_input_bytes": 4547756,
+          "outside_index/canonical_json_output_bytes": 16388136
+        },
+        "in_process_cpu_seconds": 0.212665149,
+        "in_process_wall_seconds": 0.21585885300009977,
+        "kind": "adapter",
+        "mode": "operations",
+        "operations": {
+          "adapter_consume": {
+            "calls": 1,
+            "cpu_seconds": 0.13944440600000002,
+            "self_cpu_seconds": 0.07743349699999916,
+            "self_wall_seconds": 0.07742089497605775,
+            "wall_seconds": 0.1426378759997533
+          },
+          "canonical_json": {
+            "calls": 6875,
+            "cpu_seconds": 0.0743204609999997,
+            "self_cpu_seconds": 0.0743204609999997,
+            "self_wall_seconds": 0.07413115703093354,
+            "wall_seconds": 0.07413115703093354
+          },
+          "external_subprocess": {
+            "calls": 2,
+            "cpu_seconds": 0.0006185590000000046,
+            "self_cpu_seconds": 0.0006185590000000046,
+            "self_wall_seconds": 0.003749864999008423,
+            "wall_seconds": 0.003749864999008423
+          },
+          "json_parse": {
+            "calls": 1,
+            "cpu_seconds": 0.019870045000000003,
+            "self_cpu_seconds": 0.019870045000000003,
+            "self_wall_seconds": 0.01986792699972284,
+            "wall_seconds": 0.01986792699972284
+          },
+          "merkle_digest": {
+            "calls": 6873,
+            "cpu_seconds": 0.05685980100000086,
+            "self_cpu_seconds": 0.02230074200000115,
+            "self_wall_seconds": 0.02255642399268254,
+            "wall_seconds": 0.05693288802376628
+          },
+          "pinned_resolver": {
+            "calls": 1,
+            "cpu_seconds": 0.0051511080000000015,
+            "self_cpu_seconds": 0.004532548999999997,
+            "self_wall_seconds": 0.004534228000920848,
+            "wall_seconds": 0.008284092999929271
+          }
+        },
+        "phases": [],
+        "process_max_rss_kib": 75692,
+        "returncode": 0
+      },
+      "max_rss_kib": 75692,
+      "obligations": 3436,
+      "raw_directory": "/workspace/kernel-audit/native-profile-20261016-final/adapter/operations",
+      "returncode": 0,
+      "status": "WARRANTED_BOUNDED_CALLER_QUALIFIED_IMPORT",
+      "wall_seconds": 0.2768487399998776
+    },
+    "unprofiled": {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+        "/workspace/kernel-audit/native-profile-20261016-final/profile_identity.py",
+        "--child",
+        "--base",
+        "/workspace/native-profile-base",
+        "--raw",
+        "/workspace/kernel-audit/native-profile-20261016-final/adapter/unprofiled",
+        "--kind",
+        "adapter",
+        "--mode",
+        "unprofiled",
+        "--arguments",
+        "[\"--mathgraph\", \"/workspace/mathgraph\", \"--result\", \"/workspace/kernel-audit/native-profile-20261016-final/unrelated-definition/0-unprofiled/result.json\", \"--expected-evidence-id\", \"ee36056b0ef19354f206fd3cf5a382d1e5d27495075a3354df4cff78e47eddb8\", \"--expected-export-sha256\", \"3e87c0fdad28a426d73073940ffea9dc03941c274f9c79887765d51f2dcc2ad5\", \"--expected-result-sha256\", \"e319590999df714a5998c62901735db12da704c562a37984df60d5aab205359e\", \"--output\", \"/workspace/kernel-audit/native-profile-20261016-final/adapter/unprofiled/result.json\"]"
+      ],
+      "cpu_seconds": 0.24944,
+      "detail": {
+        "children_cpu_seconds": 0.003619,
+        "children_max_rss_kib": 37780,
+        "in_process_cpu_seconds": 0.186784125,
+        "in_process_wall_seconds": 0.19021129200064024,
+        "kind": "adapter",
+        "mode": "unprofiled",
+        "process_max_rss_kib": 59948,
+        "returncode": 0
+      },
+      "max_rss_kib": 59948,
+      "obligations": 3436,
+      "raw_directory": "/workspace/kernel-audit/native-profile-20261016-final/adapter/unprofiled",
+      "returncode": 0,
+      "status": "WARRANTED_BOUNDED_CALLER_QUALIFIED_IMPORT",
+      "wall_seconds": 0.2495432729992899
+    }
+  },
+  "baseline_evidence_id": "8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067",
+  "baseline_result_sha256": "861b1aa78ae94e03f4c23d993a3372176db5165d46765486af1675e04772a458",
+  "cache_state": "Each run receives only the baseline evidence record and baseline export; the changed export and receipt are newly persisted.",
+  "cases": {
+    "early-definition": {
+      "all_modes_same_evidence": true,
+      "bytes": 15922029,
+      "export_sha256": "13323bf721599b9b77fe0ea94da5c4632edd2a25188842fb09738bfdf74fdd9f",
+      "runs": [
+        {
+          "command": [
+            "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+            "/workspace/kernel-audit/native-profile-20261016-final/profile_identity.py",
+            "--child",
+            "--base",
+            "/workspace/native-profile-base",
+            "--raw",
+            "/workspace/kernel-audit/native-profile-20261016-final/early-definition/0-unprofiled",
+            "--kind",
+            "engine",
+            "--mode",
+            "unprofiled",
+            "--arguments",
+            "[\"--export\", \"/workspace/kernel-audit/workloads-final/early-definition/export.ndjson\", \"--checker\", \"/workspace/mathgraph-lean-kernel/target/release/check-selected\", \"--cache\", \"/workspace/kernel-audit/native-profile-20261016-final/caches/early-definition/0-unprofiled\", \"--authority-key\", \"/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key\", \"--previous\", \"8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067\", \"--output\", \"/workspace/kernel-audit/native-profile-20261016-final/early-definition/0-unprofiled/result.json\"]"
+          ],
+          "counts": {
+            "invalidated": 413,
+            "rechecked": 413,
+            "reused": 3023,
+            "scheduled": 413,
+            "total": 3436
+          },
+          "cpu_seconds": 4.635140000000001,
+          "detail": {
+            "children_cpu_seconds": 0.062453,
+            "children_max_rss_kib": 283576,
+            "in_process_cpu_seconds": 4.480766631000001,
+            "in_process_wall_seconds": 4.556290118999641,
+            "kind": "engine",
+            "mode": "unprofiled",
+            "process_max_rss_kib": 286800,
+            "returncode": 0
+          },
+          "engine_timings": {
+            "cache_validation_seconds": 0.05464519899942388,
+            "checking_seconds": 0.06675250399985089,
+            "identity_seconds": 4.310513399000229,
+            "total_seconds": 4.520182741000099
+          },
+          "evidence_id": "40eda60aeaf6e8e95875d828297b87981f584ced73d5ae6ee2657edb95576e92",
+          "max_rss_kib": 286800,
+          "raw_directory": "/workspace/kernel-audit/native-profile-20261016-final/early-definition/0-unprofiled",
+          "result_path": "/workspace/kernel-audit/native-profile-20261016-final/early-definition/0-unprofiled/result.json",
+          "result_sha256": "c31f65ad50057d52e82315fc5e3dba20f40eeafd1fda76d9dd986fc6738f43e0",
+          "returncode": 0,
+          "status": "VERIFIED",
+          "wall_seconds": 4.651618032000442
+        },
+        {
+          "command": [
+            "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+            "/workspace/kernel-audit/native-profile-20261016-final/profile_identity.py",
+            "--child",
+            "--base",
+            "/workspace/native-profile-base",
+            "--raw",
+            "/workspace/kernel-audit/native-profile-20261016-final/early-definition/1-unprofiled",
+            "--kind",
+            "engine",
+            "--mode",
+            "unprofiled",
+            "--arguments",
+            "[\"--export\", \"/workspace/kernel-audit/workloads-final/early-definition/export.ndjson\", \"--checker\", \"/workspace/mathgraph-lean-kernel/target/release/check-selected\", \"--cache\", \"/workspace/kernel-audit/native-profile-20261016-final/caches/early-definition/1-unprofiled\", \"--authority-key\", \"/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key\", \"--previous\", \"8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067\", \"--output\", \"/workspace/kernel-audit/native-profile-20261016-final/early-definition/1-unprofiled/result.json\"]"
+          ],
+          "counts": {
+            "invalidated": 413,
+            "rechecked": 413,
+            "reused": 3023,
+            "scheduled": 413,
+            "total": 3436
+          },
+          "cpu_seconds": 4.330043,
+          "detail": {
+            "children_cpu_seconds": 0.053716,
+            "children_max_rss_kib": 283580,
+            "in_process_cpu_seconds": 4.194339438,
+            "in_process_wall_seconds": 4.2574757830007,
+            "kind": "engine",
+            "mode": "unprofiled",
+            "process_max_rss_kib": 286804,
+            "returncode": 0
+          },
+          "engine_timings": {
+            "cache_validation_seconds": 0.05043661099989549,
+            "checking_seconds": 0.05506807900019339,
+            "identity_seconds": 4.037414680999973,
+            "total_seconds": 4.22131828900001
+          },
+          "evidence_id": "40eda60aeaf6e8e95875d828297b87981f584ced73d5ae6ee2657edb95576e92",
+          "max_rss_kib": 286804,
+          "raw_directory": "/workspace/kernel-audit/native-profile-20261016-final/early-definition/1-unprofiled",
+          "result_path": "/workspace/kernel-audit/native-profile-20261016-final/early-definition/1-unprofiled/result.json",
+          "result_sha256": "d5444a7eb2c21ba0b2ddb3c1e156a110f0473481d6b78e14f5c6849dfe9871df",
+          "returncode": 0,
+          "status": "VERIFIED",
+          "wall_seconds": 4.339720963999753
+        },
+        {
+          "command": [
+            "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+            "/workspace/kernel-audit/native-profile-20261016-final/profile_identity.py",
+            "--child",
+            "--base",
+            "/workspace/native-profile-base",
+            "--raw",
+            "/workspace/kernel-audit/native-profile-20261016-final/early-definition/2-unprofiled",
+            "--kind",
+            "engine",
+            "--mode",
+            "unprofiled",
+            "--arguments",
+            "[\"--export\", \"/workspace/kernel-audit/workloads-final/early-definition/export.ndjson\", \"--checker\", \"/workspace/mathgraph-lean-kernel/target/release/check-selected\", \"--cache\", \"/workspace/kernel-audit/native-profile-20261016-final/caches/early-definition/2-unprofiled\", \"--authority-key\", \"/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key\", \"--previous\", \"8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067\", \"--output\", \"/workspace/kernel-audit/native-profile-20261016-final/early-definition/2-unprofiled/result.json\"]"
+          ],
+          "counts": {
+            "invalidated": 413,
+            "rechecked": 413,
+            "reused": 3023,
+            "scheduled": 413,
+            "total": 3436
+          },
+          "cpu_seconds": 4.206151,
+          "detail": {
+            "children_cpu_seconds": 0.050526999999999996,
+            "children_max_rss_kib": 283580,
+            "in_process_cpu_seconds": 4.081711012,
+            "in_process_wall_seconds": 4.14642885000012,
+            "kind": "engine",
+            "mode": "unprofiled",
+            "process_max_rss_kib": 287392,
+            "returncode": 0
+          },
+          "engine_timings": {
+            "cache_validation_seconds": 0.047181955999803904,
+            "checking_seconds": 0.0521299709998857,
+            "identity_seconds": 3.928326573999584,
+            "total_seconds": 4.112549868000315
+          },
+          "evidence_id": "40eda60aeaf6e8e95875d828297b87981f584ced73d5ae6ee2657edb95576e92",
+          "max_rss_kib": 287392,
+          "raw_directory": "/workspace/kernel-audit/native-profile-20261016-final/early-definition/2-unprofiled",
+          "result_path": "/workspace/kernel-audit/native-profile-20261016-final/early-definition/2-unprofiled/result.json",
+          "result_sha256": "d341f8dfded38926581ced41c64af9f06f343d724e4e4d7a498c8d729dad79be",
+          "returncode": 0,
+          "status": "VERIFIED",
+          "wall_seconds": 4.2207694599992465
+        },
+        {
+          "command": [
+            "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+            "/workspace/kernel-audit/native-profile-20261016-final/profile_identity.py",
+            "--child",
+            "--base",
+            "/workspace/native-profile-base",
+            "--raw",
+            "/workspace/kernel-audit/native-profile-20261016-final/early-definition/3-cprofile",
+            "--kind",
+            "engine",
+            "--mode",
+            "cprofile",
+            "--arguments",
+            "[\"--export\", \"/workspace/kernel-audit/workloads-final/early-definition/export.ndjson\", \"--checker\", \"/workspace/mathgraph-lean-kernel/target/release/check-selected\", \"--cache\", \"/workspace/kernel-audit/native-profile-20261016-final/caches/early-definition/3-cprofile\", \"--authority-key\", \"/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key\", \"--previous\", \"8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067\", \"--output\", \"/workspace/kernel-audit/native-profile-20261016-final/early-definition/3-cprofile/result.json\"]"
+          ],
+          "counts": {
+            "invalidated": 413,
+            "rechecked": 413,
+            "reused": 3023,
+            "scheduled": 413,
+            "total": 3436
+          },
+          "cpu_seconds": 7.874632999999999,
+          "detail": {
+            "children_cpu_seconds": 0.044666,
+            "children_max_rss_kib": 283664,
+            "in_process_cpu_seconds": 7.758996421,
+            "in_process_wall_seconds": 7.8155109679992165,
+            "kind": "engine",
+            "mode": "cprofile",
+            "process_max_rss_kib": 283664,
+            "profile_top_self": [
+              {
+                "calls": 1,
+                "cumulative_seconds": 7.542875088000001,
+                "file": "/workspace/native-profile-base/engine.py",
+                "function": "make_index",
+                "line": 59,
+                "primitive_calls": 1,
+                "self_seconds": 1.631125422
+              },
+              {
+                "calls": 305574,
+                "cumulative_seconds": 1.7027635220000001,
+                "file": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/json/decoder.py",
+                "function": "decode",
+                "line": 333,
+                "primitive_calls": 305574,
+                "self_seconds": 0.740893859
+              },
+              {
+                "calls": 309140,
+                "cumulative_seconds": 0.607883284,
+                "file": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/json/encoder.py",
+                "function": "iterencode",
+                "line": 205,
+                "primitive_calls": 309140,
+                "self_seconds": 0.607883284
+              },
+              {
+                "calls": 305574,
+                "cumulative_seconds": 2.9531455330000003,
+                "file": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/json/__init__.py",
+                "function": "loads",
+                "line": 299,
+                "primitive_calls": 305574,
+                "self_seconds": 0.481867027
+              },
+              {
+                "calls": 305574,
+                "cumulative_seconds": 0.699739957,
+                "file": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/json/decoder.py",
+                "function": "raw_decode",
+                "line": 344,
+                "primitive_calls": 305574,
+                "self_seconds": 0.39698800500000003
+              },
+              {
+                "calls": 305862,
+                "cumulative_seconds": 0.33887288800000004,
+                "file": "/workspace/native-profile-base/engine.py",
+                "function": "fields",
+                "line": 77,
+                "primitive_calls": 305862,
+                "self_seconds": 0.31301792100000003
+              },
+              {
+                "calls": 615334,
+                "cumulative_seconds": 0.30275195200000005,
+                "file": "/workspace/native-profile-base/engine.py",
+                "function": "strict_object",
+                "line": 46,
+                "primitive_calls": 615334,
+                "self_seconds": 0.30275195200000005
+              },
+              {
+                "calls": 305573,
+                "cumulative_seconds": 0.29822943100000004,
+                "file": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/json/decoder.py",
+                "function": "__init__",
+                "line": 285,
+                "primitive_calls": 305573,
+                "self_seconds": 0.29822943100000004
+              },
+              {
+                "calls": 309140,
+                "cumulative_seconds": 1.304403223,
+                "file": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/json/__init__.py",
+                "function": "dumps",
+                "line": 183,
+                "primitive_calls": 309140,
+                "self_seconds": 0.287485496
+              },
+              {
+                "calls": 309140,
+                "cumulative_seconds": 0.9611927830000001,
+                "file": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/json/encoder.py",
+                "function": "encode",
+                "line": 183,
+                "primitive_calls": 309140,
+                "self_seconds": 0.245627368
+              },
+              {
+                "calls": 305574,
+                "cumulative_seconds": 0.356062213,
+                "file": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/json/__init__.py",
+                "function": "detect_encoding",
+                "line": 244,
+                "primitive_calls": 305574,
+                "self_seconds": 0.208614178
+              },
+              {
+                "calls": 654180,
+                "cumulative_seconds": 0.19842927200000002,
+                "file": "/workspace/native-profile-base/engine.py",
+                "function": "node",
+                "line": 69,
+                "primitive_calls": 654180,
+                "self_seconds": 0.19842927200000002
+              },
+              {
+                "calls": 309133,
+                "cumulative_seconds": 1.842499525,
+                "file": "/workspace/native-profile-base/engine.py",
+                "function": "digest",
+                "line": 34,
+                "primitive_calls": 309133,
+                "self_seconds": 0.187967825
+              },
+              {
+                "calls": 1841164,
+                "cumulative_seconds": 0.187145537,
+                "file": "~",
+                "function": "<built-in method builtins.isinstance>",
+                "line": 0,
+                "primitive_calls": 1841164,
+                "self_seconds": 0.18711802600000002
+              },
+              {
+                "calls": 309139,
+                "cumulative_seconds": 1.516602279,
+                "file": "/workspace/native-profile-base/engine.py",
+                "function": "encoded",
+                "line": 30,
+                "primitive_calls": 309139,
+                "self_seconds": 0.16349813500000002
+              },
+              {
+                "calls": 611165,
+                "cumulative_seconds": 0.161189882,
+                "file": "~",
+                "function": "<method 'match' of 're.Pattern' objects>",
+                "line": 0,
+                "primitive_calls": 611165,
+                "self_seconds": 0.161189882
+              },
+              {
+                "calls": 554856,
+                "cumulative_seconds": 0.15445883300000002,
+                "file": "~",
+                "function": "<method 'update' of 'set' objects>",
+                "line": 0,
+                "primitive_calls": 554856,
+                "self_seconds": 0.15445883300000002
+              },
+              {
+                "calls": 551472,
+                "cumulative_seconds": 0.28534507800000003,
+                "file": "/workspace/native-profile-base/engine.py",
+                "function": "ex",
+                "line": 75,
+                "primitive_calls": 551472,
+                "self_seconds": 0.118561384
+              },
+              {
+                "calls": 916722,
+                "cumulative_seconds": 0.11599669100000001,
+                "file": "~",
+                "function": "<method 'startswith' of 'bytes' objects>",
+                "line": 0,
+                "primitive_calls": 916722,
+                "self_seconds": 0.11599669100000001
+              },
+              {
+                "calls": 309140,
+                "cumulative_seconds": 0.10625780600000001,
+                "file": "~",
+                "function": "<built-in method _hashlib.openssl_sha256>",
+                "line": 0,
+                "primitive_calls": 309140,
+                "self_seconds": 0.10625780600000001
+              },
+              {
+                "calls": 309140,
+                "cumulative_seconds": 0.10150375900000001,
+                "file": "~",
+                "function": "<method 'hexdigest' of '_hashlib.HASH' objects>",
+                "line": 0,
+                "primitive_calls": 309140,
+                "self_seconds": 0.10150375900000001
+              },
+              {
+                "calls": 920076,
+                "cumulative_seconds": 0.09683544300000001,
+                "file": "~",
+                "function": "<built-in method builtins.len>",
+                "line": 0,
+                "primitive_calls": 920076,
+                "self_seconds": 0.09683544300000001
+              },
+              {
+                "calls": 611148,
+                "cumulative_seconds": 0.06896970100000001,
+                "file": "~",
+                "function": "<method 'end' of 're.Match' objects>",
+                "line": 0,
+                "primitive_calls": 611148,
+                "self_seconds": 0.06896970100000001
+              },
+              {
+                "calls": 1,
+                "cumulative_seconds": 7.779557496000001,
+                "file": "/workspace/native-profile-base/engine.py",
+                "function": "_verify_with_binary",
+                "line": 325,
+                "primitive_calls": 1,
+                "self_seconds": 0.06144271800000001
+              },
+              {
+                "calls": 309139,
+                "cumulative_seconds": 0.055724944000000005,
+                "file": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/json/encoder.py",
+                "function": "__init__",
+                "line": 105,
+                "primitive_calls": 309139,
+                "self_seconds": 0.055724944000000005
+              },
+              {
+                "calls": 305579,
+                "cumulative_seconds": 0.05433340800000001,
+                "file": "~",
+                "function": "<method 'decode' of 'bytes' objects>",
+                "line": 0,
+                "primitive_calls": 305579,
+                "self_seconds": 0.05433340800000001
+              },
+              {
+                "calls": 309169,
+                "cumulative_seconds": 0.04874081,
+                "file": "~",
+                "function": "<method 'encode' of 'str' objects>",
+                "line": 0,
+                "primitive_calls": 309169,
+                "self_seconds": 0.04874081
+              },
+              {
+                "calls": 2,
+                "cumulative_seconds": 0.048159633,
+                "file": "~",
+                "function": "<method 'poll' of 'select.poll' objects>",
+                "line": 0,
+                "primitive_calls": 2,
+                "self_seconds": 0.048159633
+              },
+              {
+                "calls": 309794,
+                "cumulative_seconds": 0.046741120000000004,
+                "file": "~",
+                "function": "<method 'get' of 'dict' objects>",
+                "line": 0,
+                "primitive_calls": 309794,
+                "self_seconds": 0.046741120000000004
+              },
+              {
+                "calls": 305577,
+                "cumulative_seconds": 0.042196391,
+                "file": "~",
+                "function": "<built-in method builtins.iter>",
+                "line": 0,
+                "primitive_calls": 305577,
+                "self_seconds": 0.042196391
+              },
+              {
+                "calls": 275814,
+                "cumulative_seconds": 0.041403295,
+                "file": "~",
+                "function": "<method 'items' of 'dict' objects>",
+                "line": 0,
+                "primitive_calls": 275814,
+                "self_seconds": 0.041403295
+              },
+              {
+                "calls": 309162,
+                "cumulative_seconds": 0.037632385000000004,
+                "file": "~",
+                "function": "<method 'join' of 'str' objects>",
+                "line": 0,
+                "primitive_calls": 309162,
+                "self_seconds": 0.037632385000000004
+              },
+              {
+                "calls": 305579,
+                "cumulative_seconds": 0.033827963,
+                "file": "~",
+                "function": "<built-in method builtins.next>",
+                "line": 0,
+                "primitive_calls": 305579,
+                "self_seconds": 0.033751251
+              },
+              {
+                "calls": 3436,
+                "cumulative_seconds": 0.11163508500000001,
+                "file": "/workspace/native-profile-base/engine.py",
+                "function": "declaration",
+                "line": 80,
+                "primitive_calls": 3436,
+                "self_seconds": 0.027416754
+              },
+              {
+                "calls": 35,
+                "cumulative_seconds": 0.020988444000000002,
+                "file": "~",
+                "function": "<method 'update' of '_hashlib.HASH' objects>",
+                "line": 0,
+                "primitive_calls": 35,
+                "self_seconds": 0.020988444000000002
+              }
+            ],
+            "returncode": 0
+          },
+          "engine_timings": {
+            "cache_validation_seconds": 0.04828032899968093,
+            "checking_seconds": 0.04937829499976942,
+            "identity_seconds": 7.605638005000401,
+            "total_seconds": 7.779036971000096
+          },
+          "evidence_id": "40eda60aeaf6e8e95875d828297b87981f584ced73d5ae6ee2657edb95576e92",
+          "max_rss_kib": 283664,
+          "raw_directory": "/workspace/kernel-audit/native-profile-20261016-final/early-definition/3-cprofile",
+          "result_path": "/workspace/kernel-audit/native-profile-20261016-final/early-definition/3-cprofile/result.json",
+          "result_sha256": "45f0506ea916d3a7b3350d1ccb3b443a11f7dacf80cb449ef59590c54b6d59f9",
+          "returncode": 0,
+          "status": "VERIFIED",
+          "wall_seconds": 7.886748794000596
+        },
+        {
+          "command": [
+            "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+            "/workspace/kernel-audit/native-profile-20261016-final/profile_identity.py",
+            "--child",
+            "--base",
+            "/workspace/native-profile-base",
+            "--raw",
+            "/workspace/kernel-audit/native-profile-20261016-final/early-definition/4-operations",
+            "--kind",
+            "engine",
+            "--mode",
+            "operations",
+            "--arguments",
+            "[\"--export\", \"/workspace/kernel-audit/workloads-final/early-definition/export.ndjson\", \"--checker\", \"/workspace/mathgraph-lean-kernel/target/release/check-selected\", \"--cache\", \"/workspace/kernel-audit/native-profile-20261016-final/caches/early-definition/4-operations\", \"--authority-key\", \"/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key\", \"--previous\", \"8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067\", \"--output\", \"/workspace/kernel-audit/native-profile-20261016-final/early-definition/4-operations/result.json\"]"
+          ],
+          "counts": {
+            "invalidated": 413,
+            "rechecked": 413,
+            "reused": 3023,
+            "scheduled": 413,
+            "total": 3436
+          },
+          "cpu_seconds": 9.430988,
+          "detail": {
+            "caveat": "Operation timers perturb runtime. Exclusive costs exclude nested timers, not instrumentation overhead. RSS phase values are boundary samples; process maxima are measured separately.",
+            "children_cpu_seconds": 0.059824999999999996,
+            "children_max_rss_kib": 283672,
+            "counts": {
+              "canonical_json_output_bytes": 72950154,
+              "copied_bytes": 17538757,
+              "declaration_dependency_members": 48391,
+              "declaration_graph_edges": 48391,
+              "declarations": 3436,
+              "dependency_materialized_members": 2655975,
+              "dependency_update_input_members": 3301940,
+              "expression_dependency_members": 2607584,
+              "expression_nodes": 277321,
+              "file_hash_input_bytes": 33484525,
+              "index_rows/canonical_json_output_bytes": 51797432,
+              "index_rows/json_parse_input_bytes": 15922029,
+              "index_scc/canonical_json_output_bytes": 3665076,
+              "inductive_blocks": 122,
+              "json_parse_input_bytes": 4293717,
+              "level_nodes": 104,
+              "max_declaration_dependencies": 111,
+              "max_expression_dependencies": 111,
+              "max_scc_members": 16,
+              "name_nodes": 25003,
+              "outside_index/canonical_json_output_bytes": 17487646,
+              "scc_components": 3267
+            },
+            "in_process_cpu_seconds": 9.288565329,
+            "in_process_wall_seconds": 9.359614451999732,
+            "kind": "engine",
+            "mode": "operations",
+            "operations": {
+              "cache_authentication": {
+                "calls": 1,
+                "cpu_seconds": 0.046683594999999994,
+                "self_cpu_seconds": 0.006794221000000003,
+                "self_wall_seconds": 0.006798208999498456,
+                "wall_seconds": 0.04668727799980843
+              },
+              "canonical_json": {
+                "calls": 6,
+                "cpu_seconds": 0.06549746000000095,
+                "self_cpu_seconds": 0.06549746000000095,
+                "self_wall_seconds": 0.06549813200035715,
+                "wall_seconds": 0.06549813200035715
+              },
+              "external_subprocess": {
+                "calls": 1,
+                "cpu_seconds": 0.0005097870000003724,
+                "self_cpu_seconds": 0.0005097870000003724,
+                "self_wall_seconds": 0.060494771999401564,
+                "wall_seconds": 0.060494771999401564
+              },
+              "file_copy": {
+                "calls": 2,
+                "cpu_seconds": 0.0043637990000000015,
+                "self_cpu_seconds": 0.0043637990000000015,
+                "self_wall_seconds": 0.004361974999483209,
+                "wall_seconds": 0.004361974999483209
+              },
+              "file_hash": {
+                "calls": 4,
+                "cpu_seconds": 0.024059714999999995,
+                "self_cpu_seconds": 0.024059714999999995,
+                "self_wall_seconds": 0.024056395999650704,
+                "wall_seconds": 0.024056395999650704
+              },
+              "index_rows/canonical_json": {
+                "calls": 305864,
+                "cpu_seconds": 1.6356060790003706,
+                "self_cpu_seconds": 1.6356060790003706,
+                "self_wall_seconds": 1.6246892511608166,
+                "wall_seconds": 1.6246892511608166
+              },
+              "index_rows/dependency_add": {
+                "calls": 8970,
+                "cpu_seconds": 0.0054318850000094065,
+                "self_cpu_seconds": 0.0054318850000094065,
+                "self_wall_seconds": 0.005422017994533235,
+                "wall_seconds": 0.005422017994533235
+              },
+              "index_rows/dependency_discard": {
+                "calls": 3436,
+                "cpu_seconds": 0.0020235419999980464,
+                "self_cpu_seconds": 0.0020235419999980464,
+                "self_wall_seconds": 0.001962096023817139,
+                "wall_seconds": 0.001962096023817139
+              },
+              "index_rows/dependency_materialize": {
+                "calls": 280757,
+                "cpu_seconds": 0.21603542900050127,
+                "self_cpu_seconds": 0.21603542900050127,
+                "self_wall_seconds": 0.214800228819513,
+                "wall_seconds": 0.214800228819513
+              },
+              "index_rows/dependency_update": {
+                "calls": 554856,
+                "cpu_seconds": 0.3784440600003981,
+                "self_cpu_seconds": 0.3784440600003981,
+                "self_wall_seconds": 0.3783234357042602,
+                "wall_seconds": 0.3783234357042602
+              },
+              "index_rows/index_statistics": {
+                "calls": 1,
+                "cpu_seconds": 0.0450444980000011,
+                "self_cpu_seconds": 0.0450444980000011,
+                "self_wall_seconds": 0.045039603999612154,
+                "wall_seconds": 0.045039603999612154
+              },
+              "index_rows/json_parse": {
+                "calls": 305572,
+                "cpu_seconds": 1.3530976459997544,
+                "self_cpu_seconds": 1.3530976459997544,
+                "self_wall_seconds": 1.3423223959616735,
+                "wall_seconds": 1.3423223959616735
+              },
+              "index_rows/merkle_digest": {
+                "calls": 305864,
+                "cpu_seconds": 2.6539133049998593,
+                "self_cpu_seconds": 1.0183072259994885,
+                "self_wall_seconds": 1.0268710740410825,
+                "wall_seconds": 2.651560325201899
+              },
+              "index_scc/canonical_json": {
+                "calls": 3269,
+                "cpu_seconds": 0.019542235999978175,
+                "self_cpu_seconds": 0.019542235999978175,
+                "self_wall_seconds": 0.019057125976360112,
+                "wall_seconds": 0.019057125976360112
+              },
+              "index_scc/index_statistics": {
+                "calls": 1,
+                "cpu_seconds": 0.0001409700000003511,
+                "self_cpu_seconds": 0.0001409700000003511,
+                "self_wall_seconds": 0.0001421589995516115,
+                "wall_seconds": 0.0001421589995516115
+              },
+              "index_scc/merkle_digest": {
+                "calls": 3269,
+                "cpu_seconds": 0.032224160999978935,
+                "self_cpu_seconds": 0.01268192500000076,
+                "self_wall_seconds": 0.013269424041936873,
+                "wall_seconds": 0.032326550018296984
+              },
+              "json_parse": {
+                "calls": 2,
+                "cpu_seconds": 0.015411225999999112,
+                "self_cpu_seconds": 0.015411225999999112,
+                "self_wall_seconds": 0.015414507000969024,
+                "wall_seconds": 0.015414507000969024
+              },
+              "make_index": {
+                "calls": 1,
+                "cpu_seconds": 9.125803948,
+                "self_cpu_seconds": 4.439448451999499,
+                "self_wall_seconds": 4.457021765277204,
+                "wall_seconds": 9.128920578000361
+              },
+              "receipt_or_export_persistence": {
+                "calls": 2,
+                "cpu_seconds": 0.0049330750000002865,
+                "self_cpu_seconds": 0.0049330750000002865,
+                "self_wall_seconds": 0.01286475800043263,
+                "wall_seconds": 0.01286475800043263
+              }
+            },
+            "phases": [
+              {
+                "cpu_seconds": 8.982496501,
+                "name": "index_rows",
+                "rss_end_kib": 280268,
+                "rss_start_kib": 28532,
+                "wall_seconds": 8.985610959999576
+              },
+              {
+                "cpu_seconds": 0.09521965500000107,
+                "name": "index_scc",
+                "rss_end_kib": 283856,
+                "rss_start_kib": 280268,
+                "wall_seconds": 0.09521852600028069
+              }
+            ],
+            "process_max_rss_kib": 291484,
+            "returncode": 0
+          },
+          "engine_timings": {
+            "cache_validation_seconds": 0.04669968600046559,
+            "checking_seconds": 0.06090046900044399,
+            "identity_seconds": 9.14127771099993,
+            "total_seconds": 9.326122008000311
+          },
+          "evidence_id": "40eda60aeaf6e8e95875d828297b87981f584ced73d5ae6ee2657edb95576e92",
+          "max_rss_kib": 291484,
+          "raw_directory": "/workspace/kernel-audit/native-profile-20261016-final/early-definition/4-operations",
+          "result_path": "/workspace/kernel-audit/native-profile-20261016-final/early-definition/4-operations/result.json",
+          "result_sha256": "ff82e3e67fd62bd61b418959782e39a49c3a67881e9f2240cd0a7b56784a659b",
+          "returncode": 0,
+          "status": "VERIFIED",
+          "wall_seconds": 9.44256560300073
+        }
+      ]
+    },
+    "unrelated-definition": {
+      "all_modes_same_evidence": true,
+      "bytes": 15922029,
+      "export_sha256": "3e87c0fdad28a426d73073940ffea9dc03941c274f9c79887765d51f2dcc2ad5",
+      "runs": [
+        {
+          "command": [
+            "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+            "/workspace/kernel-audit/native-profile-20261016-final/profile_identity.py",
+            "--child",
+            "--base",
+            "/workspace/native-profile-base",
+            "--raw",
+            "/workspace/kernel-audit/native-profile-20261016-final/unrelated-definition/0-unprofiled",
+            "--kind",
+            "engine",
+            "--mode",
+            "unprofiled",
+            "--arguments",
+            "[\"--export\", \"/workspace/kernel-audit/workloads-final/unrelated-definition/export.ndjson\", \"--checker\", \"/workspace/mathgraph-lean-kernel/target/release/check-selected\", \"--cache\", \"/workspace/kernel-audit/native-profile-20261016-final/caches/unrelated-definition/0-unprofiled\", \"--authority-key\", \"/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key\", \"--previous\", \"8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067\", \"--output\", \"/workspace/kernel-audit/native-profile-20261016-final/unrelated-definition/0-unprofiled/result.json\"]"
+          ],
+          "counts": {
+            "invalidated": 1,
+            "rechecked": 1,
+            "reused": 3435,
+            "scheduled": 1,
+            "total": 3436
+          },
+          "cpu_seconds": 4.265601,
+          "detail": {
+            "children_cpu_seconds": 0.016259999999999997,
+            "children_max_rss_kib": 283576,
+            "in_process_cpu_seconds": 4.177954596999999,
+            "in_process_wall_seconds": 4.206993136999699,
+            "kind": "engine",
+            "mode": "unprofiled",
+            "process_max_rss_kib": 285824,
+            "returncode": 0
+          },
+          "engine_timings": {
+            "cache_validation_seconds": 0.04696020899973519,
+            "checking_seconds": 0.018788469999890367,
+            "identity_seconds": 4.017300028000136,
+            "total_seconds": 4.172401757999978
+          },
+          "evidence_id": "ee36056b0ef19354f206fd3cf5a382d1e5d27495075a3354df4cff78e47eddb8",
+          "max_rss_kib": 285824,
+          "raw_directory": "/workspace/kernel-audit/native-profile-20261016-final/unrelated-definition/0-unprofiled",
+          "result_path": "/workspace/kernel-audit/native-profile-20261016-final/unrelated-definition/0-unprofiled/result.json",
+          "result_sha256": "e319590999df714a5998c62901735db12da704c562a37984df60d5aab205359e",
+          "returncode": 0,
+          "status": "VERIFIED",
+          "wall_seconds": 4.278635888000281
+        },
+        {
+          "command": [
+            "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+            "/workspace/kernel-audit/native-profile-20261016-final/profile_identity.py",
+            "--child",
+            "--base",
+            "/workspace/native-profile-base",
+            "--raw",
+            "/workspace/kernel-audit/native-profile-20261016-final/unrelated-definition/1-unprofiled",
+            "--kind",
+            "engine",
+            "--mode",
+            "unprofiled",
+            "--arguments",
+            "[\"--export\", \"/workspace/kernel-audit/workloads-final/unrelated-definition/export.ndjson\", \"--checker\", \"/workspace/mathgraph-lean-kernel/target/release/check-selected\", \"--cache\", \"/workspace/kernel-audit/native-profile-20261016-final/caches/unrelated-definition/1-unprofiled\", \"--authority-key\", \"/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key\", \"--previous\", \"8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067\", \"--output\", \"/workspace/kernel-audit/native-profile-20261016-final/unrelated-definition/1-unprofiled/result.json\"]"
+          ],
+          "counts": {
+            "invalidated": 1,
+            "rechecked": 1,
+            "reused": 3435,
+            "scheduled": 1,
+            "total": 3436
+          },
+          "cpu_seconds": 4.3208899999999995,
+          "detail": {
+            "children_cpu_seconds": 0.016315999999999997,
+            "children_max_rss_kib": 283580,
+            "in_process_cpu_seconds": 4.224724975,
+            "in_process_wall_seconds": 4.249595282999508,
+            "kind": "engine",
+            "mode": "unprofiled",
+            "process_max_rss_kib": 286836,
+            "returncode": 0
+          },
+          "engine_timings": {
+            "cache_validation_seconds": 0.04919929199968465,
+            "checking_seconds": 0.01829383200038137,
+            "identity_seconds": 4.070612954999888,
+            "total_seconds": 4.2181422089997795
+          },
+          "evidence_id": "ee36056b0ef19354f206fd3cf5a382d1e5d27495075a3354df4cff78e47eddb8",
+          "max_rss_kib": 286836,
+          "raw_directory": "/workspace/kernel-audit/native-profile-20261016-final/unrelated-definition/1-unprofiled",
+          "result_path": "/workspace/kernel-audit/native-profile-20261016-final/unrelated-definition/1-unprofiled/result.json",
+          "result_sha256": "4dfd84b8983803c89defa238f3f5da3ad086014aaaad44d8a760583e40a48297",
+          "returncode": 0,
+          "status": "VERIFIED",
+          "wall_seconds": 4.3297700969997095
+        },
+        {
+          "command": [
+            "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+            "/workspace/kernel-audit/native-profile-20261016-final/profile_identity.py",
+            "--child",
+            "--base",
+            "/workspace/native-profile-base",
+            "--raw",
+            "/workspace/kernel-audit/native-profile-20261016-final/unrelated-definition/2-unprofiled",
+            "--kind",
+            "engine",
+            "--mode",
+            "unprofiled",
+            "--arguments",
+            "[\"--export\", \"/workspace/kernel-audit/workloads-final/unrelated-definition/export.ndjson\", \"--checker\", \"/workspace/mathgraph-lean-kernel/target/release/check-selected\", \"--cache\", \"/workspace/kernel-audit/native-profile-20261016-final/caches/unrelated-definition/2-unprofiled\", \"--authority-key\", \"/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key\", \"--previous\", \"8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067\", \"--output\", \"/workspace/kernel-audit/native-profile-20261016-final/unrelated-definition/2-unprofiled/result.json\"]"
+          ],
+          "counts": {
+            "invalidated": 1,
+            "rechecked": 1,
+            "reused": 3435,
+            "scheduled": 1,
+            "total": 3436
+          },
+          "cpu_seconds": 4.31671,
+          "detail": {
+            "children_cpu_seconds": 0.018432999999999998,
+            "children_max_rss_kib": 283576,
+            "in_process_cpu_seconds": 4.220697336,
+            "in_process_wall_seconds": 4.249193436000496,
+            "kind": "engine",
+            "mode": "unprofiled",
+            "process_max_rss_kib": 285824,
+            "returncode": 0
+          },
+          "engine_timings": {
+            "cache_validation_seconds": 0.051635693999742216,
+            "checking_seconds": 0.021213115999671572,
+            "identity_seconds": 4.055457028999626,
+            "total_seconds": 4.2175205780004035
+          },
+          "evidence_id": "ee36056b0ef19354f206fd3cf5a382d1e5d27495075a3354df4cff78e47eddb8",
+          "max_rss_kib": 285824,
+          "raw_directory": "/workspace/kernel-audit/native-profile-20261016-final/unrelated-definition/2-unprofiled",
+          "result_path": "/workspace/kernel-audit/native-profile-20261016-final/unrelated-definition/2-unprofiled/result.json",
+          "result_sha256": "618cb81c1cc7e1dcf2a45ba8878c2ca54f4b9b7e3d16a528e4bcecdc30d56edd",
+          "returncode": 0,
+          "status": "VERIFIED",
+          "wall_seconds": 4.3271024389996455
+        },
+        {
+          "command": [
+            "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+            "/workspace/kernel-audit/native-profile-20261016-final/profile_identity.py",
+            "--child",
+            "--base",
+            "/workspace/native-profile-base",
+            "--raw",
+            "/workspace/kernel-audit/native-profile-20261016-final/unrelated-definition/3-cprofile",
+            "--kind",
+            "engine",
+            "--mode",
+            "cprofile",
+            "--arguments",
+            "[\"--export\", \"/workspace/kernel-audit/workloads-final/unrelated-definition/export.ndjson\", \"--checker\", \"/workspace/mathgraph-lean-kernel/target/release/check-selected\", \"--cache\", \"/workspace/kernel-audit/native-profile-20261016-final/caches/unrelated-definition/3-cprofile\", \"--authority-key\", \"/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key\", \"--previous\", \"8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067\", \"--output\", \"/workspace/kernel-audit/native-profile-20261016-final/unrelated-definition/3-cprofile/result.json\"]"
+          ],
+          "counts": {
+            "invalidated": 1,
+            "rechecked": 1,
+            "reused": 3435,
+            "scheduled": 1,
+            "total": 3436
+          },
+          "cpu_seconds": 8.060594,
+          "detail": {
+            "children_cpu_seconds": 0.015324999999999998,
+            "children_max_rss_kib": 283660,
+            "in_process_cpu_seconds": 7.951372015,
+            "in_process_wall_seconds": 7.977607366000484,
+            "kind": "engine",
+            "mode": "cprofile",
+            "process_max_rss_kib": 285904,
+            "profile_top_self": [
+              {
+                "calls": 1,
+                "cumulative_seconds": 7.690413472,
+                "file": "/workspace/native-profile-base/engine.py",
+                "function": "make_index",
+                "line": 59,
+                "primitive_calls": 1,
+                "self_seconds": 1.666243708
+              },
+              {
+                "calls": 305574,
+                "cumulative_seconds": 1.7262520810000002,
+                "file": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/json/decoder.py",
+                "function": "decode",
+                "line": 333,
+                "primitive_calls": 305574,
+                "self_seconds": 0.7422774940000001
+              },
+              {
+                "calls": 309140,
+                "cumulative_seconds": 0.6355392200000001,
+                "file": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/json/encoder.py",
+                "function": "iterencode",
+                "line": 205,
+                "primitive_calls": 309140,
+                "self_seconds": 0.6355392200000001
+              },
+              {
+                "calls": 305574,
+                "cumulative_seconds": 2.999539258,
+                "file": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/json/__init__.py",
+                "function": "loads",
+                "line": 299,
+                "primitive_calls": 305574,
+                "self_seconds": 0.49525833
+              },
+              {
+                "calls": 305574,
+                "cumulative_seconds": 0.719651834,
+                "file": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/json/decoder.py",
+                "function": "raw_decode",
+                "line": 344,
+                "primitive_calls": 305574,
+                "self_seconds": 0.407449852
+              },
+              {
+                "calls": 305862,
+                "cumulative_seconds": 0.35042069800000003,
+                "file": "/workspace/native-profile-base/engine.py",
+                "function": "fields",
+                "line": 77,
+                "primitive_calls": 305862,
+                "self_seconds": 0.32568336800000003
+              },
+              {
+                "calls": 615334,
+                "cumulative_seconds": 0.31220198200000004,
+                "file": "/workspace/native-profile-base/engine.py",
+                "function": "strict_object",
+                "line": 46,
+                "primitive_calls": 615334,
+                "self_seconds": 0.31220198200000004
+              },
+              {
+                "calls": 309140,
+                "cumulative_seconds": 1.368371019,
+                "file": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/json/__init__.py",
+                "function": "dumps",
+                "line": 183,
+                "primitive_calls": 309140,
+                "self_seconds": 0.307803894
+              },
+              {
+                "calls": 305573,
+                "cumulative_seconds": 0.302925588,
+                "file": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/json/decoder.py",
+                "function": "__init__",
+                "line": 285,
+                "primitive_calls": 305573,
+                "self_seconds": 0.302925588
+              },
+              {
+                "calls": 309140,
+                "cumulative_seconds": 0.999022834,
+                "file": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/json/encoder.py",
+                "function": "encode",
+                "line": 183,
+                "primitive_calls": 309140,
+                "self_seconds": 0.25086462400000004
+              },
+              {
+                "calls": 305574,
+                "cumulative_seconds": 0.35772299100000005,
+                "file": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/json/__init__.py",
+                "function": "detect_encoding",
+                "line": 244,
+                "primitive_calls": 305574,
+                "self_seconds": 0.212826438
+              },
+              {
+                "calls": 654180,
+                "cumulative_seconds": 0.19631046400000002,
+                "file": "/workspace/native-profile-base/engine.py",
+                "function": "node",
+                "line": 69,
+                "primitive_calls": 654180,
+                "self_seconds": 0.19631046400000002
+              },
+              {
+                "calls": 309133,
+                "cumulative_seconds": 1.8976285140000002,
+                "file": "/workspace/native-profile-base/engine.py",
+                "function": "digest",
+                "line": 34,
+                "primitive_calls": 309133,
+                "self_seconds": 0.191567954
+              },
+              {
+                "calls": 1841164,
+                "cumulative_seconds": 0.19015739,
+                "file": "~",
+                "function": "<built-in method builtins.isinstance>",
+                "line": 0,
+                "primitive_calls": 1841164,
+                "self_seconds": 0.190127866
+              },
+              {
+                "calls": 309139,
+                "cumulative_seconds": 1.5889123870000001,
+                "file": "/workspace/native-profile-base/engine.py",
+                "function": "encoded",
+                "line": 30,
+                "primitive_calls": 309139,
+                "self_seconds": 0.17023869700000002
+              },
+              {
+                "calls": 611165,
+                "cumulative_seconds": 0.163333791,
+                "file": "~",
+                "function": "<method 'match' of 're.Pattern' objects>",
+                "line": 0,
+                "primitive_calls": 611165,
+                "self_seconds": 0.163333791
+              },
+              {
+                "calls": 554856,
+                "cumulative_seconds": 0.154935766,
+                "file": "~",
+                "function": "<method 'update' of 'set' objects>",
+                "line": 0,
+                "primitive_calls": 554856,
+                "self_seconds": 0.154935766
+              },
+              {
+                "calls": 551472,
+                "cumulative_seconds": 0.286152609,
+                "file": "/workspace/native-profile-base/engine.py",
+                "function": "ex",
+                "line": 75,
+                "primitive_calls": 551472,
+                "self_seconds": 0.12142428400000001
+              },
+              {
+                "calls": 916722,
+                "cumulative_seconds": 0.11436125500000001,
+                "file": "~",
+                "function": "<method 'startswith' of 'bytes' objects>",
+                "line": 0,
+                "primitive_calls": 916722,
+                "self_seconds": 0.11436125500000001
+              },
+              {
+                "calls": 309140,
+                "cumulative_seconds": 0.105740551,
+                "file": "~",
+                "function": "<built-in method _hashlib.openssl_sha256>",
+                "line": 0,
+                "primitive_calls": 309140,
+                "self_seconds": 0.105740551
+              },
+              {
+                "calls": 309140,
+                "cumulative_seconds": 0.104294145,
+                "file": "~",
+                "function": "<method 'hexdigest' of '_hashlib.HASH' objects>",
+                "line": 0,
+                "primitive_calls": 309140,
+                "self_seconds": 0.104294145
+              },
+              {
+                "calls": 920076,
+                "cumulative_seconds": 0.093234357,
+                "file": "~",
+                "function": "<built-in method builtins.len>",
+                "line": 0,
+                "primitive_calls": 920076,
+                "self_seconds": 0.093234357
+              },
+              {
+                "calls": 611148,
+                "cumulative_seconds": 0.070768967,
+                "file": "~",
+                "function": "<method 'end' of 're.Match' objects>",
+                "line": 0,
+                "primitive_calls": 611148,
+                "self_seconds": 0.070768967
+              },
+              {
+                "calls": 1,
+                "cumulative_seconds": 7.928306301,
+                "file": "/workspace/native-profile-base/engine.py",
+                "function": "_verify_with_binary",
+                "line": 325,
+                "primitive_calls": 1,
+                "self_seconds": 0.064652136
+              },
+              {
+                "calls": 309139,
+                "cumulative_seconds": 0.061544291,
+                "file": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/json/encoder.py",
+                "function": "__init__",
+                "line": 105,
+                "primitive_calls": 309139,
+                "self_seconds": 0.061544291
+              },
+              {
+                "calls": 305579,
+                "cumulative_seconds": 0.05760731400000001,
+                "file": "~",
+                "function": "<method 'decode' of 'bytes' objects>",
+                "line": 0,
+                "primitive_calls": 305579,
+                "self_seconds": 0.05760731400000001
+              },
+              {
+                "calls": 309169,
+                "cumulative_seconds": 0.050351255000000004,
+                "file": "~",
+                "function": "<method 'encode' of 'str' objects>",
+                "line": 0,
+                "primitive_calls": 309169,
+                "self_seconds": 0.050351255000000004
+              },
+              {
+                "calls": 309382,
+                "cumulative_seconds": 0.047162937,
+                "file": "~",
+                "function": "<method 'get' of 'dict' objects>",
+                "line": 0,
+                "primitive_calls": 309382,
+                "self_seconds": 0.047162937
+              },
+              {
+                "calls": 275814,
+                "cumulative_seconds": 0.043808530000000005,
+                "file": "~",
+                "function": "<method 'items' of 'dict' objects>",
+                "line": 0,
+                "primitive_calls": 275814,
+                "self_seconds": 0.043808530000000005
+              },
+              {
+                "calls": 305577,
+                "cumulative_seconds": 0.043621814,
+                "file": "~",
+                "function": "<built-in method builtins.iter>",
+                "line": 0,
+                "primitive_calls": 305577,
+                "self_seconds": 0.043621814
+              },
+              {
+                "calls": 309162,
+                "cumulative_seconds": 0.038196336000000004,
+                "file": "~",
+                "function": "<method 'join' of 'str' objects>",
+                "line": 0,
+                "primitive_calls": 309162,
+                "self_seconds": 0.038196336000000004
+              },
+              {
+                "calls": 305579,
+                "cumulative_seconds": 0.034112916,
+                "file": "~",
+                "function": "<built-in method builtins.next>",
+                "line": 0,
+                "primitive_calls": 305579,
+                "self_seconds": 0.033983657
+              },
+              {
+                "calls": 3436,
+                "cumulative_seconds": 0.11319963100000001,
+                "file": "/workspace/native-profile-base/engine.py",
+                "function": "declaration",
+                "line": 80,
+                "primitive_calls": 3436,
+                "self_seconds": 0.02712861
+              },
+              {
+                "calls": 35,
+                "cumulative_seconds": 0.020330279,
+                "file": "~",
+                "function": "<method 'update' of '_hashlib.HASH' objects>",
+                "line": 0,
+                "primitive_calls": 35,
+                "self_seconds": 0.020330279
+              },
+              {
+                "calls": 68776,
+                "cumulative_seconds": 0.04110324,
+                "file": "/workspace/native-profile-base/engine.py",
+                "function": "nm",
+                "line": 73,
+                "primitive_calls": 68776,
+                "self_seconds": 0.020265153
+              }
+            ],
+            "returncode": 0
+          },
+          "engine_timings": {
+            "cache_validation_seconds": 0.055605613999432535,
+            "checking_seconds": 0.017442229999687697,
+            "identity_seconds": 7.757570964000479,
+            "total_seconds": 7.928004747000159
+          },
+          "evidence_id": "ee36056b0ef19354f206fd3cf5a382d1e5d27495075a3354df4cff78e47eddb8",
+          "max_rss_kib": 285904,
+          "raw_directory": "/workspace/kernel-audit/native-profile-20261016-final/unrelated-definition/3-cprofile",
+          "result_path": "/workspace/kernel-audit/native-profile-20261016-final/unrelated-definition/3-cprofile/result.json",
+          "result_sha256": "1977e9e7763a3163f3f1692f402a67db926e775485946f934eecc7d1950222e6",
+          "returncode": 0,
+          "status": "VERIFIED",
+          "wall_seconds": 8.07207365800059
+        },
+        {
+          "command": [
+            "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+            "/workspace/kernel-audit/native-profile-20261016-final/profile_identity.py",
+            "--child",
+            "--base",
+            "/workspace/native-profile-base",
+            "--raw",
+            "/workspace/kernel-audit/native-profile-20261016-final/unrelated-definition/4-operations",
+            "--kind",
+            "engine",
+            "--mode",
+            "operations",
+            "--arguments",
+            "[\"--export\", \"/workspace/kernel-audit/workloads-final/unrelated-definition/export.ndjson\", \"--checker\", \"/workspace/mathgraph-lean-kernel/target/release/check-selected\", \"--cache\", \"/workspace/kernel-audit/native-profile-20261016-final/caches/unrelated-definition/4-operations\", \"--authority-key\", \"/workspace/kernel-audit/.qualification-final-v2-authority/issuer.key\", \"--previous\", \"8980b36cdbdee7c034c770069f6160d6dd8362d29d3019eee1d80ade5151e067\", \"--output\", \"/workspace/kernel-audit/native-profile-20261016-final/unrelated-definition/4-operations/result.json\"]"
+          ],
+          "counts": {
+            "invalidated": 1,
+            "rechecked": 1,
+            "reused": 3435,
+            "scheduled": 1,
+            "total": 3436
+          },
+          "cpu_seconds": 9.110243,
+          "detail": {
+            "caveat": "Operation timers perturb runtime. Exclusive costs exclude nested timers, not instrumentation overhead. RSS phase values are boundary samples; process maxima are measured separately.",
+            "children_cpu_seconds": 0.015215,
+            "children_max_rss_kib": 283764,
+            "counts": {
+              "canonical_json_output_bytes": 72891272,
+              "copied_bytes": 17538757,
+              "declaration_dependency_members": 48391,
+              "declaration_graph_edges": 48391,
+              "declarations": 3436,
+              "dependency_materialized_members": 2655975,
+              "dependency_update_input_members": 3301940,
+              "expression_dependency_members": 2607584,
+              "expression_nodes": 277321,
+              "file_hash_input_bytes": 33484525,
+              "index_rows/canonical_json_output_bytes": 51797432,
+              "index_rows/json_parse_input_bytes": 15922029,
+              "index_scc/canonical_json_output_bytes": 3665076,
+              "inductive_blocks": 122,
+              "json_parse_input_bytes": 4293715,
+              "level_nodes": 104,
+              "max_declaration_dependencies": 111,
+              "max_expression_dependencies": 111,
+              "max_scc_members": 16,
+              "name_nodes": 25003,
+              "outside_index/canonical_json_output_bytes": 17428764,
+              "scc_components": 3267
+            },
+            "in_process_cpu_seconds": 9.013595016,
+            "in_process_wall_seconds": 9.04161747299986,
+            "kind": "engine",
+            "mode": "operations",
+            "operations": {
+              "cache_authentication": {
+                "calls": 1,
+                "cpu_seconds": 0.04821068499999999,
+                "self_cpu_seconds": 0.006900469999999992,
+                "self_wall_seconds": 0.006905627000378445,
+                "wall_seconds": 0.048209606999989774
+              },
+              "canonical_json": {
+                "calls": 6,
+                "cpu_seconds": 0.06739064600000409,
+                "self_cpu_seconds": 0.06739064600000409,
+                "self_wall_seconds": 0.06738176599901635,
+                "wall_seconds": 0.06738176599901635
+              },
+              "external_subprocess": {
+                "calls": 1,
+                "cpu_seconds": 0.000507725000000292,
+                "self_cpu_seconds": 0.000507725000000292,
+                "self_wall_seconds": 0.017150241000308597,
+                "wall_seconds": 0.017150241000308597
+              },
+              "file_copy": {
+                "calls": 2,
+                "cpu_seconds": 0.004651405999999997,
+                "self_cpu_seconds": 0.004651405999999997,
+                "self_wall_seconds": 0.004649757999686699,
+                "wall_seconds": 0.004649757999686699
+              },
+              "file_hash": {
+                "calls": 4,
+                "cpu_seconds": 0.024005325000000008,
+                "self_cpu_seconds": 0.024005325000000008,
+                "self_wall_seconds": 0.024001566000151797,
+                "wall_seconds": 0.024001566000151797
+              },
+              "index_rows/canonical_json": {
+                "calls": 305864,
+                "cpu_seconds": 1.5758920349998675,
+                "self_cpu_seconds": 1.5758920349998675,
+                "self_wall_seconds": 1.5683595580285328,
+                "wall_seconds": 1.5683595580285328
+              },
+              "index_rows/dependency_add": {
+                "calls": 8970,
+                "cpu_seconds": 0.006690690000012434,
+                "self_cpu_seconds": 0.006690690000012434,
+                "self_wall_seconds": 0.0067656610071935575,
+                "wall_seconds": 0.0067656610071935575
+              },
+              "index_rows/dependency_discard": {
+                "calls": 3436,
+                "cpu_seconds": 0.002040677999975954,
+                "self_cpu_seconds": 0.002040677999975954,
+                "self_wall_seconds": 0.001953960021637613,
+                "wall_seconds": 0.001953960021637613
+              },
+              "index_rows/dependency_materialize": {
+                "calls": 280757,
+                "cpu_seconds": 0.20862626300005782,
+                "self_cpu_seconds": 0.20862626300005782,
+                "self_wall_seconds": 0.20743468975342694,
+                "wall_seconds": 0.20743468975342694
+              },
+              "index_rows/dependency_update": {
+                "calls": 554856,
+                "cpu_seconds": 0.3726253179998545,
+                "self_cpu_seconds": 0.3726253179998545,
+                "self_wall_seconds": 0.3742072259510678,
+                "wall_seconds": 0.3742072259510678
+              },
+              "index_rows/index_statistics": {
+                "calls": 1,
+                "cpu_seconds": 0.04418800400000045,
+                "self_cpu_seconds": 0.04418800400000045,
+                "self_wall_seconds": 0.04418438500033517,
+                "wall_seconds": 0.04418438500033517
+              },
+              "index_rows/json_parse": {
+                "calls": 305572,
+                "cpu_seconds": 1.3084213840004741,
+                "self_cpu_seconds": 1.3084213840004741,
+                "self_wall_seconds": 1.2979951549805264,
+                "wall_seconds": 1.2979951549805264
+              },
+              "index_rows/merkle_digest": {
+                "calls": 305864,
+                "cpu_seconds": 2.569104684000078,
+                "self_cpu_seconds": 0.993212649000211,
+                "self_wall_seconds": 0.9993404271226609,
+                "wall_seconds": 2.5676999851511937
+              },
+              "index_scc/canonical_json": {
+                "calls": 3269,
+                "cpu_seconds": 0.017775632000015307,
+                "self_cpu_seconds": 0.017775632000015307,
+                "self_wall_seconds": 0.017526703002658905,
+                "wall_seconds": 0.017526703002658905
+              },
+              "index_scc/index_statistics": {
+                "calls": 1,
+                "cpu_seconds": 0.00012587700000032953,
+                "self_cpu_seconds": 0.00012587700000032953,
+                "self_wall_seconds": 0.00012791799963451922,
+                "wall_seconds": 0.00012791799963451922
+              },
+              "index_scc/merkle_digest": {
+                "calls": 3269,
+                "cpu_seconds": 0.029651068000005054,
+                "self_cpu_seconds": 0.011875435999989747,
+                "self_wall_seconds": 0.012102509020223806,
+                "wall_seconds": 0.02962921202288271
+              },
+              "json_parse": {
+                "calls": 2,
+                "cpu_seconds": 0.016516298000000082,
+                "self_cpu_seconds": 0.016516298000000082,
+                "self_wall_seconds": 0.016514605998963816,
+                "wall_seconds": 0.016514605998963816
+              },
+              "make_index": {
+                "calls": 1,
+                "cpu_seconds": 8.851206975,
+                "self_cpu_seconds": 4.309733008999541,
+                "self_wall_seconds": 4.324162364112453,
+                "wall_seconds": 8.854160556000352
+              },
+              "receipt_or_export_persistence": {
+                "calls": 2,
+                "cpu_seconds": 0.003858769999999012,
+                "self_cpu_seconds": 0.003858769999999012,
+                "self_wall_seconds": 0.012239457999385195,
+                "wall_seconds": 0.012239457999385195
+              }
+            },
+            "phases": [
+              {
+                "cpu_seconds": 8.708758265,
+                "name": "index_rows",
+                "rss_end_kib": 280272,
+                "rss_start_kib": 28364,
+                "wall_seconds": 8.711708394999732
+              },
+              {
+                "cpu_seconds": 0.09340179099999979,
+                "name": "index_scc",
+                "rss_end_kib": 283860,
+                "rss_start_kib": 280272,
+                "wall_seconds": 0.09340016900023329
+              }
+            ],
+            "process_max_rss_kib": 289476,
+            "returncode": 0
+          },
+          "engine_timings": {
+            "cache_validation_seconds": 0.048221623999779695,
+            "checking_seconds": 0.017529627999465447,
+            "identity_seconds": 8.866155096000512,
+            "total_seconds": 9.009282562999942
+          },
+          "evidence_id": "ee36056b0ef19354f206fd3cf5a382d1e5d27495075a3354df4cff78e47eddb8",
+          "max_rss_kib": 289476,
+          "raw_directory": "/workspace/kernel-audit/native-profile-20261016-final/unrelated-definition/4-operations",
+          "result_path": "/workspace/kernel-audit/native-profile-20261016-final/unrelated-definition/4-operations/result.json",
+          "result_sha256": "3f6708c1f7b526b840afa1cb98e23e6e553f3d30c4d111e8c99006a090101652",
+          "returncode": 0,
+          "status": "VERIFIED",
+          "wall_seconds": 9.123748756999703
+        }
+      ]
+    }
+  },
+  "checker_sha256": "869dbda8a8e2807c194b7937391cc659cfa437fc42bc365d51ec5c8f8cf2009d",
+  "profiling_tool_sha256": "3b12d8476a0427228daee95681687c8bb66197069b968f2fa0837feea8d8c8cb",
+  "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+  "rss_definition": "wait4 ru_maxrss in KiB; process tree maximum, not sum of simultaneous resident memory.",
+  "schema": "mathgraph.incremental-native-profile.v1",
+  "source_commit": "9ac04033b51703fb135ec3c28621d44b183944fe",
+  "source_sha256": {
+    "engine.py": "1937d9504bc44728e57d1a33a0481a6b413fd84d26cca5a929ce7adedd7afa22",
+    "mathgraph_integration.py": "494753602065cfa28adead5518cde834a4753cc7c06344e7505358800e0d8df2",
+    "pins.json": "08015efcd86f129fbc8eaa64354825a1e42d331e64daf55ed8a3cbd3a9cb2b82"
+  },
+  "timing_definition": "Fresh child process including common profiling-harness startup; caches cloned outside timing. Unprofiled runs are performance evidence; instrumented runs provide attribution only.",
+  "workload_manifest_sha256": "bcf2730fd7ac9044ce864ba7f0e9d62acfabaa6c1f79b371962c3235f0e12456"
+}

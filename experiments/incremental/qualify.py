@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Independent exact-export qualification; all status/resource evidence is retained."""
 import argparse
+import functools
 import json
 from pathlib import Path
 import shutil
@@ -25,11 +26,15 @@ def verdict(record):
     return {0:'ACCEPT', 1:'REJECT', 2:'DECLINE'}.get(record['returncode'], 'ERROR')
 
 
-def invoke_engine(export, selected, cache, key, output, previous=None, policy='default', disable=False):
+def invoke_engine(export, selected, cache, key, output, previous=None, policy='default', disable=False,
+                  *, identity_backend='python', indexer=None):
     output.parent.mkdir(parents=True, exist_ok=True)
     command = [sys.executable, str(HERE / 'engine.py'), '--export', str(export),
                '--checker', str(selected), '--cache', str(cache), '--authority-key', str(key),
                '--output', str(output), '--policy', policy]
+    command += ['--identity-backend', identity_backend]
+    if identity_backend != 'python':
+        command += ['--indexer', str(indexer)]
     if previous:
         command += ['--previous', previous]
     if disable:
@@ -52,6 +57,10 @@ def compact(value):
 
 
 def qualify(args):
+    # Exercise the original gates and controls with the selected accelerator;
+    # their expected outcomes and reuse predicate remain unchanged.
+    invoke_engine = functools.partial(globals()['invoke_engine'],
+        identity_backend=args.identity_backend, indexer=args.indexer)
     out = args.out.resolve()
     if (out / 'summary.json').exists():
         raise ValueError('use a new output directory; previous evidence must remain reviewable')
@@ -91,6 +100,8 @@ def qualify(args):
                    pins=json.loads((HERE / 'pins.json').read_text()),
                    workload_manifest_sha256=sha256(workloads / 'manifest.json'),
                    checker_sha256=sha256(selected), full_checker_sha256=sha256(full_checker),
+                   identity_backend=args.identity_backend,
+                   indexer_sha256=sha256(args.indexer) if args.identity_backend != 'python' else None,
                    repetitions=args.repetitions, oracles={}, scenarios={}, optional_kernels={}, gates=[])
     cache = out / 'cache'
     baseline = Path(manifest['variants']['baseline']['path'])
@@ -359,7 +370,11 @@ if __name__ == '__main__':
     parser.add_argument('--repetitions',type=int,default=1)
     parser.add_argument('--optional-kernels',action='store_true')
     parser.add_argument('--optional-timeout',type=int,default=180)
+    parser.add_argument('--identity-backend',choices=['python','native','differential'],default='python')
+    parser.add_argument('--indexer',type=Path)
     options=parser.parse_args()
     if options.repetitions < 1:
         parser.error('--repetitions must be positive')
+    if options.identity_backend != 'python' and options.indexer is None:
+        parser.error('--indexer is required for native or differential identity')
     raise SystemExit(qualify(options))

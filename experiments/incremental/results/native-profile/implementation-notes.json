@@ -1,0 +1,46 @@
+{
+  "schema": "mathgraph.native-index-implementation-notes.v1",
+  "baseline_export": "/workspace/kernel-audit/workloads-final/baseline/export.ndjson",
+  "baseline_index_bytes": 4275875,
+  "oracle_python_seconds": 4.043919,
+  "initial_native_seconds": 0.300928,
+  "initial_native_exact_python_index": true,
+  "buffered_native_seconds": [
+    0.213514,
+    0.201065,
+    0.193223
+  ],
+  "typed_output_native_seconds": [
+    0.222787,
+    0.202247,
+    0.216117,
+    0.189595,
+    0.173869
+  ],
+  "typed_output_exact_baseline_snapshot": true,
+  "measurement_scope": "subprocess wall time includes capture_output; other agents concurrently qualified fixtures in final samples",
+  "best_typed_output_phase_seconds": {
+    "parse_and_identity": 0.134520009,
+    "fingerprint_and_output": 0.0269553,
+    "parser_cleanup": 3.2558e-05
+  },
+  "optimizations": [
+    "shared kernel fast parser typed observer",
+    "SHA-256 typed hashes with exact Python canonical JSON",
+    "compact dependency IDs and shared sorted dependency arrays",
+    "subset reuse for dependency unions",
+    "buffered serialized stdout in one write",
+    "typed Serialize schema removes output JSON object tree",
+    "stack hex formatting"
+  ],
+  "limitations": [
+    "floating-point or oversized numeric tokens explicitly decline to Python fallback",
+    "initial and optimized identity phases still exceed desired 0.08s budget",
+    "combined parsed environment selected checking not implemented because projected savings insufficient"
+  ],
+  "validation": [
+    "exact baseline equality to Python make_index",
+    "5 canonical serialization/hash/strict-JSON unit tests",
+    "2 normal parser binder metadata behavior tests"
+  ]
+}

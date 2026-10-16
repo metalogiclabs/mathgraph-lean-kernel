@@ -51,6 +51,8 @@ pub struct Parser<'a, R: BufRead> {
     skipped: Vec<String>,
     mutual_block_sizes: FxHashMap<NamePtr<'a>, (usize, usize)>,
     scratch_idxs: Vec<u32>,
+    identity: Option<crate::identity::IdentityBuilder>,
+    identity_all: Vec<u32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
@@ -337,6 +339,32 @@ pub(crate) fn parse_export_mapped<'p>(
     parser.finish()
 }
 
+/// An identity-only restriction, for which callers may use the Python oracle.
+#[derive(Debug)]
+pub struct IdentityError(pub String);
+impl fmt::Display for IdentityError { fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { f.write_str(&self.0) } }
+impl Error for IdentityError {}
+fn identity_error(error: Box<dyn Error>) -> Box<dyn Error> { Box::new(IdentityError(error.to_string())) }
+fn identity_fast_error(error: Box<dyn Error>) -> FastError { FastError::Failed(identity_error(error)) }
+
+/// Parse using the real kernel parser and return the exact incremental index.
+pub fn export_identity(input: &[u8], config: Config) -> Result<crate::identity::ExportIdentityIndex, Box<dyn Error>> {
+    let arena = stumpalo::Arena::new();
+    let mut parser = Parser::with_input_len(arena.as_arena_ref(), std::io::empty(), config, input.len());
+    parser.identity = Some(crate::identity::IdentityBuilder::new(input.len()));
+    let parse_started = std::time::Instant::now();
+    parser.run_over(input)?;
+    let parse_seconds = parse_started.elapsed().as_secs_f64();
+    if !parser.skipped.is_empty() { return Err("identity index cannot contain skipped axioms".into()); }
+    let finish_started = std::time::Instant::now();
+    let result = parser.identity.take().unwrap().finish().map_err(identity_error);
+    let fingerprint_seconds=finish_started.elapsed().as_secs_f64();
+    let drop_started=std::time::Instant::now();
+    drop(parser);
+    if std::env::var_os("MATHGRAPH_IDENTITY_METRICS").is_some() { eprintln!("IDENTITY_METRICS {}", serde_json::json!({"parse_and_identity_seconds":parse_seconds,"fingerprint_and_output_seconds":fingerprint_seconds,"parser_cleanup_seconds":drop_started.elapsed().as_secs_f64()})); }
+    result
+}
+
 const READ_CHUNK: usize = 1 << 22;
 
 pub(crate) fn parse_export_file<'p, R: BufRead>(
@@ -421,6 +449,7 @@ struct Cur<'s> {
     lim: isize,
     i: usize,
     next: usize,
+    strict_identity: bool,
 }
 
 impl<'s> Cur<'s> {
@@ -438,6 +467,7 @@ impl<'s> Cur<'s> {
 
     #[inline(always)]
     fn uint(&mut self) -> Result<u64, Fallback> {
+        if self.strict_identity && self.s.get(self.i) == Some(&b'0') && self.s.get(self.i + 1).is_some_and(u8::is_ascii_digit) { return Err(Fallback); }
         if self.i as isize <= self.lim {
             let x = u64::from_le_bytes(self.s[self.i..self.i + 8].try_into().unwrap()) ^ DIGIT_BIAS;
             let run = digit_run(x);
@@ -486,6 +516,7 @@ impl<'s> Cur<'s> {
                     return Ok(r);
                 }
                 b'\\' | b'\n' => return Err(Fallback),
+                c if self.strict_identity && c < 0x20 => return Err(Fallback),
                 _ => self.i += 1,
             }
         }
@@ -679,6 +710,8 @@ impl<'a, R: BufRead> Parser<'a, R> {
             skipped: Vec::new(),
             mutual_block_sizes: new_fx_hash_map(),
             scratch_idxs: Vec::new(),
+            identity: None,
+            identity_all: Vec::new(),
         }
     }
 
@@ -801,6 +834,7 @@ impl<'a, R: BufRead> Parser<'a, R> {
         };
         let line = std::str::from_utf8(&input[pos..end])?;
         self.go1_general(line)?;
+        if let Some(identity) = &mut self.identity { identity.observe_general(line).map_err(identity_error)?; }
         Ok(end)
     }
 
@@ -848,7 +882,7 @@ impl<'a, R: BufRead> Parser<'a, R> {
         if s[pos + 2] != b'a' {
             return self.other_line(s, lim, pos, idxs);
         }
-        let mut c = Cur { s, lim, i: pos, next: 0 };
+        let mut c = Cur { s, lim, i: pos, next: 0, strict_identity: self.identity.is_some() };
         c.lit(b"{\"app\":{\"arg\":")?;
         let arg = c.uint_u32()?;
         c.lit(b",\"fn\":")?;
@@ -856,13 +890,14 @@ impl<'a, R: BufRead> Parser<'a, R> {
         c.lit(b"},\"ie\":")?;
         let i = c.uint_u32()?;
         c.close(b"}")?;
+        if let Some(identity) = &mut self.identity { identity.app(i, fun, arg).map_err(identity_fast_error)?; }
         self.do_app(BackRef::Ie(i), fun, arg);
         Ok(c.next)
     }
 
     #[inline(never)]
     fn other_line(&mut self, s: &[u8], lim: isize, pos: usize, idxs: &mut Vec<u32>) -> Result<usize, FastError> {
-        let mut c = Cur { s, lim, i: pos, next: 0 };
+        let mut c = Cur { s, lim, i: pos, next: 0, strict_identity: self.identity.is_some() };
         self.fast_body(&mut c, idxs)?;
         Ok(c.next)
     }
@@ -879,21 +914,22 @@ impl<'a, R: BufRead> Parser<'a, R> {
                         b'l' => match c.peek(1)? {
                             b'a' => {
                                 c.lit(b"lam\":{\"binderInfo\":")?;
-                                c.quoted()?;
+                                let binder_info = c.quoted()?;
                                 c.lit(b",\"body\":")?;
                                 let body = c.uint_u32()?;
                                 c.lit(b",\"name\":")?;
-                                c.uint_u32()?;
+                                let name = c.uint_u32()?;
                                 c.lit(b",\"type\":")?;
                                 let binder_type = c.uint_u32()?;
                                 c.close(b"}}")?;
+                                if let Some(identity) = &mut self.identity { identity.expression("lam", i, &[("body",body),("type",binder_type)], Some(("name",name)), Some(("binderInfo",std::str::from_utf8(binder_info).map_err(|e| identity_fast_error(Box::new(e)))?)), None, None).map_err(identity_fast_error)?; }
                                 Ok(self.do_lambda(BackRef::Ie(i), binder_type, body))
                             }
                             b'e' => {
                                 c.lit(b"letE\":{\"body\":")?;
                                 let body = c.uint_u32()?;
                                 c.lit(b",\"name\":")?;
-                                c.uint_u32()?;
+                                let name = c.uint_u32()?;
                                 c.lit(b",\"nondep\":")?;
                                 let nondep = c.boolean()?;
                                 c.lit(b",\"type\":")?;
@@ -901,6 +937,7 @@ impl<'a, R: BufRead> Parser<'a, R> {
                                 c.lit(b",\"value\":")?;
                                 let val = c.uint_u32()?;
                                 c.close(b"}}")?;
+                                if let Some(identity) = &mut self.identity { identity.expression("letE", i, &[("body",body),("type",binder_type),("value",val)], Some(("name",name)), None, Some(("nondep",nondep)), None).map_err(identity_fast_error)?; }
                                 Ok(self.do_let(BackRef::Ie(i), binder_type, val, body, nondep))
                             }
                             _ => Err(FastError::Fallback),
@@ -912,6 +949,7 @@ impl<'a, R: BufRead> Parser<'a, R> {
                             let big = BigUint::parse_bytes(digits, 10).ok_or_else(|| {
                                 FastError::Failed(Box::from("invalid BigUint decimal string".to_string()))
                             })?;
+                            if let Some(identity) = &mut self.identity { identity.atom("natVal", i, std::str::from_utf8(digits).map_err(|e| FastError::Failed(Box::new(e)))?, false).map_err(identity_fast_error)?; }
                             self.do_nat_lit(BackRef::Ie(i), big).map_err(FastError::Failed)
                         }
                         b'p' => {
@@ -922,6 +960,7 @@ impl<'a, R: BufRead> Parser<'a, R> {
                             c.lit(b",\"typeName\":")?;
                             let ty_name = c.uint_u32()?;
                             c.close(b"}}")?;
+                            if let Some(identity) = &mut self.identity { identity.expression("proj", i, &[("struct",structure)], Some(("typeName",ty_name)), None, None, Some(("idx",idx))).map_err(identity_fast_error)?; }
                             Ok(self.do_proj(BackRef::Ie(i), ty_name, idx, structure))
                         }
                         b's' => match c.peek(1)? {
@@ -929,12 +968,14 @@ impl<'a, R: BufRead> Parser<'a, R> {
                                 c.lit(b"sort\":")?;
                                 let level = c.uint_u32()?;
                                 c.close(b"}")?;
+                                if let Some(identity) = &mut self.identity { identity.sort(i, level).map_err(identity_fast_error)?; }
                                 Ok(self.do_sort(BackRef::Ie(i), level))
                             }
                             b't' => {
                                 c.lit(b"strVal\":")?;
                                 let string = c.quoted_str()?;
                                 c.close(b"}")?;
+                                if let Some(identity) = &mut self.identity { identity.atom("strVal", i, string, false).map_err(identity_fast_error)?; }
                                 self.do_str_lit(BackRef::Ie(i), string).map_err(FastError::Failed)
                             }
                             _ => Err(FastError::Fallback),
@@ -953,6 +994,7 @@ impl<'a, R: BufRead> Parser<'a, R> {
                             c.lit(b",")?;
                             let r = c.uint_u32()?;
                             c.close(b"]}")?;
+                            if let Some(identity) = &mut self.identity { identity.level_node("imax", i, l, Some(r)).map_err(identity_fast_error)?; }
                             Ok(self.do_imax(BackRef::Il(i), l, r))
                         }
                         b'm' => {
@@ -961,18 +1003,21 @@ impl<'a, R: BufRead> Parser<'a, R> {
                             c.lit(b",")?;
                             let r = c.uint_u32()?;
                             c.close(b"]}")?;
+                            if let Some(identity) = &mut self.identity { identity.level_node("max", i, l, Some(r)).map_err(identity_fast_error)?; }
                             Ok(self.do_max(BackRef::Il(i), l, r))
                         }
                         b'p' => {
                             c.lit(b"param\":")?;
                             let n = c.uint_u32()?;
                             c.close(b"}")?;
+                            if let Some(identity) = &mut self.identity { identity.level_node("param", i, n, None).map_err(identity_fast_error)?; }
                             Ok(self.do_level_param(BackRef::Il(i), n))
                         }
                         b's' => {
                             c.lit(b"succ\":")?;
                             let l = c.uint_u32()?;
                             c.close(b"}")?;
+                            if let Some(identity) = &mut self.identity { identity.level_node("succ", i, l, None).map_err(identity_fast_error)?; }
                             Ok(self.do_succ(BackRef::Il(i), l))
                         }
                         _ => Err(FastError::Fallback),
@@ -989,6 +1034,7 @@ impl<'a, R: BufRead> Parser<'a, R> {
                             c.lit(b",\"pre\":")?;
                             let pre = c.uint_u32()?;
                             c.close(b"}}")?;
+                            if let Some(identity) = &mut self.identity { identity.name_num(i, pre, u64::from(n)).map_err(identity_fast_error)?; }
                             Ok(self.do_name_num(BackRef::In(i), pre, u64::from(n)))
                         }
                         b's' => {
@@ -997,6 +1043,7 @@ impl<'a, R: BufRead> Parser<'a, R> {
                             c.lit(b",\"str\":")?;
                             let string = c.quoted_str()?;
                             c.close(b"}}")?;
+                            if let Some(identity) = &mut self.identity { identity.name_str(i, pre, string).map_err(identity_fast_error)?; }
                             Ok(self.do_name_str(BackRef::In(i), pre, string))
                         }
                         _ => Err(FastError::Fallback),
@@ -1010,6 +1057,7 @@ impl<'a, R: BufRead> Parser<'a, R> {
                 c.lit(b",\"ie\":")?;
                 let i = c.uint_u32()?;
                 c.close(b"}")?;
+                if let Some(identity) = &mut self.identity { identity.atom("bvar", i, &dbj_idx.to_string(), true).map_err(identity_fast_error)?; }
                 self.do_bvar(BackRef::Ie(i), dbj_idx).map_err(FastError::Failed)
             }
             b'c' => {
@@ -1020,11 +1068,12 @@ impl<'a, R: BufRead> Parser<'a, R> {
                 c.lit(b"},\"ie\":")?;
                 let i = c.uint_u32()?;
                 c.close(b"}")?;
+                if let Some(identity) = &mut self.identity { identity.constant(i, name, idxs).map_err(identity_fast_error)?; }
                 Ok(self.do_const(BackRef::Ie(i), name, idxs))
             }
             b'd' => {
                 c.lit(b"{\"def\":{\"all\":")?;
-                c.skip_u32_array()?;
+                if self.identity.is_some() { c.u32_array(&mut self.identity_all)?; } else { c.skip_u32_array()?; }
                 c.lit(b",\"hints\":")?;
                 let hint = c.hint()?;
                 c.lit(b",\"levelParams\":")?;
@@ -1036,25 +1085,27 @@ impl<'a, R: BufRead> Parser<'a, R> {
                 c.lit(b",\"value\":")?;
                 let val = c.uint_u32()?;
                 c.close(b"}}")?;
+                if let Some(identity) = &mut self.identity { identity.simple_declaration("def", name, ty, val, idxs, &self.identity_all, Some(hint)).map_err(identity_fast_error)?; }
                 Ok(self.do_def(name, ty, val, idxs, hint))
             }
             b'f' => {
                 c.lit(b"{\"forallE\":{\"binderInfo\":")?;
-                c.quoted()?;
+                let binder_info = c.quoted()?;
                 c.lit(b",\"body\":")?;
                 let body = c.uint_u32()?;
                 c.lit(b",\"name\":")?;
-                c.uint_u32()?;
+                let name = c.uint_u32()?;
                 c.lit(b",\"type\":")?;
                 let binder_type = c.uint_u32()?;
                 c.lit(b"},\"ie\":")?;
                 let i = c.uint_u32()?;
                 c.close(b"}")?;
+                if let Some(identity) = &mut self.identity { identity.expression("forallE", i, &[("body",body),("type",binder_type)], Some(("name",name)), Some(("binderInfo",std::str::from_utf8(binder_info).map_err(|e| identity_fast_error(Box::new(e)))?)), None, None).map_err(identity_fast_error)?; }
                 Ok(self.do_pi(BackRef::Ie(i), binder_type, body))
             }
             b't' => {
                 c.lit(b"{\"thm\":{\"all\":")?;
-                c.skip_u32_array()?;
+                if self.identity.is_some() { c.u32_array(&mut self.identity_all)?; } else { c.skip_u32_array()?; }
                 c.lit(b",\"levelParams\":")?;
                 c.u32_array(idxs)?;
                 c.lit(b",\"name\":")?;
@@ -1064,6 +1115,7 @@ impl<'a, R: BufRead> Parser<'a, R> {
                 c.lit(b",\"value\":")?;
                 let val = c.uint_u32()?;
                 c.close(b"}}")?;
+                if let Some(identity) = &mut self.identity { identity.simple_declaration("thm", name, ty, val, idxs, &self.identity_all, None).map_err(identity_fast_error)?; }
                 Ok(self.do_thm(name, ty, val, idxs))
             }
             _ => Err(FastError::Fallback),

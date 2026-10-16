@@ -1,0 +1,41 @@
+{
+  "schema": "mathgraph.native-index-operation-profile.v1",
+  "source_copy": "/workspace/native-index-op-profile",
+  "frozen_source_modified": false,
+  "frozen_export_index_sha256": "daca81e13e52edfaa6dacaa7741565f49d1af109dc7ffa23aaea4a6e724137de",
+  "instrumented_output_exact_baseline": true,
+  "empty_scope_ns": 26.5907445,
+  "samples": [
+    {
+      "merge_nanos": 29892269,
+      "merge_count": 272206,
+      "hash_nanos": 55786911,
+      "hash_count": 309133,
+      "hex_nanos": 34800949,
+      "hex_count": 704633,
+      "wall_seconds": 0.2744387900002039
+    },
+    {
+      "merge_nanos": 31147647,
+      "merge_count": 272206,
+      "hash_nanos": 53386628,
+      "hash_count": 309133,
+      "hex_nanos": 35757385,
+      "hex_count": 704633,
+      "wall_seconds": 0.27061900300031994
+    },
+    {
+      "merge_nanos": 29530944,
+      "merge_count": 272206,
+      "hash_nanos": 55721415,
+      "hash_count": 309133,
+      "hex_nanos": 34245389,
+      "hex_count": 704633,
+      "wall_seconds": 0.26535059599973465
+    }
+  ],
+  "interpretation": "Measured sums include one elapsed scope overhead per operation; subtract count times empty_scope_ns for rough operation-only estimate. Nested hash/hex sums are separate from dependency merges. Atomics and outer now calls inflate instrumented overall wall time. No measured removable single cost supports >=0.05 seconds saving while retaining exact SHA256 identities and required actual parser validation.",
+  "hash_adjusted_seconds_median": 0.0475013383804815,
+  "hex_adjusted_seconds_median": 0.0160642329307315,
+  "merge_adjusted_seconds_median": 0.022654108802633
+}

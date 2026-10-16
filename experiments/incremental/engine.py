@@ -11,6 +11,7 @@ import hmac
 import json
 import os
 from pathlib import Path
+import resource
 import shutil
 import subprocess
 import tempfile
@@ -25,6 +26,75 @@ BUILTINS = ('Quot Quot.mk Quot.lift Quot.ind String String.ofList Nat Nat.zero '
             'List List.nil List.cons').split()
 SIMPLE = {'axiom', 'def', 'opaque', 'thm'}
 STANDARD_AXIOMS = ['propext', 'Classical.choice', 'Quot.sound']
+
+
+def cpu_time():
+    """CPU consumed by this adapter and its completed native subprocesses."""
+    own = resource.getrusage(resource.RUSAGE_SELF)
+    children = resource.getrusage(resource.RUSAGE_CHILDREN)
+    return own.ru_utime + own.ru_stime + children.ru_utime + children.ru_stime
+
+
+def indexed_export(path, policy, configuration, timings):
+    """Accelerate identity only; the qualified Python index remains the oracle.
+
+    Native refusals fall back to the original indexer and actual kernel parser.
+    A successful native result that disagrees in differential mode is never
+    admitted. No native output authenticates earlier acceptance evidence.
+    """
+    backend = policy.get('identity_backend', 'python')
+    if backend not in ('python', 'native', 'differential'):
+        raise ValueError('unsupported identity backend')
+    native = None
+    notes = {'requested': backend, 'used': 'python'}
+    if backend != 'python':
+        indexer = policy.get('_captured_indexer')
+        if indexer is None:
+            raise ValueError('native identity requires --indexer')
+        config_path = Path(path).with_name('index-config.json')
+        config_path.write_bytes(encoded(dict(configuration, export_file_path=str(path))))
+        tick, cpu = time.perf_counter(), cpu_time()
+        try:
+            process = subprocess.run([str(indexer), str(config_path)], capture_output=True,
+                                     timeout=policy.get('timeout', 600))
+        except subprocess.TimeoutExpired as error:
+            raise ValueError('native identity timeout; no reuse authorized') from error
+        timings['native_index_seconds'] = time.perf_counter() - tick
+        timings['native_index_cpu_seconds'] = cpu_time() - cpu
+        try:
+            output = json.loads(process.stdout, object_pairs_hook=strict_object)
+        except (ValueError, UnicodeError) as error:
+            raise ValueError('invalid native identity protocol; no reuse authorized') from error
+        if process.returncode == 0:
+            if not isinstance(output, dict) or set(output) != {'meta', 'declarations', 'count', 'builtins', 'complex', 'schedule'}:
+                raise ValueError('incomplete native identity protocol; no reuse authorized')
+            native = output
+            notes['used'] = 'native'
+        else:
+            # Explicit unsupported data and real parser rejection retain the
+            # qualified Python/selected-check classification and checks. A crash
+            # or malformed protocol is a failure, not a hint to trust a cache.
+            if (not isinstance(output, dict) or set(output) != {'status', 'stage', 'error', 'declined'}
+                    or output.get('status') != 'error'
+                    or output.get('stage') not in ('identity', 'kernel_parse')
+                    or not isinstance(output.get('error'), str)
+                    or type(output.get('declined')) is not bool
+                    or process.returncode != (2 if output['declined'] else 1)):
+                raise ValueError('unexplained native identity failure; no reuse authorized')
+            notes.update(used='python_fallback', native_refusal=output)
+    if native is None or backend == 'differential':
+        tick, cpu = time.perf_counter(), cpu_time()
+        python = make_index(path)
+        timings['python_index_seconds'] = time.perf_counter() - tick
+        timings['python_index_cpu_seconds'] = cpu_time() - cpu
+        # Python's equality conflates bool/int/float. Compare the canonical
+        # typed JSON bytes used by the identity and authority machinery.
+        if native is not None and encoded(python) != encoded(native):
+            raise ValueError('Python/native identity disagreement; no reuse authorized')
+        if backend == 'differential' and native is not None:
+            notes['used'] = 'differential_agreement'
+        return python if native is None else native, notes
+    return native, notes
 
 
 def encoded(value):
@@ -307,6 +377,7 @@ def immutable_write(path, data, repair_corruption=False):
 def verify_incremental(previous_evidence, changed_development, verifier_policy):
     """Return inspectable decisions; a previous warrant is not a fresh check."""
     start = time.perf_counter()
+    policy = dict(verifier_policy)
     cache = Path(verifier_policy['cache'])
     key = Path(verifier_policy['authority_key']).read_bytes()
     if len(key) != 32:
@@ -318,7 +389,14 @@ def verify_incremental(previous_evidence, changed_development, verifier_policy):
         checker = binary_temp / 'check-selected'
         shutil.copyfile(checker_source, checker)
         checker.chmod(0o500)
-        return _verify_with_binary(previous_evidence, changed_development, verifier_policy,
+        backend = policy.get('identity_backend', 'python')
+        if backend != 'python':
+            indexer_source = Path(policy['indexer']).resolve()
+            indexer = binary_temp / 'export-index'
+            shutil.copyfile(indexer_source, indexer)
+            indexer.chmod(0o500)
+            policy['_captured_indexer'] = indexer
+        return _verify_with_binary(previous_evidence, changed_development, policy,
                                    start, cache, key, checker)
 
 
@@ -329,25 +407,38 @@ def _verify_with_binary(previous_evidence, changed_development, verifier_policy,
                       configuration=dict(nat_extension=True, string_extension=True,
                                          permitted_axioms=STANDARD_AXIOMS, num_threads=1,
                                          unpermitted_axiom_hard_error=True))
+    if verifier_policy.get('_captured_indexer'):
+        provenance['indexer_sha256'] = file_hash(verifier_policy['_captured_indexer'])
     timings = {}
     old, cache_error = None, None
-    tick = time.perf_counter()
+    tick, cpu = time.perf_counter(), cpu_time()
     if previous_evidence and not verifier_policy.get('disable_cache'):
         try:
             old = load_evidence(cache, previous_evidence, key)
         except (ValueError, OSError, KeyError, TypeError) as e:
             cache_error = str(e)
     timings['cache_validation_seconds'] = time.perf_counter() - tick
+    timings['cache_validation_cpu_seconds'] = cpu_time() - cpu
     with tempfile.TemporaryDirectory(prefix='mathgraph-incremental-') as temp:
         temp = Path(temp)
         snapshot = temp / 'current.ndjson'
+        tick, cpu = time.perf_counter(), cpu_time()
         shutil.copyfile(changed_development, snapshot)
-        tick = time.perf_counter()
+        timings['snapshot_copy_seconds'] = time.perf_counter() - tick
+        timings['snapshot_copy_cpu_seconds'] = cpu_time() - cpu
+        tick, cpu = time.perf_counter(), cpu_time()
         export_hash = file_hash(snapshot)
+        timings['export_hash_seconds'] = time.perf_counter() - tick
+        timings['export_hash_cpu_seconds'] = cpu_time() - cpu
+        tick, cpu = time.perf_counter(), cpu_time()
         compatible = old is not None and old['provenance'] == provenance
         identical = compatible and old['export_sha256'] == export_hash
-        index = old['index'] if identical else make_index(snapshot)
-        timings['identity_seconds'] = time.perf_counter() - tick
+        if identical:
+            index, identity_backend = old['index'], {'requested':verifier_policy.get('identity_backend', 'python'), 'used':'authenticated_exact_export'}
+        else:
+            index, identity_backend = indexed_export(snapshot, verifier_policy, provenance['configuration'], timings)
+        timings['identity_seconds'] = time.perf_counter() - tick + timings['export_hash_seconds']
+        timings['identity_cpu_seconds'] = cpu_time() - cpu + timings['export_hash_cpu_seconds']
         if compatible and old['index']['meta'] != index['meta']:
             compatible = False
         globals_same = compatible and old['index']['builtins'] == index['builtins'] and old['index']['complex'] == index['complex']
@@ -376,7 +467,7 @@ def _verify_with_binary(previous_evidence, changed_development, verifier_policy,
                                   direct=d['deps']), evidence_id=previous_evidence if reuse else None))
         counts = dict(total=index['count'], rechecked=0, reused=index['count']-len(selected),
                       invalidated=len(selected) if previous_evidence else 0, scheduled=len(selected))
-        tick = time.perf_counter()
+        tick, cpu = time.perf_counter(), cpu_time()
         result = dict(code=0, stdout='', stderr='', scope='previously_warranted_exact_export')
         # A semantic index is not a parser acceptance certificate. Even when
         # every obligation is reusable, changed bytes must pass the real parser
@@ -396,11 +487,13 @@ def _verify_with_binary(previous_evidence, changed_development, verifier_policy,
             except subprocess.TimeoutExpired:
                 result = dict(code=124, stdout='', stderr='checker timeout')
         timings['checking_seconds'] = time.perf_counter() - tick
+        timings['checking_cpu_seconds'] = cpu_time() - cpu
         status = 'VERIFIED' if result['code'] == 0 else 'UNKNOWN' if result['code'] in (2, 124) else 'REJECTED'
         for d in decisions:
             if d['status'] == 'UNKNOWN':
                 d['status'] = 'VERIFIED_NEW' if status == 'VERIFIED' else 'UNKNOWN'
         evidence_id = None
+        tick, cpu = time.perf_counter(), cpu_time()
         if status == 'VERIFIED':
             payload = dict(schema=SCHEMA, status=status, export_sha256=export_hash, index=index,
                            provenance=provenance, previous_evidence=previous_evidence,
@@ -416,12 +509,15 @@ def _verify_with_binary(previous_evidence, changed_development, verifier_policy,
             # A selected-check process stops at failure: completed work is unknown,
             # and previous per-obligation warrants cannot accept the new environment.
             counts['rechecked'] = None
+        timings['receipt_persistence_seconds'] = time.perf_counter() - tick
+        timings['receipt_persistence_cpu_seconds'] = cpu_time() - cpu
         timings['total_seconds'] = time.perf_counter() - start
         selected_set = set(selected)
         return dict(schema=SCHEMA, status=status, evidence_id=evidence_id,
                     export_sha256=export_hash, previous_evidence=previous_evidence,
                     counts=counts, decisions=decisions, timings=timings,
                     provenance=provenance, checker_result=result, cache_error=cache_error,
+                    identity_backend=identity_backend,
                     invalidation_events=[dict(index=d['index'], status='INVALIDATED', reason=d['reason']) for d in decisions if d['index'] in selected_set] if previous_evidence else [],
                     rejection=dict(status='REJECTED', scope='changed_environment', reason='selected_kernel_rejected') if status=='REJECTED' else None,
                     action_authorization='NONE')
@@ -433,6 +529,8 @@ def main():
     for flag in ('export', 'checker', 'cache', 'authority-key', 'output', 'previous', 'policy'):
         p.add_argument('--' + flag)
     p.add_argument('--disable-cache', action='store_true')
+    p.add_argument('--identity-backend', choices=('python', 'native', 'differential'), default='python')
+    p.add_argument('--indexer', help='Captured native identity executable; its SHA256 is part of provenance')
     args = p.parse_args()
     if args.init_key:
         args.init_key.parent.mkdir(parents=True, exist_ok=True)
@@ -445,7 +543,8 @@ def main():
     try:
         result = verify_incremental(args.previous, args.export, dict(checker=args.checker,
                     cache=args.cache, authority_key=args.authority_key,
-                    policy=args.policy or 'default', disable_cache=args.disable_cache))
+                    policy=args.policy or 'default', disable_cache=args.disable_cache,
+                    identity_backend=args.identity_backend, indexer=args.indexer))
     except (ValueError, OSError, KeyError, TypeError, RecursionError) as e:
         result = dict(schema=SCHEMA, status='UNKNOWN', evidence_id=None, error=str(e))
     Path(args.output).write_bytes(encoded(result) + b'\n')
