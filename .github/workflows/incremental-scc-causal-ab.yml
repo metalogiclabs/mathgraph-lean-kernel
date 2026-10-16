@@ -1,0 +1,120 @@
+name: Causal full vs retained SCC qualification
+on:
+  push:
+    branches: [research/incremental-scc-causal-ab-20261017]
+  workflow_dispatch:
+permissions:
+  contents: read
+defaults:
+  run:
+    shell: bash
+jobs:
+  qualification:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+      - name: Build exact toolchain and exercise retained graph tests
+        run: |
+          set -euo pipefail
+          bash experiments/incremental/setup.sh
+          export PATH="$HOME/.cargo/bin:$HOME/.elan/bin:$PATH"
+          cargo +1.95.0 test --release --locked --lib identity::session_tests -- --nocapture
+          cargo +1.95.0 test --release --locked --bin index-session
+          cargo +1.95.0 test --release --locked --lib
+          python3 experiments/incremental/test_delta_reuse.py
+          python3 experiments/incremental/test_source_delta_authority.py
+      - name: Build pinned original and expanded Lean Std exports
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$HOME/.elan/bin:$PATH"
+          mkdir -p artifacts
+          bash experiments/incremental/build_delta_producer.sh artifacts/delta-build
+          python3 experiments/incremental/build_workloads.py --out artifacts/workloads
+          python3 experiments/incremental/build_delta_workloads.py \
+            --workloads artifacts/workloads --out artifacts/expanded \
+            --producer artifacts/delta-build/delta-producer
+      - name: Full original and expanded producer-delta oracle qualification
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$HOME/.elan/bin:$PATH"
+          python3 experiments/incremental/engine.py --init-key "$RUNNER_TEMP/issuer-small.key"
+          python3 experiments/incremental/engine.py --init-key "$RUNNER_TEMP/issuer-large.key"
+          python3 experiments/incremental/qualify_delta.py \
+            --workloads artifacts/workloads --producer artifacts/delta-build/delta-producer \
+            --checker target/release/check-selected --indexer target/release/export-index \
+            --index-session target/release/index-session --full-checker target/release/sokonanoda \
+            --authority-key "$RUNNER_TEMP/issuer-small.key" \
+            --out artifacts/small --repetitions 5
+          python3 experiments/incremental/qualify_delta.py \
+            --workloads artifacts/expanded --producer artifacts/delta-build/delta-producer \
+            --checker target/release/check-selected --indexer target/release/export-index \
+            --index-session target/release/index-session --full-checker target/release/sokonanoda \
+            --authority-key "$RUNNER_TEMP/issuer-large.key" \
+            --out artifacts/large --repetitions 5
+      - name: Same-host causal A/B of retained and original SCC algorithms
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$HOME/.elan/bin:$PATH"
+          python3 -m py_compile experiments/incremental/benchmark_retained_scc.py
+          python3 experiments/incremental/engine.py --init-key "$RUNNER_TEMP/ab-small-issuer.key"
+          python3 experiments/incremental/engine.py --init-key "$RUNNER_TEMP/ab-large-issuer.key"
+          python3 experiments/incremental/benchmark_retained_scc.py \
+            --workloads artifacts/workloads --producer artifacts/delta-build/delta-producer \
+            --checker target/release/check-selected --indexer target/release/export-index \
+            --index-session target/release/index-session --full-checker target/release/sokonanoda \
+            --authority-key "$RUNNER_TEMP/ab-small-issuer.key" \
+            --out artifacts/ab-small --repetitions 5
+          python3 experiments/incremental/benchmark_retained_scc.py \
+            --workloads artifacts/expanded --producer artifacts/delta-build/delta-producer \
+            --checker target/release/check-selected --indexer target/release/export-index \
+            --index-session target/release/index-session --full-checker target/release/sokonanoda \
+            --authority-key "$RUNNER_TEMP/ab-large-issuer.key" \
+            --out artifacts/ab-large --repetitions 5
+      - name: Check exact A/B source, oracles, and complete pairs
+        run: |
+          set -euo pipefail
+          git diff --exit-code
+          python3 - <<'PY'
+          import json, os, subprocess
+          from pathlib import Path
+          sha=subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip()
+          for label,min_gates in [('small',243),('large',226)]:
+              r=json.loads((Path('artifacts')/label/'summary.json').read_text())
+              assert r.get('run_completed') and r.get('correctness_passed')
+              assert r.get('qualification_status')=='PASS'
+              assert len(r.get('gates',[]))>=min_gates
+              assert all(g['passed'] is True for g in r['gates'] if g['required'])
+          for label in ('ab-small','ab-large'):
+              r=json.loads((Path('artifacts')/label/'summary.json').read_text())
+              assert r['source_sha']==sha and r['complete'] and r['correctness_passed']
+              assert all(g['passed'] is True for g in r['gates'])
+              assert len(r['pairs'])==10
+              for edit in ('early-definition','unrelated-definition'):
+                  e=r['economics'][edit]
+                  assert e['complete_transaction']['paired_count']==5
+                  assert e['native_scc_finish']['paired_count']==5
+                  assert len(e['recomputed_sccs'])==5
+          PY
+      - name: Publish concise evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: retained-scc-causal-ab
+          path: |
+            artifacts/small/summary.json
+            artifacts/small/summary.md
+            artifacts/large/summary.json
+            artifacts/large/summary.md
+            artifacts/ab-small/summary.json
+            artifacts/ab-small/summary.md
+            artifacts/ab-small/partial.json
+            artifacts/ab-small/failure.txt
+            artifacts/ab-large/summary.json
+            artifacts/ab-large/summary.md
+            artifacts/ab-large/partial.json
+            artifacts/ab-large/failure.txt
+          if-no-files-found: warn
+          retention-days: 30
