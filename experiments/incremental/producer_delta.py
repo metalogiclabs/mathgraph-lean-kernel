@@ -200,7 +200,7 @@ def authenticate_sparse_acceptance(raw, evidence_id, key, baseline):
         if not hexid(payload[name]):
             raise ValueError('malformed signed sparse acceptance reference: ' + name)
     if type(baseline) is not dict or baseline.get('status') != 'VERIFIED':
-        raise ValueError('sparse receipt requires issuer-validated baseline')
+        raise ValueError('sparse receipt requires issuer-authenticated verified baseline')
     if not hexid(baseline.get('export_sha256')):
         raise ValueError('malformed verified baseline export identity')
     if not isinstance(baseline.get('provenance'), dict) or not isinstance(
