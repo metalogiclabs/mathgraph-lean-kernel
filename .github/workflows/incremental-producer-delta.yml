@@ -1,0 +1,340 @@
+name: Producer delta qualification
+
+on:
+  push:
+    branches:
+      - research/incremental-producer-delta-20261016
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: incremental-producer-delta-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  qualification:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Capture exact checked source before execution
+        run: |
+          mkdir -p artifacts
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git diff --exit-code
+          git rev-parse HEAD > artifacts/source-ref.txt
+          git ls-files -z -- src Cargo.toml Cargo.lock experiments/incremental \
+            .github/workflows/incremental-producer-delta.yml \
+            | xargs -0 sha256sum > artifacts/source-SHA256SUMS
+      - name: Verify piped failures fail the shell
+        run: |
+          set +e
+          (false | tee "$RUNNER_TEMP/native-index-pipeline-negative.log")
+          task_pipeline_status=$?
+          set -e
+          test "$task_pipeline_status" -ne 0
+          printf 'Pipeline negative control returned %s\n' "$task_pipeline_status"
+      - name: Install exact compilers and build release binaries
+        run: |
+          mkdir -p artifacts
+          bash experiments/incremental/setup.sh 2>&1 | tee artifacts/setup.log
+      - name: Build the source-owned producer with the exact Lean release
+        run: |
+          export PATH="$HOME/.elan/bin:$HOME/.cargo/bin:$PATH"
+          bash experiments/incremental/build_delta_producer.sh artifacts/delta-build \
+            2>&1 | tee artifacts/delta-producer-build.log
+          test -x artifacts/delta-build/delta-producer
+          test -x target/release/index-session
+          sha256sum artifacts/delta-build/delta-producer target/release/index-session \
+            > artifacts/delta-binaries-SHA256SUMS
+      - name: Preserve separately compiled original checker binaries
+        env:
+          BASELINE_REF: 9ac04033b51703fb135ec3c28621d44b183944fe
+        run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          baseline_worktree="$RUNNER_TEMP/incremental-native-index-baseline"
+          baseline_target="$RUNNER_TEMP/incremental-native-index-baseline-target"
+          mkdir -p artifacts/native-baseline-bin
+          git worktree add --detach "$baseline_worktree" "$BASELINE_REF"
+          git -C "$baseline_worktree" rev-parse HEAD > artifacts/native-baseline-bin/source-ref.txt
+          test "$(cat artifacts/native-baseline-bin/source-ref.txt)" = "$BASELINE_REF"
+          cargo +1.95.0 build --release --locked \
+            --manifest-path "$baseline_worktree/Cargo.toml" \
+            --target-dir "$baseline_target" \
+            --bin check-selected --bin sokonanoda \
+            2>&1 | tee artifacts/native-baseline-bin/build.log
+          cp "$baseline_target/release/check-selected" artifacts/native-baseline-bin/check-selected
+          cp "$baseline_target/release/sokonanoda" artifacts/native-baseline-bin/sokonanoda
+          sha256sum artifacts/native-baseline-bin/check-selected \
+            artifacts/native-baseline-bin/sokonanoda > artifacts/native-baseline-bin/SHA256SUMS
+      - name: Test release checker and adversarial identity predicate
+        run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          cargo +1.95.0 test --release --locked 2>&1 | tee artifacts/rust-tests.log
+          python3 experiments/incremental/test_predicate.py 2>&1 | tee artifacts/predicate-tests.log
+          python3 experiments/incremental/test_native_identity.py 2>&1 | tee artifacts/native-identity-tests.log
+          python3 experiments/incremental/test_native_adapter.py \
+            --checker target/release/check-selected 2>&1 | tee artifacts/native-adapter-tests.log
+      - name: Compile unchanged pinned Std workloads and exact exports
+        run: |
+          export PATH="$HOME/.elan/bin:$PATH"
+          python3 experiments/incremental/build_workloads.py \
+            --out artifacts/workloads 2>&1 | tee artifacts/workload-build.log
+      - name: Test producer authentication boundaries and the actual Lean daemon
+        run: |
+          export PATH="$HOME/.elan/bin:$HOME/.cargo/bin:$PATH"
+          python3 experiments/incremental/test_delta_reuse.py \
+            2>&1 | tee artifacts/delta-reuse-tests.log
+          python3 experiments/incremental/test_delta_producer.py \
+            --binary artifacts/delta-build/delta-producer \
+            --workload artifacts/workloads/baseline/source \
+            --output artifacts/delta-producer-tests \
+            2>&1 | tee artifacts/delta-producer-tests.log
+          python3 experiments/incremental/qualify_delta.py --self-test \
+            2>&1 | tee artifacts/delta-harness-tests.log
+      - name: Run all original correctness gates in a separate process
+        run: |
+          chmod 500 target/release/check-selected target/release/sokonanoda target/release/export-index
+          python3 experiments/incremental/qualify.py \
+            --workloads artifacts/workloads --out artifacts/original-qualification \
+            --checker target/release/check-selected \
+            --full-checker target/release/sokonanoda \
+            --identity-backend native --indexer target/release/export-index \
+            --authority-dir "$RUNNER_TEMP/native-index-original-authority" \
+            --repetitions 3 --optional-kernels \
+            2>&1 | tee artifacts/original-qualification.log
+      - name: Qualify native identity against all original correctness gates
+        id: native_qualification
+        run: |
+          python3 experiments/incremental/qualify_native.py \
+            --workloads artifacts/workloads --out artifacts/native-qualification \
+            --checker target/release/check-selected \
+            --full-checker target/release/sokonanoda \
+            --indexer target/release/export-index \
+            --authority-dir "$RUNNER_TEMP/native-index-authority" \
+            --original-qualification artifacts/original-qualification \
+            2>&1 | tee artifacts/native-qualification.log
+      - name: Independently replay native qualification and full oracles
+        id: native_replay
+        run: |
+          python3 experiments/incremental/replay_native.py \
+            --qualification artifacts/original-qualification \
+            --workloads artifacts/workloads \
+            --authority-key "$RUNNER_TEMP/native-index-original-authority/issuer.key" \
+            --checker target/release/sokonanoda \
+            --indexer target/release/export-index \
+            --reference experiments/incremental/results/local-qualified.json \
+            --out artifacts/native-independent-replay \
+            2>&1 | tee artifacts/native-independent-replay.log
+      - name: Benchmark complete verification against the preserved original binaries
+        run: |
+          python3 experiments/incremental/benchmark_native.py \
+            --workloads artifacts/workloads --out artifacts/native-benchmark \
+            --baseline-bin artifacts/native-baseline-bin \
+            --baseline-ref 9ac04033b51703fb135ec3c28621d44b183944fe \
+            --repetitions 5 \
+            2>&1 | tee artifacts/native-benchmark.log
+      - name: Qualify pinned MathGraph receipt consumption
+        if: ${{ !cancelled() && steps.native_qualification.outcome == 'success' && steps.native_replay.outcome == 'success' }}
+        run: |
+          git clone --no-checkout https://github.com/metalogiclabs/mathgraph.git "$RUNNER_TEMP/mathgraph-native-index-consumer"
+          git -C "$RUNNER_TEMP/mathgraph-native-index-consumer" checkout --detach cf359686c74549a132c7a651cd7aabc7c1a870fe
+          python3 experiments/incremental/qualify_integration.py \
+            --qualification artifacts/original-qualification \
+            --mathgraph "$RUNNER_TEMP/mathgraph-native-index-consumer" \
+            --out artifacts/mathgraph-integration \
+            2>&1 | tee artifacts/mathgraph-integration.log
+      - name: Collect separate phase memory diagnostics
+        run: |
+          python3 experiments/incremental/profile_native_phases.py \
+            --workloads artifacts/workloads \
+            --checker target/release/check-selected \
+            --indexer target/release/export-index \
+            --parser target/release/sokonanoda \
+            --out artifacts/native-phase-memory \
+            2>&1 | tee artifacts/native-phase-memory.log
+      - name: Qualify authenticated producer deltas and paired end-to-end economics
+        id: delta_qualification
+        run: |
+          export PATH="$HOME/.elan/bin:$HOME/.cargo/bin:$PATH"
+          mkdir -p "$RUNNER_TEMP/delta-authority"
+          python3 experiments/incremental/engine.py \
+            --init-key "$RUNNER_TEMP/delta-authority/issuer.key"
+          chmod 500 target/release/index-session artifacts/delta-build/delta-producer
+          python3 experiments/incremental/qualify_delta.py \
+            --workloads artifacts/workloads \
+            --producer artifacts/delta-build/delta-producer \
+            --checker target/release/check-selected \
+            --indexer target/release/export-index \
+            --index-session target/release/index-session \
+            --full-checker target/release/sokonanoda \
+            --authority-key "$RUNNER_TEMP/delta-authority/issuer.key" \
+            --out artifacts/delta-qualification --repetitions 5 \
+            2>&1 | tee artifacts/delta-qualification.log
+      - name: Build all five exact pinned expanded Std exports
+        run: |
+          export PATH="$HOME/.elan/bin:$HOME/.cargo/bin:$PATH"
+          python3 experiments/incremental/build_delta_workloads.py \
+            --workloads artifacts/workloads --out artifacts/delta-expanded-workloads \
+            --producer artifacts/delta-build/delta-producer \
+            2>&1 | tee artifacts/delta-expanded-workload-build.log
+      - name: Qualify expanded producer deltas and separate paired economics
+        id: delta_expanded_qualification
+        run: |
+          export PATH="$HOME/.elan/bin:$HOME/.cargo/bin:$PATH"
+          mkdir -p "$RUNNER_TEMP/delta-expanded-authority"
+          python3 experiments/incremental/engine.py \
+            --init-key "$RUNNER_TEMP/delta-expanded-authority/issuer.key"
+          python3 experiments/incremental/qualify_delta.py \
+            --workloads artifacts/delta-expanded-workloads \
+            --producer artifacts/delta-build/delta-producer \
+            --checker target/release/check-selected \
+            --indexer target/release/export-index \
+            --index-session target/release/index-session \
+            --full-checker target/release/sokonanoda \
+            --authority-key "$RUNNER_TEMP/delta-expanded-authority/issuer.key" \
+            --out artifacts/delta-expanded-qualification --repetitions 5 \
+            2>&1 | tee artifacts/delta-expanded-qualification.log
+      - name: Verify exact source and executable bytes stayed unchanged
+        if: always()
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git diff --exit-code -- src Cargo.toml Cargo.lock experiments/incremental \
+            .github/workflows/incremental-producer-delta.yml
+          sha256sum --check artifacts/source-SHA256SUMS \
+            > artifacts/source-checksums-verified.log
+          sha256sum --check artifacts/delta-binaries-SHA256SUMS \
+            > artifacts/delta-binaries-verified.log
+          python3 - <<'PYCODE'
+          import json, os
+          from pathlib import Path
+          Path('artifacts/source-stability.json').write_text(json.dumps({
+              'source_sha': os.environ['GITHUB_SHA'], 'passed': True}) + '\n')
+          PYCODE
+      - name: Publish correctness and economic summaries
+        if: always()
+        run: |
+          for summary in artifacts/native-qualification/summary.md \
+            artifacts/original-qualification/summary.md \
+            artifacts/native-benchmark/summary.md \
+            artifacts/delta-qualification/summary.md \
+            artifacts/delta-expanded-qualification/summary.md; do
+            if [ -f "$summary" ]; then
+              cat "$summary" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+          python3 - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          observations = {'source_sha': os.environ['GITHUB_SHA'], 'reports': {}}
+          failures = []
+          minimum_gates = {'original-correctness': 197, 'native-correctness': 335,
+                           'independent-replay': 719, 'native-economics': 251,
+                           'producer-delta': 1, 'producer-delta-expanded': 1}
+          for label, location, acceptance_flag in (
+              ('original-correctness', 'artifacts/original-qualification/summary.json', 'qualification_passed'),
+              ('native-correctness', 'artifacts/native-qualification/summary.json', 'qualification_passed'),
+              ('independent-replay', 'artifacts/native-independent-replay/summary.json', 'passed'),
+              ('native-economics', 'artifacts/native-benchmark/summary.json', 'correctness_passed'),
+              ('producer-delta', 'artifacts/delta-qualification/summary.json', 'correctness_passed'),
+              ('producer-delta-expanded', 'artifacts/delta-expanded-qualification/summary.json', 'correctness_passed')):
+              path = Path(location)
+              if not path.exists():
+                  failures.append(label + ': missing report')
+                  continue
+              report = json.loads(path.read_bytes())
+              gates = report.get('gates', [])
+              required = [g for g in gates if g.get('required', True)]
+              report_passed = (len(gates) >= minimum_gates[label] and bool(required)
+                               and all(g['passed'] is True for g in required)
+                               and report.get(acceptance_flag) is True)
+              if label.startswith('producer-delta'):
+                  expected_profile = ('std-hashmap-expanded-v1' if label.endswith('-expanded')
+                                      else 'original-qualified-3436')
+                  report_passed = (report_passed and report.get('run_completed') is True
+                                   and report.get('qualification_status') == 'PASS'
+                                   and report.get('profile') == expected_profile)
+              if not report_passed:
+                  failures.append(label + ': correctness failure')
+              value = {'source_sha': observations['source_sha'],
+                       'summary_sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
+                       'gates': len(gates),
+                       'required_gates': len(required),
+                       'minimum_gates': minimum_gates[label],
+                       'all_gates_passed': bool(gates) and all(g['passed'] for g in gates),
+                       'report_passed': report_passed}
+              if label == 'native-economics':
+                  value.update(economic_status=report['economic_status'],
+                      primary={variant: {arm: data['resources'] for arm, data in report['medians'][variant].items()}
+                               for variant in ('early-definition', 'unrelated-definition')})
+              if label.startswith('producer-delta'):
+                  value.update(economic_status=report.get('economic_status'),
+                      economics=report.get('economics'),
+                      profile=report.get('profile'),
+                      qualification_status=report.get('qualification_status'))
+              observations['reports'][label] = value
+              print('::notice title=' + label + '::' + json.dumps(value, separators=(',', ':')))
+          stable_path = Path('artifacts/source-stability.json')
+          if not stable_path.exists():
+              failures.append('exact-source: missing stability report')
+          else:
+              stable = json.loads(stable_path.read_bytes())
+              if stable.get('passed') is not True or stable.get('source_sha') != os.environ['GITHUB_SHA']:
+                  failures.append('exact-source: source stability failure')
+              observations['source_stability'] = stable
+          observations['qualified_speedup_profiles'] = []
+          if not failures:
+              for label in ('producer-delta-expanded', 'producer-delta'):
+                  value = observations['reports'][label]
+                  if (value['report_passed'] and value['economic_status'] == 'SPEEDUP'
+                          and value.get('economics', {}).get('early-definition', {}).get('passed') is True):
+                      observations['qualified_speedup_profiles'].append(label)
+          observations['failures'] = failures
+          Path('artifacts/ci-observations.json').write_text(json.dumps(observations, indent=2) + '\n')
+          if failures:
+              raise SystemExit('; '.join(failures))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: incremental-producer-delta-${{ github.sha }}
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: incremental-producer-delta-summaries-${{ github.sha }}
+          path: |
+            artifacts/ci-observations.json
+            artifacts/source-ref.txt
+            artifacts/source-SHA256SUMS
+            artifacts/source-stability.json
+            artifacts/delta-binaries-SHA256SUMS
+            artifacts/delta-qualification/summary.json
+            artifacts/delta-qualification/summary.md
+            artifacts/delta-expanded-qualification/summary.json
+            artifacts/delta-expanded-qualification/summary.md
+            artifacts/delta-expanded-workloads/manifest.json
+            artifacts/delta-expanded-workloads/producer-ready.json
+            artifacts/delta-producer-tests/report.json
+            artifacts/original-qualification/summary.json
+            artifacts/original-qualification/summary.md
+            artifacts/native-qualification/summary.json
+            artifacts/native-qualification/summary.md
+            artifacts/native-independent-replay/summary.json
+            artifacts/native-benchmark/summary.json
+            artifacts/native-benchmark/summary.md
+            artifacts/native-phase-memory/summary.json
+            artifacts/mathgraph-integration/summary.json
+            artifacts/*.log
+          if-no-files-found: error
+          retention-days: 30

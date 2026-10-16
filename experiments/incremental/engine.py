@@ -333,10 +333,49 @@ def make_index(path):
                 schedule=digest([d['key'] for d in decls]))
 
 
-def load_evidence(cache, evidence_id, key):
+def reuse_decisions(old, index, provenance, previous_evidence, disable_cache=False,
+                    cache_error=None, identical=False):
+    """Apply the existing reuse predicate to authenticated identity inputs.
+
+    This helper does not authenticate inputs or establish parser acceptance.
+    As in the full adapter, callers supply ``old=None`` when cache is disabled
+    or authentication fails. ``identical`` requires authenticated exact bytes.
+    Returned decisions remain provisional until genuine selected checks pass.
+    """
+    compatible = old is not None and old['provenance'] == provenance
+    if compatible and old['index']['meta'] != index['meta']:
+        compatible = False
+    globals_same = compatible and old['index']['builtins'] == index['builtins'] and old['index']['complex'] == index['complex']
+    schedule_same = globals_same and old['index']['schedule'] == index['schedule']
+    old_by_key = {d['key']: d for d in old['index']['declarations']} if compatible else {}
+    prefix, selected, decisions = True, [], []
+    for d in index['declarations']:
+        prior = old_by_key.get(d['key'])
+        prefix = prefix and globals_same and prior is not None and prior['index'] == d['index'] and prior['own'] == d['own']
+        local = schedule_same and d['kind'] in SIMPLE and prior is not None and prior['own'] == d['own'] and prior['closure'] == d['closure']
+        reuse = identical or prefix or local
+        if reuse:
+            reason = 'exact_export' if identical else 'exact_verified_prefix' if prefix else 'dependency_closure_unchanged'
+        else:
+            selected.append(d['index'])
+            reason = ('cache_disabled' if disable_cache else
+                      'cache_refused:' + cache_error if cache_error else
+                      'no_previous_evidence' if old is None else
+                      'toolchain_or_policy_changed' if not compatible else
+                      'global_builtin_or_complex_assumption_changed' if not globals_same else
+                      'declaration_schedule_changed' if not schedule_same else
+                      'complex_outside_verified_prefix' if d['kind'] not in SIMPLE else
+                      'content_or_transitive_dependency_changed')
+        decisions.append(dict(name=d['name'], index=d['index'], status='VERIFIED_REUSED' if reuse else 'UNKNOWN',
+                              reason=reason, dependency_witness=dict(own=d['own'], closure=d['closure'],
+                              direct=d['deps']), evidence_id=previous_evidence if reuse else None))
+    return selected, decisions
+
+
+def authenticate_record(raw, evidence_id, key):
+    """Authenticate an existing accepted record; export bytes remain unchecked."""
     if len(evidence_id) != 64 or any(c not in '0123456789abcdef' for c in evidence_id):
         raise ValueError('invalid evidence identifier')
-    raw = (cache / 'records' / (evidence_id + '.json')).read_bytes()
     if hashlib.sha256(raw).hexdigest() != evidence_id:
         raise ValueError('evidence content address mismatch')
     signed = json.loads(raw, object_pairs_hook=strict_object)
@@ -346,6 +385,15 @@ def load_evidence(cache, evidence_id, key):
         raise ValueError('evidence issuer authentication failed')
     if payload['schema'] != SCHEMA or payload['status'] != 'VERIFIED':
         raise ValueError('not accepted verification evidence')
+    return payload
+
+
+def load_evidence(cache, evidence_id, key):
+    # Keep identifier validation before constructing or opening the cache path.
+    if len(evidence_id) != 64 or any(c not in '0123456789abcdef' for c in evidence_id):
+        raise ValueError('invalid evidence identifier')
+    raw = (cache / 'records' / (evidence_id + '.json')).read_bytes()
+    payload = authenticate_record(raw, evidence_id, key)
     snapshot = cache / 'exports' / (payload['export_sha256'] + '.ndjson')
     if file_hash(snapshot) != payload['export_sha256']:
         raise ValueError('persisted export corruption')
@@ -439,32 +487,10 @@ def _verify_with_binary(previous_evidence, changed_development, verifier_policy,
             index, identity_backend = indexed_export(snapshot, verifier_policy, provenance['configuration'], timings)
         timings['identity_seconds'] = time.perf_counter() - tick + timings['export_hash_seconds']
         timings['identity_cpu_seconds'] = cpu_time() - cpu + timings['export_hash_cpu_seconds']
-        if compatible and old['index']['meta'] != index['meta']:
-            compatible = False
-        globals_same = compatible and old['index']['builtins'] == index['builtins'] and old['index']['complex'] == index['complex']
-        schedule_same = globals_same and old['index']['schedule'] == index['schedule']
-        old_by_key = {d['key']: d for d in old['index']['declarations']} if compatible else {}
-        prefix, selected, decisions = True, [], []
-        for d in index['declarations']:
-            prior = old_by_key.get(d['key'])
-            prefix = prefix and globals_same and prior is not None and prior['index'] == d['index'] and prior['own'] == d['own']
-            local = schedule_same and d['kind'] in SIMPLE and prior is not None and prior['own'] == d['own'] and prior['closure'] == d['closure']
-            reuse = identical or prefix or local
-            if reuse:
-                reason = 'exact_export' if identical else 'exact_verified_prefix' if prefix else 'dependency_closure_unchanged'
-            else:
-                selected.append(d['index'])
-                reason = ('cache_disabled' if verifier_policy.get('disable_cache') else
-                          'cache_refused:' + cache_error if cache_error else
-                          'no_previous_evidence' if old is None else
-                          'toolchain_or_policy_changed' if not compatible else
-                          'global_builtin_or_complex_assumption_changed' if not globals_same else
-                          'declaration_schedule_changed' if not schedule_same else
-                          'complex_outside_verified_prefix' if d['kind'] not in SIMPLE else
-                          'content_or_transitive_dependency_changed')
-            decisions.append(dict(name=d['name'], index=d['index'], status='VERIFIED_REUSED' if reuse else 'UNKNOWN',
-                                  reason=reason, dependency_witness=dict(own=d['own'], closure=d['closure'],
-                                  direct=d['deps']), evidence_id=previous_evidence if reuse else None))
+        selected, decisions = reuse_decisions(
+            old, index, provenance, previous_evidence,
+            disable_cache=verifier_policy.get('disable_cache'),
+            cache_error=cache_error, identical=identical)
         counts = dict(total=index['count'], rechecked=0, reused=index['count']-len(selected),
                       invalidated=len(selected) if previous_evidence else 0, scheduled=len(selected))
         tick, cpu = time.perf_counter(), cpu_time()

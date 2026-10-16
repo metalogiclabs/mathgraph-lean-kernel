@@ -365,6 +365,18 @@ pub fn export_identity(input: &[u8], config: Config) -> Result<crate::identity::
     result
 }
 
+/// Initialize a retained identity DAG through exactly the ordinary kernel
+/// parser and its existing typed identity observer. No parsed kernel arena is
+/// retained and no claim is checked or accepted by this cache witness.
+pub fn export_identity_builder(input: &[u8], config: Config) -> Result<crate::identity::IdentityBuilder, Box<dyn Error>> {
+    let arena = stumpalo::Arena::new();
+    let mut parser = Parser::with_input_len(arena.as_arena_ref(), std::io::empty(), config, input.len());
+    parser.identity = Some(crate::identity::IdentityBuilder::new(input.len()));
+    parser.run_over(input)?;
+    if !parser.skipped.is_empty() { return Err("identity index cannot contain skipped axioms".into()); }
+    Ok(parser.identity.take().unwrap())
+}
+
 const READ_CHUNK: usize = 1 << 22;
 
 pub(crate) fn parse_export_file<'p, R: BufRead>(

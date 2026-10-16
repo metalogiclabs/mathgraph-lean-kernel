@@ -84,7 +84,8 @@ pub struct ExportIdentityIndex {
     schedule: HexFingerprint,
 }
 
-pub(crate) struct IdentityBuilder {
+/// Retained typed identity DAG. This is a cache witness, never proof authority.
+pub struct IdentityBuilder {
     names: Vec<Option<Name>>,
     levels: Vec<Option<Fingerprint>>,
     exprs: Vec<Option<Expression>>,
@@ -94,6 +95,14 @@ pub(crate) struct IdentityBuilder {
     meta: Option<Value>,
     rows: usize,
     buffer: Vec<u8>,
+    delta_attempted: bool,
+}
+#[derive(Serialize)]
+pub struct IdentityDelta {
+    pub index: ExportIdentityIndex,
+    pub rows_processed: usize,
+    pub dag_rows: usize,
+    pub replaced_names: Vec<String>,
 }
 impl IdentityBuilder {
     pub(crate) fn new(input_len: usize) -> Self {
@@ -107,6 +116,7 @@ impl IdentityBuilder {
             meta: None,
             rows: 0,
             buffer: Vec::with_capacity(512),
+            delta_attempted: false,
         }
     }
     fn begin(&mut self) -> Result<()> {
@@ -622,7 +632,47 @@ impl IdentityBuilder {
             _ => failure(format!("unsupported export item: {tag}")),
         }
     }
-    pub(crate) fn finish(self) -> Result<ExportIdentityIndex> {
+    /// Apply one baseline-anchored update. On any error the session is poisoned;
+    /// callers must terminate it rather than consume possibly partial state.
+    /// All rows still require the ordinary full selected checker downstream.
+    pub fn apply_delta(&mut self, input: &str) -> Result<IdentityDelta> {
+        if self.delta_attempted { return failure("identity session permits only one delta attempt"); }
+        self.delta_attempted = true;
+        let mut rows_processed = 0;
+        let mut dag_rows = 0;
+        let mut replaced_names = Vec::new();
+        let mut replaced = BTreeSet::new();
+        for line in input.lines() {
+            let StrictValue(row) = serde_json::from_str(line)?;
+            let row = row.as_object().ok_or("export row is not an object")?;
+            let tags = row.keys().filter(|k| !matches!(k.as_str(), "in" | "il" | "ie")).collect::<Vec<_>>();
+            if tags.len() != 1 { return failure("ambiguous export row"); }
+            let tag = tags[0].as_str();
+            if simple(tag) {
+                if row.len() != 1 { return failure("index attached to declaration"); }
+                let key = self.name(Self::uint(&row[tag]["name"])?)?.hash;
+                let Some(position) = self.declarations.iter().position(|d| d.key == key) else {
+                    return failure("delta cannot introduce a declaration");
+                };
+                if self.declarations[position].kind != tag { return failure("delta cannot change declaration kind"); }
+                if !replaced.insert(key) { return failure("duplicate declaration replacement"); }
+                self.seen.remove(&key);
+                self.observe_general(line)?;
+                let replacement = self.declarations.pop().ok_or("replacement missing")?;
+                replaced_names.push(replacement.name.clone());
+                self.declarations[position] = replacement;
+            } else {
+                if !matches!(tag, "str" | "num" | "succ" | "max" | "imax" | "param" | "bvar" | "sort" | "const" | "app" | "lam" | "forallE" | "letE" | "proj" | "natVal" | "strVal") {
+                    return failure("delta metadata and complex declarations are unsupported");
+                }
+                self.observe_general(line)?;
+                dag_rows += 1;
+            }
+            rows_processed += 1;
+        }
+        Ok(IdentityDelta { index: self.finish()?, rows_processed, dag_rows, replaced_names })
+    }
+    pub fn finish(&self) -> Result<ExportIdentityIndex> {
         let mut by_key: FxHashMap<Fingerprint, usize> = new_fx_hash_map();
         for (i, d) in self.declarations.iter().enumerate() {
             by_key.insert(d.key, i);
@@ -729,25 +779,95 @@ impl IdentityBuilder {
         let schedule = digest_value(&json!(self.declarations.iter().map(|d| hex(d.key)).collect::<Vec<_>>()));
         let declarations = self
             .declarations
-            .into_iter()
+            .iter()
             .enumerate()
             .map(|(i, d)| ExportDeclaration {
                 key: HexFingerprint(d.key),
-                name: d.name,
-                kind: d.kind,
+                name: d.name.clone(),
+                kind: d.kind.clone(),
                 own: HexFingerprint(d.own),
-                deps: d.deps.into_iter().map(HexFingerprint).collect(),
+                deps: d.deps.iter().copied().map(HexFingerprint).collect(),
                 index: i,
                 closure: HexFingerprint(roots[comp[i]]),
             })
             .collect();
         Ok(ExportIdentityIndex {
-            meta: self.meta.ok_or("metadata missing")?,
+            meta: self.meta.clone().ok_or("metadata missing")?,
             declarations,
             count: n,
             builtins: builtin,
             complex: HexFingerprint(complex),
             schedule: HexFingerprint(schedule),
         })
+    }
+}
+
+#[cfg(test)]
+mod session_tests {
+    use super::*;
+    fn meta() -> &'static str { r#"{"meta":{"lean":{"version":"4.35.0","githash":"test"},"exporter":{"name":"lean4export","version":"test"},"format":{"version":"3.1.0"}}}"# }
+    fn baseline() -> String {
+        [meta(), r#"{"in":1,"str":{"pre":0,"str":"a"}}"#, r#"{"in":2,"str":{"pre":0,"str":"b"}}"#,
+         r#"{"ie":0,"sort":0}"#, r#"{"ie":1,"const":{"name":1,"us":[]}}"#,
+         r#"{"def":{"name":1,"levelParams":[],"type":0,"value":0,"hints":"abbrev","safety":"safe","all":[]}}"#,
+         r#"{"def":{"name":2,"levelParams":[],"type":0,"value":1,"hints":"abbrev","safety":"safe","all":[]}}"#].join("\n") + "\n"
+    }
+    fn config() -> crate::util::Config { serde_json::from_value(json!({"use_stdin":true,"num_threads":1})).unwrap() }
+    fn builder() -> IdentityBuilder { crate::parser::export_identity_builder(baseline().as_bytes(),config()).unwrap() }
+    fn replacement(value:u32) -> String { json!({"def":{"name":1,"levelParams":[],"type":0,"value":value,"hints":"abbrev","safety":"safe","all":[]}}).to_string() }
+    #[test]
+    fn session_replacement_matches_fresh_genuine_parser_and_preserves_dependency_schedule() {
+        let mut retained=builder();
+        let old=serde_json::to_value(retained.finish().unwrap()).unwrap();
+        assert_eq!(old,serde_json::to_value(crate::parser::export_identity(baseline().as_bytes(),config()).unwrap()).unwrap());
+        let additions="{\"il\":1,\"succ\":0}\n{\"ie\":2,\"sort\":1}\n";
+        let delta=retained.apply_delta(&(additions.to_owned()+&replacement(2)+"\n")).unwrap();
+        let mut rows=baseline().lines().map(str::to_owned).collect::<Vec<_>>();
+        rows[5]=replacement(2);rows.insert(5,"{\"ie\":2,\"sort\":1}".into());rows.insert(5,"{\"il\":1,\"succ\":0}".into());
+        let fresh=crate::parser::export_identity((rows.join("\n")+"\n").as_bytes(),config()).unwrap();
+        let actual=serde_json::to_value(&delta.index).unwrap();
+        assert_eq!(actual,serde_json::to_value(fresh).unwrap());
+        assert_eq!(actual["schedule"],old["schedule"]);
+        assert_ne!(actual["declarations"][1]["closure"],old["declarations"][1]["closure"]);
+        assert_eq!((delta.rows_processed,delta.dag_rows),(3,2));assert_eq!(delta.replaced_names,vec!["a"]);
+        assert!(retained.apply_delta(&replacement(0)).is_err(),"one baseline-anchored update only");
+    }
+    #[test]
+    fn session_empty_and_unused_dag_updates_preserve_index_but_require_downstream_parser() {
+        let mut unchanged=builder();
+        let old=serde_json::to_value(unchanged.finish().unwrap()).unwrap();
+        let update=unchanged.apply_delta("").unwrap();
+        assert_eq!(serde_json::to_value(update.index).unwrap(),old);
+        assert_eq!((update.rows_processed,update.dag_rows),(0,0));
+        assert!(update.replaced_names.is_empty());
+        let mut retained=builder();
+        let malformed="{\"ie\":2,\"bvar\":\"not-an-integer\"}\n";
+        let update=retained.apply_delta(malformed).unwrap();
+        assert_eq!(serde_json::to_value(update.index).unwrap(),old);
+        assert_eq!((update.rows_processed,update.dag_rows),(1,1));
+        assert!(update.replaced_names.is_empty());
+        let composite=baseline()+malformed;
+        let downstream=std::panic::catch_unwind(|| {
+            let arena=stumpalo::Arena::new();
+            let rejected=crate::parser::parse_export_mapped(arena.as_arena_ref(),composite.as_bytes(),config()).is_err();
+            rejected
+        });
+        assert!(downstream.is_err() || downstream.unwrap(),"actual downstream kernel parser must reject malformed unused DAG rows");
+    }
+    #[test]
+    fn session_refuses_duplicate_missing_new_metadata_complex_and_changed_kind() {
+        let cases=vec![
+          "{\"ie\":0,\"sort\":0}".to_owned(),
+          "{\"ie\":4,\"sort\":999}".to_owned(),
+          replacement(999),
+          "{\"in\":3,\"str\":{\"pre\":0,\"str\":\"new\"}}\n{\"thm\":{\"name\":3,\"levelParams\":[],\"type\":0,\"value\":0,\"all\":[]}}".to_owned(),
+          meta().to_owned(),
+          "{\"inductive\":{\"types\":[],\"ctors\":[],\"recs\":[]}}".to_owned(),
+          "{\"thm\":{\"name\":1,\"levelParams\":[],\"type\":0,\"value\":0,\"all\":[]}}".to_owned(),
+          "{\"ie\":3,\"sort\":0,\"sort\":0}".to_owned(),
+          "{\"in\":3,\"str\":{\"pre\":0,\"str\":\"bad\u{0001}\"}}".to_owned(),
+          replacement(0)+"\n"+&replacement(0),
+        ];
+        for delta in cases { let mut retained=builder();assert!(retained.apply_delta(&delta).is_err(),"accepted {delta}");assert!(retained.apply_delta(&replacement(0)).is_err(),"failure must poison session"); }
     }
 }
