@@ -283,8 +283,8 @@ def execute(command, directory, accepted=(0,)):
 
 def collect(args):
     out = args.out.resolve()
-    if out.is_relative_to(REPO) or out.exists():
-        raise ValueError('--out must be a new directory outside the repository')
+    if out.exists():
+        raise ValueError('--out must be a new directory')
     if args.repetitions < 1 or args.interval_ms < 0.5:
         raise ValueError('use positive repetitions and a sampling interval >= 0.5 ms')
     out.mkdir(parents=True)

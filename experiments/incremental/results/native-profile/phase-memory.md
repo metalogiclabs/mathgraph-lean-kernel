@@ -41,4 +41,4 @@ python3 experiments/incremental/profile_native_phases.py \
   --summary /workspace/kernel-audit/native-phase-memory-replay.json
 ```
 
-`--out` must be a new directory outside the repository. Only the compact summary should be uploaded to CI artifacts; raw samples, snapshots, and executable captures stay in the output directory. The unchanged engine creates a temporary issuer key outside that directory and deletes it after collection. No issuer key is copied or published. Final raw evidence is `/workspace/kernel-audit/native-phase-memory-1445-qualified/`.
+`--out` must be a new directory. CI publishes its raw samples, snapshots, executable captures and summary as artifacts. The unchanged engine creates a temporary issuer key outside that directory and deletes it after collection. No issuer key is copied or published. Final local raw evidence is `/workspace/kernel-audit/native-phase-memory-1445-qualified/`.
