@@ -93,6 +93,8 @@ jobs:
           export PATH="$HOME/.elan/bin:$HOME/.cargo/bin:$PATH"
           python3 experiments/incremental/test_delta_reuse.py \
             2>&1 | tee artifacts/delta-reuse-tests.log
+          python3 experiments/incremental/test_source_delta_authority.py \
+            2>&1 | tee artifacts/delta-source-authority-tests.log
           python3 experiments/incremental/test_delta_producer.py \
             --binary artifacts/delta-build/delta-producer \
             --workload artifacts/workloads/baseline/source \
