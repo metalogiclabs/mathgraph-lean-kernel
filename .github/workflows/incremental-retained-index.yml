@@ -1,0 +1,643 @@
+name: Retained index qualification
+
+on:
+  push:
+    branches:
+      - research/retained-scc-index-20261016
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: incremental-retained-index-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  qualification:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Capture exact checked source before execution
+        run: |
+          mkdir -p artifacts
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git diff --exit-code
+          git rev-parse HEAD > artifacts/source-ref.txt
+          git ls-files -z -- src Cargo.toml Cargo.lock experiments/incremental \
+            .github/workflows/incremental-retained-index.yml \
+            | xargs -0 sha256sum > artifacts/source-SHA256SUMS
+      - name: Verify piped failures fail the shell
+        run: |
+          set +e
+          (false | tee "$RUNNER_TEMP/native-index-pipeline-negative.log")
+          task_pipeline_status=$?
+          set -e
+          test "$task_pipeline_status" -ne 0
+          printf 'Pipeline negative control returned %s\n' "$task_pipeline_status"
+      - name: Install exact compilers and build release binaries
+        run: |
+          mkdir -p artifacts
+          bash experiments/incremental/setup.sh 2>&1 | tee artifacts/setup.log
+      - name: Build the source-owned producer with the exact Lean release
+        run: |
+          export PATH="$HOME/.elan/bin:$HOME/.cargo/bin:$PATH"
+          bash experiments/incremental/build_delta_producer.sh artifacts/delta-build \
+            2>&1 | tee artifacts/delta-producer-build.log
+          test -x artifacts/delta-build/delta-producer
+          test -x target/release/index-session
+          sha256sum artifacts/delta-build/delta-producer target/release/index-session \
+            > artifacts/delta-binaries-pretests-SHA256SUMS
+      - name: Preserve separately compiled original checker binaries
+        env:
+          BASELINE_REF: 9ac04033b51703fb135ec3c28621d44b183944fe
+        run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          baseline_worktree="$RUNNER_TEMP/incremental-native-index-baseline"
+          baseline_target="$RUNNER_TEMP/incremental-native-index-baseline-target"
+          mkdir -p artifacts/native-baseline-bin
+          git worktree add --detach "$baseline_worktree" "$BASELINE_REF"
+          git -C "$baseline_worktree" rev-parse HEAD > artifacts/native-baseline-bin/source-ref.txt
+          test "$(cat artifacts/native-baseline-bin/source-ref.txt)" = "$BASELINE_REF"
+          cargo +1.95.0 build --release --locked \
+            --manifest-path "$baseline_worktree/Cargo.toml" \
+            --target-dir "$baseline_target" \
+            --bin check-selected --bin sokonanoda \
+            2>&1 | tee artifacts/native-baseline-bin/build.log
+          cp "$baseline_target/release/check-selected" artifacts/native-baseline-bin/check-selected
+          cp "$baseline_target/release/sokonanoda" artifacts/native-baseline-bin/sokonanoda
+          sha256sum artifacts/native-baseline-bin/check-selected \
+            artifacts/native-baseline-bin/sokonanoda > artifacts/native-baseline-bin/SHA256SUMS
+      - name: Preserve the exact qualified producer adapter and index implementation
+        env:
+          PRODUCER_BASELINE_REF: 4496042c75368f6c35675a9b131c960080afa518
+        run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          producer_baseline_worktree="$RUNNER_TEMP/retained-index-qualified449"
+          producer_baseline_target="$RUNNER_TEMP/retained-index-qualified449-target"
+          mkdir -p artifacts/qualified449/bin
+          git worktree add --detach "$producer_baseline_worktree" "$PRODUCER_BASELINE_REF"
+          test "$(git -C "$producer_baseline_worktree" rev-parse HEAD)" = "$PRODUCER_BASELINE_REF"
+          printf '%s\n' "$PRODUCER_BASELINE_REF" > artifacts/qualified449/source-ref.txt
+          cargo +1.95.0 build --release --locked \
+            --manifest-path "$producer_baseline_worktree/Cargo.toml" \
+            --target-dir "$producer_baseline_target" \
+            --bin index-session --bin export-index --bin check-selected --bin sokonanoda \
+            2>&1 | tee artifacts/qualified449/build.log
+          cp -R "$producer_baseline_worktree/experiments/incremental" artifacts/qualified449/incremental
+          for binary in index-session export-index check-selected sokonanoda; do
+            cp "$producer_baseline_target/release/$binary" "artifacts/qualified449/bin/$binary"
+          done
+          sha256sum artifacts/qualified449/bin/* > artifacts/qualified449/SHA256SUMS
+      - name: Test release checker and adversarial identity predicate
+        run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          cargo +1.95.0 test --release --locked 2>&1 | tee artifacts/rust-tests.log
+          python3 experiments/incremental/test_predicate.py 2>&1 | tee artifacts/predicate-tests.log
+          python3 experiments/incremental/test_native_identity.py 2>&1 | tee artifacts/native-identity-tests.log
+          python3 experiments/incremental/test_native_adapter.py \
+            --checker target/release/check-selected 2>&1 | tee artifacts/native-adapter-tests.log
+      - name: Freeze ordinary release executables after Cargo test builds
+        run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          cargo +1.95.0 build --release --locked --bins \
+            2>&1 | tee artifacts/post-test-release-build.log
+          sha256sum artifacts/delta-build/delta-producer target/release/index-session \
+            target/release/export-index target/release/check-selected target/release/sokonanoda \
+            > artifacts/delta-binaries-SHA256SUMS
+      - name: Compile unchanged pinned Std workloads and exact exports
+        run: |
+          export PATH="$HOME/.elan/bin:$PATH"
+          python3 experiments/incremental/build_workloads.py \
+            --out artifacts/workloads 2>&1 | tee artifacts/workload-build.log
+      - name: Test producer authentication boundaries and the actual Lean daemon
+        run: |
+          export PATH="$HOME/.elan/bin:$HOME/.cargo/bin:$PATH"
+          python3 experiments/incremental/test_delta_reuse.py \
+            2>&1 | tee artifacts/delta-reuse-tests.log
+          python3 experiments/incremental/test_source_delta_authority.py \
+            2>&1 | tee artifacts/delta-source-authority-tests.log
+          python3 experiments/incremental/test_delta_producer.py \
+            --binary artifacts/delta-build/delta-producer \
+            --workload artifacts/workloads/baseline/source \
+            --output artifacts/delta-producer-tests \
+            2>&1 | tee artifacts/delta-producer-tests.log
+          python3 experiments/incremental/qualify_delta.py --self-test \
+            2>&1 | tee artifacts/delta-harness-tests.log
+          python3 experiments/incremental/qualify_retained_index.py --self-test \
+            2>&1 | tee artifacts/retained-harness-tests.log
+          python3 experiments/incremental/test_sparse_receipts.py \
+            2>&1 | tee artifacts/sparse-receipt-tests.log
+      - name: Run all original correctness gates in a separate process
+        run: |
+          chmod 500 target/release/check-selected target/release/sokonanoda target/release/export-index
+          python3 experiments/incremental/qualify.py \
+            --workloads artifacts/workloads --out artifacts/original-qualification \
+            --checker target/release/check-selected \
+            --full-checker target/release/sokonanoda \
+            --identity-backend native --indexer target/release/export-index \
+            --authority-dir "$RUNNER_TEMP/native-index-original-authority" \
+            --repetitions 3 --optional-kernels \
+            2>&1 | tee artifacts/original-qualification.log
+      - name: Qualify native identity against all original correctness gates
+        id: native_qualification
+        run: |
+          python3 experiments/incremental/qualify_native.py \
+            --workloads artifacts/workloads --out artifacts/native-qualification \
+            --checker target/release/check-selected \
+            --full-checker target/release/sokonanoda \
+            --indexer target/release/export-index \
+            --authority-dir "$RUNNER_TEMP/native-index-authority" \
+            --original-qualification artifacts/original-qualification \
+            2>&1 | tee artifacts/native-qualification.log
+      - name: Independently replay native qualification and full oracles
+        id: native_replay
+        run: |
+          python3 experiments/incremental/replay_native.py \
+            --qualification artifacts/original-qualification \
+            --workloads artifacts/workloads \
+            --authority-key "$RUNNER_TEMP/native-index-original-authority/issuer.key" \
+            --checker target/release/sokonanoda \
+            --indexer target/release/export-index \
+            --reference experiments/incremental/results/local-qualified.json \
+            --out artifacts/native-independent-replay \
+            2>&1 | tee artifacts/native-independent-replay.log
+      - name: Benchmark complete verification against the preserved original binaries
+        run: |
+          python3 experiments/incremental/benchmark_native.py \
+            --workloads artifacts/workloads --out artifacts/native-benchmark \
+            --baseline-bin artifacts/native-baseline-bin \
+            --baseline-ref 9ac04033b51703fb135ec3c28621d44b183944fe \
+            --repetitions 5 \
+            2>&1 | tee artifacts/native-benchmark.log
+      - name: Qualify pinned MathGraph receipt consumption
+        if: ${{ !cancelled() && steps.native_qualification.outcome == 'success' && steps.native_replay.outcome == 'success' }}
+        run: |
+          git clone --no-checkout https://github.com/metalogiclabs/mathgraph.git "$RUNNER_TEMP/mathgraph-native-index-consumer"
+          git -C "$RUNNER_TEMP/mathgraph-native-index-consumer" checkout --detach cf359686c74549a132c7a651cd7aabc7c1a870fe
+          python3 experiments/incremental/qualify_integration.py \
+            --qualification artifacts/original-qualification \
+            --mathgraph "$RUNNER_TEMP/mathgraph-native-index-consumer" \
+            --out artifacts/mathgraph-integration \
+            2>&1 | tee artifacts/mathgraph-integration.log
+      - name: Collect separate phase memory diagnostics
+        run: |
+          python3 experiments/incremental/profile_native_phases.py \
+            --workloads artifacts/workloads \
+            --checker target/release/check-selected \
+            --indexer target/release/export-index \
+            --parser target/release/sokonanoda \
+            --out artifacts/native-phase-memory \
+            2>&1 | tee artifacts/native-phase-memory.log
+      - name: Qualify authenticated producer deltas and paired end-to-end economics
+        id: delta_qualification
+        run: |
+          export PATH="$HOME/.elan/bin:$HOME/.cargo/bin:$PATH"
+          mkdir -p "$RUNNER_TEMP/delta-authority"
+          python3 experiments/incremental/engine.py \
+            --init-key "$RUNNER_TEMP/delta-authority/issuer.key"
+          chmod 500 target/release/index-session artifacts/delta-build/delta-producer
+          python3 experiments/incremental/qualify_delta.py \
+            --workloads artifacts/workloads \
+            --producer artifacts/delta-build/delta-producer \
+            --checker target/release/check-selected \
+            --indexer target/release/export-index \
+            --index-session target/release/index-session \
+            --full-checker target/release/sokonanoda \
+            --authority-key "$RUNNER_TEMP/delta-authority/issuer.key" \
+            --out artifacts/delta-qualification --repetitions 5 \
+            2>&1 | tee artifacts/delta-qualification.log
+      - name: Build all five exact pinned expanded Std exports
+        run: |
+          export PATH="$HOME/.elan/bin:$HOME/.cargo/bin:$PATH"
+          python3 experiments/incremental/build_delta_workloads.py \
+            --workloads artifacts/workloads --out artifacts/delta-expanded-workloads \
+            --producer artifacts/delta-build/delta-producer \
+            2>&1 | tee artifacts/delta-expanded-workload-build.log
+      - name: Qualify expanded producer deltas and separate paired economics
+        id: delta_expanded_qualification
+        run: |
+          export PATH="$HOME/.elan/bin:$HOME/.cargo/bin:$PATH"
+          mkdir -p "$RUNNER_TEMP/delta-expanded-authority"
+          python3 experiments/incremental/engine.py \
+            --init-key "$RUNNER_TEMP/delta-expanded-authority/issuer.key"
+          python3 experiments/incremental/qualify_delta.py \
+            --workloads artifacts/delta-expanded-workloads \
+            --producer artifacts/delta-build/delta-producer \
+            --checker target/release/check-selected \
+            --indexer target/release/export-index \
+            --index-session target/release/index-session \
+            --full-checker target/release/sokonanoda \
+            --authority-key "$RUNNER_TEMP/delta-expanded-authority/issuer.key" \
+            --out artifacts/delta-expanded-qualification --repetitions 5 \
+            2>&1 | tee artifacts/delta-expanded-qualification.log
+      - name: Independently replay all retained graph fixtures against frozen Python
+        run: |
+          git show 4496042c75368f6c35675a9b131c960080afa518:experiments/incremental/engine.py \
+            > artifacts/qualified-449-engine.py
+          python3 experiments/incremental/replay_retained_index.py \
+            --index-session target/release/index-session \
+            --indexer target/release/export-index \
+            --checker target/release/check-selected \
+            --baseline-engine artifacts/qualified-449-engine.py \
+            --out artifacts/retained-independent-fixtures \
+            2>&1 | tee artifacts/retained-independent-fixtures.log
+      - name: Qualify retained identity, preserved adapter parity and paired costs
+        run: |
+          mkdir -p "$RUNNER_TEMP/retained-authority"
+          python3 experiments/incremental/engine.py \
+            --init-key "$RUNNER_TEMP/retained-authority/issuer.key"
+          python3 experiments/incremental/qualify_retained_index.py \
+            --workloads artifacts/workloads \
+            --expanded-workloads artifacts/delta-expanded-workloads \
+            --producer artifacts/delta-build/delta-producer \
+            --checker target/release/check-selected \
+            --indexer target/release/export-index \
+            --index-session target/release/index-session \
+            --full-checker target/release/sokonanoda \
+            --authority-key "$RUNNER_TEMP/retained-authority/issuer.key" \
+            --baseline-dir artifacts/qualified449 \
+            --out artifacts/retained-qualification --repetitions 5 \
+            2>&1 | tee artifacts/retained-qualification.log
+      - name: Isolate paired finish computation on each genuine parsed edit
+        run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          for profile in original expanded; do
+            workload_root=artifacts/workloads
+            if [ "$profile" = expanded ]; then workload_root=artifacts/delta-expanded-workloads; fi
+            for variant in early-definition unrelated-definition; do
+              RETAINED_BENCH_EXPORT="$PWD/$workload_root/baseline/export.ndjson" \
+              RETAINED_BENCH_DELTA="$PWD/artifacts/retained-qualification/samples/$profile/$variant-0/retained/delta.ndjson" \
+              RETAINED_BENCH_REPETITIONS=7 \
+                cargo +1.95.0 test --release --locked --lib \
+                  benchmark_retained_finish_same_parsed_mutation -- --ignored --nocapture \
+                2>&1 | tee "artifacts/retained-microbenchmark-$profile-$variant.log"
+            done
+          done
+      - name: Benchmark sparse storage witnesses after retained parity qualification
+        run: |
+          python3 experiments/incremental/benchmark_sparse_receipts.py \
+            --retained-summary artifacts/retained-qualification/summary.json \
+            --summary artifacts/delta-qualification/summary.json \
+            --expanded-summary artifacts/delta-expanded-qualification/summary.json \
+            --authority-key "$RUNNER_TEMP/delta-authority/issuer.key" \
+            --expanded-authority-key "$RUNNER_TEMP/delta-expanded-authority/issuer.key" \
+            --out artifacts/sparse-receipt-benchmark --repetitions 5 \
+            2>&1 | tee artifacts/sparse-receipt-benchmark.log
+      - name: Verify exact source and executable bytes stayed unchanged
+        if: always()
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git diff --exit-code -- src Cargo.toml Cargo.lock experiments/incremental \
+            .github/workflows/incremental-retained-index.yml
+          sha256sum --check artifacts/source-SHA256SUMS \
+            > artifacts/source-checksums-verified.log
+          sha256sum --check artifacts/delta-binaries-SHA256SUMS \
+            > artifacts/delta-binaries-verified.log
+          sha256sum --check artifacts/qualified449/SHA256SUMS \
+            > artifacts/qualified449-binaries-verified.log
+          python3 - <<'PYCODE'
+          import json, os
+          from pathlib import Path
+          Path('artifacts/source-stability.json').write_text(json.dumps({
+              'source_sha': os.environ['GITHUB_SHA'], 'passed': True}) + '\n')
+          PYCODE
+      - name: Publish correctness and economic summaries
+        if: always()
+        run: |
+          for summary in artifacts/native-qualification/summary.md \
+            artifacts/original-qualification/summary.md \
+            artifacts/native-benchmark/summary.md \
+            artifacts/delta-qualification/summary.md \
+            artifacts/delta-expanded-qualification/summary.md \
+            artifacts/retained-qualification/summary.md \
+            artifacts/sparse-receipt-benchmark/summary.md; do
+            if [ -f "$summary" ]; then
+              cat "$summary" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+          python3 - <<'PY'
+          import hashlib, json, math, os, statistics
+          from pathlib import Path
+          observations = {'source_sha': os.environ['GITHUB_SHA'], 'reports': {}}
+          failures = []
+          def compact_setup(value):
+              if isinstance(value, dict):
+                  return {key: ({'count': len(item), 'canonical_sha256': hashlib.sha256(
+                      json.dumps(item, sort_keys=True, separators=(',', ':'), ensure_ascii=True).encode()).hexdigest()}
+                      if key == 'roots' and isinstance(item, list) else compact_setup(item))
+                      for key, item in value.items()}
+              if isinstance(value, list):
+                  return [compact_setup(item) for item in value]
+              return value
+
+          def numeric_medians(rows):
+              if not rows:
+                  raise ValueError('no warm samples for phase medians')
+              fields = set().union(*(row.keys() for row in rows))
+              output = {}
+              for field in sorted(fields):
+                  values = [row.get(field) for row in rows]
+                  if any(type(value) not in (int, float) or not math.isfinite(value) for value in values):
+                      raise ValueError('missing or nonfinite phase measurement: ' + field)
+                  output[field] = statistics.median(values)
+              return output
+
+          def delta_phase_report(summary_path, report):
+              if report.get('run_completed') is not True or not report.get('samples'):
+                  raise ValueError('phase extraction requires a completed report with samples')
+              samples = []
+              for sample in report['samples']:
+                  result_path = Path(sample['result_path'])
+                  raw = result_path.read_bytes()
+                  result = json.loads(raw)
+                  if result.get('status') != 'VERIFIED':
+                      raise ValueError('sample result is not VERIFIED: ' + str(result_path))
+                  for field in ('timings', 'memory', 'counts', 'representation',
+                                'producer_report', 'typed_update', 'checker_result'):
+                      if not isinstance(result.get(field), dict):
+                          raise ValueError('missing sample phase field: ' + field)
+                  checker = result['checker_result']
+                  if checker.get('code') != 0 or any(
+                          not isinstance(checker.get(field), str) or len(checker[field].encode()) > 16384
+                          for field in ('stdout', 'stderr')):
+                      raise ValueError('invalid or unexpectedly large selected-checker output')
+                  value = {key: sample.get(key) for key in ('variant', 'repetition', 'cold_replay',
+                      'apply_wall_seconds', 'direct_wall_seconds', 'session_constructor_wall_seconds',
+                      'start_wall_seconds', 'setup_wall_seconds', 'direct_rust', 'baseline_result')}
+                  value.update(result_path=str(result_path), result_sha256=hashlib.sha256(raw).hexdigest(),
+                      evidence_id=result.get('evidence_id'), export_sha256=result.get('export_sha256'),
+                      setup_report=compact_setup(sample['setup_report']),
+                      cpu_measurement=result.get('cpu_measurement'))
+                  value.update({key: result[key] for key in ('timings', 'memory', 'counts',
+                      'representation', 'producer_report', 'typed_update', 'checker_result')})
+                  samples.append(value)
+              medians = {}
+              for variant in sorted({sample['variant'] for sample in samples}):
+                  warm = [sample for sample in samples if sample['variant'] == variant
+                          and sample['cold_replay'] is False]
+                  if len(warm) != report['repetitions']:
+                      raise ValueError('incomplete warm phase sample set: ' + variant)
+                  medians[variant] = {'sample_count': len(warm),
+                      'timings': numeric_medians([sample['timings'] for sample in warm]),
+                      'observed_wall_and_cpu': numeric_medians([{
+                          'apply_wall_seconds': sample['apply_wall_seconds'],
+                          'direct_wall_seconds': sample['direct_wall_seconds'],
+                          'direct_completed_child_cpu_seconds': sample['direct_rust']['completed_child_cpu_seconds'],
+                          'session_constructor_wall_seconds': sample['session_constructor_wall_seconds'],
+                          'start_wall_seconds': sample['start_wall_seconds'],
+                          'setup_wall_seconds': sample['setup_wall_seconds'],
+                          'start_report_cpu_seconds': sample['setup_report']['cpu_seconds']}
+                          for sample in warm])}
+              output = summary_path.with_name('compact-phases.json')
+              output.write_text(json.dumps({'schema': 'mathgraph.producer-delta-compact-phases.v1',
+                  'source_sha': os.environ['GITHUB_SHA'], 'profile': report['profile'],
+                  'summary_path': str(summary_path),
+                  'summary_sha256': hashlib.sha256(summary_path.read_bytes()).hexdigest(),
+                  'harness_sha256': report['harness_sha256'], 'host': report.get('host'),
+                  'measurement_policy': report.get('measurement_policy'),
+                  'memory_scope': 'Verbatim post-phase procfs samples in KiB. VmHWM is cumulative since process startup; no exact phase peak or aggregate RSS is inferred.',
+                  'samples': samples, 'warm_medians_by_variant': medians}, indent=2) + '\n')
+              return {'path': str(output), 'sha256': hashlib.sha256(output.read_bytes()).hexdigest(),
+                      'samples': len(samples), 'cold_samples': sum(sample['cold_replay'] is True for sample in samples)}
+          minimum_gates = {'original-correctness': 197, 'native-correctness': 335,
+                           'independent-replay': 719, 'native-economics': 251,
+                           'producer-delta': 243, 'producer-delta-expanded': 226}
+          for label, location, acceptance_flag in (
+              ('original-correctness', 'artifacts/original-qualification/summary.json', 'qualification_passed'),
+              ('native-correctness', 'artifacts/native-qualification/summary.json', 'qualification_passed'),
+              ('independent-replay', 'artifacts/native-independent-replay/summary.json', 'passed'),
+              ('native-economics', 'artifacts/native-benchmark/summary.json', 'correctness_passed'),
+              ('producer-delta', 'artifacts/delta-qualification/summary.json', 'correctness_passed'),
+              ('producer-delta-expanded', 'artifacts/delta-expanded-qualification/summary.json', 'correctness_passed')):
+              path = Path(location)
+              if not path.exists():
+                  failures.append(label + ': missing report')
+                  continue
+              report = json.loads(path.read_bytes())
+              gates = report.get('gates', [])
+              required = [g for g in gates if g.get('required', True)]
+              report_passed = (len(gates) >= minimum_gates[label] and bool(required)
+                               and all(g['passed'] is True for g in required)
+                               and report.get(acceptance_flag) is True)
+              if label.startswith('producer-delta'):
+                  expected_profile = ('std-hashmap-expanded-v1' if label.endswith('-expanded')
+                                      else 'original-qualified-3436')
+                  report_passed = (report_passed and report.get('run_completed') is True
+                                   and report.get('qualification_status') == 'PASS'
+                                   and report.get('profile') == expected_profile)
+              if not report_passed:
+                  failures.append(label + ': correctness failure')
+              value = {'source_sha': observations['source_sha'],
+                       'summary_sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
+                       'gates': len(gates),
+                       'required_gates': len(required),
+                       'minimum_gates': minimum_gates[label],
+                       'all_gates_passed': bool(gates) and all(g['passed'] for g in gates),
+                       'report_passed': report_passed}
+              if label == 'native-economics':
+                  value.update(economic_status=report['economic_status'],
+                      primary={variant: {arm: data['resources'] for arm, data in report['medians'][variant].items()}
+                               for variant in ('early-definition', 'unrelated-definition')})
+              if label.startswith('producer-delta'):
+                  value.update(economic_status=report.get('economic_status'),
+                      economics=report.get('economics'),
+                      profile=report.get('profile'),
+                      qualification_status=report.get('qualification_status'))
+                  try:
+                      value['compact_phases'] = delta_phase_report(path, report)
+                  except (KeyError, TypeError, ValueError, OSError) as error:
+                      value['phase_extraction_error'] = str(error)
+                      failures.append(label + ': incomplete phase evidence: ' + str(error))
+              observations['reports'][label] = value
+              print('::notice title=' + label + '::' + json.dumps(value, separators=(',', ':')))
+          retained_path = Path('artifacts/retained-qualification/summary.json')
+          if not retained_path.is_file():
+              failures.append('retained-index: missing report')
+          else:
+              import sys
+              sys.path.insert(0, 'experiments/incremental')
+              import qualify_retained_index as retained
+              report = json.loads(retained_path.read_bytes())
+              expected_pairs = [[p, v] for p in ('original', 'expanded') for v in retained.VARIANTS]
+              passed = (report.get('schema') == 'mathgraph.retained-index-qualification.v1'
+                  and report.get('source_sha') == os.environ['GITHUB_SHA']
+                  and report.get('source_worktree_tracked_clean') is True
+                  and report.get('baseline_source') == retained.BASELINE
+                  and report.get('harness_sha256') == hashlib.sha256(Path(retained.__file__).read_bytes()).hexdigest()
+                  and report.get('required_pairs') == expected_pairs
+                  and report.get('required_controls') == ['original:mode-boundary', 'expanded:mode-boundary']
+                  and report.get('repetitions') == 5
+                  and retained.completed(report, 5)
+                  and report.get('correctness_passed') is True
+                  and report.get('qualification_status') == 'PASS')
+              observations['reports']['retained-index'] = dict(report_passed=passed,
+                  source_sha=report.get('source_sha'), baseline_source=report.get('baseline_source'),
+                  summary_sha256=hashlib.sha256(retained_path.read_bytes()).hexdigest(),
+                  samples=len(report.get('samples', [])), gates=len(report.get('gates', [])),
+                  economics=report.get('economics'), same_cone_scaling=report.get('same_cone_scaling'))
+              if not passed:
+                  failures.append('retained-index: incomplete, wrong-source or failed report')
+              print('::notice title=retained-index::' + json.dumps(observations['reports']['retained-index'], separators=(',', ':')))
+          fixture_path = Path('artifacts/retained-independent-fixtures/summary.json')
+          if not fixture_path.is_file():
+              failures.append('retained-independent-fixtures: missing report')
+          else:
+              fixture = json.loads(fixture_path.read_bytes())
+              fixture_passed = (fixture.get('passed') is True and fixture.get('complete') is True
+                  and fixture.get('status') == 'PASS_INDEPENDENT_RETAINED_SCC_FIXTURES'
+                  and fixture.get('fixture_count') == 26 and len(fixture.get('cases', [])) == 26
+                  and fixture.get('oracle_source') == '4496042c75368f6c35675a9b131c960080afa518'
+                  and fixture.get('oracle_source_sha256') == '216662587fafcb6880f4354e3794dcd766cb305d4c098e348dcf33326c513905'
+                  and fixture.get('helper_sha256') == hashlib.sha256(Path('experiments/incremental/replay_retained_index.py').read_bytes()).hexdigest()
+                  and fixture.get('tools', {}).get('index-session', {}).get('sha256') == hashlib.sha256(Path('target/release/index-session').read_bytes()).hexdigest())
+              observations['reports']['retained-independent-fixtures'] = dict(passed=fixture_passed,
+                  fixture_count=fixture.get('fixture_count'), summary_sha256=hashlib.sha256(fixture_path.read_bytes()).hexdigest())
+              if not fixture_passed:
+                  failures.append('retained-independent-fixtures: incomplete, wrong-source or failed report')
+          observations['isolated_finish_microbenchmarks'] = {}
+          for profile in ('original', 'expanded'):
+              for variant in ('early-definition', 'unrelated-definition'):
+                  label = profile + ':' + variant
+                  path = Path('artifacts/retained-microbenchmark-' + profile + '-' + variant + '.log')
+                  if not path.is_file():
+                      failures.append('isolated-finish: missing ' + label)
+                      continue
+                  records = []
+                  for line in path.read_text().splitlines():
+                      if 'RETAINED_BENCH ' not in line:
+                          continue
+                      text = line.split('RETAINED_BENCH ', 1)[1]
+                      record, end = json.JSONDecoder().raw_decode(text)
+                      if text[end:].strip() not in ('', 'ok'):
+                          raise ValueError('unexpected microbenchmark output suffix')
+                      records.append(record)
+                  if (len(records) != 1 or records[0].get('schema') != 'mathgraph.retained-finish-microbenchmark.v1'
+                          or records[0].get('repetitions') != 7 or len(records[0].get('samples', [])) != 7
+                          or any(row.get('parity') is not True for row in records[0]['samples'])):
+                      failures.append('isolated-finish: incomplete parity evidence ' + label)
+                      continue
+                  observations['isolated_finish_microbenchmarks'][label] = dict(
+                      passed=True, log_sha256=hashlib.sha256(path.read_bytes()).hexdigest(), report=records[0])
+          sparse_path = Path('artifacts/sparse-receipt-benchmark/summary.json')
+          if not sparse_path.is_file():
+              failures.append('sparse-storage: missing report')
+          else:
+              sparse = json.loads(sparse_path.read_bytes())
+              cases = {p + ':' + v for p in ('original', 'expanded')
+                       for v in ('early-definition', 'unrelated-definition')}
+              samples = sparse.get('samples', [])
+              expected_samples = {(p, v, i) for p in ('original', 'expanded')
+                                  for v in ('early-definition', 'unrelated-definition') for i in range(5)}
+              observed_samples = [(row.get('profile'), row.get('variant'), row.get('repetition')) for row in samples]
+              inputs = sparse.get('inputs', [])
+              controls = sparse.get('controls', {})
+              sample_phases_valid = all(
+                  row.get(arm, {}).get('includes_original_acceptance_mint') is True
+                  and all(type(row[arm].get(phase, {}).get(field)) in (int, float)
+                          and math.isfinite(row[arm][phase][field]) and row[arm][phase][field] >= 0
+                          for phase in ('write', 'read') for field in ('wall_seconds', 'cpu_seconds'))
+                  for row in samples for arm in ('full', 'sparse'))
+              sparse_passed = (sparse.get('schema') == 'mathgraph.sparse-storage-benchmark.v1'
+                  and sparse.get('source_sha') == os.environ['GITHUB_SHA']
+                  and sparse.get('helper_sha256') == hashlib.sha256(Path('experiments/incremental/benchmark_sparse_receipts.py').read_bytes()).hexdigest()
+                  and sparse.get('engine_sha256') == hashlib.sha256(Path('experiments/incremental/engine.py').read_bytes()).hexdigest()
+                  and sparse.get('scope') == 'storage_only_not_acceptance'
+                  and sparse.get('parity_gate', {}).get('incomplete_smoke_allowed') is False
+                  and sparse.get('parity_gate', {}).get('qualification_status') == 'PASS'
+                  and sparse.get('parity_gate', {}).get('sha256') == hashlib.sha256(retained_path.read_bytes()).hexdigest()
+                  and sparse.get('run_completed') is True and sparse.get('correctness_passed') is True
+                  and sparse.get('qualification_status') == 'PASS'
+                  and len(inputs) == 4 and {r.get('profile', '') + ':' + r.get('variant', '') for r in inputs} == cases
+                  and all(row.get('kernel_source') == os.environ['GITHUB_SHA'] and row.get('summary_sha256') == hashlib.sha256(Path(
+                      'artifacts/delta-expanded-qualification/summary.json' if row['profile'] == 'expanded' else
+                      'artifacts/delta-qualification/summary.json').read_bytes()).hexdigest() for row in inputs)
+                  and len(observed_samples) == 20 and len(set(observed_samples)) == 20
+                  and set(observed_samples) == expected_samples and sample_phases_valid
+                  and set(controls) == cases and all(len(rows) == 11
+                      and all(row.get('passed') is True for row in rows) for rows in controls.values())
+                  and set(sparse.get('economics', {})) == cases
+                  and all(sparse['economics'][case][phase].get('paired_count') == 5
+                      and sparse['economics'][case][phase].get('status') in ('SPEEDUP', 'NO_SPEEDUP')
+                      for case in cases for phase in ('write', 'read')))
+              observations['reports']['sparse-storage'] = dict(report_passed=sparse_passed,
+                  scope=sparse.get('scope'), samples=len(samples), controls=sum(len(c) for c in controls.values()),
+                  summary_sha256=hashlib.sha256(sparse_path.read_bytes()).hexdigest(), economics=sparse.get('economics'))
+              if not sparse_passed:
+                  failures.append('sparse-storage: incomplete, wrong-source or failed report')
+              print('::notice title=sparse-storage::' + json.dumps(observations['reports']['sparse-storage'], separators=(',', ':')))
+          stable_path = Path('artifacts/source-stability.json')
+          if not stable_path.exists():
+              failures.append('exact-source: missing stability report')
+          else:
+              stable = json.loads(stable_path.read_bytes())
+              if stable.get('passed') is not True or stable.get('source_sha') != os.environ['GITHUB_SHA']:
+                  failures.append('exact-source: source stability failure')
+              observations['source_stability'] = stable
+          observations['qualified_speedup_profiles'] = []
+          if not failures:
+              for label in ('producer-delta-expanded', 'producer-delta'):
+                  value = observations['reports'][label]
+                  if (value['report_passed'] and value['economic_status'] == 'SPEEDUP'
+                          and value.get('economics', {}).get('early-definition', {}).get('passed') is True):
+                      observations['qualified_speedup_profiles'].append(label)
+          observations['failures'] = failures
+          Path('artifacts/ci-observations.json').write_text(json.dumps(observations, indent=2) + '\n')
+          if failures:
+              raise SystemExit('; '.join(failures))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: incremental-retained-index-${{ github.sha }}
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: incremental-retained-index-summaries-${{ github.sha }}
+          path: |
+            artifacts/ci-observations.json
+            artifacts/retained-qualification/summary.json
+            artifacts/retained-qualification/summary.md
+            artifacts/sparse-receipt-benchmark/summary.json
+            artifacts/sparse-receipt-benchmark/summary.md
+            artifacts/retained-independent-fixtures/summary.json
+            artifacts/retained-qualification/compact.json
+            artifacts/qualified449/source-ref.txt
+            artifacts/qualified449/SHA256SUMS
+            artifacts/qualified449/build.log
+            artifacts/source-ref.txt
+            artifacts/source-SHA256SUMS
+            artifacts/source-stability.json
+            artifacts/delta-binaries-SHA256SUMS
+            artifacts/delta-binaries-pretests-SHA256SUMS
+            artifacts/delta-qualification/summary.json
+            artifacts/delta-qualification/summary.md
+            artifacts/delta-qualification/compact-phases.json
+            artifacts/delta-expanded-qualification/summary.json
+            artifacts/delta-expanded-qualification/summary.md
+            artifacts/delta-expanded-qualification/compact-phases.json
+            artifacts/delta-expanded-workloads/manifest.json
+            artifacts/delta-expanded-workloads/producer-ready.json
+            artifacts/delta-producer-tests/report.json
+            artifacts/original-qualification/summary.json
+            artifacts/original-qualification/summary.md
+            artifacts/native-qualification/summary.json
+            artifacts/native-qualification/summary.md
+            artifacts/native-independent-replay/summary.json
+            artifacts/native-benchmark/summary.json
+            artifacts/native-benchmark/summary.md
+            artifacts/native-phase-memory/summary.json
+            artifacts/mathgraph-integration/summary.json
+            artifacts/*.log
+          if-no-files-found: error
+          retention-days: 30
