@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import shutil
 import statistics
+import subprocess
 import sys
 
 from process import run, sha256
@@ -35,7 +36,9 @@ def invoke_engine(export, selected, cache, key, output, previous=None, policy='d
         command += ['--disable-cache']
     resources = run(command, output.with_name(output.stem + '-process'), timeout=900)
     result = json.loads(output.read_text()) if output.exists() else {'status':'UNKNOWN', 'error':'missing result'}
-    return dict(result=result, resources=resources, result_path=str(output),
+    protocol_valid = (output.exists() and not resources['timed_out'] and resources['returncode']==
+                      {'VERIFIED':0,'REJECTED':1,'UNKNOWN':2}.get(result.get('status')))
+    return dict(result=result, resources=resources, result_path=str(output), protocol_valid=protocol_valid,
                 result_sha256=sha256(output) if output.exists() else None)
 
 
@@ -58,12 +61,15 @@ def qualify(args):
     selected = args.checker.resolve()
     full_checker = args.full_checker.resolve()
     tools = manifest['tools']
-    release_pins = json.loads((HERE/'pins.json').read_text())['lean_release_binaries_sha256']
+    pin = json.loads((HERE/'pins.json').read_text())
+    release_pins = pin['lean_release_binaries_sha256']
     for name, expected in release_pins.items():
         if tools[name]['sha256'] != expected or sha256(tools[name]['path']) != expected:
             raise ValueError('independent release executable differs from pin: '+name)
-    for info in manifest['variants'].values():
-        if sha256(info['path']) != info['sha256']:
+    if set(manifest['variants']) != set(pin['export_sha256']):
+        raise ValueError('qualification requires the exact pinned variant set')
+    for name, info in manifest['variants'].items():
+        if sha256(info['path']) != info['sha256'] or info['sha256'] != pin['export_sha256'][name]:
             raise ValueError('workload hash changed: ' + info['path'])
     for tool in ('leanchecker', 'leanchecker-paranoid'):
         if not tools[tool]['exists'] or sha256(tools[tool]['path']) != tools[tool]['sha256']:
@@ -79,6 +85,9 @@ def qualify(args):
     if initialized['returncode']:
         raise RuntimeError('authority initialization failed')
     summary = dict(schema='mathgraph.incremental-qualification.v1',
+                   source_git_commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=REPO,text=True).strip(),
+                   adapter_sha256=sha256(HERE/'engine.py'),
+                   harness_sources_sha256={p.name:sha256(p) for p in sorted(HERE.glob('*.py'))},
                    pins=json.loads((HERE / 'pins.json').read_text()),
                    workload_manifest_sha256=sha256(workloads / 'manifest.json'),
                    checker_sha256=sha256(selected), full_checker_sha256=sha256(full_checker),
@@ -121,7 +130,7 @@ def qualify(args):
     # Same raw bytes enter both mandatory independent C++ implementations.
     for variant, info in manifest['variants'].items():
         summary['oracles'][variant] = {}
-        expected = 'REJECT' if variant in ('invalid-proof', 'axiom-type', 'malformed-unused-dag') else 'ACCEPT'
+        expected = 'REJECT' if variant in ('invalid-proof', 'axiom-type', 'malformed-unused-dag','malformed-unused-typed-node') else 'ACCEPT'
         for tool in ('leanchecker', 'leanchecker-paranoid'):
             record = run([tools[tool]['path'], '--from-export', info['path']], out / 'oracles' / (variant + '-' + tool))
             actual = verdict(record)
@@ -143,13 +152,20 @@ def qualify(args):
             record = run(command, out / 'optional' / tool, timeout=args.optional_timeout)
             summary['optional_kernels'][tool] = dict(status=verdict(record), resources=record,
                                                         binary_sha256=tools[tool]['sha256'])
+            summary['gates'].append(dict(name='optional-'+tool+'-no-disagreement',
+                passed=verdict(record) in ('ACCEPT','DECLINE','ERROR_TIMEOUT')))
+        if all(entry['status']=='ACCEPT' for entry in summary['optional_kernels'].values()):
+            summary['gates'].append(dict(name='lake-paranoid-unsandboxed-agreement',passed=lake_unsandboxed['returncode']==0))
+            summary['gates'].append(dict(name='lake-paranoid-sandboxed-agreement',
+                passed=summary['lake_check_paranoid']['status'] in ('ACCEPT','INFRASTRUCTURE_UNAVAILABLE')))
     # Each invocation is a separate process. Warm results therefore include a real
     # process restart and cache authentication; there is no process-local cache.
     cases = [('no-change','baseline'), ('early-definition','early-definition'),
              ('unrelated-definition','unrelated-definition'), ('theorem-leaf','theorem-leaf'),
              ('type-change','type-change'), ('invalid-proof','invalid-proof'),
              ('axiom-type','axiom-type'), ('toolchain-metadata','toolchain-metadata'),
-             ('malformed-unused-dag','malformed-unused-dag')]
+             ('malformed-unused-dag','malformed-unused-dag'),
+             ('malformed-unused-typed-node','malformed-unused-typed-node')]
     early_id = None
     for name, variant in cases:
         runs = []
@@ -165,12 +181,17 @@ def qualify(args):
                     location/(mode+'.json'), previous=base_id if mode=='incremental' else None,
                     disable=mode=='fresh')
             fresh, incremental = pair['fresh']['result'], pair['incremental']['result']
-            expected = 'UNKNOWN' if variant=='malformed-unused-dag' else 'REJECTED' if variant in ('invalid-proof','axiom-type') else 'VERIFIED'
+            expected = 'UNKNOWN' if variant=='malformed-unused-dag' else 'REJECTED' if variant in ('invalid-proof','axiom-type','malformed-unused-typed-node') else 'VERIFIED'
             agreed = fresh['status']==incremental['status']==expected
             summary['gates'].append(dict(name=f'{name}-{repeat}-agreement', passed=agreed))
             if expected != 'VERIFIED':
                 summary['gates'].append(dict(name=f'{name}-{repeat}-no-evidence',
                     passed=not incremental.get('evidence_id') and not fresh.get('evidence_id')))
+            if variant=='malformed-unused-typed-node':
+                summary['gates'].append(dict(name=f'{name}-{repeat}-real-parser-with-zero-obligations',
+                    passed=incremental.get('counts',{}).get('scheduled')==0 and
+                    incremental.get('counts',{}).get('reused')==incremental.get('counts',{}).get('total') and
+                    incremental.get('checker_result',{}).get('code')==1))
             if name in ('no-change','early-definition','unrelated-definition','theorem-leaf') and agreed:
                 fewer = incremental['counts']['rechecked'] < fresh['counts']['rechecked']
                 summary['gates'].append(dict(name=f'{name}-{repeat}-fewer-kernel-obligations', passed=fewer))
@@ -183,6 +204,19 @@ def qualify(args):
                 summary['gates'].append(dict(name=f'early-definition-{repeat}-changed-cone-rechecked',passed=all(
                     decisions[n]['status']=='VERIFIED_NEW' for n in ['IncrementalWorkload.early',
                     'IncrementalWorkload.dependent','IncrementalWorkload.dependent_spec'])))
+                summary['gates'].append(dict(name=f'early-definition-{repeat}-unrelated-preserved',
+                    passed=decisions['IncrementalWorkload.unrelated']['status']=='VERIFIED_REUSED' and incremental['counts']['reused']>=3000))
+            if incremental['status']=='VERIFIED':
+                decisions = {d['name']:d for d in incremental['decisions']}
+                changed_targets = {'unrelated-definition':['IncrementalWorkload.unrelated'],
+                                   'theorem-leaf':['IncrementalWorkload.leaf'],
+                                   'type-change':['IncrementalWorkload.typed','IncrementalWorkload.typed_identity']}.get(name,[])
+                if changed_targets:
+                    summary['gates'].append(dict(name=f'{name}-{repeat}-edited-targets-rechecked',
+                        passed=all(decisions[n]['status']=='VERIFIED_NEW' for n in changed_targets)))
+                if name=='toolchain-metadata':
+                    summary['gates'].append(dict(name=f'{name}-{repeat}-full-fallback',
+                        passed=incremental['counts']['reused']==0 and incremental['counts']['rechecked']==incremental['counts']['total']))
             runs.append(pair)
         summary['scenarios'][name] = dict(runs=runs)
         print(name, [(p['fresh']['result']['status'],p['incremental']['result']['status'],p['incremental']['result'].get('counts')) for p in runs], flush=True)
@@ -220,6 +254,15 @@ def qualify(args):
         summary['gates'].append(dict(name=name+'-verified',passed=verified))
         if name != 'restore-dependency' and verified:
             summary['gates'].append(dict(name=name+'-full-fallback',passed=result['counts']['rechecked']==result['counts']['total'] and result['counts']['reused']==0))
+        if name=='restore-dependency' and verified:
+            decisions = {d['name']:d for d in result['decisions']}
+            summary['gates'].append(dict(name='restore-dependency-cone-rechecked',passed=result['counts']['reused']>0 and all(
+                decisions[n]['status']=='VERIFIED_NEW' for n in ['IncrementalWorkload.early',
+                    'IncrementalWorkload.dependent','IncrementalWorkload.dependent_spec'])))
+            restored = invoke_engine(baseline,selected,cache,key,out/'controls'/'restored-evidence-reuse.json',result['evidence_id'])
+            summary['scenarios']['restored-evidence-reuse'] = restored
+            summary['gates'].append(dict(name='restored-evidence-fully-reused',passed=restored['result']['status']=='VERIFIED' and
+                restored['result']['counts']['rechecked']==0 and restored['result']['counts']['reused']==restored['result']['counts']['total']))
     # A real ELF with an appended section still runs, but its identity changed.
     changed_checker = out / 'changed-checker'
     shutil.copy2(selected, changed_checker)
@@ -271,6 +314,17 @@ def qualify(args):
         snapshot_bytes=sum(p.stat().st_size for p in (cache/'exports').glob('*') if p.is_file()),
         evidence_bytes=sum(p.stat().st_size for p in (cache/'records').glob('*') if p.is_file()),
         evidence_records=sum(1 for p in (cache/'records').glob('*') if p.is_file()))
+    def invocation_protocols(value):
+        if isinstance(value,dict):
+            if 'protocol_valid' in value:
+                yield (value['result_path'],value['protocol_valid'])
+            for nested in value.values():
+                yield from invocation_protocols(nested)
+        elif isinstance(value,list):
+            for nested in value:
+                yield from invocation_protocols(nested)
+    for path,valid in list(invocation_protocols(summary)):
+        summary['gates'].append(dict(name='engine-exit-protocol:'+str(Path(path).relative_to(out)),passed=valid))
     summary['qualification_passed'] = all(g['passed'] for g in summary['gates'])
     summary['scope'] = ('Authenticated selected-obligation work reduction and exact-export oracle agreement. '
         'Timing medians are observations; edit speedup is not assumed. The bounded Lean theorem '

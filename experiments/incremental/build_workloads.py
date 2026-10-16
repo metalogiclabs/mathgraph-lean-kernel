@@ -68,6 +68,12 @@ def mutate(baseline, out, kind):
         # All declarations remain byte-for-byte identical. Parsing the complete
         # stream must still fail; reusing the old declarations cannot accept it.
         records.append({'ie':999999999,'app':{'fn':999999997,'arg':999999998}})
+    elif kind == 'malformed-unused-typed-node':
+        # The identity extractor can hash this unused scalar row without
+        # changing any declaration. The real Rust parser must still run even
+        # when the scheduled kernel obligation list is empty, and reject it.
+        records.append({'ie':max(obj['ie'] for obj in records if 'ie' in obj)+1,
+                        'bvar':'not-an-integer'})
     else:
         raise ValueError(kind)
     with out.open('w') as stream:
@@ -113,6 +119,8 @@ def build(out, elan):
         if exported['returncode'] or 'Constant ' in stderr or 'PANIC' in stderr or not export.stat().st_size:
             raise RuntimeError('incomplete export: ' + variant + ': ' + stderr)
         info = describe(export)
+        if info['sha256'] != pin['export_sha256'][variant]:
+            raise RuntimeError('generated export differs from exact development pin: '+variant)
         metadata = json.loads(export.open().readline())['meta']['lean']
         if metadata['githash'] != pin['lean_githash'] or metadata['version'] != '4.35.0':
             raise RuntimeError('export compiler metadata differs from pinned toolchain')
@@ -121,13 +129,15 @@ def build(out, elan):
         info.update(build=built, export_process=exported, source_sha256={str(p.relative_to(source)):sha256(p) for p in source.rglob('*.lean')})
         manifest['variants'][variant] = info
     baseline = out / 'baseline' / 'export.ndjson'
-    for variant in ('invalid-proof', 'axiom-type', 'toolchain-metadata', 'malformed-unused-dag'):
+    for variant in ('invalid-proof', 'axiom-type', 'toolchain-metadata', 'malformed-unused-dag', 'malformed-unused-typed-node'):
         target = out / variant
         target.mkdir(exist_ok=True)
         export = target / 'export.ndjson'
         mutate(baseline, export, variant)
         manifest['variants'][variant] = dict(**describe(export), mutation=variant,
             original_export_sha256=sha256(baseline), scope='NDJSON boundary mutation; not a source proof')
+        if manifest['variants'][variant]['sha256'] != pin['export_sha256'][variant]:
+            raise RuntimeError('boundary mutation differs from exact export pin: '+variant)
     (out / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
     return manifest
 
