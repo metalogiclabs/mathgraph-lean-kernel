@@ -71,7 +71,13 @@ def qualify(qualification, mathgraph, out):
         result_path = qualification / 'scenarios/early-definition/0/incremental.json'
         result_raw = result_path.read_bytes()
         result = strict_json(result_raw)
-        require(canonical(result) == canonical(pair['incremental']['result']),
+        expected_result = pair['incremental']['result_sha256']
+        require(hashlib.sha256(result_raw).hexdigest() == expected_result,
+                'RESULT_BYTES_DIFFER_FROM_QUALIFIED_SUMMARY')
+        compact_result = pair['incremental']['result']
+        require(type(compact_result) is dict
+                and all(key in result and canonical(value) == canonical(result[key])
+                        for key, value in compact_result.items()),
                 'RESULT_DIFFERS_FROM_QUALIFIED_SUMMARY')
         require(result.get('status') == 'VERIFIED'
                 and result.get('export_sha256') == expected_export,
@@ -81,7 +87,6 @@ def qualify(qualification, mathgraph, out):
         # Only now, after exact-export qualification, may this trusted caller
         # select the successful result's evidence identity and exact byte pin.
         expected_evidence = result['evidence_id']
-        expected_result = hashlib.sha256(result_raw).hexdigest()
         _, resolver_digest = pinned_resolver(mathgraph)
         report['resolver_source_sha256'] = resolver_digest
         report['admission'] = dict(result_path=str(result_path),

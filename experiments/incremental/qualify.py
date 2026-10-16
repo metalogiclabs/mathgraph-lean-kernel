@@ -234,7 +234,7 @@ def qualify(args):
     restart = invoke_engine(baseline,selected,cache,key,out/'controls'/'cold-process-restart.json',base_id)
     summary['scenarios']['cold-process-restart'] = restart
     initial_warm = summary['scenarios']['no-change']['runs'][0]['incremental']['result']
-    comparable = lambda r:[(d['index'],d['name'],d['status'],d['reason'],d['dependencies']) for d in r.get('decisions',[])]
+    comparable = lambda r:[(d['index'],d['name'],d['status'],d['reason'],d['dependency_witness']) for d in r.get('decisions',[])]
     summary['gates'].append(dict(name='cold-process-restart-identical-decisions',passed=
         restart['result']['status']=='VERIFIED' and comparable(restart['result'])==comparable(initial_warm)))
     for name in [case[0] for case in cases]:
