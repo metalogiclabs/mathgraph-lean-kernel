@@ -10,6 +10,9 @@ use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::error::Error;
 use std::sync::Arc;
+mod retained;
+pub use retained::FinishStats;
+use retained::RetainedGraph;
 
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
 const BUILTINS: &str = "Quot Quot.mk Quot.lift Quot.ind String String.ofList Nat Nat.zero Nat.succ Nat.add Nat.sub Nat.mul Nat.pow Nat.mod Nat.div Nat.div.go Nat.modCore.go Nat.beq Nat.ble Nat.gcd Nat.land Nat.lor Nat.xor Nat.shiftLeft Nat.shiftRight Bool.true Bool.false Char Char.ofNat List List.nil List.cons";
@@ -63,7 +66,7 @@ impl Serialize for HexFingerprint {
         serializer.serialize_str(std::str::from_utf8(&bytes).expect("hexadecimal ASCII"))
     }
 }
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 struct ExportDeclaration {
     key: HexFingerprint,
     name: String,
@@ -74,7 +77,7 @@ struct ExportDeclaration {
     closure: HexFingerprint,
 }
 /// The same JSON index schema returned by the Python identity oracle.
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct ExportIdentityIndex {
     meta: Value,
     declarations: Vec<ExportDeclaration>,
@@ -96,6 +99,9 @@ pub struct IdentityBuilder {
     rows: usize,
     buffer: Vec<u8>,
     delta_attempted: bool,
+    by_key: FxHashMap<Fingerprint, usize>,
+    retained: Option<RetainedGraph>,
+    retained_topology: Option<Arc<retained::RetainedTopology>>,
 }
 #[derive(Serialize)]
 pub struct IdentityDelta {
@@ -103,6 +109,7 @@ pub struct IdentityDelta {
     pub rows_processed: usize,
     pub dag_rows: usize,
     pub replaced_names: Vec<String>,
+    pub finish_stats: FinishStats,
 }
 impl IdentityBuilder {
     pub(crate) fn new(input_len: usize) -> Self {
@@ -117,6 +124,9 @@ impl IdentityBuilder {
             rows: 0,
             buffer: Vec::with_capacity(512),
             delta_attempted: false,
+            by_key: new_fx_hash_map(),
+            retained: None,
+            retained_topology: None,
         }
     }
     fn begin(&mut self) -> Result<()> {
@@ -495,6 +505,7 @@ impl IdentityBuilder {
         if kind == "axiom" && !["propext", "Classical.choice", "Quot.sound"].contains(&n.display.as_str()) {
             return failure(format!("nonstandard axiom forbidden: {}", n.display));
         }
+        self.by_key.insert(n.hash, self.declarations.len());
         self.declarations.push(Declaration {
             key: n.hash,
             name: n.display,
@@ -635,9 +646,32 @@ impl IdentityBuilder {
     /// Apply one baseline-anchored update. On any error the session is poisoned;
     /// callers must terminate it rather than consume possibly partial state.
     /// All rows still require the ordinary full selected checker downstream.
+    pub fn prepare_retained(&mut self) -> Result<ExportIdentityIndex> {
+        if self.delta_attempted { return failure("cannot prepare an attempted identity session"); }
+        if self.retained.is_none() {
+            self.by_key = self.declarations.iter().enumerate().map(|(i, d)| (d.key, i)).collect();
+            let prepared = RetainedGraph::prepare(self, self.finish()?)?;
+            self.retained_topology = Some(prepared.topology());
+            self.retained = Some(prepared);
+        }
+        Ok(self.retained.as_ref().unwrap().baseline())
+    }
     pub fn apply_delta(&mut self, input: &str) -> Result<IdentityDelta> {
+        self.apply_delta_mode(input, false)
+    }
+    pub fn apply_delta_full(&mut self, input: &str) -> Result<IdentityDelta> {
+        self.apply_delta_mode(input, true)
+    }
+    fn apply_delta_mode(&mut self, input: &str, force_full: bool) -> Result<IdentityDelta> {
         if self.delta_attempted { return failure("identity session permits only one delta attempt"); }
+        if !force_full && self.retained.is_none() {
+            if let Err(error) = self.prepare_retained() { self.delta_attempted = true; return Err(error); }
+        }
         self.delta_attempted = true;
+        let prepared = self.retained.take();
+        let mut changed_positions = Vec::new();
+        let mut positions = Vec::new();
+        let mut builtin_name_inserted = false;
         let mut rows_processed = 0;
         let mut dag_rows = 0;
         let mut replaced_names = Vec::new();
@@ -651,7 +685,7 @@ impl IdentityBuilder {
             if simple(tag) {
                 if row.len() != 1 { return failure("index attached to declaration"); }
                 let key = self.name(Self::uint(&row[tag]["name"])?)?.hash;
-                let Some(position) = self.declarations.iter().position(|d| d.key == key) else {
+                let Some(position) = self.by_key.get(&key).copied() else {
                     return failure("delta cannot introduce a declaration");
                 };
                 if self.declarations[position].kind != tag { return failure("delta cannot change declaration kind"); }
@@ -659,18 +693,31 @@ impl IdentityBuilder {
                 self.seen.remove(&key);
                 self.observe_general(line)?;
                 let replacement = self.declarations.pop().ok_or("replacement missing")?;
+                if replacement.own != self.declarations[position].own { changed_positions.push(position); }
                 replaced_names.push(replacement.name.clone());
                 self.declarations[position] = replacement;
+                self.by_key.insert(key, position);
+                positions.push(position);
             } else {
                 if !matches!(tag, "str" | "num" | "succ" | "max" | "imax" | "param" | "bvar" | "sort" | "const" | "app" | "lam" | "forallE" | "letE" | "proj" | "natVal" | "strVal") {
                     return failure("delta metadata and complex declarations are unsupported");
                 }
                 self.observe_general(line)?;
+                if matches!(tag, "str" | "num") {
+                    let name = self.name(Self::uint(&row["in"])?)?;
+                    builtin_name_inserted |= BUILTINS.split_whitespace().any(|b| b == name.display);
+                }
                 dag_rows += 1;
             }
             rows_processed += 1;
         }
-        Ok(IdentityDelta { index: self.finish()?, rows_processed, dag_rows, replaced_names })
+        let finish_clock = retained::Clock::start();
+        let (index, mut finish_stats) = if force_full {
+            drop(prepared);
+            retained::full_finish(self, &changed_positions, "forced_full_finish")?
+        } else { prepared.ok_or("retained baseline missing")?.finish(self, &positions, builtin_name_inserted)? };
+        (finish_stats.finish_wall_seconds, finish_stats.finish_cpu_seconds) = finish_clock.elapsed();
+        Ok(IdentityDelta { index, rows_processed, dag_rows, replaced_names, finish_stats })
     }
     pub fn finish(&self) -> Result<ExportIdentityIndex> {
         let mut by_key: FxHashMap<Fingerprint, usize> = new_fx_hash_map();
@@ -870,4 +917,265 @@ mod session_tests {
         ];
         for delta in cases { let mut retained=builder();assert!(retained.apply_delta(&delta).is_err(),"accepted {delta}");assert!(retained.apply_delta(&replacement(0)).is_err(),"failure must poison session"); }
     }
+}
+
+#[cfg(test)]
+mod retained_contract_tests {
+    use super::*;
+
+    fn graph(deps: &[Vec<usize>]) -> IdentityBuilder {
+        let mut builder = IdentityBuilder::new(0);
+        builder.observe_general(r#"{"meta":{"format":{"version":"3.1.0"}}}"#).unwrap();
+        for i in 0..deps.len() {
+            builder.name_str(i as u32 + 1, 0, &format!("node{i}")).unwrap();
+        }
+        for (i, edges) in deps.iter().enumerate() {
+            builder.declarations.push(Declaration {
+                key: builder.name(i as u32 + 1).unwrap().hash,
+                name: format!("node{i}"), kind: "def".into(), own: digest_bytes(&[i as u8]),
+                deps: edges.iter().map(|j| builder.name(*j as u32 + 1).unwrap().hash).collect(),
+            });
+        }
+        builder
+    }
+
+    #[test]
+    fn retained_fixed_edges_reclose_only_reverse_cone_and_match_full() {
+        let mut builder = graph(&[vec![], vec![0], vec![1], vec![]]);
+        let baseline = serde_json::to_value(builder.prepare_retained().unwrap()).unwrap();
+        let prepared = builder.retained.take().unwrap();
+        builder.declarations[0].own = digest_bytes(b"changed");
+        let (actual, stats) = prepared.finish(&builder, &[0], false).unwrap();
+        assert_eq!(serde_json::to_value(&actual).unwrap(), serde_json::to_value(builder.finish().unwrap()).unwrap());
+        assert_eq!(stats.mode, "retained");
+        assert_eq!((stats.changed_sccs, stats.affected_sccs, stats.affected_declarations), (1, 3, 3));
+        assert_eq!((stats.closure_hashes, stats.total_declarations), (3, 4));
+        assert_eq!(serde_json::to_value(&actual).unwrap()["declarations"][3], baseline["declarations"][3]);
+    }
+
+    fn equal_full(builder: &IdentityBuilder, actual: &ExportIdentityIndex) {
+        assert_eq!(serde_json::to_value(actual).unwrap(), serde_json::to_value(builder.finish().unwrap()).unwrap());
+    }
+    #[test]
+    fn retained_cycles_multiple_changes_nonsimple_members_and_reverse_cone() {
+        let mut builder = graph(&[vec![1], vec![0], vec![0], vec![2], vec![]]);
+        builder.declarations[1].kind = "ctor".into();
+        let old = builder.prepare_retained().unwrap();
+        let prepared = builder.retained.take().unwrap();
+        builder.declarations[0].own = digest_bytes(b"changed-member");
+        let (actual, stats) = prepared.finish(&builder, &[0], false).unwrap();
+        equal_full(&builder, &actual);
+        assert_eq!((stats.changed_sccs, stats.affected_sccs, stats.affected_declarations), (1, 3, 4));
+        assert_eq!(actual.complex.0, old.complex.0);
+        assert_ne!(actual.declarations[1].closure.0, old.declarations[1].closure.0);
+        assert_eq!(actual.declarations[4].closure.0, old.declarations[4].closure.0);
+
+        let mut builder = graph(&[vec![1], vec![0], vec![0], vec![2], vec![]]);
+        builder.prepare_retained().unwrap();
+        let prepared = builder.retained.take().unwrap();
+        builder.declarations[0].own = digest_bytes(b"first");
+        builder.declarations[1].own = digest_bytes(b"second");
+        let (actual, stats) = prepared.finish(&builder, &[1, 0], false).unwrap();
+        equal_full(&builder, &actual);
+        assert_eq!((stats.changed_declarations, stats.changed_sccs, stats.affected_declarations), (2, 1, 4));
+    }
+    #[test]
+    fn retained_two_changed_components_dependency_first_and_restoration() {
+        let mut builder = graph(&[vec![], vec![0], vec![1], vec![]]);
+        let original = builder.prepare_retained().unwrap();
+        let original_own = builder.declarations[0].own;
+        let prepared = builder.retained.take().unwrap();
+        builder.declarations[0].own = digest_bytes(b"first");
+        builder.declarations[1].own = digest_bytes(b"second");
+        let (actual, stats) = prepared.finish(&builder, &[1, 0], false).unwrap();
+        equal_full(&builder, &actual);
+        assert_eq!((stats.changed_sccs, stats.affected_sccs), (2, 3));
+        assert!(stats.recomputed_sccs.windows(2).all(|w| w[0] > w[1]));
+        // Restoration is a new owned baseline, never a second production update.
+        let mut restored = graph(&[vec![], vec![0], vec![1], vec![]]);
+        restored.declarations[0].own = digest_bytes(b"first");
+        restored.prepare_retained().unwrap();
+        let prepared = restored.retained.take().unwrap();
+        restored.declarations[0].own = original_own;
+        let (actual, _) = prepared.finish(&restored, &[0], false).unwrap();
+        assert_eq!(serde_json::to_value(actual).unwrap(), serde_json::to_value(original).unwrap());
+    }
+    #[test]
+    fn retained_noop_keeps_all_roots_and_does_zero_hash_work() {
+        let mut builder = graph(&[vec![], vec![0]]);
+        let original = builder.prepare_retained().unwrap();
+        let prepared = builder.retained.take().unwrap();
+        let (actual, stats) = prepared.finish(&builder, &[0], false).unwrap();
+        assert_eq!(serde_json::to_value(actual).unwrap(), serde_json::to_value(original).unwrap());
+        assert_eq!((stats.changed_declarations, stats.affected_sccs, stats.closure_hashes), (0, 0, 0));
+        assert!(stats.affected_keys.is_empty());
+    }
+    #[test]
+    fn retained_cycle_split_and_retarget_and_negative_change_fall_back() {
+        for (deps, position, next) in [
+            (vec![vec![1], vec![0]], 1, vec![]),
+            (vec![vec![1], vec![], vec![]], 0, vec![2]),
+        ] {
+            let mut builder = graph(&deps);
+            builder.prepare_retained().unwrap();
+            let prepared = builder.retained.take().unwrap();
+            builder.declarations[position].own = digest_bytes(b"edge-change");
+            builder.declarations[position].deps = next.into_iter().map(|i| builder.declarations[i].key).collect();
+            let (actual, stats) = prepared.finish(&builder, &[position], false).unwrap();
+            equal_full(&builder, &actual);
+            assert_eq!(stats.reason.as_deref(), Some("dependency_edges_changed"));
+        }
+        let mut builder = graph(&[vec![]]);
+        builder.declarations[0].deps = vec![digest_bytes(b"missing-x")];
+        builder.prepare_retained().unwrap();
+        let prepared = builder.retained.take().unwrap();
+        builder.declarations[0].deps = vec![digest_bytes(b"missing-y")];
+        let (actual, stats) = prepared.finish(&builder, &[0], false).unwrap();
+        equal_full(&builder, &actual);
+        assert_eq!(stats.reason.as_deref(), Some("dependency_edges_changed"));
+    }
+    #[test]
+    fn retained_refreshes_builtin_helper_closure_and_falls_back_on_global_own() {
+        let mut builder = graph(&[vec![], vec![0]]);
+        builder.name_str(3, 0, "String").unwrap();
+        builder.name_str(4, 3, "ofList").unwrap();
+        builder.declarations[1].name = "String.ofList".into();
+        builder.declarations[1].key = builder.name(4).unwrap().hash;
+        let original = builder.prepare_retained().unwrap();
+        let prepared = builder.retained.take().unwrap();
+        builder.declarations[0].own = digest_bytes(b"helper");
+        let (actual, _) = prepared.finish(&builder, &[0], false).unwrap();
+        equal_full(&builder, &actual);
+        assert_ne!(actual.builtins["String.ofList"].1.unwrap().0, original.builtins["String.ofList"].1.unwrap().0);
+        for axiom in [true, false] {
+            let mut builder = graph(&[vec![]]);
+            if axiom { builder.declarations[0].kind = "axiom".into(); }
+            else {
+                builder.name_str(2, 0, "Nat").unwrap();
+                builder.declarations[0].key = builder.name(2).unwrap().hash;
+                builder.declarations[0].name = "Nat".into();
+            }
+            builder.prepare_retained().unwrap();
+            let prepared = builder.retained.take().unwrap();
+            builder.declarations[0].own = digest_bytes(b"global");
+            let (actual, stats) = prepared.finish(&builder, &[0], false).unwrap();
+            equal_full(&builder, &actual);
+            assert_eq!(stats.reason.as_deref(), Some(if axiom {"axiom_assumption_changed"} else {"builtin_declaration_changed"}));
+        }
+    }
+    #[test]
+    fn retained_sparse_name_holes_builtin_presence_and_ambiguity() {
+        let mut builder = graph(&[vec![]]);
+        builder.name_str(100, 0, "sparse").unwrap();
+        builder.prepare_retained().unwrap();
+        let delta = r#"{"in":2,"str":{"pre":0,"str":"Nat"}}"#;
+        let update = builder.apply_delta(delta).unwrap();
+        assert_eq!(update.finish_stats.reason.as_deref(), Some("builtin_name_inventory_changed"));
+        assert!(update.index.builtins["Nat"].0.is_some());
+        equal_full(&builder, &update.index);
+        for same_key in [true, false] {
+            let mut builder = graph(&[vec![]]);
+            builder.name_str(2, 0, "Nat.add").unwrap();
+            builder.name_str(100, 0, "Nat").unwrap();
+            builder.prepare_retained().unwrap();
+            let delta = if same_key {r#"{"in":3,"str":{"pre":0,"str":"Nat.add"}}"#}
+                else {r#"{"in":3,"str":{"pre":100,"str":"add"}}"#};
+            assert!(builder.apply_delta(delta).is_err());
+            assert!(builder.apply_delta("").is_err());
+        }
+    }
+
+    #[test]
+    fn retained_edge_change_and_unresolved_dependency_change_use_full_oracle() {
+        for negative in [false, true] {
+            let mut builder = graph(&[vec![], vec![0], vec![]]);
+            builder.prepare_retained().unwrap();
+            let prepared = builder.retained.take().unwrap();
+            builder.declarations[0].own = digest_bytes(b"changed");
+            builder.declarations[0].deps = vec![if negative { digest_bytes(b"missing-name") } else {builder.declarations[1].key}];
+            let (actual, stats) = prepared.finish(&builder, &[0], false).unwrap();
+            assert_eq!(stats.mode, "full");
+            assert_eq!(stats.reason.as_deref(), Some("dependency_edges_changed"));
+            assert_eq!(serde_json::to_value(actual).unwrap(), serde_json::to_value(builder.finish().unwrap()).unwrap());
+        }
+    }
+    /// Parse and mutate exactly once. Repetition setup clones only the private baseline
+    /// graph outside measurement; no checker, parser, serialization, or IPC is timed.
+    #[test]
+    #[ignore = "set RETAINED_BENCH_EXPORT and RETAINED_BENCH_DELTA to genuine workload files"]
+    fn benchmark_retained_finish_same_parsed_mutation() {
+        let export = std::env::var("RETAINED_BENCH_EXPORT").expect("RETAINED_BENCH_EXPORT");
+        let delta = std::env::var("RETAINED_BENCH_DELTA").expect("RETAINED_BENCH_DELTA");
+        let repetitions = std::env::var("RETAINED_BENCH_REPETITIONS").ok().map(|s| s.parse::<usize>().unwrap()).unwrap_or(7);
+        assert!(repetitions >= 5);
+        let config = serde_json::from_value(json!({"use_stdin":true,"num_threads":1,
+            "permitted_axioms":["propext","Classical.choice","Quot.sound"],
+            "nat_extension":true,"string_extension":true})).unwrap();
+        let input = std::fs::read(export).unwrap();
+        let mut builder = crate::parser::export_identity_builder(&input, config).unwrap();
+        let prepare_clock = retained::Clock::start();
+        builder.prepare_retained().unwrap();
+        let (prepare_wall, prepare_cpu) = prepare_clock.elapsed();
+        let prepared = builder.retained.take().unwrap();
+        builder.retained = Some(prepared.clone());
+        let update = builder.apply_delta(&std::fs::read_to_string(delta).unwrap()).unwrap();
+        assert_eq!(update.finish_stats.mode, "retained", "benchmark requires edge-preserving input");
+        let baseline = prepared.baseline();
+        let positions = builder.declarations.iter().enumerate().filter(|(i, d)|
+            d.own != baseline.declarations[*i].own.0).map(|(i, _)| i).collect::<Vec<_>>();
+        let expected = serde_json::to_value(&update.index).unwrap();
+        let mut samples = Vec::new();
+        for repetition in 0..repetitions {
+            let candidate = prepared.clone(); // explicit cold/reset work, never inside timer
+            let measure_retained = |candidate: RetainedGraph| {
+                let call = retained::Clock::start();
+                let (index, mut stats) = candidate.finish(&builder, &positions, false).unwrap();
+                (stats.finish_wall_seconds, stats.finish_cpu_seconds) = call.elapsed();
+                (index, stats)
+            };
+            let measure_full = || {
+                let call = retained::Clock::start();
+                let (index, mut stats) = retained::full_finish(&builder, &positions, "benchmark_full_finish").unwrap();
+                (stats.finish_wall_seconds, stats.finish_cpu_seconds) = call.elapsed();
+                (index, stats)
+            };
+            let ((retained, stats), (full, full_stats)) = if repetition % 2 == 0 {
+                let left = measure_retained(candidate);
+                (left, measure_full())
+            } else {
+                let right = measure_full();
+                (measure_retained(candidate), right)
+            };
+            assert_eq!(serde_json::to_value(&retained).unwrap(), expected);
+            assert_eq!(serde_json::to_value(full).unwrap(), expected);
+            samples.push(json!({"repetition":repetition,"parity":true,"retained":stats,
+                "full_compute_wall_seconds":full_stats.compute_wall_seconds,
+                "full_compute_cpu_seconds":full_stats.compute_cpu_seconds,
+                "full_finish_wall_seconds":full_stats.finish_wall_seconds,
+                "full_finish_cpu_seconds":full_stats.finish_cpu_seconds}));
+        }
+        println!("RETAINED_BENCH {}", json!({"schema":"mathgraph.retained-finish-microbenchmark.v1",
+            "scope":"same parsed mutation; baseline graph clones outside timers; complete output parity",
+            "repetitions":repetitions,"prepare_wall_seconds":prepare_wall,"prepare_cpu_seconds":prepare_cpu,
+            "samples":samples}));
+    }
+
+    #[test]
+    fn retained_topology_lives_until_the_owning_session_is_dropped() {
+        let mut builder = graph(&[vec![], vec![0], vec![1], vec![]]);
+        builder.prepare_retained().unwrap();
+        let weak = Arc::downgrade(builder.retained_topology.as_ref().unwrap());
+        assert_eq!(weak.strong_count(), 2);
+        let prepared = builder.retained.take().unwrap();
+        builder.declarations[0].own = digest_bytes(b"changed");
+        let (index, stats) = prepared.finish(&builder, &[0], false).unwrap();
+        equal_full(&builder, &index);
+        assert_eq!(stats.touched_declarations, 3);
+        // No per-declaration topology destruction happens before the response is emitted.
+        assert_eq!(weak.strong_count(), 1);
+        assert!(weak.upgrade().is_some());
+        drop(builder);
+        assert!(weak.upgrade().is_none());
+    }
+
 }

@@ -1,5 +1,9 @@
 # Authenticated producer deltas
 
+This page records the full-finish producer-delta baseline qualified at source
+`4496042`. The [retained declaration-index continuation](retained-index.md)
+documents the successor experiment and its explicit full control.
+
 This bounded experiment continues qualified source `c5ab12699338aa57b7e9d48b15d4a7409e453c7b`.
 Its objective is a complete warm changed-input transaction faster than direct
 fresh Rust checking. Economic results require the exact-source qualification;

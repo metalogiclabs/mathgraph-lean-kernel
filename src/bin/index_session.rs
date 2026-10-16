@@ -26,8 +26,10 @@ fn emit(value: &impl serde::Serialize) -> Result<(), Box<dyn Error>> {
 
 fn run() -> Result<(), Box<dyn Error>> {
     let args = std::env::args().skip(1).collect::<Vec<_>>();
-    let [config_path] = args.as_slice() else {
-        return Err("usage: index-session CONFIG".into());
+    let (config_path, full_finish) = match args.as_slice() {
+        [config_path] => (config_path, false),
+        [config_path, option] if option == "--full-finish" => (config_path, true),
+        _ => return Err("usage: index-session CONFIG [--full-finish]".into()),
     };
     let config = Config::try_from(Path::new(config_path))?;
     let path = config.export_file_path.as_ref().ok_or("index-session requires baseline export_file_path")?;
@@ -35,16 +37,21 @@ fn run() -> Result<(), Box<dyn Error>> {
     let map = unsafe { memmap2::Mmap::map(&file) }?;
     let mut identity = sokonanoda::parser::export_identity_builder(&map, config)?;
     drop(map);
-    emit(&json!({"status":"ready", "index":identity.finish()?}))?;
+    let setup = std::time::Instant::now();
+    let baseline = if full_finish { identity.finish()? } else { identity.prepare_retained()? };
+    let prepare_wall_seconds = setup.elapsed().as_secs_f64();
+    emit(&json!({"status":"ready", "index":baseline,
+        "identity_mode":if full_finish {"full"} else {"retained"},
+        "prepare_wall_seconds":prepare_wall_seconds}))?;
     for line in std::io::stdin().lock().lines() {
         // Struct deserialization rejects duplicate fields, unknown fields,
         // malformed JSON and unescaped controls before any DAG mutation.
         let request: Request = serde_json::from_str(&line?)?;
         let delta = std::fs::read_to_string(request.delta_path)?;
-        let update = identity.apply_delta(&delta)?;
+        let update = if full_finish { identity.apply_delta_full(&delta)? } else { identity.apply_delta(&delta)? };
         emit(&json!({"status":"indexed", "index":update.index,
             "rows_processed":update.rows_processed, "dag_rows":update.dag_rows,
-            "replaced_names":update.replaced_names}))?;
+            "replaced_names":update.replaced_names, "finish_stats":update.finish_stats}))?;
     }
     Ok(())
 }
@@ -73,6 +80,8 @@ mod tests {
         for raw in [
             r#"{"delta_path":"a","delta_path":"b"}"#,
             r#"{"delta_path":"a","authority":"trusted"}"#,
+            r#"{"delta_path":"a","retained_state":{"roots":[]}}"#,
+            r#"{"delta_path":"a","scc_cache_path":"unverified.json"}"#,
             "{\"delta_path\":\"bad\u{0001}\"}",
             r#"{}"#,
         ] {
