@@ -26,11 +26,16 @@ fn emit(value: &impl serde::Serialize) -> Result<(), Box<dyn Error>> {
 
 fn run() -> Result<(), Box<dyn Error>> {
     let args = std::env::args().skip(1).collect::<Vec<_>>();
-    let (config_path, full_index) = match args.as_slice() {
-        [path] => (path, false),
-        [path, flag] if flag == "--full-index" => (path, true),
-        _ => return Err("usage: index-session CONFIG [--full-index]".into()),
-    };
+    let config_path = args.first().ok_or("usage: index-session CONFIG [--full-index|--sparse-response]")?;
+    let flags = &args[1..];
+    if flags.len() > 1 || flags.iter().any(|f| f != "--full-index" && f != "--sparse-response") {
+        return Err("unsupported or duplicated index-session flags".into());
+    }
+    let full_index = flags.iter().any(|f| f == "--full-index");
+    let sparse_response = flags.iter().any(|f| f == "--sparse-response");
+    if full_index && sparse_response {
+        return Err("sparse response requires retained SCC baseline".into());
+    }
     let config = Config::try_from(Path::new(config_path))?;
     let path = config.export_file_path.as_ref().ok_or("index-session requires baseline export_file_path")?;
     let file = std::fs::File::open(path)?;
@@ -41,20 +46,36 @@ fn run() -> Result<(), Box<dyn Error>> {
     // differs. Both return the same canonical full index and require the same
     // source attestation plus independent selected checker downstream.
     let initial_index = if full_index { identity.finish()? } else { identity.prepare_retained()? };
-    emit(&json!({"status":"ready", "index":initial_index}))?;
+    emit(&json!({"status":"ready", "index":&initial_index}))?;
     for line in std::io::stdin().lock().lines() {
         // Struct deserialization rejects duplicate fields, unknown fields,
         // malformed JSON and unescaped controls before any DAG mutation.
         let request: Request = serde_json::from_str(&line?)?;
         let delta = std::fs::read_to_string(request.delta_path)?;
         let update = identity.apply_delta(&delta)?;
-        emit(&json!({"status":"indexed", "index":update.index,
+        let metadata = json!({
+            "status":"indexed",
             "rows_processed":update.rows_processed, "dag_rows":update.dag_rows,
             "replaced_names":update.replaced_names,
             "retained_graph_used":update.retained_graph_used,
             "recomputed_sccs":update.recomputed_sccs,
             "finish_nanos":update.finish_nanos,
-            "finish_mode":if full_index {"full"} else {"retained"} }))?;
+            "finish_mode":if full_index {"full"} else {"retained"},
+        });
+        let mut response = metadata;
+        if sparse_response && update.retained_graph_used {
+            if let Some(patch) = update.index.sparse_patch_against(&initial_index)? {
+                response["index_wire"] = json!("baseline_patch_v1");
+                response["index_patch"] = patch;
+            } else {
+                response["index_wire"] = json!("full_index_v1");
+                response["index"] = serde_json::to_value(&update.index)?;
+            }
+        } else {
+            response["index_wire"] = json!("full_index_v1");
+            response["index"] = serde_json::to_value(&update.index)?;
+        }
+        emit(&response)?;
     }
     Ok(())
 }

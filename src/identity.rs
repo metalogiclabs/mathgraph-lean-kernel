@@ -50,7 +50,7 @@ fn subset(left: &[u32], right: &[u32]) -> bool {
     n == left.len()
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 struct HexFingerprint(Fingerprint);
 impl Serialize for HexFingerprint {
     fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
@@ -63,7 +63,7 @@ impl Serialize for HexFingerprint {
         serializer.serialize_str(std::str::from_utf8(&bytes).expect("hexadecimal ASCII"))
     }
 }
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, PartialEq, Eq)]
 struct ExportDeclaration {
     key: HexFingerprint,
     name: String,
@@ -82,6 +82,49 @@ pub struct ExportIdentityIndex {
     builtins: BTreeMap<String, (Option<HexFingerprint>, Option<HexFingerprint>)>,
     complex: HexFingerprint,
     schedule: HexFingerprint,
+}
+
+
+impl ExportIdentityIndex {
+    /// A transport optimization, not an acceptance certificate. The receiver
+    /// reconstructs against its independently authenticated complete baseline
+    /// and the normal selected proof checker still parses the changed export.
+    ///
+    /// Return None when structural assumptions change: the daemon emits its
+    /// historical complete-index response instead of speculating about reuse.
+    pub fn sparse_patch_against(&self, baseline: &Self) -> Result<Option<Value>> {
+        if self.count != baseline.count || self.declarations.len() != baseline.declarations.len()
+            || self.meta != baseline.meta || self.schedule != baseline.schedule
+            || self.complex != baseline.complex
+            || !self.builtins.keys().eq(baseline.builtins.keys())
+        {
+            return Ok(None);
+        }
+        let mut changed = Vec::new();
+        for (position, (current, old)) in self.declarations.iter()
+            .zip(&baseline.declarations).enumerate()
+        {
+            if current.key != old.key || current.kind != old.kind
+                || current.name != old.name || current.index != position
+                || old.index != position || current.deps != old.deps
+            {
+                return Ok(None);
+            }
+            if current != old { changed.push(current); }
+        }
+        let mut builtin_changes = BTreeMap::new();
+        for (name, current) in &self.builtins {
+            if baseline.builtins.get(name) != Some(current) {
+                builtin_changes.insert(name.clone(), current.clone());
+            }
+        }
+        Ok(Some(json!({
+            "schema": "mathgraph.export-identity-baseline-patch.v1",
+            "count": self.count,
+            "declarations": changed,
+            "builtins": builtin_changes,
+        })))
+    }
 }
 
 /// Retained typed identity DAG. This is a cache witness, never proof authority.
@@ -1081,6 +1124,36 @@ mod session_tests {
             let oracle = crate::parser::export_identity((rows.join("\n")+"\n").as_bytes(), config()).unwrap();
             assert_eq!(serde_json::to_value(delta.index).unwrap(), serde_json::to_value(oracle).unwrap());
         }
+    }
+
+    #[test]
+    fn sparse_transport_patch_matches_full_index_and_refuses_topology_drift() {
+        let mut builder = builder();
+        let baseline = builder.prepare_retained().unwrap();
+        let delta = builder.apply_delta(
+            &("{\"il\":1,\"succ\":0}\n{\"ie\":2,\"sort\":1}\n".to_owned()
+              + &replacement(2) + "\n")
+        ).unwrap();
+        let patch = delta.index.sparse_patch_against(&baseline).unwrap().unwrap();
+        assert_eq!(patch["schema"], "mathgraph.export-identity-baseline-patch.v1");
+        assert_eq!(patch["count"], 2);
+        assert_eq!(patch["declarations"].as_array().unwrap().len(), 2);
+        assert!(patch["builtins"].as_object().unwrap().is_empty());
+        let mut rebuilt = serde_json::to_value(&baseline).unwrap();
+        for row in patch["declarations"].as_array().unwrap() {
+            let i = row["index"].as_u64().unwrap() as usize;
+            rebuilt["declarations"][i] = row.clone();
+        }
+        assert_eq!(rebuilt, serde_json::to_value(&delta.index).unwrap());
+
+        let mut changed_edge = builder();
+        let old = changed_edge.prepare_retained().unwrap();
+        let modified = changed_edge.apply_delta(
+            &("{\"ie\":2,\"const\":{\"name\":2,\"us\":[]}}\n".to_owned()
+              + &replacement(2) + "\n")
+        ).unwrap();
+        // Changing a dependency edge is not eligible for sparse transport.
+        assert!(modified.index.sparse_patch_against(&old).unwrap().is_none());
     }
     #[test]
     fn retained_added_names_require_full_builtin_identity_scan() {

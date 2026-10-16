@@ -114,6 +114,64 @@ class JsonProcess:
         self.error.close()
 
 
+
+def reconstruct_index_patch(baseline, patch):
+    """Rebuild an untrusted transport witness against the HMAC-validated base.
+
+    This does not establish acceptance. Full kernel checking and the independent
+    fresh-composite typed-index oracle remain separately mandatory.
+    """
+    if type(baseline) is not dict or type(patch) is not dict:
+        raise ValueError('index patch objects required')
+    if set(patch) != {'schema', 'count', 'declarations', 'builtins'} or (
+            patch['schema'] != 'mathgraph.export-identity-baseline-patch.v1'):
+        raise ValueError('unsupported or ambiguous typed-index patch')
+    original = baseline.get('declarations')
+    if (type(original) is not list or type(baseline.get('count')) is not int or
+            type(patch['count']) is not int or patch['count'] != baseline['count'] or
+            len(original) != baseline['count']):
+        raise ValueError('typed-index patch count mismatch')
+    entries, builtin_changes = patch['declarations'], patch['builtins']
+    if type(entries) is not list or type(builtin_changes) is not dict:
+        raise ValueError('malformed typed-index patch payload')
+    out = dict(baseline)
+    declarations = list(original)
+    previous = -1
+    keys = set(original[0]) if original else set()
+    for row in entries:
+        if type(row) is not dict or set(row) != keys:
+            raise ValueError('malformed changed declaration identity')
+        pos = row.get('index')
+        if type(pos) is not int or not previous < pos < len(declarations):
+            raise ValueError('duplicate, out-of-order or invalid patch declaration')
+        past = original[pos]
+        for field in ('key', 'name', 'kind', 'deps', 'index'):
+            if row.get(field) != past.get(field) or type(row.get(field)) is not type(past.get(field)):
+                raise ValueError('identity patch silently changed dependency topology')
+        for field in ('own', 'closure'):
+            value = row.get(field)
+            if type(value) is not str or len(value) != 64 or any(c not in '0123456789abcdef' for c in value):
+                raise ValueError('invalid cryptographic identity witness')
+        declarations[pos] = row
+        previous = pos
+    old_builtins = baseline.get('builtins')
+    if type(old_builtins) is not dict:
+        raise ValueError('missing baseline builtin policy')
+    builtins = dict(old_builtins)
+    for name, value in builtin_changes.items():
+        if name not in old_builtins or type(value) is not list or len(value) != 2:
+            raise ValueError('invalid changed builtin witness')
+        for part in value:
+            if part is not None and (type(part) is not str or len(part) != 64 or
+                                      any(c not in '0123456789abcdef' for c in part)):
+                raise ValueError('invalid builtin identity fingerprint')
+        if value[0] != old_builtins[name][0]:
+            raise ValueError('builtin key changed unexpectedly')
+        builtins[name] = value
+    out['declarations'] = declarations
+    out['builtins'] = builtins
+    return out
+
 class DeltaSession:
     """One authenticated baseline-anchored transaction, then close or restart.
 
@@ -123,12 +181,15 @@ class DeltaSession:
     requires the exact pinned baseline export and authenticated prior evidence.
     """
     def __init__(self, root, workloads, producer, checker, indexer, index_session,
-                 authority_key, index_mode='retained'):
+                 authority_key, index_mode='retained', sparse_index_wire=False):
         # Mode is an explicit, authenticated A/B policy rather than an
         # unrecorded subprocess switch. Both paths must produce the same index.
         if index_mode not in ('retained', 'full'):
             raise ValueError('unsupported identity finish mode')
         self.index_mode = index_mode
+        if type(sparse_index_wire) is not bool or (sparse_index_wire and index_mode != 'retained'):
+            raise ValueError('sparse index wire requires retained identity mode')
+        self.sparse_index_wire = sparse_index_wire
         self.root, self.workloads = Path(root).resolve(), Path(workloads).resolve()
         self.root.mkdir(parents=True, exist_ok=True)
         self.key_path = Path(authority_key).resolve()
@@ -191,6 +252,8 @@ class DeltaSession:
             source_policy='complete-six-file-capture;fixed-imports;one-simple-replacement-set',
             representation='baseline-DAG;append-only-delta-DAG;original-declaration-schedule',
             identity_finish_mode=self.index_mode)
+        if self.sparse_index_wire:
+            self.delta_provenance['identity_index_wire'] = 'baseline_patch_v1'
 
     def start(self):
         tick, cpu = time.perf_counter(), self.cpu_time()
@@ -247,6 +310,8 @@ class DeltaSession:
         command = [self.tools['index_session'], config]
         if self.index_mode == 'full':
             command.append('--full-index')
+        if self.sparse_index_wire:
+            command.append('--sparse-response')
         self.index = JsonProcess(command, self.root / 'index.stderr')
         indexed = self.index.receive()
         if indexed.get('status') != 'ready' or engine.encoded(indexed.get('index')) != engine.encoded(self.old['index']):
@@ -456,7 +521,16 @@ class DeltaSession:
         update = self.index.request(dict(delta_path=str(path)))
         if update.get('status') != 'indexed' or sorted(update.get('replaced_names', [])) != payload['changed_names']:
             raise ValueError('typed index mutation witness disagrees')
-        index = update['index']
+        if self.sparse_index_wire and update.get('index_wire') == 'baseline_patch_v1':
+            if 'index' in update:
+                raise ValueError('ambiguous full and sparse index response')
+            index = reconstruct_index_patch(self.old['index'], update['index_patch'])
+        else:
+            if self.sparse_index_wire and update.get('index_wire') != 'full_index_v1':
+                raise ValueError('unrecognized sparse-index wire response')
+            if 'index_patch' in update:
+                raise ValueError('unexpected index patch on full transport')
+            index = update['index']
         identity = time.perf_counter()-tick
         phase_cpu['identity_update_cpu_seconds'] = self.cpu_time()-phase_start
         memory['identity'] = self.memory_observation()
