@@ -54,6 +54,37 @@ jobs:
             --index-session target/release/index-session --full-checker target/release/sokonanoda \
             --authority-key "$RUNNER_TEMP/issuer-large.key" \
             --out artifacts/large --repetitions 5
+      - name: Build pinned historical full-SCC index-session comparator
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$HOME/.elan/bin:$PATH"
+          git worktree add --detach "$RUNNER_TEMP/historical-index" 4496042c75368f6c35675a9b131c960080afa518
+          test "$(git -C "$RUNNER_TEMP/historical-index" rev-parse HEAD)" = "4496042c75368f6c35675a9b131c960080afa518"
+          cargo +1.95.0 build --release --locked \
+            --manifest-path "$RUNNER_TEMP/historical-index/Cargo.toml" \
+            --target-dir "$RUNNER_TEMP/historical-index-target" --bin index-session
+          test -x "$RUNNER_TEMP/historical-index-target/release/index-session"
+          test -x target/release/index-session
+          ! cmp -s "$RUNNER_TEMP/historical-index-target/release/index-session" target/release/index-session
+      - name: Qualify matched full-index versus retained-SCC warm transactions
+        id: ab_qualification
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$HOME/.elan/bin:$PATH"
+          python3 experiments/incremental/engine.py --init-key "$RUNNER_TEMP/full-scc-ab.key"
+          python3 experiments/incremental/engine.py --init-key "$RUNNER_TEMP/retained-scc-ab.key"
+          python3 experiments/incremental/benchmark_scc_ab.py \
+            --original-workloads artifacts/workloads --expanded-workloads artifacts/expanded \
+            --producer artifacts/delta-build/delta-producer \
+            --checker target/release/check-selected --indexer target/release/export-index \
+            --full-index-session "$RUNNER_TEMP/historical-index-target/release/index-session" \
+            --retained-index-session target/release/index-session \
+            --full-checker target/release/sokonanoda \
+            --full-key "$RUNNER_TEMP/full-scc-ab.key" \
+            --retained-key "$RUNNER_TEMP/retained-scc-ab.key" \
+            --out artifacts/scc-matched-ab --repetitions 5 \
+            --source-sha "$GITHUB_SHA" \
+            --prior-source-sha 4496042c75368f6c35675a9b131c960080afa518
       - name: Publish concise evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -64,5 +95,7 @@ jobs:
             artifacts/small/summary.md
             artifacts/large/summary.json
             artifacts/large/summary.md
+            artifacts/scc-matched-ab/summary.json
+            artifacts/scc-matched-ab/summary.md
           if-no-files-found: warn
           retention-days: 30
