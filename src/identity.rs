@@ -221,7 +221,8 @@ impl RetainedClosure {
             if expected != roots[number] { return failure("retained SCC baseline oracle mismatch"); }
         }
         let mut builtin_components = Vec::new();
-        for (name, (Some(key), Some(root))) in &baseline.builtins {
+        for (name, (key, root)) in &baseline.builtins {
+            let (Some(key), Some(root)) = (key, root) else { continue; };
             let Some(&i) = by_key.get(&key.0) else { return failure("missing builtin declaration"); };
             if root.0 != roots[component_for[i]] { return failure("builtin closure mismatch"); }
             builtin_components.push((name.clone(), component_for[i]));
