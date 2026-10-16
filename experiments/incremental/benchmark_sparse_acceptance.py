@@ -109,7 +109,7 @@ def run(args):
                         export_sha256=result['export_sha256'],
                         partition_sha256=hashlib.sha256(canonical(normalized_decisions(result))).hexdigest(),
                         oracle_cpp={name:v['returncode'] for name,v in sample.get('independent_kernels',{}).items()},
-                        issuer_verified=audit['issuer_hmac_valid'] and audit['all_content_addresses_valid']))
+                        issuer_verified=audit['issuer_hmac_valid'] and audit['all_content_addresses_valid'])
                 old,new=observations['full_receipt'],observations['sparse_receipt']
                 for field in ('checked_count','reused_count','export_sha256','partition_sha256','issuer_verified'):
                     if old[field]!=new[field]:
