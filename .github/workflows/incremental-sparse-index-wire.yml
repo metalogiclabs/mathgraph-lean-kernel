@@ -1,0 +1,108 @@
+name: Sparse typed-index transport qualification
+on:
+  push:
+    branches: [research/incremental-sparse-index-wire-20261017]
+  workflow_dispatch:
+permissions:
+  contents: read
+defaults:
+  run:
+    shell: bash
+jobs:
+  sparse-wire:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+      - name: Build exact pinned tools and run baseline native/transport tests
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          bash experiments/incremental/setup.sh
+          export PATH="$HOME/.cargo/bin:$HOME/.elan/bin:$PATH"
+          cargo +1.95.0 test --release --locked --lib
+          cargo +1.95.0 test --release --locked --bin index-session
+          python3 experiments/incremental/test_sparse_index_wire.py -v
+          python3 experiments/incremental/test_delta_reuse.py
+          python3 experiments/incremental/test_source_delta_authority.py
+          python3 -m py_compile experiments/incremental/benchmark_sparse_wire.py
+      - name: Build genuine Lean source-owned producer and two exact export profiles
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$HOME/.elan/bin:$PATH"
+          bash experiments/incremental/build_delta_producer.sh artifacts/delta-build
+          python3 experiments/incremental/build_workloads.py --out artifacts/workloads
+          python3 experiments/incremental/build_delta_workloads.py \
+            --workloads artifacts/workloads --out artifacts/expanded \
+            --producer artifacts/delta-build/delta-producer
+      - name: Requalify original full-index acceptance and adversarial gates
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$HOME/.elan/bin:$PATH"
+          python3 experiments/incremental/engine.py --init-key "$RUNNER_TEMP/legacy-small.key"
+          python3 experiments/incremental/engine.py --init-key "$RUNNER_TEMP/legacy-large.key"
+          python3 experiments/incremental/qualify_delta.py \
+            --workloads artifacts/workloads --producer artifacts/delta-build/delta-producer \
+            --checker target/release/check-selected --indexer target/release/export-index \
+            --index-session target/release/index-session --full-checker target/release/sokonanoda \
+            --authority-key "$RUNNER_TEMP/legacy-small.key" --out artifacts/legacy-small --repetitions 5
+          python3 experiments/incremental/qualify_delta.py \
+            --workloads artifacts/expanded --producer artifacts/delta-build/delta-producer \
+            --checker target/release/check-selected --indexer target/release/export-index \
+            --index-session target/release/index-session --full-checker target/release/sokonanoda \
+            --authority-key "$RUNNER_TEMP/legacy-large.key" --out artifacts/legacy-large --repetitions 5
+      - name: Independently qualify sparse/full typed-index transport parity and economics
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$HOME/.elan/bin:$PATH"
+          python3 experiments/incremental/engine.py --init-key "$RUNNER_TEMP/sparse-wire-issuer.key"
+          python3 experiments/incremental/benchmark_sparse_wire.py \
+            --original-workloads artifacts/workloads --expanded-workloads artifacts/expanded \
+            --producer artifacts/delta-build/delta-producer \
+            --checker target/release/check-selected --indexer target/release/export-index \
+            --index-session target/release/index-session --full-checker target/release/sokonanoda \
+            --authority-key "$RUNNER_TEMP/sparse-wire-issuer.key" --out artifacts/sparse-wire-ab \
+            --repetitions 5
+      - name: Fail closed on any missing, partial, or incorrect evidence
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git diff --exit-code
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          for label, minimum in [('legacy-small', 243), ('legacy-large', 226)]:
+              s=json.loads((Path('artifacts')/label/'summary.json').read_bytes())
+              assert s.get('run_completed') and s.get('correctness_passed')
+              assert s.get('qualification_status')=='PASS'
+              assert len(s.get('gates',[]))>=minimum
+              assert all(g.get('passed') is True for g in s['gates'] if g['required'])
+          s=json.loads(Path('artifacts/sparse-wire-ab/summary.json').read_bytes())
+          assert s.get('complete') and s.get('correctness_passed')
+          assert s.get('exact_source_sha')==os.environ['GITHUB_SHA']
+          for profile in ('original','expanded'):
+              for variant in ('early-definition','unrelated-definition'):
+                  result=s['profiles'][profile][variant]
+                  assert result['complete'] and len(result['pairs'])==5
+                  assert result['end_to_end']['paired_count']==5
+                  assert result['identity_phase']['paired_count']==5
+                  assert all(p['arms']['sparse_wire']['accepted'] and
+                             p['arms']['full_wire']['accepted'] for p in result['pairs'])
+          print('All original and sparse transport correctness gates PASS.')
+          PY
+      - name: Publish portable exact-source summary and failed evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: sparse-index-transport-qualified
+          path: |
+            artifacts/legacy-small/summary.json
+            artifacts/legacy-small/summary.md
+            artifacts/legacy-large/summary.json
+            artifacts/legacy-large/summary.md
+            artifacts/sparse-wire-ab/summary.json
+            artifacts/sparse-wire-ab/summary.md
+          if-no-files-found: warn
+          retention-days: 30
