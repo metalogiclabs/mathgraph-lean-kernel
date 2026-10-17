@@ -428,7 +428,7 @@ class DeltaSession:
         total = engine.cpu_time()
         # RUSAGE_CHILDREN omits still-running producer/index sessions. Their
         # procfs counters include completed grandchildren, in clock ticks.
-        for daemon in [self.producer, self.index, self.kernel_process]:
+        for daemon in [self.producer, self.index, getattr(self, 'kernel_process', None)]:
             if daemon is None:
                 continue
             try:
@@ -444,7 +444,7 @@ class DeltaSession:
         for label, pid in [('adapter', os.getpid()),
             ('producer', self.producer.process.pid if self.producer else None),
             ('index', self.index.process.pid if self.index else None),
-            ('retained_kernel', self.kernel_process.process.pid if self.kernel_process else None)]:
+            ('retained_kernel', getattr(self, 'kernel_process', None).process.pid if getattr(self, 'kernel_process', None) else None)]:
             if pid is None:
                 continue
             try:
@@ -815,7 +815,7 @@ class DeltaSession:
         return result
 
     def close(self):
-        for process in [self.producer, self.index, self.kernel_process]:
+        for process in [self.producer, self.index, getattr(self, 'kernel_process', None)]:
             if process is not None:
                 process.close()
         if self.fd is not None:
