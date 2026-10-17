@@ -1,0 +1,103 @@
+name: Independent selected Rust checker phase profile
+on:
+  push:
+    branches: [research/incremental-native-parse-profile-20261017]
+  workflow_dispatch:
+permissions:
+  contents: read
+defaults:
+  run:
+    shell: bash
+jobs:
+  parser-profile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+      - name: Build pinned original and diagnostic Rust checkers and protect native tests
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$HOME/.elan/bin:$PATH"
+          bash experiments/incremental/setup.sh
+          test -x target/release/check-selected
+          test -x target/release/check-selected-profiled
+          test -x target/release/export-index
+          test -x target/release/sokonanoda
+          cargo +1.95.0 test --release --locked --lib
+          cargo +1.95.0 test --release --locked --bin index-session
+          cargo +1.95.0 test --release --locked --bin check-selected-profiled
+          python3 experiments/incremental/test_delta_reuse.py
+          python3 experiments/incremental/test_source_delta_authority.py
+          python3 -m py_compile experiments/incremental/profile_selected_parser.py
+      - name: Build exact pinned genuine Lean and Std source export profiles
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$HOME/.elan/bin:$PATH"
+          mkdir -p artifacts
+          bash experiments/incremental/build_delta_producer.sh artifacts/delta-build
+          python3 experiments/incremental/build_workloads.py --out artifacts/workloads
+          python3 experiments/incremental/build_delta_workloads.py \
+            --workloads artifacts/workloads --out artifacts/expanded \
+            --producer artifacts/delta-build/delta-producer
+      - name: Measure exact original and expanded selected-kernel parser vs actual check
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$HOME/.elan/bin:$PATH"
+          python3 experiments/incremental/profile_selected_parser.py \
+            --workloads artifacts/workloads --profile original \
+            --profiled-checker target/release/check-selected-profiled \
+            --selected-checker target/release/check-selected \
+            --indexer target/release/export-index \
+            --full-checker target/release/sokonanoda \
+            --out artifacts/parser-profile-original --repetitions 5
+          python3 experiments/incremental/profile_selected_parser.py \
+            --workloads artifacts/expanded --profile expanded \
+            --profiled-checker target/release/check-selected-profiled \
+            --selected-checker target/release/check-selected \
+            --indexer target/release/export-index \
+            --full-checker target/release/sokonanoda \
+            --out artifacts/parser-profile-expanded --repetitions 5
+      - name: Fail closed on exact source, mandatory malformed inputs, five pairs and independent oracles
+        run: |
+          set -euo pipefail
+          git diff --exit-code
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          for profile in ("original","expanded"):
+              file=Path("artifacts")/("parser-profile-"+profile)/"summary.json"
+              result=json.loads(file.read_bytes())
+              assert result["source_git_sha"]==os.environ["GITHUB_SHA"]
+              assert result["run_completed"] and result["status"]=="PASS"
+              for edit in ("early-definition","unrelated-definition"):
+                  row=result["edits"][edit]
+                  assert row["complete"] and len(row["rows"])==5
+                  assert all(x["actual"]["original"]["response"]["checked"] ==
+                             x["actual"]["profiled"]["response"]["checked"]
+                             for x in row["rows"])
+                  assert all(x["returncode"]==0 for x in row["oracles"].values())
+                  assert row["medians"]["parse_seconds"]>0
+                  assert row["medians"]["actual_selected_check_seconds"]>=0
+              if profile=="original":
+                  for case in ("malformed-unused-dag","malformed-unused-typed-node","invalid-proof"):
+                      records=result["negative_controls"][case]
+                      assert all(x["returncode"]==1 for x in records.values())
+                      if case.startswith("malformed"):
+                          assert records["original"]["selected"]==[]
+          print("Exact profile, genuine checker parity and parser falsifiers PASS")
+          PY
+      - name: Preserve portable exact-source phase evidence, including negative results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: independent-rust-parser-phase-profile
+          path: |
+            artifacts/parser-profile-original/summary.json
+            artifacts/parser-profile-original/summary.md
+            artifacts/parser-profile-expanded/summary.json
+            artifacts/parser-profile-expanded/summary.md
+          if-no-files-found: warn
+          retention-days: 30
