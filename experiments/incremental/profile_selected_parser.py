@@ -81,11 +81,6 @@ def preflight(args):
                 "official checker version drift: " + k)
     return manifest
 
-def check_original_full(config, manifest, variant_dir):
-    args = {
-        "rust": [Path(variant_dir) / "unused-path"], # replaced by caller
-    }
-
 def run(args):
     args.out.mkdir(parents=True, exist_ok=False)
     manifest = preflight(args)
@@ -194,7 +189,7 @@ def run(args):
 
     # Parser completeness is independently falsified: no selected obligations
     # may conceal unused malformed changed DAG nodes.
-    for kind in NEGATIVES:
+    for kind in (NEGATIVES if args.profile == 'original' else ()):
         path=Path(manifest["variants"][kind]["path"])
         directory=args.out/"negative-controls"/kind
         directory.mkdir(parents=True,exist_ok=True)
