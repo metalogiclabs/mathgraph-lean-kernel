@@ -1,0 +1,91 @@
+name: Retained genuine Rust parser shadow qualification
+on:
+  push:
+    branches: [research/incremental-retained-native-parser-20261017]
+  workflow_dispatch:
+permissions:
+  contents: read
+defaults:
+  run:
+    shell: bash
+jobs:
+  retained-parser-shadow:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+      - name: Build pinned Lean Rust environment and exercise native parser guards
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$HOME/.elan/bin:$PATH"
+          mkdir -p artifacts
+          bash experiments/incremental/setup.sh
+          cargo +1.95.0 test --release --locked --lib
+          cargo +1.95.0 test --release --locked --bin check-selected-retained-session
+          cargo +1.95.0 test --release --locked --bin index-session
+          python3 experiments/incremental/test_delta_reuse.py
+          python3 experiments/incremental/test_source_delta_authority.py
+          python3 -m py_compile experiments/incremental/benchmark_retained_kernel_parser.py
+          test -x target/release/check-selected-retained-session
+          test -x target/release/check-selected
+          test -x target/release/index-session
+      - name: Build original and expanded pinned genuine Lean Std source-owned exports
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$HOME/.elan/bin:$PATH"
+          bash experiments/incremental/build_delta_producer.sh artifacts/delta-build
+          python3 experiments/incremental/build_workloads.py --out artifacts/workloads
+          python3 experiments/incremental/build_delta_workloads.py \
+            --workloads artifacts/workloads --out artifacts/expanded \
+            --producer artifacts/delta-build/delta-producer
+      - name: Qualify real retained parsed-kernel shadow against independent full kernels
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$HOME/.elan/bin:$PATH"
+          python3 experiments/incremental/engine.py --init-key "$RUNNER_TEMP/retained-parser-shadow-issuer.key"
+          python3 experiments/incremental/benchmark_retained_kernel_parser.py \
+            --original-workloads artifacts/workloads --expanded-workloads artifacts/expanded \
+            --producer artifacts/delta-build/delta-producer \
+            --selected-checker target/release/check-selected \
+            --retained-checker target/release/check-selected-retained-session \
+            --indexer target/release/export-index --index-session target/release/index-session \
+            --full-checker target/release/sokonanoda \
+            --authority-key "$RUNNER_TEMP/retained-parser-shadow-issuer.key" \
+            --out artifacts/retained-parser-shadow --repetitions 5
+      - name: Require exact source, full fresh oracles, negative changed-row parser controls, and complete paired witnesses
+        run: |
+          set -euo pipefail
+          git diff --exit-code
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          r=json.loads(Path('artifacts/retained-parser-shadow/summary.json').read_bytes())
+          assert r['source_sha']==os.environ['GITHUB_SHA']
+          assert r['complete'] and r['repetitions']==5
+          assert r['profile_count']==2
+          for profile in ('original','expanded'):
+              for kind in ('early-definition','unrelated-definition'):
+                  case=r['profiles'][profile][kind]
+                  assert case['complete'] and len(case['samples'])==5
+                  assert all(s['trials']['fresh']['checked']==s['trials']['retained']['checked'] for s in case['samples'])
+                  assert all(set(s['full_oracles'])=={'full-rust','cxx','paranoid-cxx'}
+                             and all(x['returncode']==0 for x in s['full_oracles'].values())
+                             for s in case['samples'] if s['repetition']==0)
+              for neg in ('malformed-unused-node','overwrite-admitted-expression'):
+                  assert r['negative_controls'][profile+'-'+neg]['passed']
+                  assert r['negative_controls'][profile+'-'+neg]['checked']==[]
+          print('Retained parser shadow parity and negative changed byte controls PASS')
+          PY
+      - name: Preserve portable reproducible report or negative evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: retained-genuine-rust-parser-shadow
+          path: |
+            artifacts/retained-parser-shadow/summary.json
+            artifacts/retained-parser-shadow/summary.md
+          if-no-files-found: warn
+          retention-days: 30
