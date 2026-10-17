@@ -11,6 +11,7 @@ use num_bigint::BigUint;
 use serde::de::{Error as DeError, Visitor};
 use serde::{Deserialize, Deserializer};
 use std::borrow::Cow;
+use std::collections::BTreeSet;
 use std::error::Error;
 use std::fmt;
 use std::io::BufRead;
@@ -53,6 +54,14 @@ pub struct Parser<'a, R: BufRead> {
     scratch_idxs: Vec<u32>,
     identity: Option<crate::identity::IdentityBuilder>,
     identity_all: Vec<u32>,
+    // Opt-in one-shot genuine parser continuation after independently admitted baseline.
+    // This cache is never itself an acceptance certificate.
+    retained_simple_names: BTreeSet<String>,
+    delta_allowed: Option<BTreeSet<String>>,
+    delta_seen: BTreeSet<String>,
+    original_name_slots: usize,
+    original_level_slots: usize,
+    original_expr_slots: usize,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
@@ -724,10 +733,86 @@ impl<'a, R: BufRead> Parser<'a, R> {
             scratch_idxs: Vec::new(),
             identity: None,
             identity_all: Vec::new(),
+            retained_simple_names: BTreeSet::new(),
+            delta_allowed: None,
+            delta_seen: BTreeSet::new(),
+            original_name_slots: 0,
+            original_level_slots: 0,
+            original_expr_slots: 0,
         }
     }
 
+    /// Admit a real fully parsed kernel environment once. The caller separately
+    /// authenticates the source-owner export and complete prior verification.
+    /// The returned count is only a parser witness, not a proof certificate.
+    pub fn run_retained_baseline(&mut self, input: &[u8]) -> Result<usize, Box<dyn Error>> {
+        if self.delta_allowed.is_some() || !self.declars.is_empty() {
+            return Err("retained parser baseline is not empty".into());
+        }
+        self.run_over(input)?;
+        if !self.skipped.is_empty() {
+            return Err("retained baseline has skipped axioms".into());
+        }
+        self.original_name_slots = self.names_by_idx.len();
+        self.original_level_slots = self.levels_by_idx.len();
+        self.original_expr_slots = self.exprs_by_idx.len();
+        for (name, declaration) in self.declars.iter() {
+            if matches!(declaration,
+                Declar::Definition { .. } | Declar::Theorem { .. } | Declar::Opaque { .. })
+            {
+                self.retained_simple_names.insert(self.name_to_string(*name));
+            }
+        }
+        Ok(self.declars.len())
+    }
+
+    /// Apply exactly one append-only typed DAG delta to the *already parsed*
+    /// accepted baseline, replace only existing compatible simple declarations
+    /// at their original ordered slots, and invoke the genuine Rust checker.
+    ///
+    /// Important: applicability of omitted declarations is established only
+    /// by an external issuer-authenticated source transition and the unchanged
+    /// conservative dependency-closure predicate. This primitive is not a
+    /// complete independent proof of the source or reused environment.
+    pub fn check_retained_simple_delta(
+        mut self, delta: &[u8], expected_names: &[String], selected: &[usize]
+    ) -> Result<(usize, usize, f64, f64), Box<dyn Error>> {
+        if self.original_expr_slots == 0 || self.delta_allowed.is_some() {
+            return Err("no admitted retained baseline or duplicate delta attempt".into());
+        }
+        let mut expected = BTreeSet::new();
+        for name in expected_names {
+            if name.is_empty() || !expected.insert(name.clone()) ||
+               !self.retained_simple_names.contains(name) {
+                return Err("unrecognized or repeated simple declaration replacement".into());
+            }
+        }
+        self.delta_allowed = Some(expected.clone());
+        let parser_started = std::time::Instant::now();
+        // Every changed row is parsed, INCLUDING UNUSED NODES under an empty
+        // selected obligation list. This deliberately rejects the same malformed
+        // changed bytes that fresh full check-selected would reject.
+        self.run_over(delta)?;
+        if self.delta_seen != expected {
+            return Err("the delta did not replace exactly the announced declarations".into());
+        }
+        let (export, skipped_axioms) = self.finish()?;
+        if !skipped_axioms.is_empty() {
+            return Err("retained updated export contains skipped axioms".into());
+        }
+        let parse_and_finish_seconds = parser_started.elapsed().as_secs_f64();
+        let checker_started = std::time::Instant::now();
+        let checked = export.check_selected_declars(selected)?;
+        let selected_check_seconds = checker_started.elapsed().as_secs_f64();
+        Ok((checked, export.declaration_count(), parse_and_finish_seconds,
+            selected_check_seconds))
+    }
+
     fn push_name(&mut self, expected: BackRef, n: Name<'a>) {
+        if self.delta_allowed.is_some() &&
+           (expected.index() as usize) < self.original_name_slots {
+            panic!("changed typed name DAG index overwrites admitted baseline");
+        }
         if self.dag.names.get(&n).is_some() {
             panic!("Attempted to insert duplicate Name");
         }
@@ -736,6 +821,10 @@ impl<'a, R: BufRead> Parser<'a, R> {
     }
 
     fn push_level(&mut self, expected: BackRef, l: Level<'a>) {
+        if self.delta_allowed.is_some() &&
+           (expected.index() as usize) < self.original_level_slots {
+            panic!("changed typed level DAG index overwrites admitted baseline");
+        }
         if self.dag.levels.get(&l).is_some() {
             panic!("Attempted to insert duplicate Level");
         }
@@ -745,6 +834,10 @@ impl<'a, R: BufRead> Parser<'a, R> {
 
     #[inline(always)]
     fn push_expr(&mut self, expected: BackRef, e: Expr<'a>, num_loose_bvars: u16, fv_mask: u64) {
+        if self.delta_allowed.is_some() &&
+           (expected.index() as usize) < self.original_expr_slots {
+            panic!("changed typed expression DAG index overwrites admitted baseline");
+        }
         let r: &'a Expr<'a> = self.arena.alloc(e);
         let ptr = ExprPtr::global(r, num_loose_bvars);
         let entry = ExprEntry { ptr: Some(ptr), child_mask: if num_loose_bvars > 64 { 0 } else { fv_mask } };
@@ -1306,6 +1399,24 @@ impl<'a, R: BufRead> Parser<'a, R> {
     }
 
     fn add_declar(&mut self, name: NamePtr<'a>, d: Declar<'a>) {
+        if let Some(allowed) = &self.delta_allowed {
+            let text = self.name_to_string(name);
+            assert!(allowed.contains(&text),
+                    "changed source attempted unannounced declaration replacement");
+            assert!(self.delta_seen.insert(text),
+                    "duplicate changed declaration in retained Rust parser");
+            let slot = self.declars.get_mut(&name)
+                .expect("retained parser cannot add a new declaration");
+            assert!(
+                matches!((&*slot, &d),
+                    (Declar::Definition { .. }, Declar::Definition { .. }) |
+                    (Declar::Theorem { .. }, Declar::Theorem { .. }) |
+                    (Declar::Opaque { .. }, Declar::Opaque { .. })),
+                "retained parser cannot change declaration kind"
+            );
+            *slot = d;
+            return;
+        }
         let idx = u32::try_from(self.declars.len()).expect("declaration count exceeds u32");
         assert!(idx != crate::name::NO_DECL, "declaration count exceeds u32");
         assert!(self.declars.insert(name, d).is_none());
@@ -1339,6 +1450,9 @@ impl<'a, R: BufRead> Parser<'a, R> {
         let ExportJsonObject { val, i: assigned_idx } = serde_json::from_str::<ExportJsonObject>(line)?;
         match val {
             Metadata(json_val) => {
+                if self.delta_allowed.is_some() {
+                    return Err("metadata change is outside retained parser policy".into());
+                }
                 let _ = check_semver(&json_val)?;
             }
             NameStr { pre, str } => self.do_name_str(assigned_idx.unwrap(), pre, &str),
@@ -1362,6 +1476,9 @@ impl<'a, R: BufRead> Parser<'a, R> {
             ExprProj { type_name, idx, structure: struct_ } =>
                 self.do_proj(assigned_idx.unwrap(), type_name, idx, struct_),
             Axiom { name, ty, uparams, is_unsafe } => {
+                if self.delta_allowed.is_some() {
+                    return Err("axiom change is outside retained parser policy".into());
+                }
                 assert!(!is_unsafe);
                 let name = self.get_name_ptr(name);
                 let uparams = self.get_uparams_ptr(&uparams);
@@ -1398,6 +1515,9 @@ impl<'a, R: BufRead> Parser<'a, R> {
                 self.add_declar(name, definition);
             }
             Quot { name, ty, uparams, .. } => {
+                if self.delta_allowed.is_some() {
+                    return Err("quotient change is outside retained parser policy".into());
+                }
                 let name = self.get_name_ptr(name);
                 let ty = self.get_expr_ptr(ty);
                 let uparams = self.get_uparams_ptr(&uparams);
@@ -1406,6 +1526,9 @@ impl<'a, R: BufRead> Parser<'a, R> {
                 self.add_declar(name, quot);
             }
             Inductive { ind_vals, ctor_vals, rec_vals } => {
+                if self.delta_allowed.is_some() {
+                    return Err("inductive topology change outside retained parser policy".into());
+                }
                 let block_start = self.declars.len();
                 let block_size = ind_vals.len() + ctor_vals.len() + rec_vals.len();
                 for IndInfo {
