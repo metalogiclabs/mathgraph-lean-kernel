@@ -78,7 +78,7 @@ jobs:
                   assert all(x["actual"]["original"]["response"]["checked"] ==
                              x["actual"]["profiled"]["response"]["checked"]
                              for x in row["rows"])
-                  assert all(x["returncode"]==0 for x in row["oracles"].values())
+                  assert all(x["exitcode"]==0 for x in row["oracles"].values())
                   assert row["medians"]["parse_seconds"]>0
                   assert row["medians"]["actual_selected_check_seconds"]>=0
               if profile=="original":
