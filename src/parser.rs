@@ -88,7 +88,7 @@ struct FileMeta<'a> {
     format: FormatMeta<'a>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 enum BackRef {
     #[serde(alias = "in")]
     In(u32),
