@@ -1,0 +1,159 @@
+name: Retained Rust kernel issuer acceptance qualification
+on:
+  push:
+    branches: [research/incremental-retained-kernel-admission-20261017]
+  workflow_dispatch:
+permissions:
+  contents: read
+defaults:
+  run:
+    shell: bash
+jobs:
+  retained-kernel-admission:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+      - name: Build exact pinned kernel executables and protect source-level gates
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$HOME/.elan/bin:$PATH"
+          mkdir -p artifacts
+          bash experiments/incremental/setup.sh
+          cargo +1.95.0 test --release --locked --lib
+          cargo +1.95.0 test --release --locked --bin check-selected-retained-session
+          cargo +1.95.0 test --release --locked --bin index-session
+          python3 experiments/incremental/test_source_delta_authority.py
+          python3 experiments/incremental/test_sparse_index_wire.py
+          python3 experiments/incremental/test_sparse_acceptance.py
+          python3 experiments/incremental/test_delta_reuse.py
+          python3 -m py_compile experiments/incremental/producer_delta.py \
+            experiments/incremental/qualify_delta.py \
+            experiments/incremental/benchmark_retained_admission.py
+          for exe in check-selected-retained-session check-selected export-index index-session sokonanoda; do
+            test -x "target/release/$exe"
+          done
+      - name: Build original and expanded pinned real Lean Std source-owned exports
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$HOME/.elan/bin:$PATH"
+          bash experiments/incremental/build_delta_producer.sh artifacts/delta-build
+          python3 experiments/incremental/build_workloads.py --out artifacts/workloads
+          python3 experiments/incremental/build_delta_workloads.py \
+            --workloads artifacts/workloads --out artifacts/expanded \
+            --producer artifacts/delta-build/delta-producer
+      - name: Smoke-test one real HMAC accepted source delta with retained actual kernel
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$HOME/.elan/bin:$PATH"
+          python3 experiments/incremental/engine.py --init-key "$RUNNER_TEMP/retained-issuer-smoke.key"
+          python3 - <<'PY'
+          import sys,json
+          from pathlib import Path
+          from argparse import Namespace
+          sys.path.insert(0, 'experiments/incremental')
+          from benchmark_retained_admission import qualifier, verified_result
+          r = Path('artifacts').resolve()
+          q=qualifier(Namespace(
+              original_workloads=r/'workloads',
+              expanded_workloads=r/'expanded',
+              producer=r/'delta-build/delta-producer',
+              checker=r.parent/'target/release/check-selected',
+              retained_checker=r.parent/'target/release/check-selected-retained-session',
+              indexer=r.parent/'target/release/export-index',
+              index_session=r.parent/'target/release/index-session',
+              full_checker=r.parent/'target/release/sokonanoda',
+              authority_key=Path(__import__('os').environ['RUNNER_TEMP'])/'retained-issuer-smoke.key',
+              out=r/'retained-admission-smoke',repetitions=5),
+              r/'workloads','original','retained_selected','smoke')
+          q.preflight()
+          refs={v:q.reference(v) for v in ('baseline','early-definition')}
+          sample=q.sample('early-definition',0,refs)
+          if sample.get('error'):
+              raise RuntimeError('retained actual-kernel source-owner smoke refused: '+sample['error'])
+          result,audit=verified_result(sample,'retained_selected')
+          assert result['counts']['rechecked']==413 and result['counts']['reused']==3023
+          assert result['native_kernel_report']['status']=='checked'
+          assert audit['receipt_schema']=='mathgraph.incremental-lean.sparse-accepted.v1'
+          print('HMAC accepted retained genuine Rust kernel source delta PASS')
+          PY
+      - name: Requalify all original and expanded protected producer-delta gates with actual retained Rust kernel
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$HOME/.elan/bin:$PATH"
+          python3 experiments/incremental/engine.py --init-key "$RUNNER_TEMP/retained-issuer-protected.key"
+          python3 experiments/incremental/benchmark_retained_admission.py \
+            --mode protected \
+            --original-workloads artifacts/workloads --expanded-workloads artifacts/expanded \
+            --producer artifacts/delta-build/delta-producer \
+            --checker target/release/check-selected \
+            --retained-checker target/release/check-selected-retained-session \
+            --indexer target/release/export-index --index-session target/release/index-session \
+            --full-checker target/release/sokonanoda \
+            --authority-key "$RUNNER_TEMP/retained-issuer-protected.key" \
+            --out artifacts/retained-admission-protected --repetitions 5
+      - name: Pair actual accepted fresh vs retained Rust selected kernel economics on identical real source
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$HOME/.elan/bin:$PATH"
+          python3 experiments/incremental/engine.py --init-key "$RUNNER_TEMP/retained-issuer-ab.key"
+          python3 experiments/incremental/benchmark_retained_admission.py \
+            --mode compare \
+            --original-workloads artifacts/workloads --expanded-workloads artifacts/expanded \
+            --producer artifacts/delta-build/delta-producer \
+            --checker target/release/check-selected \
+            --retained-checker target/release/check-selected-retained-session \
+            --indexer target/release/export-index --index-session target/release/index-session \
+            --full-checker target/release/sokonanoda \
+            --authority-key "$RUNNER_TEMP/retained-issuer-ab.key" \
+            --out artifacts/retained-admission-ab --repetitions 5
+      - name: Require exact source, mandatory negative controls, independent oracles, and five pairs
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git diff --exit-code
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          protected=json.loads(Path('artifacts/retained-admission-protected/protected-summary.json').read_bytes())
+          assert protected['qualified'] and protected['source_sha']==os.environ['GITHUB_SHA']
+          for profile,minimum in [('original',243),('expanded',226)]:
+              p=protected['profiles'][profile]
+              assert p['qualification_status']=='PASS',p
+              assert p['required_gates']>=minimum,p
+              assert not p['failed_gates'],p
+              assert p['signed_kernel_backend']=='sha-pinned-retained-parser-v1'
+          result=json.loads(Path('artifacts/retained-admission-ab/summary.json').read_bytes())
+          assert result['completed'] and result['qualified']
+          assert result['source_sha']==os.environ['GITHUB_SHA']
+          for profile in ('original','expanded'):
+              assert result['profiles'][profile]['cold_restart']['passed']
+              for edit in ('early-definition','unrelated-definition'):
+                  row=result['profiles'][profile][edit]
+                  assert row['complete'] and len(row['pairs'])==5
+                  assert row['warm_economics']['paired_count']==5
+                  assert row['selected_kernel_economics']['paired_count']==5
+                  for pair in row['pairs']:
+                      assert pair['arms']['retained_selected']['checked']==pair['arms']['fresh_selected']['checked']
+                      assert pair['arms']['retained_selected']['decisions_sha256']==pair['arms']['fresh_selected']['decisions_sha256']
+                      assert pair['arms']['retained_selected']['kernel_report']['kernel']=='sokonanoda_real_selected_declaration_check'
+          print('Exact signed retained Rust kernel admission, negative controls, fresh oracle and complete A/B pairs PASS')
+          PY
+      - name: Archive qualified or failed exact-source evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: retained-native-kernel-acceptance
+          path: |
+            artifacts/retained-admission-smoke/smoke/retained_selected/summary.json
+            artifacts/retained-admission-protected/protected-summary.json
+            artifacts/retained-admission-protected/original/protected-matrix/retained_selected/summary.json
+            artifacts/retained-admission-protected/original/protected-matrix/retained_selected/summary.md
+            artifacts/retained-admission-protected/expanded/protected-matrix/retained_selected/summary.json
+            artifacts/retained-admission-protected/expanded/protected-matrix/retained_selected/summary.md
+            artifacts/retained-admission-ab/summary.json
+            artifacts/retained-admission-ab/summary.md
+          if-no-files-found: warn
+          retention-days: 30

@@ -16,6 +16,7 @@ import subprocess
 import tempfile
 import time
 import fcntl
+from types import SimpleNamespace
 
 import engine
 from build_workloads import ROOTS
@@ -234,7 +235,7 @@ class DeltaSession:
     """
     def __init__(self, root, workloads, producer, checker, indexer, index_session,
                  authority_key, index_mode='retained', sparse_index_wire=False,
-                 sparse_receipt=False, frozen_baseline=False):
+                 sparse_receipt=False, frozen_baseline=False, retained_checker=None):
         # Mode is an explicit, authenticated A/B policy rather than an
         # unrecorded subprocess switch. Both paths must produce the same index.
         if index_mode not in ('retained', 'full'):
@@ -251,6 +252,14 @@ class DeltaSession:
         self.frozen_baseline_mode = frozen_baseline
         self.frozen_baseline_bytes = None
         self.frozen_baseline_sha256 = None
+        # The retained parser is an opt-in actual native kernel transition,
+        # included in issuer-attested toolchain identity. Unsupported parameter
+        # combinations decline before any evidence or process is created.
+        if retained_checker is not None and (
+                not sparse_index_wire or not sparse_receipt or not frozen_baseline):
+            raise ValueError('retained native kernel requires immutable admitted baseline, sparse typed identity and signed acceptance')
+        self.retained_checker_path = Path(retained_checker).resolve() if retained_checker is not None else None
+        self.kernel_process = None
         self.root, self.workloads = Path(root).resolve(), Path(workloads).resolve()
         self.root.mkdir(parents=True, exist_ok=True)
         self.key_path = Path(authority_key).resolve()
@@ -288,8 +297,11 @@ class DeltaSession:
         self.private = tempfile.TemporaryDirectory(prefix='mathgraph-source-owner-')
         self.temp = Path(self.private.name)
         self.tools, self.tool_hashes = {}, {}
-        for name, source in [('producer', producer), ('checker', checker), ('indexer', indexer),
-                             ('index_session', index_session)]:
+        protected_tools = [('producer', producer), ('checker', checker), ('indexer', indexer),
+                           ('index_session', index_session)]
+        if self.retained_checker_path is not None:
+            protected_tools.append(('retained_checker', self.retained_checker_path))
+        for name, source in protected_tools:
             destination = self.temp / name
             shutil.copyfile(source, destination)
             destination.chmod(0o500)
@@ -321,6 +333,8 @@ class DeltaSession:
             # Explicit HMAC-bound applicability assumption: retained immutable
             # source-owned Python bytes, never a mutable disk re-read.
             self.delta_provenance['baseline_authority'] = 'source-owned-frozen-bytes-v1'
+        if self.retained_checker_path is not None:
+            self.delta_provenance['selected_kernel_backend'] = 'sha-pinned-retained-parser-v1'
 
     def start(self):
         tick, cpu = time.perf_counter(), self.cpu_time()
@@ -393,8 +407,19 @@ class DeltaSession:
         indexed = self.index.receive()
         if indexed.get('status') != 'ready' or engine.encoded(indexed.get('index')) != engine.encoded(self.old['index']):
             raise ValueError('retained typed index disagrees with authenticated baseline')
+        kernel_ready = None
+        if self.retained_checker_path is not None:
+            self.kernel_process = JsonProcess(
+                [self.tools['retained_checker'], config, expected],
+                self.root / 'retained-kernel.stderr')
+            kernel_ready = self.kernel_process.receive()
+            if (kernel_ready.get('status') != 'ready' or
+                kernel_ready.get('total_declarations') != self.old['index']['count'] or
+                kernel_ready.get('baseline_sha256') != expected or
+                kernel_ready.get('scope') != 'retained_parser_low_level_witness_not_acceptance_authority'):
+                raise ValueError('retained Rust parser failed exact authenticated baseline admission')
         self.start_report = dict(status='READY', base_evidence_id=self.base_id,
-            source_root=self.source_root, producer=ready,
+            source_root=self.source_root, producer=ready, retained_kernel_ready=kernel_ready,
             wall_seconds=time.perf_counter()-tick, cpu_seconds=self.cpu_time()-cpu,
             delta_provenance=self.delta_provenance)
         return self.start_report
@@ -403,7 +428,7 @@ class DeltaSession:
         total = engine.cpu_time()
         # RUSAGE_CHILDREN omits still-running producer/index sessions. Their
         # procfs counters include completed grandchildren, in clock ticks.
-        for daemon in [self.producer, self.index]:
+        for daemon in [self.producer, self.index, getattr(self, 'kernel_process', None)]:
             if daemon is None:
                 continue
             try:
@@ -418,7 +443,8 @@ class DeltaSession:
                             'not exact phase peaks or aggregate memory savings', processes={})
         for label, pid in [('adapter', os.getpid()),
             ('producer', self.producer.process.pid if self.producer else None),
-            ('index', self.index.process.pid if self.index else None)]:
+            ('index', self.index.process.pid if self.index else None),
+            ('retained_kernel', getattr(self, 'kernel_process', None).process.pid if getattr(self, 'kernel_process', None) else None)]:
             if pid is None:
                 continue
             try:
@@ -633,9 +659,38 @@ class DeltaSession:
         indices = self.temp / 'indices.json'
         indices.write_bytes(engine.encoded(selected))
         tick, phase_start = time.perf_counter(), self.cpu_time()
-        # Always parse changed representation bytes, including unused DAG rows.
-        checked = subprocess.run([str(self.tools['checker']), str(config), str(indices)],
-                                 capture_output=True, timeout=120)
+        # The low-level retained native parser is provenance pinned and can only
+        # replace the old complete parser after the issuer has authenticated
+        # exactly the source-owned delta and the old conservative predicate
+        # independently selected obligations. It must parse every new DAG row,
+        # including unused malformed rows when nothing is selected.
+        native_kernel_report = None
+        if self.kernel_process is not None:
+            native_kernel_report = self.kernel_process.request(dict(
+                delta_path=str(path), delta_sha256=payload['delta_sha256'],
+                selected_indices_path=str(indices),
+                expected_changed_names=payload['changed_names']))
+            if (native_kernel_report.get('status') == 'checked' and
+                native_kernel_report.get('code') == 0 and
+                native_kernel_report.get('kernel') == 'sokonanoda_real_selected_declaration_check' and
+                native_kernel_report.get('scope') == 'selected_obligations_under_caller_trusted_environment'):
+                normalized = dict(
+                    checked=native_kernel_report['checked'],
+                    total_declarations=native_kernel_report['total_declarations'],
+                    scope='selected_obligations_under_caller_trusted_environment')
+                checked = SimpleNamespace(
+                    returncode=0, stdout=engine.encoded(normalized), stderr=b'')
+            elif (native_kernel_report.get('status') == 'rejected' and
+                  native_kernel_report.get('code') == 1 and
+                  native_kernel_report.get('scope') == 'retained_parser_low_level_refusal_not_issuer_acceptance'):
+                checked = SimpleNamespace(
+                    returncode=1, stdout=b'',
+                    stderr=str(native_kernel_report.get('reason', '')).encode())
+            else:
+                raise ValueError('unexpected native retained Rust checker response')
+        else:
+            checked = subprocess.run([str(self.tools['checker']), str(config), str(indices)],
+                                     capture_output=True, timeout=120)
         checking = time.perf_counter()-tick
         phase_cpu['checking_cpu_seconds'] = self.cpu_time()-phase_start
         memory['checking'] = self.memory_observation()
@@ -693,6 +748,7 @@ class DeltaSession:
                                 stderr=checked.stderr.decode(errors='replace')),
             provenance=self.old['provenance'], producer_provenance=self.delta_provenance,
             producer_report=transaction['producer_report'], typed_update={k:v for k,v in update.items() if k!='index'},
+            native_kernel_report=native_kernel_report,
             representation=dict(delta_bytes=len(delta), export_bytes=export_bytes,
                                 full_export_disk_bytes_written=0, immutable_memfd=True),
             timings=dict(producer_seconds=transaction.get('prepare_wall_seconds',0),
@@ -702,7 +758,7 @@ class DeltaSession:
                 materialization_and_hash_seconds=materialization, checking_seconds=checking,
                 persistence_seconds=persistence, consumer_seconds=time.perf_counter()-start,
                 consumer_cpu_seconds=self.cpu_time()-cpu, **phase_cpu), memory=memory,
-            cpu_measurement='Adapter + completed children + live producer/index procfs ticks; '
+            cpu_measurement='Adapter + completed children + live producer/index/kernel procfs ticks; '
                             'live counters have SC_CLK_TCK granularity', action_authorization='NONE')
         result['timings']['end_to_end_seconds'] = result['timings']['producer_seconds'] + result['timings']['consumer_seconds']
         result['timings']['end_to_end_cpu_seconds'] = transaction.get('prepare_cpu_seconds',0) + result['timings']['consumer_cpu_seconds']
@@ -759,7 +815,7 @@ class DeltaSession:
         return result
 
     def close(self):
-        for process in [self.producer, self.index]:
+        for process in [self.producer, self.index, getattr(self, 'kernel_process', None)]:
             if process is not None:
                 process.close()
         if self.fd is not None:
