@@ -234,7 +234,7 @@ class DeltaSession:
     """
     def __init__(self, root, workloads, producer, checker, indexer, index_session,
                  authority_key, index_mode='retained', sparse_index_wire=False,
-                 sparse_receipt=False):
+                 sparse_receipt=False, frozen_baseline=False):
         # Mode is an explicit, authenticated A/B policy rather than an
         # unrecorded subprocess switch. Both paths must produce the same index.
         if index_mode not in ('retained', 'full'):
@@ -246,6 +246,11 @@ class DeltaSession:
         if type(sparse_receipt) is not bool or (sparse_receipt and not sparse_index_wire):
             raise ValueError('sparse receipt requires sparse typed-index transport')
         self.sparse_receipt = sparse_receipt
+        if type(frozen_baseline) is not bool:
+            raise ValueError('frozen baseline mode must be boolean')
+        self.frozen_baseline_mode = frozen_baseline
+        self.frozen_baseline_bytes = None
+        self.frozen_baseline_sha256 = None
         self.root, self.workloads = Path(root).resolve(), Path(workloads).resolve()
         self.root.mkdir(parents=True, exist_ok=True)
         self.key_path = Path(authority_key).resolve()
@@ -312,6 +317,10 @@ class DeltaSession:
             self.delta_provenance['identity_index_wire'] = 'baseline_patch_v1'
         if self.sparse_receipt:
             self.delta_provenance['acceptance_receipt'] = SPARSE_ACCEPTANCE
+        if self.frozen_baseline_mode:
+            # Explicit HMAC-bound applicability assumption: retained immutable
+            # source-owned Python bytes, never a mutable disk re-read.
+            self.delta_provenance['baseline_authority'] = 'source-owned-frozen-bytes-v1'
 
     def start(self):
         tick, cpu = time.perf_counter(), self.cpu_time()
@@ -358,7 +367,17 @@ class DeltaSession:
                                                                   genesis_id=genesis_id)))
         if self.old['export_sha256'] != expected:
             raise ValueError('authenticated baseline export mismatch')
-        self._baseline_bytes()
+        authenticated_storage = self._baseline_bytes()
+        if authenticated_storage != produced:
+            raise ValueError('source-owned and authenticated persistent baseline differ')
+        # A Python bytes object is immutable for the lifetime of this issuer
+        # process. Warm verification can read this already-authenticated source
+        # snapshot without referring again to mutable cache storage. At every
+        # cold restart the complete signed record and export hash are checked
+        # again before a new snapshot can be admitted.
+        if self.frozen_baseline_mode:
+            self.frozen_baseline_bytes = produced
+            self.frozen_baseline_sha256 = expected
         # Layout is reconstructed from authenticated bytes at every cold start;
         # ordinary untrusted storage never authenticates a cached offset table.
         self.layout = self._layout(produced)
@@ -569,7 +588,17 @@ class DeltaSession:
             raise ValueError('changed-byte integrity failed')
         phase_cpu, memory = {}, dict(producer=transaction.get('memory_after_producer'))
         tick, phase_start = time.perf_counter(), self.cpu_time()
-        baseline = self._baseline_bytes()
+        if self.frozen_baseline_mode:
+            baseline = self.frozen_baseline_bytes
+            if (type(baseline) is not bytes or
+                    self.frozen_baseline_sha256 != self.old['export_sha256'] or
+                    self.frozen_baseline_sha256 != self.export_pins['baseline']):
+                raise ValueError('missing exact authenticated immutable session baseline')
+            # A source-owned immutable *historical snapshot* is the warm input.
+            # On-disk corruption during this live session cannot change the
+            # bytes actually checked; cold restart must still refuse the disk.
+        else:
+            baseline = self._baseline_bytes()
         validation = time.perf_counter()-tick
         phase_cpu['baseline_validation_cpu_seconds'] = self.cpu_time()-phase_start
         memory['validation'] = self.memory_observation()
@@ -667,7 +696,9 @@ class DeltaSession:
             representation=dict(delta_bytes=len(delta), export_bytes=export_bytes,
                                 full_export_disk_bytes_written=0, immutable_memfd=True),
             timings=dict(producer_seconds=transaction.get('prepare_wall_seconds',0),
-                baseline_validation_seconds=validation, identity_update_seconds=identity,
+                baseline_validation_seconds=validation,
+                baseline_authority='source-owned-frozen-bytes-v1' if self.frozen_baseline_mode else 'rehashed-durable-bytes-v1',
+                identity_update_seconds=identity,
                 materialization_and_hash_seconds=materialization, checking_seconds=checking,
                 persistence_seconds=persistence, consumer_seconds=time.perf_counter()-start,
                 consumer_cpu_seconds=self.cpu_time()-cpu, **phase_cpu), memory=memory,
