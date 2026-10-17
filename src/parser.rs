@@ -760,7 +760,8 @@ impl<'a, R: BufRead> Parser<'a, R> {
             if matches!(declaration,
                 Declar::Definition { .. } | Declar::Theorem { .. } | Declar::Opaque { .. })
             {
-                self.retained_simple_names.insert(self.name_to_string(*name));
+                let rendered = self.name_to_string(*name);
+                self.retained_simple_names.insert(rendered);
             }
         }
         Ok(self.declars.len())
