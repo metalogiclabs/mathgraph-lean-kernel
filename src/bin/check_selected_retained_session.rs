@@ -135,7 +135,9 @@ mod tests {
     use super::*;
     #[test]
     fn sha_guard_refuses_uppercase_short_and_non_hex() {
-        for s in ["short", "F".repeat(64).as_str(), &"g".repeat(64)] {
+        let uppercase = "F".repeat(64);
+        let non_hex = "g".repeat(64);
+        for s in ["short", uppercase.as_str(), non_hex.as_str()] {
             assert!(validate_hex_id(s).is_err());
         }
         assert!(validate_hex_id(&"a".repeat(64)).is_ok());
