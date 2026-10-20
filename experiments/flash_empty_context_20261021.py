@@ -21,7 +21,7 @@ new='''        // Empty consequential projection: every requested local was abse
         } else {
             self.intern_frame(slots_hash, out_mask, slots, value::NEAR, rest, lsub)
         };
-        self.tc_cache.prune_dm[slot] = (Some(Id::of(e)), mask, Some(r));'''
+        self.tc_cache.prune_dm.put(slot, Id::of(e), mask, r);'''
 assert s.count(old)==1, "SOURCE_DRIFT: expected original memo publication exactly once"
 s=s.replace(old,new)
 p.write_text(s)
