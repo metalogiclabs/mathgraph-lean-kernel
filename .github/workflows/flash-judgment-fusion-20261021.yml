@@ -1,0 +1,75 @@
+name: Flash fused consequential-judgment A/B factorial
+on:
+  push:
+    branches: [research/flash-judgment-fusion-20261021]
+    paths:
+      - 'experiments/flash_judgment_fusion_patch_20261021.py'
+      - 'experiments/flash_judgment_fusion_gate_20261021.py'
+      - '.github/workflows/flash-judgment-fusion-20261021.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-factorial:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install deterministic guest-instruction meter
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq valgrind
+      - name: Pin exact Soko and Arena source; isolate controlled interventions
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/flash-fused-results /tmp/flash-fused-zip /tmp/flash-fused-portable
+          git rev-parse HEAD > /tmp/flash-fused-results/experiment-sha.txt
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/flash-fused-base-src
+          git -C /tmp/flash-fused-base-src checkout --detach 7645b1e1fcacfe410c99141f1234381d995b325d
+          for arm in infer eval both; do
+            git -C /tmp/flash-fused-base-src worktree add --detach /tmp/flash-fused-$arm-src 7645b1e1fcacfe410c99141f1234381d995b325d
+          done
+          for arm in base infer eval both; do
+            python3 experiments/arena_soko_sparse_patch_v1.py /tmp/flash-fused-$arm-src
+            python3 experiments/arena_soko_growth_patch_v1.py /tmp/flash-fused-$arm-src
+          done
+          for arm in infer eval both; do
+            python3 experiments/flash_judgment_fusion_patch_20261021.py /tmp/flash-fused-$arm-src "$arm"
+            git -C /tmp/flash-fused-$arm-src diff --check
+            git -C /tmp/flash-fused-$arm-src diff > /tmp/flash-fused-results/$arm.diff
+          done
+          git -C /tmp/flash-fused-base-src diff > /tmp/flash-fused-results/qualified-common.diff
+          gh api repos/leanprover/lean-kernel-arena/actions/artifacts/11505862349/zip > /tmp/flash-fused-pack.zip
+          unzip -q /tmp/flash-fused-pack.zip -d /tmp/flash-fused-zip
+          tar --no-same-owner -xzf /tmp/flash-fused-zip/lean-arena-tests.tar.gz -C /tmp/flash-fused-portable
+          test -s /tmp/flash-fused-portable/good/init-prelude.ndjson
+      - name: Compile identical-ISA checker arms and require genuine native Rust tests
+        run: |
+          set -euo pipefail
+          rustc -vV > /tmp/flash-fused-results/toolchain.txt
+          for arm in base infer eval both; do
+            CARGO_TARGET_DIR=/tmp/flash-fused-$arm-target RUSTFLAGS='-C target-cpu=x86-64' \
+              cargo build --release --locked --manifest-path /tmp/flash-fused-$arm-src/Cargo.toml
+            CARGO_TARGET_DIR=/tmp/flash-fused-$arm-target RUSTFLAGS='-C target-cpu=x86-64' \
+              cargo test --release --locked --manifest-path /tmp/flash-fused-$arm-src/Cargo.toml \
+              > /tmp/flash-fused-results/$arm-tests.log 2>&1 || {
+                tail -80 /tmp/flash-fused-results/$arm-tests.log; exit 1;
+              }
+          done
+          sha256sum /tmp/flash-fused-{base,infer,eval,both}-target/release/sokonanoda > /tmp/flash-fused-results/binaries.sha256
+      - name: Four-arm protected semantic parity and causal instruction measurement
+        run: |
+          set -euo pipefail
+          python3 experiments/flash_judgment_fusion_gate_20261021.py \
+            /tmp/flash-fused-portable /tmp/flash-fused-results
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-judgment-fusion-factorial-${{ github.sha }}
+          path: /tmp/flash-fused-results/
+          if-no-files-found: warn
