@@ -1,0 +1,78 @@
+name: Flash context transport robust seven-run crossover
+on:
+  push:
+    branches: [research/flash-context-robust-crossover-20261021]
+    paths:
+      - 'experiments/flash_context_compound_patch_20261021.py'
+      - 'experiments/flash_context_robust_gate_20261021.py'
+      - '.github/workflows/flash-context-robust-20261021.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  compositional-cost:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 160
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install native validation and guest instruction tool
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq valgrind
+      - name: Pin original kernel source and freeze four independent source arms
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/flash-compound-evidence /tmp/flash-compound-zip /tmp/flash-compound-portable
+          git rev-parse HEAD > /tmp/flash-compound-evidence/execution-head.txt
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/flash-compound-base-src
+          git -C /tmp/flash-compound-base-src checkout --detach 7645b1e1fcacfe410c99141f1234381d995b325d
+          for arm in fused support compound; do
+            git -C /tmp/flash-compound-base-src worktree add --detach /tmp/flash-compound-$arm-src 7645b1e1fcacfe410c99141f1234381d995b325d
+          done
+          for arm in base fused support compound; do
+            python3 experiments/arena_soko_sparse_patch_v1.py /tmp/flash-compound-$arm-src
+            python3 experiments/arena_soko_growth_patch_v1.py /tmp/flash-compound-$arm-src
+          done
+          for arm in fused compound; do
+            python3 experiments/flash_judgment_fusion_patch_20261021.py /tmp/flash-compound-$arm-src both
+          done
+          python3 experiments/flash_context_compound_patch_20261021.py /tmp/flash-compound-support-src support
+          python3 experiments/flash_context_compound_patch_20261021.py /tmp/flash-compound-compound-src compound
+          for arm in base fused support compound; do
+            git -C /tmp/flash-compound-$arm-src diff --check
+            git -C /tmp/flash-compound-$arm-src diff > /tmp/flash-compound-evidence/$arm.diff
+          done
+          gh api repos/leanprover/lean-kernel-arena/actions/artifacts/11505862349/zip > /tmp/flash-compound-tests.zip
+          unzip -q /tmp/flash-compound-tests.zip -d /tmp/flash-compound-zip
+          tar --no-same-owner -xzf /tmp/flash-compound-zip/lean-arena-tests.tar.gz -C /tmp/flash-compound-portable
+          test -s /tmp/flash-compound-portable/good/init-prelude.ndjson
+      - name: Compile and run exact native unit tests for every source arm
+        run: |
+          set -euo pipefail
+          rustc -vV > /tmp/flash-compound-evidence/toolchain.txt
+          for arm in base fused support compound; do
+            CARGO_TARGET_DIR=/tmp/flash-compound-$arm-target RUSTFLAGS='-C target-cpu=x86-64' \
+              cargo build --release --locked --manifest-path /tmp/flash-compound-$arm-src/Cargo.toml
+            CARGO_TARGET_DIR=/tmp/flash-compound-$arm-target RUSTFLAGS='-C target-cpu=x86-64' \
+              cargo test --release --locked --manifest-path /tmp/flash-compound-$arm-src/Cargo.toml \
+              > /tmp/flash-compound-evidence/$arm-rust-tests.log 2>&1 || {
+                tail -80 /tmp/flash-compound-evidence/$arm-rust-tests.log; exit 1;
+              }
+          done
+          sha256sum /tmp/flash-compound-{base,fused,support,compound}-target/release/sokonanoda > /tmp/flash-compound-evidence/binaries.sha256
+      - name: Protect every pinned verdict and require paired complete-process instructions
+        run: |
+          set -euo pipefail
+          python3 experiments/flash_context_robust_gate_20261021.py \
+            /tmp/flash-compound-portable /tmp/flash-compound-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-context-robust-${{ github.sha }}
+          path: /tmp/flash-compound-evidence/
+          if-no-files-found: warn
