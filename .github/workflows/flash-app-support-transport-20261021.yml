@@ -1,0 +1,70 @@
+name: Flash inherited support in application inference
+on:
+  push:
+    branches: [research/flash-app-support-transport-20261021]
+    paths:
+      - 'experiments/flash_app_support_transport_patch_20261021.py'
+      - 'experiments/flash_app_support_transport_gate_20261021.py'
+      - '.github/workflows/flash-app-support-transport-20261021.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  protected-cost:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install deterministic guest-instruction meter
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq valgrind
+      - name: Freeze source, exact cached context, independent control
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/flash-app-evidence /tmp/flash-app-zip /tmp/flash-app-tests
+          git rev-parse HEAD > /tmp/flash-app-evidence/experiment-sha.txt
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/flash-app-base-src
+          git -C /tmp/flash-app-base-src checkout --detach 7645b1e1fcacfe410c99141f1234381d995b325d
+          git -C /tmp/flash-app-base-src worktree add --detach /tmp/flash-app-candidate-src 7645b1e1fcacfe410c99141f1234381d995b325d
+          for arm in base candidate; do
+            python3 experiments/arena_soko_sparse_patch_v1.py /tmp/flash-app-$arm-src
+            python3 experiments/arena_soko_growth_patch_v1.py /tmp/flash-app-$arm-src
+          done
+          python3 experiments/flash_app_support_transport_patch_20261021.py /tmp/flash-app-candidate-src
+          git -C /tmp/flash-app-candidate-src diff --check
+          git -C /tmp/flash-app-base-src diff > /tmp/flash-app-evidence/qualified-common.diff
+          git -C /tmp/flash-app-candidate-src diff > /tmp/flash-app-evidence/candidate.diff
+          gh api repos/leanprover/lean-kernel-arena/actions/artifacts/11505862349/zip > /tmp/flash-app-tests.zip
+          unzip -q /tmp/flash-app-tests.zip -d /tmp/flash-app-zip
+          tar --no-same-owner -xzf /tmp/flash-app-zip/lean-arena-tests.tar.gz -C /tmp/flash-app-tests
+          test -s /tmp/flash-app-tests/good/init-prelude.ndjson
+      - name: Build identical checker variants and run native Rust unit tests
+        run: |
+          set -euo pipefail
+          rustc -vV > /tmp/flash-app-evidence/compiler.txt
+          for arm in base candidate; do
+            CARGO_TARGET_DIR=/tmp/flash-app-$arm-target RUSTFLAGS='-C target-cpu=x86-64' \
+              cargo build --release --locked --manifest-path /tmp/flash-app-$arm-src/Cargo.toml
+            CARGO_TARGET_DIR=/tmp/flash-app-$arm-target RUSTFLAGS='-C target-cpu=x86-64' \
+              cargo test --release --locked --manifest-path /tmp/flash-app-$arm-src/Cargo.toml \
+              > /tmp/flash-app-evidence/$arm-rust-tests.log 2>&1 || {
+                tail -80 /tmp/flash-app-evidence/$arm-rust-tests.log; exit 1;
+              }
+          done
+          sha256sum /tmp/flash-app-{base,candidate}-target/release/sokonanoda > /tmp/flash-app-evidence/binaries.sha256
+      - name: Require protected whole-corpus verdict parity and measured instruction savings
+        run: |
+          set -euo pipefail
+          python3 experiments/flash_app_support_transport_gate_20261021.py /tmp/flash-app-tests /tmp/flash-app-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-app-parent-support-${{ github.sha }}
+          path: /tmp/flash-app-evidence/
+          if-no-files-found: warn
