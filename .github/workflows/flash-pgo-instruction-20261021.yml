@@ -1,0 +1,96 @@
+name: Flash full-Mathlib-trained PGO guest-instruction A/B
+on:
+  push:
+    branches: [research/flash-pgo-instruction-gate-20261021]
+    paths:
+      - 'experiments/flash_pgo_instruction_20261021.py'
+      - '.github/workflows/flash-pgo-instruction-20261021.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  measured-ab:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+      - name: Install portable instruction meter
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq valgrind
+      - name: Freeze source and authentic Arena inputs
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/flash-evidence /tmp/flash-export /tmp/flash-training-zip /tmp/flash-training
+          git rev-parse HEAD > /tmp/flash-evidence/experiment-commit.txt
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/flash-source
+          git -C /tmp/flash-source checkout --detach 7645b1e1fcacfe410c99141f1234381d995b325d
+          test "$(git -C /tmp/flash-source rev-parse HEAD)" = 7645b1e1fcacfe410c99141f1234381d995b325d
+          python3 experiments/arena_soko_sparse_patch_v1.py /tmp/flash-source
+          python3 experiments/arena_soko_growth_patch_v1.py /tmp/flash-source
+          git -C /tmp/flash-source diff --check
+          git -C /tmp/flash-source diff -- src/checker/cache.rs src/checker/eval/environment.rs src/checker/ptrmap.rs > /tmp/flash-evidence/qualified-common-source.diff
+          sha256sum /tmp/flash-source/src/checker/{cache.rs,ptrmap.rs} > /tmp/flash-evidence/semantic-source-files.sha256
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/flash-arena
+          git -C /tmp/flash-arena checkout --detach b83254de5146ef34147ab82a48edbe1856b0edcc
+          gh api repos/leanprover/lean-kernel-arena/actions/artifacts/11505862349/zip > /tmp/flash-training.zip
+          unzip -q /tmp/flash-training.zip -d /tmp/flash-training-zip
+          tar --no-same-owner -xzf /tmp/flash-training-zip/lean-arena-tests.tar.gz -C /tmp/flash-training
+          test -s /tmp/flash-training/good/init-prelude.ndjson
+          rustc -vV > /tmp/flash-evidence/rustc.txt
+      - name: Obtain original pinned complete Mathlib
+        run: |
+          set -euo pipefail
+          cd /tmp/flash-arena
+          nix develop -c ./lka.py build-test mathlib
+          test -s _build/tests/mathlib.ndjson
+          stat -c '%s' _build/tests/mathlib.ndjson | tee /tmp/flash-evidence/mathlib-bytes.txt
+          sha256sum _build/tests/mathlib.ndjson > /tmp/flash-evidence/mathlib.sha256
+          echo '22c5de83469408950005589a3bc5ef5157c65549b5a802f85d567c29151306a6  _build/tests/mathlib.ndjson' | sha256sum -c -
+      - name: Compile identical semantic source using two different PGO training distributions
+        run: |
+          set -euo pipefail
+          HOST=$(rustc -vV | awk '/^host:/ {print $2}')
+          LLVM_PROFDATA="$(rustc --print sysroot)/lib/rustlib/$HOST/bin/llvm-profdata"
+          test -x "$LLVM_PROFDATA"
+          cargo test --release --locked --manifest-path /tmp/flash-source/Cargo.toml > /tmp/flash-evidence/native-tests.log 2>&1 || { tail -80 /tmp/flash-evidence/native-tests.log; exit 1; }
+          for arm in init mathlib; do
+            dir="/tmp/flash-pgo-$arm"
+            target="/tmp/flash-target-$arm"
+            mkdir -p "$dir"
+            CARGO_TARGET_DIR="$target" RUSTFLAGS="-C target-cpu=x86-64 -Cprofile-generate=$dir" \
+              cargo build --release --locked --manifest-path /tmp/flash-source/Cargo.toml
+            if [ "$arm" = init ]; then
+              TRAIN=/tmp/flash-training/good/init-prelude.ndjson
+            else
+              TRAIN=/tmp/flash-arena/_build/tests/mathlib.ndjson
+            fi
+            "$target/release/sokonanoda" --stdin --nat-extension --string-extension --axiom-allow-all --threads 4 \
+              < "$TRAIN" > /tmp/flash-evidence/pgo-training-$arm.stdout 2>/tmp/flash-evidence/pgo-training-$arm.stderr
+            "$LLVM_PROFDATA" merge -o "$dir/merged.profdata" "$dir"
+            test -s "$dir/merged.profdata"
+            sha256sum "$dir/merged.profdata" >> /tmp/flash-evidence/profile-hashes.sha256
+            CARGO_TARGET_DIR="$target" RUSTFLAGS="-C target-cpu=x86-64 -Cprofile-use=$dir/merged.profdata" \
+              cargo build --release --locked --manifest-path /tmp/flash-source/Cargo.toml
+            cp "$target/release/sokonanoda" "/tmp/flash-profile-$arm"
+          done
+          sha256sum /tmp/flash-profile-{init,mathlib} > /tmp/flash-evidence/binary-hashes.sha256
+      - name: Protected 196 parity and paired deterministic guest-instruction gate
+        run: |
+          set -euo pipefail
+          python3 experiments/flash_pgo_instruction_20261021.py \
+            /tmp/flash-training /tmp/flash-arena/_build/tests/mathlib.ndjson /tmp/flash-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-pgo-guest-instruction-${{ github.sha }}
+          path: /tmp/flash-evidence/
+          if-no-files-found: warn
