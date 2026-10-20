@@ -12,7 +12,7 @@ import pathlib,sys
 p=pathlib.Path(sys.argv[1])/"src/checker/eval/environment.rs"
 s=p.read_text()
 old='''        let r = self.intern_frame(slots_hash, out_mask, slots, value::NEAR, rest, lsub);
-        self.tc_cache.prune_dm[slot] = (Some(Id::of(e)), mask, Some(r));'''
+        self.tc_cache.prune_dm.put(slot, Id::of(e), mask, r);'''
 new='''        // Empty consequential projection: every requested local was absent
         // from the captured frame and there is no far tail. The existing
         // universe-substitution base is the complete semantic environment.
