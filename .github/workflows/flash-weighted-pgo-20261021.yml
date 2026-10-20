@@ -1,0 +1,114 @@
+name: Flash weighted PGO profile selection
+on:
+  push:
+    branches: [research/flash-weighted-pgo-20261021]
+    paths:
+      - 'experiments/flash_weighted_pgo_gate_20261021.py'
+      - '.github/workflows/flash-weighted-pgo-20261021.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  blended-pgo:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+      - name: Install deterministic guest-instruction meter
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq valgrind
+      - name: Freeze checker, semantic patch, and Arena authority
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/flash-weighted-evidence /tmp/flash-weighted-zip /tmp/flash-weighted-portable
+          git rev-parse HEAD > /tmp/flash-weighted-evidence/experiment-sha.txt
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/flash-weighted-source
+          git -C /tmp/flash-weighted-source checkout --detach 7645b1e1fcacfe410c99141f1234381d995b325d
+          test "$(git -C /tmp/flash-weighted-source rev-parse HEAD)" = 7645b1e1fcacfe410c99141f1234381d995b325d
+          python3 experiments/arena_soko_sparse_patch_v1.py /tmp/flash-weighted-source
+          python3 experiments/arena_soko_growth_patch_v1.py /tmp/flash-weighted-source
+          git -C /tmp/flash-weighted-source diff --check
+          git -C /tmp/flash-weighted-source diff > /tmp/flash-weighted-evidence/common-semantic-source.diff
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/flash-weighted-arena
+          git -C /tmp/flash-weighted-arena checkout --detach b83254de5146ef34147ab82a48edbe1856b0edcc
+          gh api repos/leanprover/lean-kernel-arena/actions/artifacts/11505862349/zip > /tmp/flash-weighted-testpack.zip
+          unzip -q /tmp/flash-weighted-testpack.zip -d /tmp/flash-weighted-zip
+          tar --no-same-owner -xzf /tmp/flash-weighted-zip/lean-arena-tests.tar.gz -C /tmp/flash-weighted-portable
+          test -s /tmp/flash-weighted-portable/good/init-prelude.ndjson
+          rustc -vV > /tmp/flash-weighted-evidence/rust-toolchain.txt
+      - name: Pin exact original full-Mathlib training source
+        run: |
+          set -euo pipefail
+          cd /tmp/flash-weighted-arena
+          nix develop -c ./lka.py build-test mathlib
+          test -s _build/tests/mathlib.ndjson
+          test "$(stat -c '%s' _build/tests/mathlib.ndjson)" = 6184415052
+          echo '22c5de83469408950005589a3bc5ef5157c65549b5a802f85d567c29151306a6  _build/tests/mathlib.ndjson' | sha256sum -c -
+      - name: Generate two training profiles from exactly one instrumented checker
+        run: |
+          set -euo pipefail
+          HOST=$(rustc -vV | awk '/^host:/ {print $2}')
+          LLVM_PROFDATA="$(rustc --print sysroot)/lib/rustlib/$HOST/bin/llvm-profdata"
+          test -x "$LLVM_PROFDATA"
+          "$LLVM_PROFDATA" merge --help | grep -q 'weighted-input'
+          printf '%s\n' "$LLVM_PROFDATA" > /tmp/flash-weighted-evidence/profdata-path.txt
+          cargo test --release --locked --manifest-path /tmp/flash-weighted-source/Cargo.toml > /tmp/flash-weighted-evidence/rust-tests.log 2>&1 || { tail -80 /tmp/flash-weighted-evidence/rust-tests.log; exit 1; }
+          mkdir -p /tmp/flash-weighted-profile /tmp/flash-weighted-generated
+          CARGO_TARGET_DIR=/tmp/flash-weighted-instrumented \
+            RUSTFLAGS='-C target-cpu=x86-64 -Cprofile-generate=/tmp/flash-weighted-generated' \
+            cargo build --release --locked --manifest-path /tmp/flash-weighted-source/Cargo.toml
+          for train in init mathlib; do
+            if [ "$train" = init ]; then
+              src=/tmp/flash-weighted-portable/good/init-prelude.ndjson
+            else
+              src=/tmp/flash-weighted-arena/_build/tests/mathlib.ndjson
+            fi
+            LLVM_PROFILE_FILE="/tmp/flash-weighted-profile/$train.profraw" \
+              /tmp/flash-weighted-instrumented/release/sokonanoda \
+              --stdin --nat-extension --string-extension --axiom-allow-all --threads 4 < "$src" \
+              >/tmp/flash-weighted-evidence/$train-training.stdout \
+              2>/tmp/flash-weighted-evidence/$train-training.stderr
+            test -s "/tmp/flash-weighted-profile/$train.profraw"
+            "$LLVM_PROFDATA" merge -o "/tmp/flash-weighted-profile/$train.profdata" \
+              "/tmp/flash-weighted-profile/$train.profraw"
+            test -s "/tmp/flash-weighted-profile/$train.profdata"
+          done
+          for weight in 10 100 1000; do
+            "$LLVM_PROFDATA" merge \
+              "-weighted-input=$weight,/tmp/flash-weighted-profile/init.profdata" \
+              "-weighted-input=1,/tmp/flash-weighted-profile/mathlib.profdata" \
+              -o "/tmp/flash-weighted-profile/mix$weight.profdata"
+            test -s "/tmp/flash-weighted-profile/mix$weight.profdata"
+          done
+          sha256sum /tmp/flash-weighted-profile/*.profdata > /tmp/flash-weighted-evidence/profile-sha256.txt
+      - name: Compile profile-only variants with identical semantic source and target ISA
+        run: |
+          set -euo pipefail
+          for arm in init mix10 mix100 mix1000; do
+            prof="/tmp/flash-weighted-profile/$arm.profdata"
+            CARGO_TARGET_DIR="/tmp/flash-weighted-build-$arm" \
+              RUSTFLAGS="-C target-cpu=x86-64 -Cprofile-use=$prof" \
+              cargo build --release --locked --manifest-path /tmp/flash-weighted-source/Cargo.toml
+            cp "/tmp/flash-weighted-build-$arm/release/sokonanoda" "/tmp/flash-weighted-binary-$arm"
+          done
+          sha256sum /tmp/flash-weighted-binary-{init,mix10,mix100,mix1000} > /tmp/flash-weighted-evidence/binary-sha256.txt
+      - name: Qualify protected verdicts and five whole-process guest-instruction outcomes
+        run: |
+          set -euo pipefail
+          python3 experiments/flash_weighted_pgo_gate_20261021.py \
+            /tmp/flash-weighted-portable /tmp/flash-weighted-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-weighted-pgo-certificate-${{ github.sha }}
+          path: /tmp/flash-weighted-evidence/
+          if-no-files-found: warn
