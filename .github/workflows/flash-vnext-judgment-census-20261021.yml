@@ -1,0 +1,82 @@
+name: Flash VNext full-Mathlib contextual judgment overlap census
+on:
+  push:
+    branches: [research/flash-vnext-judgment-census-20261021]
+    paths:
+      - 'experiments/flash_vnext_judgment_census_patch_20261021.py'
+      - 'experiments/flash_vnext_judgment_census_report_20261021.py'
+      - '.github/workflows/flash-vnext-judgment-census-20261021.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: flash-vnext-census-20261021
+  cancel-in-progress: true
+jobs:
+  full-mathlib:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Freeze original source, Arena and feature-only diagnostics
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/flash-vnext-census-evidence
+          git rev-parse HEAD > /tmp/flash-vnext-census-evidence/research-head.txt
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/flash-vnext-census-source
+          git -C /tmp/flash-vnext-census-source checkout --detach 7645b1e1fcacfe410c99141f1234381d995b325d
+          python3 experiments/arena_soko_sparse_patch_v1.py /tmp/flash-vnext-census-source
+          python3 experiments/arena_soko_growth_patch_v1.py /tmp/flash-vnext-census-source
+          python3 experiments/flash_vnext_judgment_cache_patch_20261021.py /tmp/flash-vnext-census-source
+          python3 experiments/flash_vnext_judgment_census_patch_20261021.py /tmp/flash-vnext-census-source
+          git -C /tmp/flash-vnext-census-source diff --check
+          git -C /tmp/flash-vnext-census-source diff > /tmp/flash-vnext-census-evidence/diagnostic-source.diff
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/flash-vnext-census-arena
+          git -C /tmp/flash-vnext-census-arena checkout --detach b83254de5146ef34147ab82a48edbe1856b0edcc
+          rustc -vV > /tmp/flash-vnext-census-evidence/compiler.txt
+      - name: Build identical exact Mathlib full export
+        run: |
+          set -euo pipefail
+          cd /tmp/flash-vnext-census-arena
+          nix develop -c ./lka.py build-test mathlib
+          test "$(stat -c '%s' _build/tests/mathlib.ndjson)" = 6184415052
+          echo '22c5de83469408950005589a3bc5ef5157c65549b5a802f85d567c29151306a6  _build/tests/mathlib.ndjson' | sha256sum -c -
+          sha256sum _build/tests/mathlib.ndjson > /tmp/flash-vnext-census-evidence/mathlib.sha256
+      - name: Compile diagnostic-only kernel and require native test suite
+        run: |
+          set -euo pipefail
+          CARGO_TARGET_DIR=/tmp/flash-vnext-census-target RUSTFLAGS="-C target-cpu=native" \
+            cargo test --release --locked --features judgment-census \
+            --manifest-path /tmp/flash-vnext-census-source/Cargo.toml \
+            > /tmp/flash-vnext-census-evidence/rust-tests.log 2>&1 || {
+              tail -120 /tmp/flash-vnext-census-evidence/rust-tests.log
+              exit 1
+            }
+          CARGO_TARGET_DIR=/tmp/flash-vnext-census-target RUSTFLAGS="-C target-cpu=native" \
+            cargo build --release --locked --features judgment-census \
+            --manifest-path /tmp/flash-vnext-census-source/Cargo.toml
+          sha256sum /tmp/flash-vnext-census-target/release/sokonanoda > /tmp/flash-vnext-census-evidence/binary.sha256
+      - name: Demand exact full Mathlib ACCEPT and report post-cache overlap
+        run: |
+          set -euo pipefail
+          /usr/bin/time -f 'CPU_USER=%U CPU_SYS=%S WALL=%e MAX_RSS_KB=%M' \
+            -o /tmp/flash-vnext-census-evidence/performance.time \
+            /tmp/flash-vnext-census-target/release/sokonanoda \
+            --stdin --nat-extension --string-extension --axiom-allow-all --threads 4 \
+            < /tmp/flash-vnext-census-arena/_build/tests/mathlib.ndjson \
+            > /tmp/flash-vnext-census-evidence/mathlib.stdout \
+            2> /tmp/flash-vnext-census-evidence/mathlib.stderr
+          python3 experiments/flash_vnext_judgment_census_report_20261021.py \
+            /tmp/flash-vnext-census-evidence/mathlib.stderr \
+            /tmp/flash-vnext-census-evidence/census.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-vnext-full-mathlib-census-${{ github.sha }}
+          path: /tmp/flash-vnext-census-evidence/
+          if-no-files-found: warn
