@@ -175,6 +175,40 @@ def reconstruct_index_patch(baseline, patch):
     return out
 
 
+def _same_index_json(left, right):
+    """Compare already admitted acyclic JSON indexes as their canonical bytes.
+
+    The authenticated baseline and decoded patches contain plain serializable
+    JSON values. Unchanged reconstructed subtrees share that private baseline;
+    identity can skip those subtrees without re-encoding them. This is not an
+    input validator or an equality definition for arbitrary mutable Python
+    objects. Float representation and non-ASCII aliases use the old encoder.
+    """
+    kind = type(left)
+    if type(right) is not kind or kind not in (dict, list, str, int, bool, float, type(None)):
+        return engine.encoded(left) == engine.encoded(right)
+    if kind is float:
+        return engine.encoded(left) == engine.encoded(right)
+    if kind is str:
+        if left == right:
+            return True
+        if left.isascii() and right.isascii():
+            return False
+        return engine.encoded(left) == engine.encoded(right)
+    if kind not in (dict, list):
+        return left == right
+    if left is right:
+        return True
+    if kind is dict:
+        if not all(type(k) is str and k.isascii() for k in left) or not all(
+                type(k) is str and k.isascii() for k in right):
+            return engine.encoded(left) == engine.encoded(right)
+        return left.keys() == right.keys() and all(
+            _same_index_json(value, right[key]) for key, value in left.items())
+    return len(left) == len(right) and all(
+        _same_index_json(a, b) for a, b in zip(left, right))
+
+
 def authenticate_sparse_acceptance(raw, evidence_id, key, baseline):
     """Authenticate a compact acceptance and re-establish its exact applicability.
 
@@ -235,7 +269,8 @@ class DeltaSession:
     """
     def __init__(self, root, workloads, producer, checker, indexer, index_session,
                  authority_key, index_mode='retained', sparse_index_wire=False,
-                 sparse_receipt=False, frozen_baseline=False, retained_checker=None):
+                 sparse_receipt=False, frozen_baseline=False, retained_checker=None,
+                 receipt_index_comparison='shared_json'):
         # Mode is an explicit, authenticated A/B policy rather than an
         # unrecorded subprocess switch. Both paths must produce the same index.
         if index_mode not in ('retained', 'full'):
@@ -247,6 +282,9 @@ class DeltaSession:
         if type(sparse_receipt) is not bool or (sparse_receipt and not sparse_index_wire):
             raise ValueError('sparse receipt requires sparse typed-index transport')
         self.sparse_receipt = sparse_receipt
+        if receipt_index_comparison not in ('canonical_json', 'shared_json'):
+            raise ValueError('unsupported receipt index comparison mode')
+        self.receipt_index_comparison = receipt_index_comparison
         if type(frozen_baseline) is not bool:
             raise ValueError('frozen baseline mode must be boolean')
         self.frozen_baseline_mode = frozen_baseline
@@ -329,6 +367,7 @@ class DeltaSession:
             self.delta_provenance['identity_index_wire'] = 'baseline_patch_v1'
         if self.sparse_receipt:
             self.delta_provenance['acceptance_receipt'] = SPARSE_ACCEPTANCE
+            self.delta_provenance['receipt_index_comparison'] = self.receipt_index_comparison
         if self.frozen_baseline_mode:
             # Explicit HMAC-bound applicability assumption: retained immutable
             # source-owned Python bytes, never a mutable disk re-read.
@@ -723,7 +762,10 @@ class DeltaSession:
                 candidate = engine.encoded(seal(accepted, self.key))
                 restored = authenticate_sparse_acceptance(
                     candidate, sha(candidate), self.key, self.old)
-                if engine.encoded(restored['index']) != engine.encoded(index):
+                same_index = (_same_index_json(restored['index'], index)
+                    if self.receipt_index_comparison == 'shared_json' else
+                    engine.encoded(restored['index']) == engine.encoded(index))
+                if not same_index:
                     raise ValueError('signed sparse receipt does not reconstruct live typed index')
             else:
                 accepted = dict(schema=engine.SCHEMA, status=status, export_sha256=export_hash,
