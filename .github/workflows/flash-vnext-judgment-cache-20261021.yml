@@ -1,0 +1,75 @@
+name: Flash VNext single contextual judgment cache
+on:
+  push:
+    branches: [research/flash-vnext-judgment-cache-20261021]
+    paths:
+      - 'experiments/flash_vnext_judgment_cache_patch_20261021.py'
+      - 'experiments/flash_vnext_judgment_cache_gate_20261021.py'
+      - '.github/workflows/flash-vnext-judgment-cache-20261021.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: flash-vnext-judgment-cache-20261021
+  cancel-in-progress: true
+jobs:
+  protected-cost:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install full-process instruction counter
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq valgrind
+      - name: Freeze upstream and qualify source-isolated cache rewrite
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/flash-vnext-evidence /tmp/flash-vnext-zip /tmp/flash-vnext-corpus
+          git rev-parse HEAD > /tmp/flash-vnext-evidence/research-head.txt
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/flash-vnext-base-src
+          git -C /tmp/flash-vnext-base-src checkout --detach 7645b1e1fcacfe410c99141f1234381d995b325d
+          git -C /tmp/flash-vnext-base-src worktree add --detach /tmp/flash-vnext-unified-src 7645b1e1fcacfe410c99141f1234381d995b325d
+          for arm in base unified; do
+            python3 experiments/arena_soko_sparse_patch_v1.py /tmp/flash-vnext-$arm-src
+            python3 experiments/arena_soko_growth_patch_v1.py /tmp/flash-vnext-$arm-src
+            git -C /tmp/flash-vnext-$arm-src diff --check
+          done
+          python3 experiments/flash_vnext_judgment_cache_patch_20261021.py /tmp/flash-vnext-unified-src
+          git -C /tmp/flash-vnext-unified-src diff --check
+          git -C /tmp/flash-vnext-base-src diff > /tmp/flash-vnext-evidence/qualified-common.diff
+          git -C /tmp/flash-vnext-unified-src diff > /tmp/flash-vnext-evidence/unified-judgment.diff
+          gh api repos/leanprover/lean-kernel-arena/actions/artifacts/11505862349/zip > /tmp/flash-vnext-portable.zip
+          unzip -q /tmp/flash-vnext-portable.zip -d /tmp/flash-vnext-zip
+          tar --no-same-owner -xzf /tmp/flash-vnext-zip/lean-arena-tests.tar.gz -C /tmp/flash-vnext-corpus
+          test -s /tmp/flash-vnext-corpus/good/init-prelude.ndjson
+      - name: Build and test both checker implementations
+        run: |
+          set -euo pipefail
+          rustc -vV > /tmp/flash-vnext-evidence/compiler.txt
+          for arm in base unified; do
+            CARGO_TARGET_DIR=/tmp/flash-vnext-$arm-target RUSTFLAGS='-C target-cpu=x86-64' \
+              cargo build --release --locked --manifest-path /tmp/flash-vnext-$arm-src/Cargo.toml
+            CARGO_TARGET_DIR=/tmp/flash-vnext-$arm-target RUSTFLAGS='-C target-cpu=x86-64' \
+              cargo test --release --locked --manifest-path /tmp/flash-vnext-$arm-src/Cargo.toml \
+              > /tmp/flash-vnext-evidence/$arm-tests.log 2>&1 || {
+                tail -100 /tmp/flash-vnext-evidence/$arm-tests.log; exit 1;
+              }
+          done
+          sha256sum /tmp/flash-vnext-{base,unified}-target/release/sokonanoda > /tmp/flash-vnext-evidence/binaries.sha256
+      - name: Exact frozen196 verdict equality and five-case source-faithful cost
+        run: |
+          set -euo pipefail
+          python3 experiments/flash_vnext_judgment_cache_gate_20261021.py \
+            /tmp/flash-vnext-corpus /tmp/flash-vnext-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-vnext-judgment-cache-${{ github.sha }}
+          path: /tmp/flash-vnext-evidence/
+          if-no-files-found: warn
