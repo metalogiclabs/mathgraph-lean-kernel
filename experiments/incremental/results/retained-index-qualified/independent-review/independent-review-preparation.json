@@ -1,0 +1,93 @@
+{
+  "schema": "mathgraph.independent-retained-review-preparation.v1",
+  "helper_path": "/tmp/retained-ci-review.py",
+  "helper_sha256": "610d67e9dbf70429a4d73ae8ffc75841adc52e58f529002e9715def8cdabcc83",
+  "source": "ef434eb2477fb64d7fd90fdf23f55bd0b35a0243",
+  "run": 38961520032,
+  "job": 117177490277,
+  "required_dependencies": {
+    "review-compact-ci.py": "0a71217ca636697b4861b664a8ced1584285337a7f1605891c58e27497fc7c47",
+    "review-evidence.py": "ee46a394b83190677a76c8735ec423b292864efcc23a308cf66932283bbd3bb9"
+  },
+  "dependency_resolution": "explicit --legacy-helper/--delta-helper, then helper siblings, then committed producer-delta-qualified helpers under explicit --repo",
+  "actual_CI_review_performed": false,
+  "diagnostic_status": "DIAGNOSTIC_ONLY_NOT_QUALIFICATION",
+  "diagnostic_passed": false,
+  "diagnostic_check_count": 4597,
+  "reviewer_falsifiers": {
+    "status": "PASS_FALSIFIERS",
+    "cases": [
+      {
+        "name": "partial-run",
+        "passed": true,
+        "refusal": "retained:complete"
+      },
+      {
+        "name": "missing-sample",
+        "passed": true,
+        "refusal": "retained:complete-unique-samples"
+      },
+      {
+        "name": "false-gate",
+        "passed": true,
+        "refusal": "retained:gates"
+      },
+      {
+        "name": "missing-required-gate",
+        "passed": true,
+        "refusal": "retained:complete-required-gate-set"
+      },
+      {
+        "name": "wrong-source",
+        "passed": true,
+        "refusal": "retained:source"
+      },
+      {
+        "name": "changed-direct-timing",
+        "passed": true,
+        "refusal": "original:early-definition:retained_vs_direct_fresh_rust:direct_median_wall_seconds"
+      },
+      {
+        "name": "forged-work-counter",
+        "passed": true,
+        "refusal": "original:early-definition:0:standalone:retained:touched_declarations"
+      },
+      {
+        "name": "false-HMAC-audit",
+        "passed": true,
+        "refusal": "original:early-definition:0:retained:HMAC-audit"
+      },
+      {
+        "name": "core-exceeds-whole",
+        "passed": true,
+        "refusal": "original:early-definition:0:standalone:retained:whole-contains-core"
+      },
+      {
+        "name": "unpaid-close",
+        "passed": true,
+        "refusal": "original:early-definition:0:retained:api-wall-sum"
+      },
+      {
+        "name": "storage-wrong-cause",
+        "passed": true,
+        "refusal": "original:early-definition:intended-cause:forged_capsule_hmac"
+      },
+      {
+        "name": "storage-free-original-signature",
+        "passed": true,
+        "refusal": "storage:fair-original-mint"
+      },
+      {
+        "name": "storage-altered-duration",
+        "passed": true,
+        "refusal": "original:early-definition:read:apply_median_wall_seconds"
+      },
+      {
+        "name": "storage-missing-pair",
+        "passed": true,
+        "refusal": "storage:complete-pairs"
+      }
+    ]
+  },
+  "actual_cli": "python retained-ci-review.py --repo /path/to/mathgraph-lean-kernel --zip DOWNLOADED_COMPACT.zip --metadata PROVIDER_ARTIFACT.json --source ef434eb2477fb64d7fd90fdf23f55bd0b35a0243 --run 38961520032 --job 117177490277 --run-json final-run.json --jobs-json final-jobs.json --falsifiers --out independent-review.json"
+}

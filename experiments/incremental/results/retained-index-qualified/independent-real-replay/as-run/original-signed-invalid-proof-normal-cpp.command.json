@@ -1,0 +1,15 @@
+{
+  "command": [
+    "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+    "--silent",
+    "--from-export",
+    "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-signed-invalid-proof.ndjson"
+  ],
+  "elapsed_seconds": 1.6577458000010665,
+  "expected_returncode": 1,
+  "returncode": 1,
+  "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-signed-invalid-proof-normal-cpp.stderr",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-signed-invalid-proof-normal-cpp.stdout",
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

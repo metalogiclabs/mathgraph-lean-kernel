@@ -1,0 +1,1271 @@
+{
+  "schema": "mathgraph.retained-index.qualified-publication.v1",
+  "status": "WARRANTED_BOUNDED",
+  "qualified_source": "ef434eb2477fb64d7fd90fdf23f55bd0b35a0243",
+  "runtime_commit": "fa254deaa7ec5d2881026215de4cfde10866cce4",
+  "previous_qualified_source": "4496042c75368f6c35675a9b131c960080afa518",
+  "branch": "research/retained-scc-index-20261016",
+  "run_id": 38961520032,
+  "job_id": 117177490277,
+  "run_url": "https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/38961520032",
+  "run_conclusion": "success",
+  "scope": "One authenticated, baseline-anchored warm update; exact dependency-edge preservation permits retained SCC reclosure. Full index/selected-check/verdict parity, no general revision stream or cold superiority.",
+  "historical_scope": "Independent parallel branch frozen on 2026-10-16; archived on 2026-10-21. Later ROS branches are preserved and not superseded or pooled.",
+  "host": {
+    "uname": [
+      "Linux",
+      "runnervm8k3b6",
+      "6.17.0-1022-azure",
+      "#22-Ubuntu SMP Mon Jul 27 17:24:03 UTC 2026",
+      "x86_64",
+      "x86_64"
+    ],
+    "cpu_model": "AMD EPYC 7763 64-Core Processor"
+  },
+  "measurement_policy": {
+    "one_baseline_anchored_update_per_process": true,
+    "arm_order": "alternating qualified449/full/retained and reverse by repetition",
+    "standalone_order": "alternating full/retained and reverse by repetition",
+    "caches": "OS file cache warm; fresh sessions per arm; no host/profile pooling",
+    "compute": "Rust finish/reclosure only, after row mutation, before full-index JSON serialization",
+    "finish": "whole postparse finish call, including statistics construction and destructors reached there; retained lifetime anchor is accounted in actual adapter shutdown",
+    "forced_full_observation_overhead": "full compute timer is the untouched historical algorithm; forced-full wholefinish additionally constructs O(N) observation counters/keys. Preserved449 adapter arm is the primary actual historical end-to-end comparator.",
+    "ipc": "roundtrip includes Rust compute, full-index serialization, pipe transport and Python decode; difference is residual, not pure IPC",
+    "lifecycle": "actual constructor through completed apply plus separately measured supported SIGTERM close, one update; per-sample API component sums, no hypothetical multi-update amortization",
+    "memory": "post-phase procfs samples; cumulative VmHWM, no exact phase peak or aggregate RSS"
+  },
+  "correctness_gate_counts": {
+    "original": 197,
+    "native": 335,
+    "independent_native_replay": 719,
+    "old_native_benchmark_correctness": 251,
+    "original_delta": 243,
+    "expanded_delta": 226,
+    "retained": 181
+  },
+  "independent_retained_fixtures": 26,
+  "retained_paired_samples": 20,
+  "adapter_arms": 60,
+  "standalone_updates": 40,
+  "isolated_benchmarks": 4,
+  "isolated_repetitions": 7,
+  "independent_archive_review": {
+    "path": "ci/independent-review-root.json",
+    "status": "PASS_WITH_STATED_LIMITS",
+    "checks": 25145,
+    "falsifiers": 14,
+    "fresh_kernels_executed_by_archive_reviewer": false,
+    "historical_private_hmac_reauthenticated": false
+  },
+  "separate_actual_kernel_replay": {
+    "path": "independent-real-replay/ci-input-parity.json",
+    "full_kernel_commands": 40,
+    "zero_selected_parser_commands": 8,
+    "exact_ci_input_roles": 10,
+    "scope": "Separate rebuilt current and qualified449 Rust plus pinned C++ normal/paranoid on independently reconstructed exact-byte inputs; not remote historical-HMAC reauthentication."
+  },
+  "economics": [
+    {
+      "profile": "original",
+      "obligations": 3436,
+      "variant": "early-definition",
+      "warm_vs_direct_rust": {
+        "passed": true,
+        "status": "SPEEDUP",
+        "apply_median_wall_seconds": 0.23333086200000253,
+        "direct_median_wall_seconds": 0.27305235399990124,
+        "median_ratio": 0.8545279269047683,
+        "paired_wins": 5,
+        "paired_count": 5,
+        "bootstrap_ratio_interval_95": [
+          0.8314491603091242,
+          0.8729380001922409
+        ],
+        "bootstrap_repetitions": 10000,
+        "bootstrap_seed": 20261016,
+        "setup_in_timed_update": false,
+        "scope": "paired retained / named comparator and phase; lifecycle/component-sum phases include setup and supported shutdown"
+      },
+      "warm_vs_qualified449": {
+        "passed": true,
+        "status": "SPEEDUP",
+        "apply_median_wall_seconds": 0.23333086200000253,
+        "direct_median_wall_seconds": 0.25859740599980796,
+        "median_ratio": 0.9022939000408063,
+        "paired_wins": 5,
+        "paired_count": 5,
+        "bootstrap_ratio_interval_95": [
+          0.8833265334614422,
+          0.9150348785176953
+        ],
+        "bootstrap_repetitions": 10000,
+        "bootstrap_seed": 20261016,
+        "setup_in_timed_update": false,
+        "scope": "paired retained / named comparator and phase; lifecycle/component-sum phases include setup and supported shutdown"
+      },
+      "warm_vs_current_full": {
+        "passed": true,
+        "status": "SPEEDUP",
+        "apply_median_wall_seconds": 0.23333086200000253,
+        "direct_median_wall_seconds": 0.2628924549999283,
+        "median_ratio": 0.8875525240922801,
+        "paired_wins": 5,
+        "paired_count": 5,
+        "bootstrap_ratio_interval_95": [
+          0.8583570275799568,
+          0.8980011807491589
+        ],
+        "bootstrap_repetitions": 10000,
+        "bootstrap_seed": 20261016,
+        "setup_in_timed_update": false,
+        "scope": "paired retained / named comparator and phase; lifecycle/component-sum phases include setup and supported shutdown"
+      },
+      "old_full_vs_retained_core": {
+        "passed": true,
+        "status": "SPEEDUP",
+        "apply_median_wall_seconds": 2.1971e-05,
+        "direct_median_wall_seconds": 0.029476046,
+        "median_ratio": 0.0007453849135667654,
+        "paired_wins": 5,
+        "paired_count": 5,
+        "bootstrap_ratio_interval_95": [
+          0.0007126066485937888,
+          0.0015322965449102585
+        ],
+        "bootstrap_repetitions": 10000,
+        "bootstrap_seed": 20261016,
+        "setup_in_timed_update": false,
+        "scope": "paired retained / named comparator and phase; lifecycle/component-sum phases include setup and supported shutdown"
+      },
+      "old_full_vs_retained_whole_finish": {
+        "passed": true,
+        "status": "SPEEDUP",
+        "apply_median_wall_seconds": 2.8613e-05,
+        "direct_median_wall_seconds": 0.029930863,
+        "median_ratio": 0.0009559697627161635,
+        "paired_wins": 5,
+        "paired_count": 5,
+        "bootstrap_ratio_interval_95": [
+          0.0009267960002622489,
+          0.0017014100641621931
+        ],
+        "bootstrap_repetitions": 10000,
+        "bootstrap_seed": 20261016,
+        "setup_in_timed_update": false,
+        "scope": "paired retained / named comparator and phase; lifecycle/component-sum phases include setup and supported shutdown"
+      },
+      "index_roundtrip": {
+        "passed": true,
+        "status": "SPEEDUP",
+        "apply_median_wall_seconds": 0.029776747000141768,
+        "direct_median_wall_seconds": 0.0626129080001192,
+        "median_ratio": 0.47556882360559066,
+        "paired_wins": 5,
+        "paired_count": 5,
+        "bootstrap_ratio_interval_95": [
+          0.3781908617252518,
+          0.49948092973367475
+        ],
+        "bootstrap_repetitions": 10000,
+        "bootstrap_seed": 20261016,
+        "setup_in_timed_update": false,
+        "scope": "paired retained / named comparator and phase; lifecycle/component-sum phases include setup and supported shutdown"
+      },
+      "one_update_api_component_sum_vs449": {
+        "passed": false,
+        "status": "NO_SPEEDUP",
+        "apply_median_wall_seconds": 4.165867168999739,
+        "direct_median_wall_seconds": 4.176210829999945,
+        "median_ratio": 0.9975231947281248,
+        "paired_wins": 4,
+        "paired_count": 5,
+        "bootstrap_ratio_interval_95": [
+          0.9957121394279591,
+          1.0010352571208385
+        ],
+        "bootstrap_repetitions": 10000,
+        "bootstrap_seed": 20261016,
+        "setup_in_timed_update": false,
+        "scope": "paired retained / named comparator and phase; lifecycle/component-sum phases include setup and supported shutdown"
+      },
+      "phase_medians": {
+        "qualified449": {
+          "baseline_validation_cpu_seconds": 0.045621000000000134,
+          "baseline_validation_seconds": 0.045615942999575054,
+          "checking_cpu_seconds": 0.05446600000000057,
+          "checking_seconds": 0.05429059399966718,
+          "consumer_cpu_seconds": 0.24083500000000013,
+          "consumer_seconds": 0.23404919900031018,
+          "end_to_end_cpu_seconds": 0.27300200000000086,
+          "end_to_end_seconds": 0.2584637270001622,
+          "identity_update_cpu_seconds": 0.06757399999999958,
+          "identity_update_seconds": 0.058224601999882,
+          "materialization_and_hash_cpu_seconds": 0.02876299999999965,
+          "materialization_and_hash_seconds": 0.028760685000179365,
+          "persistence_cpu_seconds": 0.03587000000000007,
+          "persistence_seconds": 0.03843811700016886,
+          "producer_seconds": 0.02347898600010012,
+          "constructor_wall_seconds": 0.2541322179999952,
+          "start_wall_seconds": 3.612991761000103,
+          "close_wall_seconds": 0.05137420200026099,
+          "close_cpu_seconds": 0.05334800000000062,
+          "constructor_through_apply_wall_seconds": 4.124708206999912,
+          "constructor_through_apply_cpu_seconds": 4.12547,
+          "one_update_api_component_sum_wall_seconds": 4.176210829999945,
+          "one_update_api_component_sum_cpu_seconds": 4.179309
+        },
+        "full": {
+          "baseline_validation_cpu_seconds": 0.045320999999999945,
+          "baseline_validation_seconds": 0.04531635600005757,
+          "checking_cpu_seconds": 0.054383000000000514,
+          "checking_seconds": 0.054389300999901025,
+          "consumer_cpu_seconds": 0.24800200000000006,
+          "consumer_seconds": 0.23727066199990077,
+          "end_to_end_cpu_seconds": 0.27509800000000073,
+          "end_to_end_seconds": 0.26276713100014604,
+          "identity_update_cpu_seconds": 0.06944000000000017,
+          "identity_update_seconds": 0.06253120200017293,
+          "materialization_and_hash_cpu_seconds": 0.0287449999999998,
+          "materialization_and_hash_seconds": 0.028754895000020042,
+          "persistence_cpu_seconds": 0.03526600000000091,
+          "persistence_seconds": 0.03774334400031876,
+          "producer_seconds": 0.023440883999683138,
+          "reuse_decisions_cpu_seconds": 0.006413000000000224,
+          "reuse_decisions_seconds": 0.006412624999938998,
+          "constructor_wall_seconds": 0.2525981479998336,
+          "start_wall_seconds": 3.6208068939999976,
+          "close_wall_seconds": 0.050884794000012334,
+          "close_cpu_seconds": 0.05874699999999944,
+          "constructor_through_apply_wall_seconds": 4.139832827000191,
+          "constructor_through_apply_cpu_seconds": 4.121881,
+          "one_update_api_component_sum_wall_seconds": 4.191082515000289,
+          "one_update_api_component_sum_cpu_seconds": 4.19397
+        },
+        "retained": {
+          "baseline_validation_cpu_seconds": 0.04490900000000009,
+          "baseline_validation_seconds": 0.04490486599979704,
+          "checking_cpu_seconds": 0.05466000000000015,
+          "checking_seconds": 0.05446394999989934,
+          "consumer_cpu_seconds": 0.21522100000000055,
+          "consumer_seconds": 0.20754994999970222,
+          "end_to_end_cpu_seconds": 0.24051300000000086,
+          "end_to_end_seconds": 0.2332128319999356,
+          "identity_update_cpu_seconds": 0.037657999999999525,
+          "identity_update_seconds": 0.03099066300001141,
+          "materialization_and_hash_cpu_seconds": 0.02860899999999944,
+          "materialization_and_hash_seconds": 0.028627924999909737,
+          "persistence_cpu_seconds": 0.035058000000000256,
+          "persistence_seconds": 0.03752293300021847,
+          "producer_seconds": 0.023089165999863326,
+          "reuse_decisions_cpu_seconds": 0.005902999999999992,
+          "reuse_decisions_seconds": 0.00590161900026942,
+          "constructor_wall_seconds": 0.25369438400002764,
+          "start_wall_seconds": 3.6270991480000703,
+          "close_wall_seconds": 0.051023523999901954,
+          "close_cpu_seconds": 0.056120000000000836,
+          "constructor_through_apply_wall_seconds": 4.114788133999809,
+          "constructor_through_apply_cpu_seconds": 4.108374,
+          "one_update_api_component_sum_wall_seconds": 4.165867168999739,
+          "one_update_api_component_sum_cpu_seconds": 4.169499
+        }
+      },
+      "counts": {
+        "total": 3436,
+        "scheduled": 413,
+        "rechecked": 413,
+        "reused": 3023,
+        "invalidated": 413
+      }
+    },
+    {
+      "profile": "original",
+      "obligations": 3436,
+      "variant": "unrelated-definition",
+      "warm_vs_direct_rust": {
+        "passed": true,
+        "status": "SPEEDUP",
+        "apply_median_wall_seconds": 0.19830864100003964,
+        "direct_median_wall_seconds": 0.2793673639998815,
+        "median_ratio": 0.7098489893763101,
+        "paired_wins": 5,
+        "paired_count": 5,
+        "bootstrap_ratio_interval_95": [
+          0.6861664555639441,
+          0.7225039476221844
+        ],
+        "bootstrap_repetitions": 10000,
+        "bootstrap_seed": 20261016,
+        "setup_in_timed_update": false,
+        "scope": "paired retained / named comparator and phase; lifecycle/component-sum phases include setup and supported shutdown"
+      },
+      "warm_vs_qualified449": {
+        "passed": true,
+        "status": "SPEEDUP",
+        "apply_median_wall_seconds": 0.19830864100003964,
+        "direct_median_wall_seconds": 0.23013413199987554,
+        "median_ratio": 0.8617089489365571,
+        "paired_wins": 5,
+        "paired_count": 5,
+        "bootstrap_ratio_interval_95": [
+          0.8421034651214808,
+          0.8967303709346272
+        ],
+        "bootstrap_repetitions": 10000,
+        "bootstrap_seed": 20261016,
+        "setup_in_timed_update": false,
+        "scope": "paired retained / named comparator and phase; lifecycle/component-sum phases include setup and supported shutdown"
+      },
+      "warm_vs_current_full": {
+        "passed": true,
+        "status": "SPEEDUP",
+        "apply_median_wall_seconds": 0.19830864100003964,
+        "direct_median_wall_seconds": 0.23589636399992742,
+        "median_ratio": 0.8406600154299142,
+        "paired_wins": 5,
+        "paired_count": 5,
+        "bootstrap_ratio_interval_95": [
+          0.7848386209991937,
+          0.8668528440484667
+        ],
+        "bootstrap_repetitions": 10000,
+        "bootstrap_seed": 20261016,
+        "setup_in_timed_update": false,
+        "scope": "paired retained / named comparator and phase; lifecycle/component-sum phases include setup and supported shutdown"
+      },
+      "old_full_vs_retained_core": {
+        "passed": true,
+        "status": "SPEEDUP",
+        "apply_median_wall_seconds": 1.3966e-05,
+        "direct_median_wall_seconds": 0.029612549,
+        "median_ratio": 0.0004716243778946554,
+        "paired_wins": 5,
+        "paired_count": 5,
+        "bootstrap_ratio_interval_95": [
+          0.00044736043703113914,
+          0.0005348941257402391
+        ],
+        "bootstrap_repetitions": 10000,
+        "bootstrap_seed": 20261016,
+        "setup_in_timed_update": false,
+        "scope": "paired retained / named comparator and phase; lifecycle/component-sum phases include setup and supported shutdown"
+      },
+      "old_full_vs_retained_whole_finish": {
+        "passed": true,
+        "status": "SPEEDUP",
+        "apply_median_wall_seconds": 2.1049e-05,
+        "direct_median_wall_seconds": 0.030076934,
+        "median_ratio": 0.0006998386205189665,
+        "paired_wins": 5,
+        "paired_count": 5,
+        "bootstrap_ratio_interval_95": [
+          0.0006766901211519664,
+          0.0007689140138917508
+        ],
+        "bootstrap_repetitions": 10000,
+        "bootstrap_seed": 20261016,
+        "setup_in_timed_update": false,
+        "scope": "paired retained / named comparator and phase; lifecycle/component-sum phases include setup and supported shutdown"
+      },
+      "index_roundtrip": {
+        "passed": true,
+        "status": "SPEEDUP",
+        "apply_median_wall_seconds": 0.02978386299992053,
+        "direct_median_wall_seconds": 0.06167939799979649,
+        "median_ratio": 0.48288186924293264,
+        "paired_wins": 5,
+        "paired_count": 5,
+        "bootstrap_ratio_interval_95": [
+          0.472552857014991,
+          0.5132726903781676
+        ],
+        "bootstrap_repetitions": 10000,
+        "bootstrap_seed": 20261016,
+        "setup_in_timed_update": false,
+        "scope": "paired retained / named comparator and phase; lifecycle/component-sum phases include setup and supported shutdown"
+      },
+      "one_update_api_component_sum_vs449": {
+        "passed": false,
+        "status": "NO_SPEEDUP",
+        "apply_median_wall_seconds": 4.136440939999829,
+        "direct_median_wall_seconds": 4.16585013599979,
+        "median_ratio": 0.9929404095106983,
+        "paired_wins": 4,
+        "paired_count": 5,
+        "bootstrap_ratio_interval_95": [
+          0.9887682354514462,
+          1.0115341485481146
+        ],
+        "bootstrap_repetitions": 10000,
+        "bootstrap_seed": 20261016,
+        "setup_in_timed_update": false,
+        "scope": "paired retained / named comparator and phase; lifecycle/component-sum phases include setup and supported shutdown"
+      },
+      "phase_medians": {
+        "qualified449": {
+          "baseline_validation_cpu_seconds": 0.04631500000000077,
+          "baseline_validation_seconds": 0.04639048599983653,
+          "checking_cpu_seconds": 0.023780999999999608,
+          "checking_seconds": 0.023593956000240723,
+          "consumer_cpu_seconds": 0.20595700000000017,
+          "consumer_seconds": 0.20554520799987586,
+          "end_to_end_cpu_seconds": 0.23921100000000006,
+          "end_to_end_seconds": 0.23001576199976626,
+          "identity_update_cpu_seconds": 0.06680799999999909,
+          "identity_update_seconds": 0.05799780200004534,
+          "materialization_and_hash_cpu_seconds": 0.02894299999999994,
+          "materialization_and_hash_seconds": 0.028939103999618965,
+          "persistence_cpu_seconds": 0.035473999999999783,
+          "persistence_seconds": 0.03826853300006405,
+          "producer_seconds": 0.023805336999885185,
+          "constructor_wall_seconds": 0.25354218199981915,
+          "start_wall_seconds": 3.6271991789999447,
+          "close_wall_seconds": 0.051094351000301685,
+          "close_cpu_seconds": 0.05443699999999918,
+          "constructor_through_apply_wall_seconds": 4.114541920999727,
+          "constructor_through_apply_cpu_seconds": 4.10346,
+          "one_update_api_component_sum_wall_seconds": 4.16585013599979,
+          "one_update_api_component_sum_cpu_seconds": 4.167705
+        },
+        "full": {
+          "baseline_validation_cpu_seconds": 0.04507800000000062,
+          "baseline_validation_seconds": 0.04507336000006035,
+          "checking_cpu_seconds": 0.020398000000000138,
+          "checking_seconds": 0.020206420000249636,
+          "consumer_cpu_seconds": 0.21731699999999998,
+          "consumer_seconds": 0.20839033399988693,
+          "end_to_end_cpu_seconds": 0.251849,
+          "end_to_end_seconds": 0.2357654789998378,
+          "identity_update_cpu_seconds": 0.07872900000000005,
+          "identity_update_seconds": 0.06287667000015063,
+          "materialization_and_hash_cpu_seconds": 0.02877799999999997,
+          "materialization_and_hash_seconds": 0.02877474600018104,
+          "persistence_cpu_seconds": 0.03480099999999986,
+          "persistence_seconds": 0.03750330599996232,
+          "producer_seconds": 0.024232344000211015,
+          "reuse_decisions_cpu_seconds": 0.006654999999999411,
+          "reuse_decisions_seconds": 0.0066541369997139554,
+          "constructor_wall_seconds": 0.25447734500039587,
+          "start_wall_seconds": 3.6411676650000118,
+          "close_wall_seconds": 0.05119682299982742,
+          "close_cpu_seconds": 0.057641000000001164,
+          "constructor_through_apply_wall_seconds": 4.125244028999987,
+          "constructor_through_apply_cpu_seconds": 4.135918,
+          "one_update_api_component_sum_wall_seconds": 4.177589090999845,
+          "one_update_api_component_sum_cpu_seconds": 4.182846
+        },
+        "retained": {
+          "baseline_validation_cpu_seconds": 0.045337999999999656,
+          "baseline_validation_seconds": 0.04533350700012306,
+          "checking_cpu_seconds": 0.02024599999999932,
+          "checking_seconds": 0.020047335000072053,
+          "consumer_cpu_seconds": 0.17832399999999904,
+          "consumer_seconds": 0.1739499390000674,
+          "end_to_end_cpu_seconds": 0.20167400000000013,
+          "end_to_end_seconds": 0.19818882699973983,
+          "identity_update_cpu_seconds": 0.03826700000000027,
+          "identity_update_seconds": 0.03169172800016895,
+          "materialization_and_hash_cpu_seconds": 0.02889599999999959,
+          "materialization_and_hash_seconds": 0.028910785000334727,
+          "persistence_cpu_seconds": 0.03581099999999893,
+          "persistence_seconds": 0.03792270299982192,
+          "producer_seconds": 0.023460798999622057,
+          "reuse_decisions_cpu_seconds": 0.006627000000000827,
+          "reuse_decisions_seconds": 0.006625800000165327,
+          "constructor_wall_seconds": 0.2562114229999679,
+          "start_wall_seconds": 3.635474379000243,
+          "close_wall_seconds": 0.051474283000061405,
+          "close_cpu_seconds": 0.0581479999999992,
+          "constructor_through_apply_wall_seconds": 4.084801414999674,
+          "constructor_through_apply_cpu_seconds": 4.079167999999999,
+          "one_update_api_component_sum_wall_seconds": 4.136440939999829,
+          "one_update_api_component_sum_cpu_seconds": 4.1385049999999985
+        }
+      },
+      "counts": {
+        "total": 3436,
+        "scheduled": 1,
+        "rechecked": 1,
+        "reused": 3435,
+        "invalidated": 1
+      }
+    },
+    {
+      "profile": "expanded",
+      "obligations": 11653,
+      "variant": "early-definition",
+      "warm_vs_direct_rust": {
+        "passed": true,
+        "status": "SPEEDUP",
+        "apply_median_wall_seconds": 0.8825839420001103,
+        "direct_median_wall_seconds": 1.1392202040001393,
+        "median_ratio": 0.7747263776582409,
+        "paired_wins": 5,
+        "paired_count": 5,
+        "bootstrap_ratio_interval_95": [
+          0.7669789399165596,
+          0.7925776351172996
+        ],
+        "bootstrap_repetitions": 10000,
+        "bootstrap_seed": 20261016,
+        "setup_in_timed_update": false,
+        "scope": "paired retained / named comparator and phase; lifecycle/component-sum phases include setup and supported shutdown"
+      },
+      "warm_vs_qualified449": {
+        "passed": true,
+        "status": "SPEEDUP",
+        "apply_median_wall_seconds": 0.8825839420001103,
+        "direct_median_wall_seconds": 0.9917327570001362,
+        "median_ratio": 0.8899413030076903,
+        "paired_wins": 5,
+        "paired_count": 5,
+        "bootstrap_ratio_interval_95": [
+          0.8602385050431635,
+          0.9137866099544922
+        ],
+        "bootstrap_repetitions": 10000,
+        "bootstrap_seed": 20261016,
+        "setup_in_timed_update": false,
+        "scope": "paired retained / named comparator and phase; lifecycle/component-sum phases include setup and supported shutdown"
+      },
+      "warm_vs_current_full": {
+        "passed": true,
+        "status": "SPEEDUP",
+        "apply_median_wall_seconds": 0.8825839420001103,
+        "direct_median_wall_seconds": 1.0260955439998725,
+        "median_ratio": 0.8601381685760638,
+        "paired_wins": 5,
+        "paired_count": 5,
+        "bootstrap_ratio_interval_95": [
+          0.8436102905440804,
+          0.8725742915270532
+        ],
+        "bootstrap_repetitions": 10000,
+        "bootstrap_seed": 20261016,
+        "setup_in_timed_update": false,
+        "scope": "paired retained / named comparator and phase; lifecycle/component-sum phases include setup and supported shutdown"
+      },
+      "old_full_vs_retained_core": {
+        "passed": true,
+        "status": "SPEEDUP",
+        "apply_median_wall_seconds": 2.4095e-05,
+        "direct_median_wall_seconds": 0.130064168,
+        "median_ratio": 0.00018525471212025126,
+        "paired_wins": 5,
+        "paired_count": 5,
+        "bootstrap_ratio_interval_95": [
+          0.0001601133906648993,
+          0.00019146807519543858
+        ],
+        "bootstrap_repetitions": 10000,
+        "bootstrap_seed": 20261016,
+        "setup_in_timed_update": false,
+        "scope": "paired retained / named comparator and phase; lifecycle/component-sum phases include setup and supported shutdown"
+      },
+      "old_full_vs_retained_whole_finish": {
+        "passed": true,
+        "status": "SPEEDUP",
+        "apply_median_wall_seconds": 2.9986e-05,
+        "direct_median_wall_seconds": 0.131666744,
+        "median_ratio": 0.00022774163838972124,
+        "paired_wins": 5,
+        "paired_count": 5,
+        "bootstrap_ratio_interval_95": [
+          0.0001965472867180017,
+          0.0002400954368700127
+        ],
+        "bootstrap_repetitions": 10000,
+        "bootstrap_seed": 20261016,
+        "setup_in_timed_update": false,
+        "scope": "paired retained / named comparator and phase; lifecycle/component-sum phases include setup and supported shutdown"
+      },
+      "index_roundtrip": {
+        "passed": true,
+        "status": "SPEEDUP",
+        "apply_median_wall_seconds": 0.17091870599961112,
+        "direct_median_wall_seconds": 0.32092428799978734,
+        "median_ratio": 0.5325826445386532,
+        "paired_wins": 5,
+        "paired_count": 5,
+        "bootstrap_ratio_interval_95": [
+          0.4004428535670641,
+          0.5930033570071536
+        ],
+        "bootstrap_repetitions": 10000,
+        "bootstrap_seed": 20261016,
+        "setup_in_timed_update": false,
+        "scope": "paired retained / named comparator and phase; lifecycle/component-sum phases include setup and supported shutdown"
+      },
+      "one_update_api_component_sum_vs449": {
+        "passed": false,
+        "status": "NO_SPEEDUP",
+        "apply_median_wall_seconds": 15.377265019999868,
+        "direct_median_wall_seconds": 15.438088246000007,
+        "median_ratio": 0.9960601840700128,
+        "paired_wins": 3,
+        "paired_count": 5,
+        "bootstrap_ratio_interval_95": [
+          0.9873252378336351,
+          1.0024990548301909
+        ],
+        "bootstrap_repetitions": 10000,
+        "bootstrap_seed": 20261016,
+        "setup_in_timed_update": false,
+        "scope": "paired retained / named comparator and phase; lifecycle/component-sum phases include setup and supported shutdown"
+      },
+      "phase_medians": {
+        "qualified449": {
+          "baseline_validation_cpu_seconds": 0.21984600000000043,
+          "baseline_validation_seconds": 0.21983843999987585,
+          "checking_cpu_seconds": 0.12278899999999915,
+          "checking_seconds": 0.12264989300001616,
+          "consumer_cpu_seconds": 0.9899279999999973,
+          "consumer_seconds": 0.9493299999999181,
+          "end_to_end_cpu_seconds": 1.0310619999999986,
+          "end_to_end_seconds": 0.9915889200001402,
+          "identity_update_cpu_seconds": 0.35252999999999624,
+          "identity_update_seconds": 0.3152649560001919,
+          "materialization_and_hash_cpu_seconds": 0.1092480000000009,
+          "materialization_and_hash_seconds": 0.10924444700003733,
+          "persistence_cpu_seconds": 0.1556470000000001,
+          "persistence_seconds": 0.16149303500014867,
+          "producer_seconds": 0.0391151759999957,
+          "constructor_wall_seconds": 0.25686413599987645,
+          "start_wall_seconds": 14.1291232020003,
+          "close_wall_seconds": 0.06891430299992862,
+          "close_cpu_seconds": 0.07867300000000199,
+          "constructor_through_apply_wall_seconds": 15.36967376299981,
+          "constructor_through_apply_cpu_seconds": 15.429878,
+          "one_update_api_component_sum_wall_seconds": 15.438088246000007,
+          "one_update_api_component_sum_cpu_seconds": 15.507654999999998
+        },
+        "full": {
+          "baseline_validation_cpu_seconds": 0.22108099999999986,
+          "baseline_validation_seconds": 0.22118420400011019,
+          "checking_cpu_seconds": 0.1280190000000001,
+          "checking_seconds": 0.12783459999991464,
+          "consumer_cpu_seconds": 1.0224469999999979,
+          "consumer_seconds": 0.9826045620002333,
+          "end_to_end_cpu_seconds": 1.0685899999999968,
+          "end_to_end_seconds": 1.0259497629999714,
+          "identity_update_cpu_seconds": 0.3862620000000003,
+          "identity_update_seconds": 0.33932562299969504,
+          "materialization_and_hash_cpu_seconds": 0.10966600000000071,
+          "materialization_and_hash_seconds": 0.1096607010003936,
+          "persistence_cpu_seconds": 0.15505699999999933,
+          "persistence_seconds": 0.1607751320002535,
+          "producer_seconds": 0.03968938099978914,
+          "reuse_decisions_cpu_seconds": 0.02015100000000203,
+          "reuse_decisions_seconds": 0.020147701000041707,
+          "constructor_wall_seconds": 0.25895664300014687,
+          "start_wall_seconds": 14.201518340999883,
+          "close_wall_seconds": 0.06926617799990709,
+          "close_cpu_seconds": 0.07738500000000315,
+          "constructor_through_apply_wall_seconds": 15.484091833000093,
+          "constructor_through_apply_cpu_seconds": 15.559977,
+          "one_update_api_component_sum_wall_seconds": 15.554030013000101,
+          "one_update_api_component_sum_cpu_seconds": 15.635946999999998
+        },
+        "retained": {
+          "baseline_validation_cpu_seconds": 0.2205440000000003,
+          "baseline_validation_seconds": 0.2205776959999639,
+          "checking_cpu_seconds": 0.12787700000000157,
+          "checking_seconds": 0.12767908299974806,
+          "consumer_cpu_seconds": 0.873659,
+          "consumer_seconds": 0.8386939390002226,
+          "end_to_end_cpu_seconds": 0.9195360000000008,
+          "end_to_end_seconds": 0.882448831000147,
+          "identity_update_cpu_seconds": 0.23734499999999947,
+          "identity_update_seconds": 0.19363742900031866,
+          "materialization_and_hash_cpu_seconds": 0.10903699999999894,
+          "materialization_and_hash_seconds": 0.10904114899994966,
+          "persistence_cpu_seconds": 0.1576599999999999,
+          "persistence_seconds": 0.16380655000011757,
+          "producer_seconds": 0.04000218999999561,
+          "reuse_decisions_cpu_seconds": 0.0196430000000003,
+          "reuse_decisions_seconds": 0.019639009999991686,
+          "constructor_wall_seconds": 0.2575774970000566,
+          "start_wall_seconds": 14.17784188700034,
+          "close_wall_seconds": 0.06942737400004262,
+          "close_cpu_seconds": 0.0761559999999939,
+          "constructor_through_apply_wall_seconds": 15.307837645999825,
+          "constructor_through_apply_cpu_seconds": 15.36899,
+          "one_update_api_component_sum_wall_seconds": 15.377265019999868,
+          "one_update_api_component_sum_cpu_seconds": 15.445145999999994
+        }
+      },
+      "counts": {
+        "total": 11653,
+        "scheduled": 672,
+        "rechecked": 672,
+        "reused": 10981,
+        "invalidated": 672
+      }
+    },
+    {
+      "profile": "expanded",
+      "obligations": 11653,
+      "variant": "unrelated-definition",
+      "warm_vs_direct_rust": {
+        "passed": true,
+        "status": "SPEEDUP",
+        "apply_median_wall_seconds": 0.8436695420000433,
+        "direct_median_wall_seconds": 1.1444078920003449,
+        "median_ratio": 0.7372105242348233,
+        "paired_wins": 5,
+        "paired_count": 5,
+        "bootstrap_ratio_interval_95": [
+          0.727342468332892,
+          0.7547527547107764
+        ],
+        "bootstrap_repetitions": 10000,
+        "bootstrap_seed": 20261016,
+        "setup_in_timed_update": false,
+        "scope": "paired retained / named comparator and phase; lifecycle/component-sum phases include setup and supported shutdown"
+      },
+      "warm_vs_qualified449": {
+        "passed": true,
+        "status": "SPEEDUP",
+        "apply_median_wall_seconds": 0.8436695420000433,
+        "direct_median_wall_seconds": 0.9557151930002874,
+        "median_ratio": 0.8827625093533379,
+        "paired_wins": 5,
+        "paired_count": 5,
+        "bootstrap_ratio_interval_95": [
+          0.8661241092105716,
+          0.9087685184816918
+        ],
+        "bootstrap_repetitions": 10000,
+        "bootstrap_seed": 20261016,
+        "setup_in_timed_update": false,
+        "scope": "paired retained / named comparator and phase; lifecycle/component-sum phases include setup and supported shutdown"
+      },
+      "warm_vs_current_full": {
+        "passed": true,
+        "status": "SPEEDUP",
+        "apply_median_wall_seconds": 0.8436695420000433,
+        "direct_median_wall_seconds": 0.9886587139999392,
+        "median_ratio": 0.8533476012027494,
+        "paired_wins": 5,
+        "paired_count": 5,
+        "bootstrap_ratio_interval_95": [
+          0.8440541053400202,
+          0.8736533616392785
+        ],
+        "bootstrap_repetitions": 10000,
+        "bootstrap_seed": 20261016,
+        "setup_in_timed_update": false,
+        "scope": "paired retained / named comparator and phase; lifecycle/component-sum phases include setup and supported shutdown"
+      },
+      "old_full_vs_retained_core": {
+        "passed": true,
+        "status": "SPEEDUP",
+        "apply_median_wall_seconds": 1.4858e-05,
+        "direct_median_wall_seconds": 0.131312492,
+        "median_ratio": 0.00011314993549890135,
+        "paired_wins": 5,
+        "paired_count": 5,
+        "bootstrap_ratio_interval_95": [
+          0.00011028986749874,
+          0.00040352116774576525
+        ],
+        "bootstrap_repetitions": 10000,
+        "bootstrap_seed": 20261016,
+        "setup_in_timed_update": false,
+        "scope": "paired retained / named comparator and phase; lifecycle/component-sum phases include setup and supported shutdown"
+      },
+      "old_full_vs_retained_whole_finish": {
+        "passed": true,
+        "status": "SPEEDUP",
+        "apply_median_wall_seconds": 2.113e-05,
+        "direct_median_wall_seconds": 0.132966159,
+        "median_ratio": 0.0001589126147503441,
+        "paired_wins": 5,
+        "paired_count": 5,
+        "bootstrap_ratio_interval_95": [
+          0.00014663043434591513,
+          0.000454022952407386
+        ],
+        "bootstrap_repetitions": 10000,
+        "bootstrap_seed": 20261016,
+        "setup_in_timed_update": false,
+        "scope": "paired retained / named comparator and phase; lifecycle/component-sum phases include setup and supported shutdown"
+      },
+      "index_roundtrip": {
+        "passed": true,
+        "status": "SPEEDUP",
+        "apply_median_wall_seconds": 0.1585701720000543,
+        "direct_median_wall_seconds": 0.3025628099999267,
+        "median_ratio": 0.5240900955411298,
+        "paired_wins": 5,
+        "paired_count": 5,
+        "bootstrap_ratio_interval_95": [
+          0.3968782800238501,
+          0.5493149643527848
+        ],
+        "bootstrap_repetitions": 10000,
+        "bootstrap_seed": 20261016,
+        "setup_in_timed_update": false,
+        "scope": "paired retained / named comparator and phase; lifecycle/component-sum phases include setup and supported shutdown"
+      },
+      "one_update_api_component_sum_vs449": {
+        "passed": true,
+        "status": "SPEEDUP",
+        "apply_median_wall_seconds": 15.396671651999895,
+        "direct_median_wall_seconds": 15.523712723999779,
+        "median_ratio": 0.9918163216326802,
+        "paired_wins": 5,
+        "paired_count": 5,
+        "bootstrap_ratio_interval_95": [
+          0.9851670864581191,
+          0.9952752642808993
+        ],
+        "bootstrap_repetitions": 10000,
+        "bootstrap_seed": 20261016,
+        "setup_in_timed_update": false,
+        "scope": "paired retained / named comparator and phase; lifecycle/component-sum phases include setup and supported shutdown"
+      },
+      "phase_medians": {
+        "qualified449": {
+          "baseline_validation_cpu_seconds": 0.21821999999999875,
+          "baseline_validation_seconds": 0.21824138800002402,
+          "checking_cpu_seconds": 0.09570199999999929,
+          "checking_seconds": 0.0954944750001232,
+          "consumer_cpu_seconds": 0.954739,
+          "consumer_seconds": 0.9129053200003909,
+          "end_to_end_cpu_seconds": 1.0007110000000008,
+          "end_to_end_seconds": 0.9555822860002081,
+          "identity_update_cpu_seconds": 0.35407099999999936,
+          "identity_update_seconds": 0.3071193979999407,
+          "materialization_and_hash_cpu_seconds": 0.10926599999999986,
+          "materialization_and_hash_seconds": 0.10926023699994403,
+          "persistence_cpu_seconds": 0.1535069999999994,
+          "persistence_seconds": 0.15847068000039144,
+          "producer_seconds": 0.04021842700012712,
+          "constructor_wall_seconds": 0.2565144670002155,
+          "start_wall_seconds": 14.236590224999873,
+          "close_wall_seconds": 0.06835967999995773,
+          "close_cpu_seconds": 0.07743799999999723,
+          "constructor_through_apply_wall_seconds": 15.455676555000082,
+          "constructor_through_apply_cpu_seconds": 15.514727,
+          "one_update_api_component_sum_wall_seconds": 15.523712723999779,
+          "one_update_api_component_sum_cpu_seconds": 15.595119999999998
+        },
+        "full": {
+          "baseline_validation_cpu_seconds": 0.21828500000000162,
+          "baseline_validation_seconds": 0.21829174300000886,
+          "checking_cpu_seconds": 0.09711700000000079,
+          "checking_seconds": 0.09691986300003919,
+          "consumer_cpu_seconds": 0.9926129999999986,
+          "consumer_seconds": 0.9418218960004197,
+          "end_to_end_cpu_seconds": 1.0286349999999995,
+          "end_to_end_seconds": 0.9885079129999212,
+          "identity_update_cpu_seconds": 0.38659700000000186,
+          "identity_update_seconds": 0.3374935380002171,
+          "materialization_and_hash_cpu_seconds": 0.10918200000000056,
+          "materialization_and_hash_seconds": 0.10917682199988121,
+          "persistence_cpu_seconds": 0.15460200000000057,
+          "persistence_seconds": 0.16032260099973428,
+          "producer_seconds": 0.03986763900002188,
+          "reuse_decisions_cpu_seconds": 0.01967500000000122,
+          "reuse_decisions_seconds": 0.019670443999984855,
+          "constructor_wall_seconds": 0.25807566799994675,
+          "start_wall_seconds": 14.206600428999991,
+          "close_wall_seconds": 0.06977395500007333,
+          "close_cpu_seconds": 0.07963899999999668,
+          "constructor_through_apply_wall_seconds": 15.437410166000063,
+          "constructor_through_apply_cpu_seconds": 15.512559000000001,
+          "one_update_api_component_sum_wall_seconds": 15.505844522000189,
+          "one_update_api_component_sum_cpu_seconds": 15.582305999999994
+        },
+        "retained": {
+          "baseline_validation_cpu_seconds": 0.2173379999999998,
+          "baseline_validation_seconds": 0.21734306100006506,
+          "checking_cpu_seconds": 0.1010629999999999,
+          "checking_seconds": 0.10087908700006665,
+          "consumer_cpu_seconds": 0.840956000000002,
+          "consumer_seconds": 0.8016223409999839,
+          "end_to_end_cpu_seconds": 0.887138000000002,
+          "end_to_end_seconds": 0.8435413130000597,
+          "identity_update_cpu_seconds": 0.23507000000000033,
+          "identity_update_seconds": 0.19404792700015605,
+          "materialization_and_hash_cpu_seconds": 0.1092840000000006,
+          "materialization_and_hash_seconds": 0.10928810399991562,
+          "persistence_cpu_seconds": 0.15235999999999983,
+          "persistence_seconds": 0.16111100200032524,
+          "producer_seconds": 0.039596350000010716,
+          "reuse_decisions_cpu_seconds": 0.020058000000000575,
+          "reuse_decisions_seconds": 0.02005594199999905,
+          "constructor_wall_seconds": 0.25736418899987257,
+          "start_wall_seconds": 14.221585060000052,
+          "close_wall_seconds": 0.06923621899977661,
+          "close_cpu_seconds": 0.076630999999999,
+          "constructor_through_apply_wall_seconds": 15.326261909000095,
+          "constructor_through_apply_cpu_seconds": 15.389101000000002,
+          "one_update_api_component_sum_wall_seconds": 15.396671651999895,
+          "one_update_api_component_sum_cpu_seconds": 15.464107000000004
+        }
+      },
+      "counts": {
+        "total": 11653,
+        "scheduled": 260,
+        "rechecked": 260,
+        "reused": 11393,
+        "invalidated": 260
+      }
+    }
+  ],
+  "same_cone_scaling": {
+    "early-definition": {
+      "operation_counts": {
+        "original": [
+          {
+            "affected_declarations": 3,
+            "affected_sccs": 3,
+            "closure_hashes": 3,
+            "touched_declarations": 3,
+            "dependency_edges_touched": 19
+          },
+          {
+            "affected_declarations": 3,
+            "affected_sccs": 3,
+            "closure_hashes": 3,
+            "touched_declarations": 3,
+            "dependency_edges_touched": 19
+          },
+          {
+            "affected_declarations": 3,
+            "affected_sccs": 3,
+            "closure_hashes": 3,
+            "touched_declarations": 3,
+            "dependency_edges_touched": 19
+          },
+          {
+            "affected_declarations": 3,
+            "affected_sccs": 3,
+            "closure_hashes": 3,
+            "touched_declarations": 3,
+            "dependency_edges_touched": 19
+          },
+          {
+            "affected_declarations": 3,
+            "affected_sccs": 3,
+            "closure_hashes": 3,
+            "touched_declarations": 3,
+            "dependency_edges_touched": 19
+          }
+        ],
+        "expanded": [
+          {
+            "affected_declarations": 3,
+            "affected_sccs": 3,
+            "closure_hashes": 3,
+            "touched_declarations": 3,
+            "dependency_edges_touched": 19
+          },
+          {
+            "affected_declarations": 3,
+            "affected_sccs": 3,
+            "closure_hashes": 3,
+            "touched_declarations": 3,
+            "dependency_edges_touched": 19
+          },
+          {
+            "affected_declarations": 3,
+            "affected_sccs": 3,
+            "closure_hashes": 3,
+            "touched_declarations": 3,
+            "dependency_edges_touched": 19
+          },
+          {
+            "affected_declarations": 3,
+            "affected_sccs": 3,
+            "closure_hashes": 3,
+            "touched_declarations": 3,
+            "dependency_edges_touched": 19
+          },
+          {
+            "affected_declarations": 3,
+            "affected_sccs": 3,
+            "closure_hashes": 3,
+            "touched_declarations": 3,
+            "dependency_edges_touched": 19
+          }
+        ]
+      },
+      "compute_wall_medians": {
+        "original": 2.1971e-05,
+        "expanded": 2.4095e-05
+      },
+      "expanded_over_original_compute_wall_ratio": 1.0966728869873925,
+      "finish_wall_medians": {
+        "original": 2.8613e-05,
+        "expanded": 2.9986e-05
+      },
+      "expanded_over_original_finish_wall_ratio": 1.047985181560829,
+      "scope": "identity finish only; complete-index JSON, row parsing, adapter, full selected-parser and persistence remain outside this cone claim"
+    },
+    "unrelated-definition": {
+      "operation_counts": {
+        "original": [
+          {
+            "affected_declarations": 1,
+            "affected_sccs": 1,
+            "closure_hashes": 1,
+            "touched_declarations": 1,
+            "dependency_edges_touched": 18
+          },
+          {
+            "affected_declarations": 1,
+            "affected_sccs": 1,
+            "closure_hashes": 1,
+            "touched_declarations": 1,
+            "dependency_edges_touched": 18
+          },
+          {
+            "affected_declarations": 1,
+            "affected_sccs": 1,
+            "closure_hashes": 1,
+            "touched_declarations": 1,
+            "dependency_edges_touched": 18
+          },
+          {
+            "affected_declarations": 1,
+            "affected_sccs": 1,
+            "closure_hashes": 1,
+            "touched_declarations": 1,
+            "dependency_edges_touched": 18
+          },
+          {
+            "affected_declarations": 1,
+            "affected_sccs": 1,
+            "closure_hashes": 1,
+            "touched_declarations": 1,
+            "dependency_edges_touched": 18
+          }
+        ],
+        "expanded": [
+          {
+            "affected_declarations": 1,
+            "affected_sccs": 1,
+            "closure_hashes": 1,
+            "touched_declarations": 1,
+            "dependency_edges_touched": 18
+          },
+          {
+            "affected_declarations": 1,
+            "affected_sccs": 1,
+            "closure_hashes": 1,
+            "touched_declarations": 1,
+            "dependency_edges_touched": 18
+          },
+          {
+            "affected_declarations": 1,
+            "affected_sccs": 1,
+            "closure_hashes": 1,
+            "touched_declarations": 1,
+            "dependency_edges_touched": 18
+          },
+          {
+            "affected_declarations": 1,
+            "affected_sccs": 1,
+            "closure_hashes": 1,
+            "touched_declarations": 1,
+            "dependency_edges_touched": 18
+          },
+          {
+            "affected_declarations": 1,
+            "affected_sccs": 1,
+            "closure_hashes": 1,
+            "touched_declarations": 1,
+            "dependency_edges_touched": 18
+          }
+        ]
+      },
+      "compute_wall_medians": {
+        "original": 1.3966e-05,
+        "expanded": 1.4858e-05
+      },
+      "expanded_over_original_compute_wall_ratio": 1.0638693971072606,
+      "finish_wall_medians": {
+        "original": 2.1049e-05,
+        "expanded": 2.113e-05
+      },
+      "expanded_over_original_finish_wall_ratio": 1.0038481638082568,
+      "scope": "identity finish only; complete-index JSON, row parsing, adapter, full selected-parser and persistence remain outside this cone claim"
+    }
+  },
+  "sparse_storage_experiment": {
+    "status": "NOT_PROMOTED_NO_SPEEDUP",
+    "scope": "Subordinate storage-only witness; unchanged full acceptance signing and full original-envelope authentication. No production receipt/authority change.",
+    "paired_samples": 20,
+    "controls": 44,
+    "economics": {
+      "expanded:early-definition": {
+        "read": {
+          "bootstrap_ratio_interval_95": [
+            1.9416899656690205,
+            2.9727874801951675
+          ],
+          "bootstrap_repetitions": 10000,
+          "bootstrap_seed": 20261016,
+          "full_median_cpu_seconds": 0.15676500000000004,
+          "full_median_wall_seconds": 0.156775375000052,
+          "paired_count": 5,
+          "paired_wins": 0,
+          "passed": false,
+          "sparse_median_cpu_seconds": 0.45203600000000055,
+          "sparse_median_wall_seconds": 0.4521156109999538,
+          "sparse_over_full_median_ratio": 2.883843275768301,
+          "status": "NO_SPEEDUP"
+        },
+        "write": {
+          "bootstrap_ratio_interval_95": [
+            1.003962208006774,
+            1.068548317944937
+          ],
+          "bootstrap_repetitions": 10000,
+          "bootstrap_seed": 20261016,
+          "full_median_cpu_seconds": 0.14801799999999954,
+          "full_median_wall_seconds": 0.15163232800023252,
+          "paired_count": 5,
+          "paired_wins": 0,
+          "passed": false,
+          "sparse_median_cpu_seconds": 0.15658600000000078,
+          "sparse_median_wall_seconds": 0.15715795300002355,
+          "sparse_over_full_median_ratio": 1.0364409428560812,
+          "status": "NO_SPEEDUP"
+        }
+      },
+      "expanded:unrelated-definition": {
+        "read": {
+          "bootstrap_ratio_interval_95": [
+            1.850422644585346,
+            3.0228228882531347
+          ],
+          "bootstrap_repetitions": 10000,
+          "bootstrap_seed": 20261016,
+          "full_median_cpu_seconds": 0.15351699999999902,
+          "full_median_wall_seconds": 0.15354132699985712,
+          "paired_count": 5,
+          "paired_wins": 0,
+          "passed": false,
+          "sparse_median_cpu_seconds": 0.43699500000000135,
+          "sparse_median_wall_seconds": 0.43701010099994164,
+          "sparse_over_full_median_ratio": 2.846205054619258,
+          "status": "NO_SPEEDUP"
+        },
+        "write": {
+          "bootstrap_ratio_interval_95": [
+            1.023189744256735,
+            1.0791681086931335
+          ],
+          "bootstrap_repetitions": 10000,
+          "bootstrap_seed": 20261016,
+          "full_median_cpu_seconds": 0.1474119999999992,
+          "full_median_wall_seconds": 0.15091972600021109,
+          "paired_count": 5,
+          "paired_wins": 0,
+          "passed": false,
+          "sparse_median_cpu_seconds": 0.1572300000000002,
+          "sparse_median_wall_seconds": 0.15776500299989493,
+          "sparse_over_full_median_ratio": 1.045357072803553,
+          "status": "NO_SPEEDUP"
+        }
+      },
+      "original:early-definition": {
+        "read": {
+          "bootstrap_ratio_interval_95": [
+            1.4277516090143578,
+            2.683765263838484
+          ],
+          "bootstrap_repetitions": 10000,
+          "bootstrap_seed": 20261016,
+          "full_median_cpu_seconds": 0.03348499999999999,
+          "full_median_wall_seconds": 0.033481786000265856,
+          "paired_count": 5,
+          "paired_wins": 0,
+          "passed": false,
+          "sparse_median_cpu_seconds": 0.08483400000000008,
+          "sparse_median_wall_seconds": 0.08482994999985749,
+          "sparse_over_full_median_ratio": 2.533614843580444,
+          "status": "NO_SPEEDUP"
+        },
+        "write": {
+          "bootstrap_ratio_interval_95": [
+            1.0218590827840677,
+            1.078882206466236
+          ],
+          "bootstrap_repetitions": 10000,
+          "bootstrap_seed": 20261016,
+          "full_median_cpu_seconds": 0.032206999999999986,
+          "full_median_wall_seconds": 0.033720430999892415,
+          "paired_count": 5,
+          "paired_wins": 0,
+          "passed": false,
+          "sparse_median_cpu_seconds": 0.03472900000000001,
+          "sparse_median_wall_seconds": 0.035246411000116495,
+          "sparse_over_full_median_ratio": 1.0452538699825322,
+          "status": "NO_SPEEDUP"
+        }
+      },
+      "original:unrelated-definition": {
+        "read": {
+          "bootstrap_ratio_interval_95": [
+            2.292761992096906,
+            3.0451012492640643
+          ],
+          "bootstrap_repetitions": 10000,
+          "bootstrap_seed": 20261016,
+          "full_median_cpu_seconds": 0.03533600000000048,
+          "full_median_wall_seconds": 0.035333978999915416,
+          "paired_count": 5,
+          "paired_wins": 0,
+          "passed": false,
+          "sparse_median_cpu_seconds": 0.08326299999999986,
+          "sparse_median_wall_seconds": 0.08327088699979868,
+          "sparse_over_full_median_ratio": 2.356680151986223,
+          "status": "NO_SPEEDUP"
+        },
+        "write": {
+          "bootstrap_ratio_interval_95": [
+            0.9943937945168612,
+            1.0476701475123211
+          ],
+          "bootstrap_repetitions": 10000,
+          "bootstrap_seed": 20261016,
+          "full_median_cpu_seconds": 0.03282600000000002,
+          "full_median_wall_seconds": 0.033956932999899436,
+          "paired_count": 5,
+          "paired_wins": 1,
+          "passed": false,
+          "sparse_median_cpu_seconds": 0.033870999999999984,
+          "sparse_median_wall_seconds": 0.03480911999986347,
+          "sparse_over_full_median_ratio": 1.0250961121832338,
+          "status": "NO_SPEEDUP"
+        }
+      }
+    }
+  },
+  "trust_boundary": {
+    "unchanged": [
+      "Lean producer",
+      "genuine kernel rules/checkers",
+      "HMAC issuer authority",
+      "verifier policy",
+      "reuse predicate",
+      "MathGraph resolver",
+      "exact changed-byte parsing requirement"
+    ],
+    "changed": "Retained-index transition becomes part of executable applicability TCB; no new cryptographic authority. Mode bound in producer provenance.",
+    "retained_state": "Private baseline-validated process memory; serialized supplied state refused; arbitrary process-memory corruption outside bounded model.",
+    "formal_status": "Existing bounded Lean theorem does not prove Rust retained transition or producer/verifier bridge."
+  },
+  "evidence_limits": [
+    "Full artifact provider metadata retained; full ZIP not downloaded/digest-verified. Partial remote read blocked by explicit403 and received zero archive bytes.",
+    "Compact archive lacks complete remote cache/index witnesses/private HMAC key.",
+    "Five finite same-host pairs; do not extrapolate to Mathlib or pool cross-run hosts.",
+    "RSS samples and cumulative VmHWM do not establish exact phase peaks or aggregate memory savings.",
+    "One-update lifecycle early cases are NO_SPEEDUP versus449; no hypothetical multi-update amortization claim."
+  ],
+  "remaining_residual": "Complete baseline receipt/export authentication, full index serialization/IPC, composite materialization/hash/parser and complete accepted receipt remain O(total input). Expanded early baseline authentication is largest measured phase:0.220577696s."
+}

@@ -1,0 +1,33 @@
+   Compiling sokonanoda v0.5.0 (/workspace/mathgraph-lean-kernel)
+warning: constant `PROMOTED_CAPABILITY_IDS` is never used
+  --> src/flash.rs:11:18
+   |
+11 | pub(crate) const PROMOTED_CAPABILITY_IDS: &[&str] = &[
+   |                  ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `sokonanoda` (lib test) generated 1 warning
+    Finished `test` profile [optimized + debuginfo] target(s) in 8.34s
+     Running unittests src/lib.rs (target/debug/deps/sokonanoda-bf910ccceed5fad2)
+
+running 16 tests
+test identity::retained_contract_tests::retained_edge_change_and_unresolved_dependency_change_use_full_oracle ... ok
+test identity::retained_contract_tests::retained_fixed_edges_reclose_only_reverse_cone_and_match_full ... ok
+test identity::retained_contract_tests::retained_noop_keeps_all_roots_and_does_zero_hash_work ... ok
+test identity::retained_contract_tests::retained_refreshes_builtin_helper_closure_and_falls_back_on_global_own ... ok
+test identity::retained_contract_tests::retained_sparse_name_holes_builtin_presence_and_ambiguity ... ok
+test identity::retained_contract_tests::retained_two_changed_components_dependency_first_and_restoration ... ok
+test identity::session_tests::session_empty_and_unused_dag_updates_preserve_index_but_require_downstream_parser ... ok
+test identity::session_tests::session_replacement_matches_fresh_genuine_parser_and_preserves_dependency_schedule ... ok
+test identity::retained_contract_tests::retained_cycles_multiple_changes_nonsimple_members_and_reverse_cone ... ok
+test identity::session_tests::session_refuses_duplicate_missing_new_metadata_complex_and_changed_kind ... ok
+test identity_support::tests::canonical_object_keys_follow_unicode_scalar_order ... ok
+test identity_support::tests::canonical_strings_match_python_ascii_encoding ... ok
+test identity_support::tests::duplicate_keys_are_rejected_at_every_depth ... ok
+test identity_support::tests::fingerprints_use_sha256_and_lowercase_hex ... ok
+test identity_support::tests::uncertain_numeric_forms_are_explicitly_unsupported ... ok
+test identity::retained_contract_tests::retained_cycle_split_and_retarget_and_negative_change_fall_back ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 47 filtered out; finished in 0.01s
+

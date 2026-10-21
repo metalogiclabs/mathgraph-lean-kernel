@@ -1,0 +1,30 @@
+{
+  "schema": "mathgraph.partial-remote-zip-review.v1",
+  "status": "BLOCKED_EXPLICIT_NETWORK_DENIAL",
+  "scope": "PARTIAL_REMOTE_ZIP_READ_ATTEMPT; FULL_ARCHIVE_SHA_NOT_VERIFIED",
+  "run_id": 38961520032,
+  "source_commit": "ef434eb2477fb64d7fd90fdf23f55bd0b35a0243",
+  "artifact_id": 12075154855,
+  "published_archive_bytes": 4210910584,
+  "published_archive_sha256_unverified": "2fcf3e723403d7c34c8e06604607ec0eb69f5a04f82940bb984db9b0840898f0",
+  "authenticated_redirect_probe_succeeded": true,
+  "blocker": "URLError (OSError): Tunnel connection failed: 403 Forbidden",
+  "blocker_stage_detail": "Transport denied during inventory attempt; the helper did not retain the exact endpoint stage. A separate authenticated redirect-only probe succeeded.",
+  "archive_body_bytes_received": 0,
+  "archive_inventory_available": false,
+  "entries_retrieved": 0,
+  "entry_crcs_verified": 0,
+  "full_archive_sha_verified": false,
+  "cumulative_body_transfer_cap_bytes": 100000000,
+  "selected_entry_compressed_cap_bytes": 30000000,
+  "whole_archive_download_attempted": false,
+  "network_denial_bypass_attempted": false,
+  "conclusion": "No additional raw-index, receipt, decision, or negative-control validation was possible from the full artifact. Existing compact evidence is unaffected.",
+  "files": [
+    "remote_zip_subset.py",
+    "blocker.json",
+    "transfer-log.json",
+    "review.json",
+    "README.md"
+  ]
+}

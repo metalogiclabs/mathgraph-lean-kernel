@@ -1,0 +1,15 @@
+{
+  "command": [
+    "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+    "--silent",
+    "--from-export",
+    "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-dag-only-zero-selection-parser.ndjson"
+  ],
+  "elapsed_seconds": 0.4502003479992709,
+  "expected_returncode": 1,
+  "returncode": 1,
+  "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-dag-only-zero-selection-parser-normal-cpp.stderr",
+  "stderr_sha256": "74ffa5806ba620027c25f9a5494051d48b6aab6372cd3dacf9da624cce5ce1a6",
+  "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-dag-only-zero-selection-parser-normal-cpp.stdout",
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

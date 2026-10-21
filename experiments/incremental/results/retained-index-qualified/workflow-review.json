@@ -1,0 +1,70 @@
+{
+  "status": "PASS_STATIC_AND_DIAGNOSTIC_REVIEW",
+  "audit_utc": "2026-10-16T20:16:26.722234+00:00",
+  "workflow_sha256": "8018b20340ac27ca740f234e4a9b85000c8f35f2d83a3557c26c74d810c1bf79",
+  "workflow_steps": 28,
+  "all_shell_syntax_valid": true,
+  "publisher_python_compiles": true,
+  "publisher_missing14evidence_reports_refused": true,
+  "required_legacy_gate_floors": [
+    197,
+    335,
+    719,
+    251,
+    243,
+    226
+  ],
+  "retained_matrix": {
+    "profiles": 2,
+    "variants": 2,
+    "repetitions": 5,
+    "adapter_arms": 3,
+    "adapter_sessions": 60,
+    "standalone_pairs": 20
+  },
+  "portable_fixtures": {
+    "count": 26,
+    "final_binary_sha256": "a00f736450fd38ae6e9b52087ec531bcd331ffe1294a2af123920a5296db7005"
+  },
+  "sparse_storage": {
+    "accepted_scope": "storage_only_not_acceptance",
+    "samples": 20,
+    "controls": 44,
+    "all_controls_passed": true,
+    "economic_statuses": {
+      "expanded:early-definition": {
+        "read": "NO_SPEEDUP",
+        "write": "NO_SPEEDUP"
+      },
+      "expanded:unrelated-definition": {
+        "read": "NO_SPEEDUP",
+        "write": "NO_SPEEDUP"
+      },
+      "original:early-definition": {
+        "read": "NO_SPEEDUP",
+        "write": "NO_SPEEDUP"
+      },
+      "original:unrelated-definition": {
+        "read": "NO_SPEEDUP",
+        "write": "NO_SPEEDUP"
+      }
+    }
+  },
+  "limitations": [
+    "Local one-pair smoke is diagnostic and ran under contention; no economic qualification claim.",
+    "Complete five-pair matrix and all197/335/719/251/243/226 legacy regression gates remain mandatory in exact-source CI."
+  ],
+  "final_retained_smoke": {
+    "path": "/workspace/kernel-audit/retained-index/harness-final-smoke-2/summary.json",
+    "sha256": "055b5fda87770434f90e34dbf1b36ff017b868062bd4b54e8465b606191924ea",
+    "observed_gates": 53,
+    "all_observed_gates_passed": true,
+    "complete_cases": 4,
+    "adapter_arms": 12,
+    "standalone_updates": 8,
+    "final_binary_sha256": "a00f736450fd38ae6e9b52087ec531bcd331ffe1294a2af123920a5296db7005",
+    "expected_status": "INCOMPLETE",
+    "reason": "one pair per case; five required for qualification",
+    "source_and_all_tools_stable": true
+  }
+}

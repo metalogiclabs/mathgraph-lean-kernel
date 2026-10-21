@@ -1,0 +1,1181 @@
+{
+  "actual_tools": {
+    "current-index": {
+      "captured_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/current-index",
+      "execution_scope": "Captured standalone Rust binary",
+      "input_path": "/workspace/mathgraph-lean-kernel/target/release/export-index",
+      "matches_original_report": false,
+      "original_report_sha256": "208069936e153ec7690ac8ef27a79b0abb12d4d6a61425c773a60dbcf44d28ab",
+      "path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/current-index",
+      "sha256": "436c3f81cd34ac9c2914775a9f9e7c1c7a009b44b02da27818902434c30c1fa7"
+    },
+    "current-rust": {
+      "captured_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/current-rust",
+      "execution_scope": "Captured standalone Rust binary",
+      "input_path": "/workspace/mathgraph-lean-kernel/target/release/sokonanoda",
+      "matches_original_report": false,
+      "original_report_sha256": "fb816d7d56be8bd433e134e7da80b532bc825f28f444caffb2432df4320f4a3b",
+      "path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/current-rust",
+      "sha256": "ce66010f8ee833c9882ad185c703647e03e10c78a082d1fe97b8153e5e2b85e4"
+    },
+    "current-zero-selected": {
+      "captured_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/current-zero-selected",
+      "execution_scope": "Captured standalone Rust binary",
+      "input_path": "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+      "matches_original_report": false,
+      "original_report_sha256": "cf9822328e974fe9065c73758a938d505476b775e989d8d89c4591f65b090fd6",
+      "path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/current-zero-selected",
+      "sha256": "3f2262d75a819936be39aad9afc69fa675c7c7ddaa8c183e6355e82abab1d092"
+    },
+    "normal-cpp": {
+      "captured_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/normal-cpp",
+      "execution_scope": "Pinned release location preserves relative shared-library loading",
+      "input_path": "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+      "matches_original_report": true,
+      "original_report_sha256": "12c38901cdbfab178f1bf6145dd30012e9a3b2c11ca695292a5884fa3cbaddb6",
+      "path": "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+      "sha256": "12c38901cdbfab178f1bf6145dd30012e9a3b2c11ca695292a5884fa3cbaddb6"
+    },
+    "paranoid-cpp": {
+      "captured_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/paranoid-cpp",
+      "execution_scope": "Pinned release location preserves relative shared-library loading",
+      "input_path": "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker-paranoid",
+      "matches_original_report": true,
+      "original_report_sha256": "ca74d1e9a856149ed05acb600d8931a574dd9f465745beeaf93e3de7b7cbe274",
+      "path": "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker-paranoid",
+      "sha256": "ca74d1e9a856149ed05acb600d8931a574dd9f465745beeaf93e3de7b7cbe274"
+    },
+    "qualified449-index": {
+      "captured_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/qualified449-index",
+      "execution_scope": "Captured standalone Rust binary",
+      "input_path": "/workspace/kernel-audit/retained-index/qualified-449-baseline/bin/export-index",
+      "matches_original_report": true,
+      "original_report_sha256": "c3e3ce6ac29a5b7e17b3a0a1ecc9c20166d9ea713748c4cd6a1bc77fedb2f698",
+      "path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/qualified449-index",
+      "sha256": "c3e3ce6ac29a5b7e17b3a0a1ecc9c20166d9ea713748c4cd6a1bc77fedb2f698"
+    },
+    "qualified449-rust": {
+      "captured_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/qualified449-rust",
+      "execution_scope": "Captured standalone Rust binary",
+      "input_path": "/workspace/kernel-audit/retained-index/qualified-449-baseline/bin/sokonanoda",
+      "matches_original_report": true,
+      "original_report_sha256": "e813211867f7e555f44e35f0a8b1e143be5ffbea5f7548e99022e704f3f7b441",
+      "path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/qualified449-rust",
+      "sha256": "e813211867f7e555f44e35f0a8b1e143be5ffbea5f7548e99022e704f3f7b441"
+    },
+    "qualified449-zero-selected": {
+      "captured_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/qualified449-zero-selected",
+      "execution_scope": "Captured standalone Rust binary",
+      "input_path": "/workspace/kernel-audit/retained-index/qualified-449-baseline/bin/check-selected",
+      "matches_original_report": true,
+      "original_report_sha256": "656c38d147833d2b08caea1829950e0ce631a44e0f8f10641fbc7201c85be6e9",
+      "path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/qualified449-zero-selected",
+      "sha256": "656c38d147833d2b08caea1829950e0ce631a44e0f8f10641fbc7201c85be6e9"
+    }
+  },
+  "cases": [
+    {
+      "expected": 0,
+      "kernels": [
+        {
+          "command": [
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/current-rust",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-early-definition.config.json"
+          ],
+          "elapsed_seconds": 0.30352137600129936,
+          "expected_returncode": 0,
+          "returncode": 0,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-early-definition-current-rust.stderr",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-early-definition-current-rust.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "current-rust"
+        },
+        {
+          "command": [
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/qualified449-rust",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-early-definition.config.json"
+          ],
+          "elapsed_seconds": 0.27862790200015297,
+          "expected_returncode": 0,
+          "returncode": 0,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-early-definition-qualified449-rust.stderr",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-early-definition-qualified449-rust.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "qualified449-rust"
+        },
+        {
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-early-definition.ndjson"
+          ],
+          "elapsed_seconds": 1.6785614540003735,
+          "expected_returncode": 0,
+          "returncode": 0,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-early-definition-normal-cpp.stderr",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-early-definition-normal-cpp.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "normal-cpp"
+        },
+        {
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker-paranoid",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-early-definition.ndjson"
+          ],
+          "elapsed_seconds": 1.9590737290000106,
+          "expected_returncode": 0,
+          "returncode": 0,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-early-definition-paranoid-cpp.stderr",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-early-definition-paranoid-cpp.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "paranoid-cpp"
+        }
+      ],
+      "name": "early-definition",
+      "original_no_acceptance_record": false,
+      "profile": "original",
+      "reconstruction": {
+        "appended_rows": 4,
+        "bytes": 15922194,
+        "delta_bytes": 271,
+        "delta_path": "/workspace/kernel-audit/retained-index/original-delta-regression/samples/early-definition-0/session/cache/deltas/eb11fc45e122f70178e45383b980de2322645bf96e7e5b38a33335fcd171b36e.ndjson",
+        "delta_sha256": "eb11fc45e122f70178e45383b980de2322645bf96e7e5b38a33335fcd171b36e",
+        "path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-early-definition.ndjson",
+        "replacements": 1,
+        "sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882"
+      },
+      "source_report": "original-current",
+      "zero_selection_verified": false
+    },
+    {
+      "expected": 0,
+      "kernels": [
+        {
+          "command": [
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/current-rust",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-early-definition.config.json"
+          ],
+          "elapsed_seconds": 1.3039807080003811,
+          "expected_returncode": 0,
+          "returncode": 0,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-early-definition-current-rust.stderr",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-early-definition-current-rust.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "current-rust"
+        },
+        {
+          "command": [
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/qualified449-rust",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-early-definition.config.json"
+          ],
+          "elapsed_seconds": 1.1644311889995151,
+          "expected_returncode": 0,
+          "returncode": 0,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-early-definition-qualified449-rust.stderr",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-early-definition-qualified449-rust.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "qualified449-rust"
+        },
+        {
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-early-definition.ndjson"
+          ],
+          "elapsed_seconds": 10.295035907000056,
+          "expected_returncode": 0,
+          "returncode": 0,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-early-definition-normal-cpp.stderr",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-early-definition-normal-cpp.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "normal-cpp"
+        },
+        {
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker-paranoid",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-early-definition.ndjson"
+          ],
+          "elapsed_seconds": 12.045480447000955,
+          "expected_returncode": 0,
+          "returncode": 0,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-early-definition-paranoid-cpp.stderr",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-early-definition-paranoid-cpp.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "paranoid-cpp"
+        }
+      ],
+      "name": "early-definition",
+      "original_no_acceptance_record": false,
+      "profile": "expanded",
+      "reconstruction": {
+        "appended_rows": 4,
+        "bytes": 64116034,
+        "delta_bytes": 280,
+        "delta_path": "/workspace/kernel-audit/retained-index/harness-final-smoke-2/samples/expanded/early-definition-0/retained/delta.ndjson",
+        "delta_sha256": "0c5bcf2490822935ae4fe2166a82777a3eaca2e7f4eea4a2f4981ac829912ab7",
+        "path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-early-definition.ndjson",
+        "replacements": 1,
+        "sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76"
+      },
+      "source_report": "expanded-current-smoke",
+      "zero_selection_verified": false
+    },
+    {
+      "expected": 1,
+      "kernels": [
+        {
+          "command": [
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/current-rust",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-signed-invalid-proof.config.json"
+          ],
+          "elapsed_seconds": 0.2711621140006173,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-signed-invalid-proof-current-rust.stderr",
+          "stderr_sha256": "71a3e2babd51e1b834e9e89ea5ad8e475c17a477186cdc5b019c7c65e5ebefa4",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-signed-invalid-proof-current-rust.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "current-rust"
+        },
+        {
+          "command": [
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/qualified449-rust",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-signed-invalid-proof.config.json"
+          ],
+          "elapsed_seconds": 0.2706832490002853,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-signed-invalid-proof-qualified449-rust.stderr",
+          "stderr_sha256": "a4599762b9013d1b90e102ca8df03bd847a0ad471ea9425a16b006d581280e9f",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-signed-invalid-proof-qualified449-rust.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "qualified449-rust"
+        },
+        {
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-signed-invalid-proof.ndjson"
+          ],
+          "elapsed_seconds": 1.6577458000010665,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-signed-invalid-proof-normal-cpp.stderr",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-signed-invalid-proof-normal-cpp.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "normal-cpp"
+        },
+        {
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker-paranoid",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-signed-invalid-proof.ndjson"
+          ],
+          "elapsed_seconds": 1.7858144080000784,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-signed-invalid-proof-paranoid-cpp.stderr",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-signed-invalid-proof-paranoid-cpp.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "paranoid-cpp"
+        }
+      ],
+      "name": "signed-invalid-proof",
+      "original_no_acceptance_record": true,
+      "profile": "original",
+      "reconstruction": {
+        "appended_rows": 0,
+        "bytes": 15922025,
+        "delta_bytes": 79,
+        "delta_path": "/workspace/kernel-audit/retained-index/original-delta-regression/controls/signed-invalid-proof/fixture-delta.ndjson",
+        "delta_sha256": "a3e3c89873713e99aed8646f0ae8c99d918279941f5da30595b3653fe6c1bb5f",
+        "path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-signed-invalid-proof.ndjson",
+        "replacements": 1,
+        "sha256": "43d98c93398a0d17604872ce6a11bb098b25ff62d4f27538bea26afaa9319f49"
+      },
+      "source_report": "original-current",
+      "zero_selection_verified": false
+    },
+    {
+      "expected": 1,
+      "kernels": [
+        {
+          "command": [
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/current-rust",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-signed-invalid-axiom.config.json"
+          ],
+          "elapsed_seconds": 0.029643073999977787,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-signed-invalid-axiom-current-rust.stderr",
+          "stderr_sha256": "920f590883c9481675983f568d551d768c7b4632b82b22e26338b05ea8c0fb34",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-signed-invalid-axiom-current-rust.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "current-rust"
+        },
+        {
+          "command": [
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/qualified449-rust",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-signed-invalid-axiom.config.json"
+          ],
+          "elapsed_seconds": 0.027552678999199998,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-signed-invalid-axiom-qualified449-rust.stderr",
+          "stderr_sha256": "8ce6e064ca21cfdc9b9bc13677b3d8f2ab88a1513dfbd9c5059d499028cfa6d0",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-signed-invalid-axiom-qualified449-rust.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "qualified449-rust"
+        },
+        {
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-signed-invalid-axiom.ndjson"
+          ],
+          "elapsed_seconds": 0.4966693429996667,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-signed-invalid-axiom-normal-cpp.stderr",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-signed-invalid-axiom-normal-cpp.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "normal-cpp"
+        },
+        {
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker-paranoid",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-signed-invalid-axiom.ndjson"
+          ],
+          "elapsed_seconds": 0.6079433329996391,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-signed-invalid-axiom-paranoid-cpp.stderr",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-signed-invalid-axiom-paranoid-cpp.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "paranoid-cpp"
+        }
+      ],
+      "name": "signed-invalid-axiom",
+      "original_no_acceptance_record": true,
+      "profile": "original",
+      "reconstruction": {
+        "appended_rows": 0,
+        "bytes": 15922028,
+        "delta_bytes": 69,
+        "delta_path": "/workspace/kernel-audit/retained-index/original-delta-regression/controls/signed-invalid-axiom/fixture-delta.ndjson",
+        "delta_sha256": "699a6f1ef5daa34beadb3d4fda2a94742198f3fc4ae2263cbba381f9ff64af5a",
+        "path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-signed-invalid-axiom.ndjson",
+        "replacements": 1,
+        "sha256": "c40269431e15a0623ca61b5394c9dab8303462d6a482ca9678eb1e135ef72024"
+      },
+      "source_report": "original-current",
+      "zero_selection_verified": false
+    },
+    {
+      "expected": 1,
+      "kernels": [
+        {
+          "command": [
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/current-rust",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-zero-selection-parser.config.json"
+          ],
+          "elapsed_seconds": 0.019011459000466857,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-zero-selection-parser-current-rust.stderr",
+          "stderr_sha256": "1e40b5261928d7aac961037aed187b8d0bc1dd46de9aab855489931c49089e98",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-zero-selection-parser-current-rust.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "current-rust"
+        },
+        {
+          "command": [
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/qualified449-rust",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-zero-selection-parser.config.json"
+          ],
+          "elapsed_seconds": 0.01336558599905402,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-zero-selection-parser-qualified449-rust.stderr",
+          "stderr_sha256": "1e40b5261928d7aac961037aed187b8d0bc1dd46de9aab855489931c49089e98",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-zero-selection-parser-qualified449-rust.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "qualified449-rust"
+        },
+        {
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-zero-selection-parser.ndjson"
+          ],
+          "elapsed_seconds": 0.48489772399989306,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-zero-selection-parser-normal-cpp.stderr",
+          "stderr_sha256": "74ffa5806ba620027c25f9a5494051d48b6aab6372cd3dacf9da624cce5ce1a6",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-zero-selection-parser-normal-cpp.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "normal-cpp"
+        },
+        {
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker-paranoid",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-zero-selection-parser.ndjson"
+          ],
+          "elapsed_seconds": 0.5665528899990022,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-zero-selection-parser-paranoid-cpp.stderr",
+          "stderr_sha256": "74ffa5806ba620027c25f9a5494051d48b6aab6372cd3dacf9da624cce5ce1a6",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-zero-selection-parser-paranoid-cpp.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "paranoid-cpp"
+        },
+        {
+          "command": [
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/current-zero-selected",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-zero-selection-parser.config.json",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-zero-selection-parser.indices.json"
+          ],
+          "elapsed_seconds": 0.012980258001334732,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-zero-selection-parser-current-zero-selected.stderr",
+          "stderr_sha256": "a5fe75f0796d55ea056b0307ccdc666585a357cfeb191f24db17a8572841be46",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-zero-selection-parser-current-zero-selected.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "current-zero-selected"
+        },
+        {
+          "command": [
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/qualified449-zero-selected",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-zero-selection-parser.config.json",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-zero-selection-parser.indices.json"
+          ],
+          "elapsed_seconds": 0.014404153000214137,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-zero-selection-parser-qualified449-zero-selected.stderr",
+          "stderr_sha256": "a5fe75f0796d55ea056b0307ccdc666585a357cfeb191f24db17a8572841be46",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-zero-selection-parser-qualified449-zero-selected.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "qualified449-zero-selected"
+        }
+      ],
+      "name": "unused-invalid-node-zero-selection-parser",
+      "original_no_acceptance_record": true,
+      "profile": "original",
+      "reconstruction": {
+        "appended_rows": 1,
+        "bytes": 15922067,
+        "delta_bytes": 121,
+        "delta_path": "/workspace/kernel-audit/retained-index/original-delta-regression/controls/unused-invalid-node-zero-selection-parser/fixture-delta.ndjson",
+        "delta_sha256": "7567e4c73df4ed2d3135f50dfa9e79bd180e4762c1430fd3a228f9ff4373105a",
+        "path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-zero-selection-parser.ndjson",
+        "replacements": 1,
+        "sha256": "0484083f89bdc9508596dd870534e87ef20d27a4ac2f57a3753778f4f8fe3b83"
+      },
+      "source_report": "original-current",
+      "zero_selection_verified": true
+    },
+    {
+      "expected": 1,
+      "kernels": [
+        {
+          "command": [
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/current-rust",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-dag-only-zero-selection-parser.config.json"
+          ],
+          "elapsed_seconds": 0.015692606999436975,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-dag-only-zero-selection-parser-current-rust.stderr",
+          "stderr_sha256": "1e40b5261928d7aac961037aed187b8d0bc1dd46de9aab855489931c49089e98",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-dag-only-zero-selection-parser-current-rust.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "current-rust"
+        },
+        {
+          "command": [
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/qualified449-rust",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-dag-only-zero-selection-parser.config.json"
+          ],
+          "elapsed_seconds": 0.016986876998998923,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-dag-only-zero-selection-parser-qualified449-rust.stderr",
+          "stderr_sha256": "1e40b5261928d7aac961037aed187b8d0bc1dd46de9aab855489931c49089e98",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-dag-only-zero-selection-parser-qualified449-rust.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "qualified449-rust"
+        },
+        {
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-dag-only-zero-selection-parser.ndjson"
+          ],
+          "elapsed_seconds": 0.4502003479992709,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-dag-only-zero-selection-parser-normal-cpp.stderr",
+          "stderr_sha256": "74ffa5806ba620027c25f9a5494051d48b6aab6372cd3dacf9da624cce5ce1a6",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-dag-only-zero-selection-parser-normal-cpp.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "normal-cpp"
+        },
+        {
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker-paranoid",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-dag-only-zero-selection-parser.ndjson"
+          ],
+          "elapsed_seconds": 0.5351741800004675,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-dag-only-zero-selection-parser-paranoid-cpp.stderr",
+          "stderr_sha256": "74ffa5806ba620027c25f9a5494051d48b6aab6372cd3dacf9da624cce5ce1a6",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-dag-only-zero-selection-parser-paranoid-cpp.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "paranoid-cpp"
+        },
+        {
+          "command": [
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/current-zero-selected",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-dag-only-zero-selection-parser.config.json",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-dag-only-zero-selection-parser.indices.json"
+          ],
+          "elapsed_seconds": 0.015378985999632278,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-dag-only-zero-selection-parser-current-zero-selected.stderr",
+          "stderr_sha256": "a5fe75f0796d55ea056b0307ccdc666585a357cfeb191f24db17a8572841be46",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-dag-only-zero-selection-parser-current-zero-selected.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "current-zero-selected"
+        },
+        {
+          "command": [
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/qualified449-zero-selected",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-dag-only-zero-selection-parser.config.json",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-dag-only-zero-selection-parser.indices.json"
+          ],
+          "elapsed_seconds": 0.014143820000754204,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-dag-only-zero-selection-parser-qualified449-zero-selected.stderr",
+          "stderr_sha256": "a5fe75f0796d55ea056b0307ccdc666585a357cfeb191f24db17a8572841be46",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-dag-only-zero-selection-parser-qualified449-zero-selected.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "qualified449-zero-selected"
+        }
+      ],
+      "name": "unused-invalid-node-dag-only-zero-selection-parser",
+      "original_no_acceptance_record": true,
+      "profile": "original",
+      "reconstruction": {
+        "appended_rows": 1,
+        "bytes": 15922067,
+        "delta_bytes": 38,
+        "delta_path": "/workspace/kernel-audit/retained-index/original-delta-regression/controls/unused-invalid-node-dag-only-zero-selection-parser/fixture-delta.ndjson",
+        "delta_sha256": "6c9d2fe80a1abb3fdc09c194ae517355aa192e3e1a9b9baf5db78014bfb6c761",
+        "path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-dag-only-zero-selection-parser.ndjson",
+        "replacements": 0,
+        "sha256": "0484083f89bdc9508596dd870534e87ef20d27a4ac2f57a3753778f4f8fe3b83"
+      },
+      "source_report": "original-current",
+      "zero_selection_verified": true
+    },
+    {
+      "expected": 1,
+      "kernels": [
+        {
+          "command": [
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/current-rust",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-signed-invalid-proof.config.json"
+          ],
+          "elapsed_seconds": 0.3918509940012882,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-signed-invalid-proof-current-rust.stderr",
+          "stderr_sha256": "faede26f7feb075828d3d405bb06faaaa1fe0c99fdec873a7909e7126e802968",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-signed-invalid-proof-current-rust.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "current-rust"
+        },
+        {
+          "command": [
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/qualified449-rust",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-signed-invalid-proof.config.json"
+          ],
+          "elapsed_seconds": 0.38668097499976284,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-signed-invalid-proof-qualified449-rust.stderr",
+          "stderr_sha256": "666b00f9c18ddbca0fa85ea12764bcaba05cbf162e95f529ea4a1a39dde7ea06",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-signed-invalid-proof-qualified449-rust.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "qualified449-rust"
+        },
+        {
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-signed-invalid-proof.ndjson"
+          ],
+          "elapsed_seconds": 9.118102476000786,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-signed-invalid-proof-normal-cpp.stderr",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-signed-invalid-proof-normal-cpp.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "normal-cpp"
+        },
+        {
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker-paranoid",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-signed-invalid-proof.ndjson"
+          ],
+          "elapsed_seconds": 10.715148208000755,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-signed-invalid-proof-paranoid-cpp.stderr",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-signed-invalid-proof-paranoid-cpp.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "paranoid-cpp"
+        }
+      ],
+      "name": "signed-invalid-proof",
+      "original_no_acceptance_record": true,
+      "profile": "expanded",
+      "reconstruction": {
+        "appended_rows": 0,
+        "bytes": 64115856,
+        "delta_bytes": 79,
+        "delta_path": "/workspace/kernel-audit/delta-expanded-qualified-v2/controls/signed-invalid-proof/fixture-delta.ndjson",
+        "delta_sha256": "a3e3c89873713e99aed8646f0ae8c99d918279941f5da30595b3653fe6c1bb5f",
+        "path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-signed-invalid-proof.ndjson",
+        "replacements": 1,
+        "sha256": "58f8091201c291c6ec490ceb82db1803221902cf0ca0f708a5c5c352da59ec08"
+      },
+      "source_report": "expanded-historical-controls",
+      "zero_selection_verified": false
+    },
+    {
+      "expected": 1,
+      "kernels": [
+        {
+          "command": [
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/current-rust",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-signed-invalid-axiom.config.json"
+          ],
+          "elapsed_seconds": 0.07646701300109271,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-signed-invalid-axiom-current-rust.stderr",
+          "stderr_sha256": "31799d1cbadd884da45a99c44314112d8abd125518f41ff9ec6c42c5b4bc286f",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-signed-invalid-axiom-current-rust.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "current-rust"
+        },
+        {
+          "command": [
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/qualified449-rust",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-signed-invalid-axiom.config.json"
+          ],
+          "elapsed_seconds": 0.07114023499889299,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-signed-invalid-axiom-qualified449-rust.stderr",
+          "stderr_sha256": "44c117bcb71d023092e585a76d07c43ab1fb36a14f59f253361eda4753638b37",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-signed-invalid-axiom-qualified449-rust.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "qualified449-rust"
+        },
+        {
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-signed-invalid-axiom.ndjson"
+          ],
+          "elapsed_seconds": 1.9555109989996708,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-signed-invalid-axiom-normal-cpp.stderr",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-signed-invalid-axiom-normal-cpp.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "normal-cpp"
+        },
+        {
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker-paranoid",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-signed-invalid-axiom.ndjson"
+          ],
+          "elapsed_seconds": 2.4251109689994337,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-signed-invalid-axiom-paranoid-cpp.stderr",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-signed-invalid-axiom-paranoid-cpp.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "paranoid-cpp"
+        }
+      ],
+      "name": "signed-invalid-axiom",
+      "original_no_acceptance_record": true,
+      "profile": "expanded",
+      "reconstruction": {
+        "appended_rows": 0,
+        "bytes": 64115859,
+        "delta_bytes": 69,
+        "delta_path": "/workspace/kernel-audit/delta-expanded-qualified-v2/controls/signed-invalid-axiom/fixture-delta.ndjson",
+        "delta_sha256": "699a6f1ef5daa34beadb3d4fda2a94742198f3fc4ae2263cbba381f9ff64af5a",
+        "path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-signed-invalid-axiom.ndjson",
+        "replacements": 1,
+        "sha256": "ac4ace2468a0bb7e02b74f7d41131f9182dcba3d931758eda41394a89b9e2c92"
+      },
+      "source_report": "expanded-historical-controls",
+      "zero_selection_verified": false
+    },
+    {
+      "expected": 1,
+      "kernels": [
+        {
+          "command": [
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/current-rust",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-zero-selection-parser.config.json"
+          ],
+          "elapsed_seconds": 0.053758718000608496,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-zero-selection-parser-current-rust.stderr",
+          "stderr_sha256": "b0bdb276876ba924db0d709cd41caad33bed735cb926a7dd960f1e964f65f716",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-zero-selection-parser-current-rust.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "current-rust"
+        },
+        {
+          "command": [
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/qualified449-rust",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-zero-selection-parser.config.json"
+          ],
+          "elapsed_seconds": 0.0581631599998218,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-zero-selection-parser-qualified449-rust.stderr",
+          "stderr_sha256": "b0bdb276876ba924db0d709cd41caad33bed735cb926a7dd960f1e964f65f716",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-zero-selection-parser-qualified449-rust.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "qualified449-rust"
+        },
+        {
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-zero-selection-parser.ndjson"
+          ],
+          "elapsed_seconds": 1.8914610320007341,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-zero-selection-parser-normal-cpp.stderr",
+          "stderr_sha256": "74ffa5806ba620027c25f9a5494051d48b6aab6372cd3dacf9da624cce5ce1a6",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-zero-selection-parser-normal-cpp.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "normal-cpp"
+        },
+        {
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker-paranoid",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-zero-selection-parser.ndjson"
+          ],
+          "elapsed_seconds": 2.3011222330005694,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-zero-selection-parser-paranoid-cpp.stderr",
+          "stderr_sha256": "74ffa5806ba620027c25f9a5494051d48b6aab6372cd3dacf9da624cce5ce1a6",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-zero-selection-parser-paranoid-cpp.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "paranoid-cpp"
+        },
+        {
+          "command": [
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/current-zero-selected",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-zero-selection-parser.config.json",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-zero-selection-parser.indices.json"
+          ],
+          "elapsed_seconds": 0.05090255600043747,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-zero-selection-parser-current-zero-selected.stderr",
+          "stderr_sha256": "af110d98c0f6142d3400c71b5c9d3c8775d54b225d4637e6c74d216737f1c31d",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-zero-selection-parser-current-zero-selected.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "current-zero-selected"
+        },
+        {
+          "command": [
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/qualified449-zero-selected",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-zero-selection-parser.config.json",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-zero-selection-parser.indices.json"
+          ],
+          "elapsed_seconds": 0.04750842399880639,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-zero-selection-parser-qualified449-zero-selected.stderr",
+          "stderr_sha256": "af110d98c0f6142d3400c71b5c9d3c8775d54b225d4637e6c74d216737f1c31d",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-zero-selection-parser-qualified449-zero-selected.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "qualified449-zero-selected"
+        }
+      ],
+      "name": "unused-invalid-node-zero-selection-parser",
+      "original_no_acceptance_record": true,
+      "profile": "expanded",
+      "reconstruction": {
+        "appended_rows": 1,
+        "bytes": 64115899,
+        "delta_bytes": 122,
+        "delta_path": "/workspace/kernel-audit/delta-expanded-qualified-v2/controls/unused-invalid-node-zero-selection-parser/fixture-delta.ndjson",
+        "delta_sha256": "2014b92938083238a899a128428650166f5d02cfdd602b2b53bfb36e90f8b507",
+        "path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-zero-selection-parser.ndjson",
+        "replacements": 1,
+        "sha256": "2ba6049b33587cf12b458afaa439741b56c7f1cca7bfe1150c5972533b377e2f"
+      },
+      "source_report": "expanded-historical-controls",
+      "zero_selection_verified": true
+    },
+    {
+      "expected": 1,
+      "kernels": [
+        {
+          "command": [
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/current-rust",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-dag-only-zero-selection-parser.config.json"
+          ],
+          "elapsed_seconds": 0.05503765200046473,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-dag-only-zero-selection-parser-current-rust.stderr",
+          "stderr_sha256": "b0bdb276876ba924db0d709cd41caad33bed735cb926a7dd960f1e964f65f716",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-dag-only-zero-selection-parser-current-rust.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "current-rust"
+        },
+        {
+          "command": [
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/qualified449-rust",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-dag-only-zero-selection-parser.config.json"
+          ],
+          "elapsed_seconds": 0.052523620001011295,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-dag-only-zero-selection-parser-qualified449-rust.stderr",
+          "stderr_sha256": "b0bdb276876ba924db0d709cd41caad33bed735cb926a7dd960f1e964f65f716",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-dag-only-zero-selection-parser-qualified449-rust.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "qualified449-rust"
+        },
+        {
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-dag-only-zero-selection-parser.ndjson"
+          ],
+          "elapsed_seconds": 1.920665892001125,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-dag-only-zero-selection-parser-normal-cpp.stderr",
+          "stderr_sha256": "74ffa5806ba620027c25f9a5494051d48b6aab6372cd3dacf9da624cce5ce1a6",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-dag-only-zero-selection-parser-normal-cpp.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "normal-cpp"
+        },
+        {
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker-paranoid",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-dag-only-zero-selection-parser.ndjson"
+          ],
+          "elapsed_seconds": 3.137419487000443,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-dag-only-zero-selection-parser-paranoid-cpp.stderr",
+          "stderr_sha256": "74ffa5806ba620027c25f9a5494051d48b6aab6372cd3dacf9da624cce5ce1a6",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-dag-only-zero-selection-parser-paranoid-cpp.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "paranoid-cpp"
+        },
+        {
+          "command": [
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/current-zero-selected",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-dag-only-zero-selection-parser.config.json",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-dag-only-zero-selection-parser.indices.json"
+          ],
+          "elapsed_seconds": 0.05870244500147237,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-dag-only-zero-selection-parser-current-zero-selected.stderr",
+          "stderr_sha256": "af110d98c0f6142d3400c71b5c9d3c8775d54b225d4637e6c74d216737f1c31d",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-dag-only-zero-selection-parser-current-zero-selected.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "current-zero-selected"
+        },
+        {
+          "command": [
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/qualified449-zero-selected",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-dag-only-zero-selection-parser.config.json",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-dag-only-zero-selection-parser.indices.json"
+          ],
+          "elapsed_seconds": 0.059717521000493434,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-dag-only-zero-selection-parser-qualified449-zero-selected.stderr",
+          "stderr_sha256": "af110d98c0f6142d3400c71b5c9d3c8775d54b225d4637e6c74d216737f1c31d",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-dag-only-zero-selection-parser-qualified449-zero-selected.stdout",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "tool": "qualified449-zero-selected"
+        }
+      ],
+      "name": "unused-invalid-node-dag-only-zero-selection-parser",
+      "original_no_acceptance_record": true,
+      "profile": "expanded",
+      "reconstruction": {
+        "appended_rows": 1,
+        "bytes": 64115899,
+        "delta_bytes": 39,
+        "delta_path": "/workspace/kernel-audit/delta-expanded-qualified-v2/controls/unused-invalid-node-dag-only-zero-selection-parser/fixture-delta.ndjson",
+        "delta_sha256": "2178551a8530a842b34f5f0786b703914fa2207bef29509ffe912b0d45ac99ed",
+        "path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-dag-only-zero-selection-parser.ndjson",
+        "replacements": 0,
+        "sha256": "2ba6049b33587cf12b458afaa439741b56c7f1cca7bfe1150c5972533b377e2f"
+      },
+      "source_report": "expanded-historical-controls",
+      "zero_selection_verified": true
+    }
+  ],
+  "current_clean_source": "ef434eb2477fb64d7fd90fdf23f55bd0b35a0243",
+  "full_kernel_commands": 40,
+  "helper_sha256": "c121be9ad5aee4628622d239b6706fca4116b285bfe8778a21cc2fefe032049e",
+  "input_reports": {
+    "expanded-current-smoke": {
+      "correctness_passed": false,
+      "path": "/workspace/kernel-audit/retained-index/harness-final-smoke-2/summary.json",
+      "qualification_status": "INCOMPLETE",
+      "recorded_source": "1e20ed04f464a716a6520abe0f4e235abf80cb32",
+      "recorded_tracked_clean": false,
+      "recorded_worktree_status": null,
+      "run_completed": true,
+      "sha256": "055b5fda87770434f90e34dbf1b36ff017b868062bd4b54e8465b606191924ea"
+    },
+    "expanded-historical-controls": {
+      "correctness_passed": true,
+      "path": "/workspace/kernel-audit/delta-expanded-qualified-v2/summary.json",
+      "qualification_status": "PASS",
+      "recorded_source": "f39715431251c8009849eb62c107e79131b4b3df",
+      "recorded_tracked_clean": null,
+      "recorded_worktree_status": "",
+      "run_completed": true,
+      "sha256": "aebe74da431811a0528101cf743f0572dc9e4261b11d385ae761f8783164deac"
+    },
+    "original-current": {
+      "correctness_passed": true,
+      "path": "/workspace/kernel-audit/retained-index/original-delta-regression/summary.json",
+      "qualification_status": "PASS",
+      "recorded_source": "1e20ed04f464a716a6520abe0f4e235abf80cb32",
+      "recorded_tracked_clean": null,
+      "recorded_worktree_status": " M experiments/incremental/producer-delta.md\n M experiments/incremental/producer_delta.py\n M src/bin/index_session.rs\n M src/identity.rs\n?? .github/workflows/incremental-retained-index.yml\n?? experiments/incremental/qualify_retained_index.py\n?? experiments/incremental/replay_retained_index.py\n?? experiments/incremental/retained-index.md\n?? experiments/incremental/test_sparse_receipts.py\n?? src/identity/\n",
+      "run_completed": true,
+      "sha256": "0ddc4f8ae4fb7edca5832812085a99b4392f75ae70c033d75c8b26f823c0ec34"
+    }
+  },
+  "measured_source_matches_current_commit": {
+    "expanded-current-smoke": {
+      "experiments/incremental/delta-pins.json": "b46450d6f844c3b8e62457f53159e6977fff99971acf84dcadac78d64c3398d1",
+      "experiments/incremental/engine.py": "216662587fafcb6880f4354e3794dcd766cb305d4c098e348dcf33326c513905",
+      "experiments/incremental/pins.json": "08015efcd86f129fbc8eaa64354825a1e42d331e64daf55ed8a3cbd3a9cb2b82",
+      "experiments/incremental/producer_delta.py": "2f15ccdf505b51e671acc3cbbcc207b8024ed5273fb7dfe55b92e5fa398cfd5d",
+      "experiments/incremental/qualify_delta.py": "68832c50f33e8cce852d08edb1b0476f00187d3d471369829311d5312110424d",
+      "experiments/incremental/qualify_retained_index.py": "a7025e34d9afece758f8ac85d5116c9d891a998cb80a01b55506bfdf5dbc75a9",
+      "experiments/incremental/replay_retained_index.py": "edf454b0c800c669275e1e067caf6e6e796506d97eda71ed11c372bd2f61541a",
+      "src/bin/index_session.rs": "a140243cd6d3f2ef8bb3b680767d0cc51a8f1e8f0bdbea58ae82904cde0ef879",
+      "src/identity.rs": "4a34f892a87a04cbdd136be53f3b76a803fff7b750945b9133c1c7795c3d6927",
+      "src/identity/retained.rs": "5d5bdcda0937ca6a2e2bc402f9526089a8c2e7791f5dbcbee31a18396007f272",
+      "src/parser.rs": "200d307e803304a335f6938cbeb5386d3ecbe5150d8aa28c2d194fc3db71d5b5"
+    },
+    "original-current": {
+      "experiments/incremental/DeltaProducer.lean": "16afdba77404a279805e72ef110c5e0bd8c513fb504f53f600ee1a51a79b82fc",
+      "experiments/incremental/build_delta_workloads.py": "85ee38fdb684730e87f33ac967b56845d4612b834323ed4e2c7bc065025a746e",
+      "experiments/incremental/build_workloads.py": "721ffe17d5ac318ad918efb15cb7a347f11a8321956612c296afef5aaadc66c4",
+      "experiments/incremental/delta-pins.json": "b46450d6f844c3b8e62457f53159e6977fff99971acf84dcadac78d64c3398d1",
+      "experiments/incremental/engine.py": "216662587fafcb6880f4354e3794dcd766cb305d4c098e348dcf33326c513905",
+      "experiments/incremental/expanded-roots.json": "83d9bd049cf7000cc9cfc2e31a2504f640ba8ad88afd0d46b33cbb0e00ea589c",
+      "experiments/incremental/pins.json": "08015efcd86f129fbc8eaa64354825a1e42d331e64daf55ed8a3cbd3a9cb2b82",
+      "experiments/incremental/producer_delta.py": "2f15ccdf505b51e671acc3cbbcc207b8024ed5273fb7dfe55b92e5fa398cfd5d",
+      "experiments/incremental/qualify_delta.py": "68832c50f33e8cce852d08edb1b0476f00187d3d471369829311d5312110424d",
+      "src/bin/check_selected.rs": "cfdb173d17f29259289d6df99870aa3d3ee887a77588d368dcd7d1d22e13466c",
+      "src/bin/index_session.rs": "a140243cd6d3f2ef8bb3b680767d0cc51a8f1e8f0bdbea58ae82904cde0ef879",
+      "src/identity.rs": "4a34f892a87a04cbdd136be53f3b76a803fff7b750945b9133c1c7795c3d6927",
+      "src/parser.rs": "200d307e803304a335f6938cbeb5386d3ecbe5150d8aa28c2d194fc3db71d5b5"
+    }
+  },
+  "oracle_source": "4496042c75368f6c35675a9b131c960080afa518",
+  "oracle_source_sha256": "216662587fafcb6880f4354e3794dcd766cb305d4c098e348dcf33326c513905",
+  "positive_full_index_parity": {
+    "expanded": {
+      "commands": [
+        {
+          "command": [
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/current-index",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-current-composite.config.json"
+          ],
+          "elapsed_seconds": 1.0286838909996732,
+          "expected_returncode": 0,
+          "returncode": 0,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-current-composite-index.stderr",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-current-composite-index.stdout",
+          "stdout_sha256": "148de39194cf02e54e21bebb0058054300cb359d1b5ae73918ba98a6f28b92d0"
+        },
+        {
+          "command": [
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/qualified449-index",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-qualified449-composite.config.json"
+          ],
+          "elapsed_seconds": 0.7554680260000168,
+          "expected_returncode": 0,
+          "returncode": 0,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-qualified449-composite-index.stderr",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-qualified449-composite-index.stdout",
+          "stdout_sha256": "148de39194cf02e54e21bebb0058054300cb359d1b5ae73918ba98a6f28b92d0"
+        },
+        {
+          "command": [
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/current-index",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-current-pinned-source-export.config.json"
+          ],
+          "elapsed_seconds": 0.7889565850000508,
+          "expected_returncode": 0,
+          "returncode": 0,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-current-pinned-source-export-index.stderr",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-current-pinned-source-export-index.stdout",
+          "stdout_sha256": "148de39194cf02e54e21bebb0058054300cb359d1b5ae73918ba98a6f28b92d0"
+        }
+      ],
+      "count": 11653,
+      "equals_actual_accepted_index": true,
+      "equals_pinned_ordinary_source_export": true,
+      "fresh_current_native_equals_qualified449_native_equals_frozen449_python": true,
+      "source_export": {
+        "path": "/workspace/kernel-audit/delta-expanded-workloads-first/early-definition/export.ndjson",
+        "sha256": "60d16dbc287d26de773b90b96cad02c0c0d76cb1db3a91d8ddcb2fbf33bd4edb"
+      },
+      "typed_index_sha256": "b77ea4534db5e5ca46d20e286f5371aa2fa8cabdf4bed90fd22400491fbf9ba5"
+    },
+    "original": {
+      "commands": [
+        {
+          "command": [
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/current-index",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-current-composite.config.json"
+          ],
+          "elapsed_seconds": 0.1776649780003936,
+          "expected_returncode": 0,
+          "returncode": 0,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-current-composite-index.stderr",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-current-composite-index.stdout",
+          "stdout_sha256": "6d4fea0bd46147798950ee19a19d814840ece0f08c3272827a4d5bb1115c238d"
+        },
+        {
+          "command": [
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/qualified449-index",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-qualified449-composite.config.json"
+          ],
+          "elapsed_seconds": 0.16616434599927743,
+          "expected_returncode": 0,
+          "returncode": 0,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-qualified449-composite-index.stderr",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-qualified449-composite-index.stdout",
+          "stdout_sha256": "6d4fea0bd46147798950ee19a19d814840ece0f08c3272827a4d5bb1115c238d"
+        },
+        {
+          "command": [
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/current-index",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-current-pinned-source-export.config.json"
+          ],
+          "elapsed_seconds": 0.19568318700112286,
+          "expected_returncode": 0,
+          "returncode": 0,
+          "stderr_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-current-pinned-source-export-index.stderr",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-current-pinned-source-export-index.stdout",
+          "stdout_sha256": "6d4fea0bd46147798950ee19a19d814840ece0f08c3272827a4d5bb1115c238d"
+        }
+      ],
+      "count": 3436,
+      "equals_actual_accepted_index": true,
+      "equals_pinned_ordinary_source_export": true,
+      "fresh_current_native_equals_qualified449_native_equals_frozen449_python": true,
+      "source_export": {
+        "path": "/workspace/kernel-audit/workloads-final/early-definition/export.ndjson",
+        "sha256": "13323bf721599b9b77fe0ea94da5c4632edd2a25188842fb09738bfdf74fdd9f"
+      },
+      "typed_index_sha256": "e0c0929a13e59c60ecee3bbbec69a3796ef00ffdb6a264514c8a804d677c8443"
+    }
+  },
+  "scope": [
+    "No producer_delta, current incremental verifier or retained-index execution occurs here.",
+    "Forty fresh full kernel commands and eight zero-selected parser commands execute exact independently reconstructed inputs.",
+    "Current local reports retain recorded initial1e20 dirty-source metadata. Their measured file hashes match ef434 independently; this does not retroactively make them clean-source CI runs.",
+    "Expanded positive comes from final incomplete one-repetition smoke; four expanded fault inputs are explicitly attributed to historical f397 qualification and independently rechecked now.",
+    "Current Rust/checker/indexer executables were rebuilt after the local reports and differ from their recorded pins. This replay records and executes their actual new hashes; preserved449 and C++ pins remain exact.",
+    "This is correctness/input replay, not economic qualification, source completeness proof, historical HMAC-secret authentication or a runtime-results promotion."
+  ],
+  "status": "PASS_INDEPENDENT_CURRENT_AND_QUALIFIED449_REAL_KERNEL_REPLAY",
+  "zero_selected_parser_commands": 8
+}

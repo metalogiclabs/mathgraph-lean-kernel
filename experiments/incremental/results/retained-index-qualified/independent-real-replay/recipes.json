@@ -1,0 +1,265 @@
+{
+  "baseline_application_source_files": {
+    "IncrementalWorkload/Base.lean": {
+      "bytes": 200,
+      "sha256": "fcbfb9a2ac5ed377fd712f30835f082ad3b1673c014012ff62780c9828ab2b5c"
+    },
+    "IncrementalWorkload/Derived.lean": {
+      "bytes": 246,
+      "sha256": "d6bc528f30ffdd5e20f771049dac8bb8ecb1dd1351dfd964f8e1970820ab4001"
+    },
+    "IncrementalWorkload/Leaves.lean": {
+      "bytes": 177,
+      "sha256": "398fb983de2acec3a4096f3971f0f0fdf9148aeafefce4548febf655e55e4a91"
+    },
+    "Workload.lean": {
+      "bytes": 225,
+      "sha256": "b0f4850771ede35ec836f3eece4c43ce8016806062268f5c8b412a5a52b1428f"
+    },
+    "lakefile.toml": {
+      "bytes": 158,
+      "sha256": "1ad9f20a1f415a69de4b886e0fd510f8ee34eb833f1536f9200dc9e78271ed98"
+    },
+    "lean-toolchain": {
+      "bytes": 25,
+      "sha256": "ca5f1f601d34c49079e38d7e7041eb0f2a9c227fbc1df0f404820069a052330c"
+    }
+  },
+  "baselines": {
+    "expanded": {
+      "bytes": 64115860,
+      "sha256": "91bfde11f02d7278e4fce3644276ff58e8a32601cfe843f790f8cad6868c0912"
+    },
+    "original": {
+      "bytes": 15922029,
+      "sha256": "d81ecde8f818ed8d8748b476e22412ec74820a49edbe7986c2c3633a3d66bef0"
+    }
+  },
+  "cases": [
+    {
+      "delta": "deltas/original-early-definition.ndjson",
+      "delta_bytes": 271,
+      "delta_sha256": "eb11fc45e122f70178e45383b980de2322645bf96e7e5b38a33335fcd171b36e",
+      "expected_bytes": 15922194,
+      "expected_returncode": 0,
+      "expected_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "name": "early-definition",
+      "original_source_report": "original-current",
+      "profile": "original",
+      "zero_selected_parser": false
+    },
+    {
+      "delta": "deltas/expanded-early-definition.ndjson",
+      "delta_bytes": 280,
+      "delta_sha256": "0c5bcf2490822935ae4fe2166a82777a3eaca2e7f4eea4a2f4981ac829912ab7",
+      "expected_bytes": 64116034,
+      "expected_returncode": 0,
+      "expected_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "name": "early-definition",
+      "original_source_report": "expanded-current-smoke",
+      "profile": "expanded",
+      "zero_selected_parser": false
+    },
+    {
+      "delta": "deltas/original-signed-invalid-proof.ndjson",
+      "delta_bytes": 79,
+      "delta_sha256": "a3e3c89873713e99aed8646f0ae8c99d918279941f5da30595b3653fe6c1bb5f",
+      "expected_bytes": 15922025,
+      "expected_returncode": 1,
+      "expected_sha256": "43d98c93398a0d17604872ce6a11bb098b25ff62d4f27538bea26afaa9319f49",
+      "name": "signed-invalid-proof",
+      "original_source_report": "original-current",
+      "profile": "original",
+      "zero_selected_parser": false
+    },
+    {
+      "delta": "deltas/original-signed-invalid-axiom.ndjson",
+      "delta_bytes": 69,
+      "delta_sha256": "699a6f1ef5daa34beadb3d4fda2a94742198f3fc4ae2263cbba381f9ff64af5a",
+      "expected_bytes": 15922028,
+      "expected_returncode": 1,
+      "expected_sha256": "c40269431e15a0623ca61b5394c9dab8303462d6a482ca9678eb1e135ef72024",
+      "name": "signed-invalid-axiom",
+      "original_source_report": "original-current",
+      "profile": "original",
+      "zero_selected_parser": false
+    },
+    {
+      "delta": "deltas/original-unused-invalid-node-zero-selection-parser.ndjson",
+      "delta_bytes": 121,
+      "delta_sha256": "7567e4c73df4ed2d3135f50dfa9e79bd180e4762c1430fd3a228f9ff4373105a",
+      "expected_bytes": 15922067,
+      "expected_returncode": 1,
+      "expected_sha256": "0484083f89bdc9508596dd870534e87ef20d27a4ac2f57a3753778f4f8fe3b83",
+      "name": "unused-invalid-node-zero-selection-parser",
+      "original_source_report": "original-current",
+      "profile": "original",
+      "zero_selected_parser": true
+    },
+    {
+      "delta": "deltas/original-unused-invalid-node-dag-only-zero-selection-parser.ndjson",
+      "delta_bytes": 38,
+      "delta_sha256": "6c9d2fe80a1abb3fdc09c194ae517355aa192e3e1a9b9baf5db78014bfb6c761",
+      "expected_bytes": 15922067,
+      "expected_returncode": 1,
+      "expected_sha256": "0484083f89bdc9508596dd870534e87ef20d27a4ac2f57a3753778f4f8fe3b83",
+      "name": "unused-invalid-node-dag-only-zero-selection-parser",
+      "original_source_report": "original-current",
+      "profile": "original",
+      "zero_selected_parser": true
+    },
+    {
+      "delta": "deltas/expanded-signed-invalid-proof.ndjson",
+      "delta_bytes": 79,
+      "delta_sha256": "a3e3c89873713e99aed8646f0ae8c99d918279941f5da30595b3653fe6c1bb5f",
+      "expected_bytes": 64115856,
+      "expected_returncode": 1,
+      "expected_sha256": "58f8091201c291c6ec490ceb82db1803221902cf0ca0f708a5c5c352da59ec08",
+      "name": "signed-invalid-proof",
+      "original_source_report": "expanded-historical-controls",
+      "profile": "expanded",
+      "zero_selected_parser": false
+    },
+    {
+      "delta": "deltas/expanded-signed-invalid-axiom.ndjson",
+      "delta_bytes": 69,
+      "delta_sha256": "699a6f1ef5daa34beadb3d4fda2a94742198f3fc4ae2263cbba381f9ff64af5a",
+      "expected_bytes": 64115859,
+      "expected_returncode": 1,
+      "expected_sha256": "ac4ace2468a0bb7e02b74f7d41131f9182dcba3d931758eda41394a89b9e2c92",
+      "name": "signed-invalid-axiom",
+      "original_source_report": "expanded-historical-controls",
+      "profile": "expanded",
+      "zero_selected_parser": false
+    },
+    {
+      "delta": "deltas/expanded-unused-invalid-node-zero-selection-parser.ndjson",
+      "delta_bytes": 122,
+      "delta_sha256": "2014b92938083238a899a128428650166f5d02cfdd602b2b53bfb36e90f8b507",
+      "expected_bytes": 64115899,
+      "expected_returncode": 1,
+      "expected_sha256": "2ba6049b33587cf12b458afaa439741b56c7f1cca7bfe1150c5972533b377e2f",
+      "name": "unused-invalid-node-zero-selection-parser",
+      "original_source_report": "expanded-historical-controls",
+      "profile": "expanded",
+      "zero_selected_parser": true
+    },
+    {
+      "delta": "deltas/expanded-unused-invalid-node-dag-only-zero-selection-parser.ndjson",
+      "delta_bytes": 39,
+      "delta_sha256": "2178551a8530a842b34f5f0786b703914fa2207bef29509ffe912b0d45ac99ed",
+      "expected_bytes": 64115899,
+      "expected_returncode": 1,
+      "expected_sha256": "2ba6049b33587cf12b458afaa439741b56c7f1cca7bfe1150c5972533b377e2f",
+      "name": "unused-invalid-node-dag-only-zero-selection-parser",
+      "original_source_report": "expanded-historical-controls",
+      "profile": "expanded",
+      "zero_selected_parser": true
+    }
+  ],
+  "observations": {
+    "actual_case_count": 10,
+    "as_run_summary": "as-run/summary.json",
+    "as_run_summary_sha256": "e8d2b4b2111bc728c32658afde8acc698ec838f728c42b374b685127465829a3",
+    "full_kernel_commands": 40,
+    "zero_selected_parser_commands": 8
+  },
+  "qualified_baseline_python_sha256": "216662587fafcb6880f4354e3794dcd766cb305d4c098e348dcf33326c513905",
+  "qualified_baseline_source": "4496042c75368f6c35675a9b131c960080afa518",
+  "schema": "mathgraph.independent-real-input-recipes.v1",
+  "scope": [
+    "No producer_delta, current incremental verifier or retained-index execution occurs here.",
+    "Forty fresh full kernel commands and eight zero-selected parser commands execute exact independently reconstructed inputs.",
+    "Current local reports retain recorded initial1e20 dirty-source metadata. Their measured file hashes match ef434 independently; this does not retroactively make them clean-source CI runs.",
+    "Expanded positive comes from final incomplete one-repetition smoke; four expanded fault inputs are explicitly attributed to historical f397 qualification and independently rechecked now.",
+    "Current Rust/checker/indexer executables were rebuilt after the local reports and differ from their recorded pins. This replay records and executes their actual new hashes; preserved449 and C++ pins remain exact.",
+    "This is correctness/input replay, not economic qualification, source completeness proof, historical HMAC-secret authentication or a runtime-results promotion."
+  ],
+  "source": "ef434eb2477fb64d7fd90fdf23f55bd0b35a0243",
+  "source_exports": {
+    "expanded": {
+      "count": 11653,
+      "sha256": "60d16dbc287d26de773b90b96cad02c0c0d76cb1db3a91d8ddcb2fbf33bd4edb",
+      "typed_index_sha256": "b77ea4534db5e5ca46d20e286f5371aa2fa8cabdf4bed90fd22400491fbf9ba5"
+    },
+    "original": {
+      "count": 3436,
+      "sha256": "13323bf721599b9b77fe0ea94da5c4632edd2a25188842fb09738bfdf74fdd9f",
+      "typed_index_sha256": "e0c0929a13e59c60ecee3bbbec69a3796ef00ffdb6a264514c8a804d677c8443"
+    }
+  },
+  "tools": {
+    "current-index": {
+      "captured_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/current-index",
+      "execution_scope": "Captured standalone Rust binary",
+      "input_path": "/workspace/mathgraph-lean-kernel/target/release/export-index",
+      "matches_original_report": false,
+      "original_report_sha256": "208069936e153ec7690ac8ef27a79b0abb12d4d6a61425c773a60dbcf44d28ab",
+      "path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/current-index",
+      "sha256": "436c3f81cd34ac9c2914775a9f9e7c1c7a009b44b02da27818902434c30c1fa7"
+    },
+    "current-rust": {
+      "captured_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/current-rust",
+      "execution_scope": "Captured standalone Rust binary",
+      "input_path": "/workspace/mathgraph-lean-kernel/target/release/sokonanoda",
+      "matches_original_report": false,
+      "original_report_sha256": "fb816d7d56be8bd433e134e7da80b532bc825f28f444caffb2432df4320f4a3b",
+      "path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/current-rust",
+      "sha256": "ce66010f8ee833c9882ad185c703647e03e10c78a082d1fe97b8153e5e2b85e4"
+    },
+    "current-zero-selected": {
+      "captured_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/current-zero-selected",
+      "execution_scope": "Captured standalone Rust binary",
+      "input_path": "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+      "matches_original_report": false,
+      "original_report_sha256": "cf9822328e974fe9065c73758a938d505476b775e989d8d89c4591f65b090fd6",
+      "path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/current-zero-selected",
+      "sha256": "3f2262d75a819936be39aad9afc69fa675c7c7ddaa8c183e6355e82abab1d092"
+    },
+    "normal-cpp": {
+      "captured_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/normal-cpp",
+      "execution_scope": "Pinned release location preserves relative shared-library loading",
+      "input_path": "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+      "matches_original_report": true,
+      "original_report_sha256": "12c38901cdbfab178f1bf6145dd30012e9a3b2c11ca695292a5884fa3cbaddb6",
+      "path": "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+      "sha256": "12c38901cdbfab178f1bf6145dd30012e9a3b2c11ca695292a5884fa3cbaddb6"
+    },
+    "paranoid-cpp": {
+      "captured_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/paranoid-cpp",
+      "execution_scope": "Pinned release location preserves relative shared-library loading",
+      "input_path": "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker-paranoid",
+      "matches_original_report": true,
+      "original_report_sha256": "ca74d1e9a856149ed05acb600d8931a574dd9f465745beeaf93e3de7b7cbe274",
+      "path": "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker-paranoid",
+      "sha256": "ca74d1e9a856149ed05acb600d8931a574dd9f465745beeaf93e3de7b7cbe274"
+    },
+    "qualified449-index": {
+      "captured_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/qualified449-index",
+      "execution_scope": "Captured standalone Rust binary",
+      "input_path": "/workspace/kernel-audit/retained-index/qualified-449-baseline/bin/export-index",
+      "matches_original_report": true,
+      "original_report_sha256": "c3e3ce6ac29a5b7e17b3a0a1ecc9c20166d9ea713748c4cd6a1bc77fedb2f698",
+      "path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/qualified449-index",
+      "sha256": "c3e3ce6ac29a5b7e17b3a0a1ecc9c20166d9ea713748c4cd6a1bc77fedb2f698"
+    },
+    "qualified449-rust": {
+      "captured_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/qualified449-rust",
+      "execution_scope": "Captured standalone Rust binary",
+      "input_path": "/workspace/kernel-audit/retained-index/qualified-449-baseline/bin/sokonanoda",
+      "matches_original_report": true,
+      "original_report_sha256": "e813211867f7e555f44e35f0a8b1e143be5ffbea5f7548e99022e704f3f7b441",
+      "path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/qualified449-rust",
+      "sha256": "e813211867f7e555f44e35f0a8b1e143be5ffbea5f7548e99022e704f3f7b441"
+    },
+    "qualified449-zero-selected": {
+      "captured_path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/qualified449-zero-selected",
+      "execution_scope": "Captured standalone Rust binary",
+      "input_path": "/workspace/kernel-audit/retained-index/qualified-449-baseline/bin/check-selected",
+      "matches_original_report": true,
+      "original_report_sha256": "656c38d147833d2b08caea1829950e0ce631a44e0f8f10641fbc7201c85be6e9",
+      "path": "/workspace/kernel-audit/retained-index/independent-real-inputs-final/tools/qualified449-zero-selected",
+      "sha256": "656c38d147833d2b08caea1829950e0ce631a44e0f8f10641fbc7201c85be6e9"
+    }
+  }
+}

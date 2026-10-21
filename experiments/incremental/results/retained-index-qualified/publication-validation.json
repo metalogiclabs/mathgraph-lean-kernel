@@ -1,0 +1,11 @@
+{
+  "schema": "mathgraph.retained-index.publication-validation.v1",
+  "qualified_source": "ef434eb2477fb64d7fd90fdf23f55bd0b35a0243",
+  "generated_files_excluded": [
+    "independent-review/__pycache__/review-evidence.cpython-312.pyc",
+    "independent-review/__pycache__/review-compact-ci.cpython-312.pyc",
+    "ci/full-artifact-subset/__pycache__/remote_zip_subset.cpython-312.pyc"
+  ],
+  "reason": "Generated Python bytecode caches were copied from diagnostic review and ignored by Git. Remove them from the publication manifest; source/helper bytes and measured evidence are unchanged.",
+  "raw_whitespace_policy": "Preserve original logs, raw provider JSON and frozen auxiliary helper bytes. Check authored files separately; original evidence whitespace is not reformatted."
+}

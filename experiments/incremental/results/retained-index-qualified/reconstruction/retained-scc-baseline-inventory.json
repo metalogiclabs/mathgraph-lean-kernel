@@ -1,0 +1,357 @@
+{
+  "schema": "mathgraph.retained-scc-baseline-inventory.v1",
+  "source": "4496042c75368f6c35675a9b131c960080afa518",
+  "canonical_ros": "https://app.notion.com/p/3fb3e523d7ab81c68c89c1442eb0bb05",
+  "run": 38945728644,
+  "evidence_commit": "341ab72166f933f1f7d72cb008b21daeb427b49f",
+  "sync_commit": "1e20ed0",
+  "scope": "read-only witness comparisons and measured compact phase arithmetic; no new kernel run or historical HMAC reauthentication",
+  "sparse_receipt_investigation": "PENDING_RETAINED_TRANSITION_LOCAL_PARITY",
+  "profiles": {
+    "original": {
+      "full_witness_comparisons": {
+        "early-definition": {
+          "baseline_record_path": "/workspace/kernel-audit/delta-small-qualified-v1/samples/early-definition-0/session/baseline-cache/records/746980dc544b0ca8a74a10b7ed9f00b02a805d46bdd07080b3492a2586555abb.json",
+          "baseline_record_sha256": "746980dc544b0ca8a74a10b7ed9f00b02a805d46bdd07080b3492a2586555abb",
+          "native_witness_path": "/workspace/kernel-audit/delta-small-qualified-v1/samples/early-definition-0/composite-native-index/process.stdout",
+          "native_witness_sha256": "6d4fea0bd46147798950ee19a19d814840ece0f08c3272827a4d5bb1115c238d",
+          "baseline_receipt_bytes": 4293695,
+          "full_native_response_bytes": 4275875,
+          "total_declarations": 3436,
+          "changed_own": 1,
+          "changed_closure": 3,
+          "changed_dependencies": 0,
+          "global_equal": {
+            "meta": true,
+            "count": true,
+            "builtins": true,
+            "complex": true,
+            "schedule": true
+          },
+          "changed_closure_names": [
+            "IncrementalWorkload.early",
+            "IncrementalWorkload.dependent",
+            "IncrementalWorkload.dependent_spec"
+          ]
+        },
+        "unrelated-definition": {
+          "baseline_record_path": "/workspace/kernel-audit/delta-small-qualified-v1/samples/unrelated-definition-0/session/baseline-cache/records/746980dc544b0ca8a74a10b7ed9f00b02a805d46bdd07080b3492a2586555abb.json",
+          "baseline_record_sha256": "746980dc544b0ca8a74a10b7ed9f00b02a805d46bdd07080b3492a2586555abb",
+          "native_witness_path": "/workspace/kernel-audit/delta-small-qualified-v1/samples/unrelated-definition-0/composite-native-index/process.stdout",
+          "native_witness_sha256": "273e870d5dee6c29817e4987a5c55fffb6dff42f2b35b5d3941bdad16e65a6d8",
+          "baseline_receipt_bytes": 4293695,
+          "full_native_response_bytes": 4275875,
+          "total_declarations": 3436,
+          "changed_own": 1,
+          "changed_closure": 1,
+          "changed_dependencies": 0,
+          "global_equal": {
+            "meta": true,
+            "count": true,
+            "builtins": true,
+            "complex": true,
+            "schedule": true
+          },
+          "changed_closure_names": [
+            "IncrementalWorkload.unrelated"
+          ]
+        },
+        "theorem-leaf": {
+          "baseline_record_path": "/workspace/kernel-audit/delta-small-qualified-v1/samples/theorem-leaf-0/session/baseline-cache/records/746980dc544b0ca8a74a10b7ed9f00b02a805d46bdd07080b3492a2586555abb.json",
+          "baseline_record_sha256": "746980dc544b0ca8a74a10b7ed9f00b02a805d46bdd07080b3492a2586555abb",
+          "native_witness_path": "/workspace/kernel-audit/delta-small-qualified-v1/samples/theorem-leaf-0/composite-native-index/process.stdout",
+          "native_witness_sha256": "0bb2794ff353fad783a4a5c11c9daada313fdddf7a29699ceb36ac442b5e8882",
+          "baseline_receipt_bytes": 4293695,
+          "full_native_response_bytes": 4275942,
+          "total_declarations": 3436,
+          "changed_own": 1,
+          "changed_closure": 1,
+          "changed_dependencies": 1,
+          "global_equal": {
+            "meta": true,
+            "count": true,
+            "builtins": true,
+            "complex": true,
+            "schedule": true
+          },
+          "changed_closure_names": [
+            "IncrementalWorkload.leaf"
+          ]
+        },
+        "baseline": {
+          "baseline_record_path": "/workspace/kernel-audit/delta-small-qualified-v1/samples/baseline-0/session/baseline-cache/records/746980dc544b0ca8a74a10b7ed9f00b02a805d46bdd07080b3492a2586555abb.json",
+          "baseline_record_sha256": "746980dc544b0ca8a74a10b7ed9f00b02a805d46bdd07080b3492a2586555abb",
+          "native_witness_path": "/workspace/kernel-audit/delta-small-qualified-v1/samples/baseline-0/composite-native-index/process.stdout",
+          "native_witness_sha256": "cfdb6334e6c527b92befb4e15602e52f7f8060624e14c67940eb1c7ac1bef8a2",
+          "baseline_receipt_bytes": 4293695,
+          "full_native_response_bytes": 4275875,
+          "total_declarations": 3436,
+          "changed_own": 0,
+          "changed_closure": 0,
+          "changed_dependencies": 0,
+          "global_equal": {
+            "meta": true,
+            "count": true,
+            "builtins": true,
+            "complex": true,
+            "schedule": true
+          },
+          "changed_closure_names": []
+        }
+      },
+      "ci_phase_arithmetic": {
+        "early-definition": {
+          "sample_count": 5,
+          "apply_median": 0.2813307320000149,
+          "direct_median": 0.3396545440000409,
+          "setup_median": 3.879251962000126,
+          "unattributed_wall_residual_median": 0.010054953000008027,
+          "unattributed_wall_residual_range": [
+            0.009324602000106097,
+            0.011211694999701649
+          ],
+          "phase_medians": {
+            "baseline_validation_seconds": 0.053497984000159704,
+            "identity_update_seconds": 0.057703583999909824,
+            "materialization_and_hash_seconds": 0.025619230999836873,
+            "checking_seconds": 0.06537248900008308,
+            "persistence_seconds": 0.044095254000012574,
+            "producer_seconds": 0.024339524999959394
+          }
+        },
+        "unrelated-definition": {
+          "sample_count": 5,
+          "apply_median": 0.24183454299986806,
+          "direct_median": 0.34793210699990595,
+          "setup_median": 3.884775469000033,
+          "unattributed_wall_residual_median": 0.010706798999990497,
+          "unattributed_wall_residual_range": [
+            0.010014008000098329,
+            0.01163505999966219
+          ],
+          "phase_medians": {
+            "baseline_validation_seconds": 0.05303300900004615,
+            "identity_update_seconds": 0.05756935999988855,
+            "materialization_and_hash_seconds": 0.025554497000030096,
+            "checking_seconds": 0.024818622999873696,
+            "persistence_seconds": 0.04413096400003269,
+            "producer_seconds": 0.024259364000045025
+          }
+        },
+        "theorem-leaf": {
+          "sample_count": 5,
+          "apply_median": 0.2563243639999655,
+          "direct_median": 0.328678267999976,
+          "setup_median": 3.8770316860000094,
+          "unattributed_wall_residual_median": 0.011521520000314922,
+          "unattributed_wall_residual_range": [
+            0.010175464000212742,
+            0.033922120999932304
+          ],
+          "phase_medians": {
+            "baseline_validation_seconds": 0.05342816100005621,
+            "identity_update_seconds": 0.05781619899994439,
+            "materialization_and_hash_seconds": 0.025589392000028965,
+            "checking_seconds": 0.025603548000162846,
+            "persistence_seconds": 0.043803629999956684,
+            "producer_seconds": 0.02452139999991232
+          }
+        },
+        "baseline": {
+          "sample_count": 5,
+          "apply_median": 0.2269052300000567,
+          "direct_median": 0.33491266200007885,
+          "setup_median": 3.8878365069999745,
+          "unattributed_wall_residual_median": 0.01082426100037992,
+          "unattributed_wall_residual_range": [
+            0.009748292000040237,
+            0.011673213000449323
+          ],
+          "phase_medians": {
+            "baseline_validation_seconds": 0.052704023999922356,
+            "identity_update_seconds": 0.05732390499997564,
+            "materialization_and_hash_seconds": 0.025424175999887666,
+            "checking_seconds": 0.02120953999997255,
+            "persistence_seconds": 0.04428707299985035,
+            "producer_seconds": 0.014805111999976361
+          }
+        }
+      }
+    },
+    "expanded": {
+      "full_witness_comparisons": {
+        "early-definition": {
+          "baseline_record_path": "/workspace/kernel-audit/delta-expanded-qualified-v2/samples/early-definition-0/session/baseline-cache/records/e81dbf282ada015286048d05c832028f12550ba034542fce40c9972c8e4368fc.json",
+          "baseline_record_sha256": "e81dbf282ada015286048d05c832028f12550ba034542fce40c9972c8e4368fc",
+          "native_witness_path": "/workspace/kernel-audit/delta-expanded-qualified-v2/samples/early-definition-0/composite-native-index/process.stdout",
+          "native_witness_sha256": "148de39194cf02e54e21bebb0058054300cb359d1b5ae73918ba98a6f28b92d0",
+          "baseline_receipt_bytes": 20176765,
+          "full_native_response_bytes": 20111909,
+          "total_declarations": 11653,
+          "changed_own": 1,
+          "changed_closure": 3,
+          "changed_dependencies": 0,
+          "global_equal": {
+            "meta": true,
+            "count": true,
+            "builtins": true,
+            "complex": true,
+            "schedule": true
+          },
+          "changed_closure_names": [
+            "IncrementalWorkload.early",
+            "IncrementalWorkload.dependent",
+            "IncrementalWorkload.dependent_spec"
+          ]
+        },
+        "unrelated-definition": {
+          "baseline_record_path": "/workspace/kernel-audit/delta-expanded-qualified-v2/samples/unrelated-definition-0/session/baseline-cache/records/e81dbf282ada015286048d05c832028f12550ba034542fce40c9972c8e4368fc.json",
+          "baseline_record_sha256": "e81dbf282ada015286048d05c832028f12550ba034542fce40c9972c8e4368fc",
+          "native_witness_path": "/workspace/kernel-audit/delta-expanded-qualified-v2/samples/unrelated-definition-0/composite-native-index/process.stdout",
+          "native_witness_sha256": "3ef066d360deb240a8429abd7a59e5255cfe1a5a06043c675fe00d333c04c2f2",
+          "baseline_receipt_bytes": 20176765,
+          "full_native_response_bytes": 20111909,
+          "total_declarations": 11653,
+          "changed_own": 1,
+          "changed_closure": 1,
+          "changed_dependencies": 0,
+          "global_equal": {
+            "meta": true,
+            "count": true,
+            "builtins": true,
+            "complex": true,
+            "schedule": true
+          },
+          "changed_closure_names": [
+            "IncrementalWorkload.unrelated"
+          ]
+        },
+        "theorem-leaf": {
+          "baseline_record_path": "/workspace/kernel-audit/delta-expanded-qualified-v2/samples/theorem-leaf-0/session/baseline-cache/records/e81dbf282ada015286048d05c832028f12550ba034542fce40c9972c8e4368fc.json",
+          "baseline_record_sha256": "e81dbf282ada015286048d05c832028f12550ba034542fce40c9972c8e4368fc",
+          "native_witness_path": "/workspace/kernel-audit/delta-expanded-qualified-v2/samples/theorem-leaf-0/composite-native-index/process.stdout",
+          "native_witness_sha256": "2fc4a67bceae363e8065d2992a41088543dd8ba5e770e4f975ec76ae99f895f1",
+          "baseline_receipt_bytes": 20176765,
+          "full_native_response_bytes": 20111976,
+          "total_declarations": 11653,
+          "changed_own": 1,
+          "changed_closure": 1,
+          "changed_dependencies": 1,
+          "global_equal": {
+            "meta": true,
+            "count": true,
+            "builtins": true,
+            "complex": true,
+            "schedule": true
+          },
+          "changed_closure_names": [
+            "IncrementalWorkload.leaf"
+          ]
+        },
+        "baseline": {
+          "baseline_record_path": "/workspace/kernel-audit/delta-expanded-qualified-v2/samples/baseline-0/session/baseline-cache/records/e81dbf282ada015286048d05c832028f12550ba034542fce40c9972c8e4368fc.json",
+          "baseline_record_sha256": "e81dbf282ada015286048d05c832028f12550ba034542fce40c9972c8e4368fc",
+          "native_witness_path": "/workspace/kernel-audit/delta-expanded-qualified-v2/samples/baseline-0/composite-native-index/process.stdout",
+          "native_witness_sha256": "9ebb26b81eb5592e5831d91671e47d2488b896c4f20559305268c7e51360d992",
+          "baseline_receipt_bytes": 20176765,
+          "full_native_response_bytes": 20111909,
+          "total_declarations": 11653,
+          "changed_own": 0,
+          "changed_closure": 0,
+          "changed_dependencies": 0,
+          "global_equal": {
+            "meta": true,
+            "count": true,
+            "builtins": true,
+            "complex": true,
+            "schedule": true
+          },
+          "changed_closure_names": []
+        }
+      },
+      "ci_phase_arithmetic": {
+        "early-definition": {
+          "sample_count": 5,
+          "apply_median": 1.102488122000068,
+          "direct_median": 1.415305331000127,
+          "setup_median": 14.245238111000162,
+          "unattributed_wall_residual_median": 0.031777374999819585,
+          "unattributed_wall_residual_range": [
+            0.029293836000306328,
+            0.10457808499995735
+          ],
+          "phase_medians": {
+            "baseline_validation_seconds": 0.23710634600001868,
+            "identity_update_seconds": 0.33412737999969977,
+            "materialization_and_hash_seconds": 0.09775863400000162,
+            "checking_seconds": 0.18144668699960675,
+            "persistence_seconds": 0.17943258100012827,
+            "producer_seconds": 0.04098864700017657
+          }
+        },
+        "unrelated-definition": {
+          "sample_count": 5,
+          "apply_median": 1.1287602620000143,
+          "direct_median": 1.428212302999782,
+          "setup_median": 14.260904134000157,
+          "unattributed_wall_residual_median": 0.031031193999297102,
+          "unattributed_wall_residual_range": [
+            0.02953054799900201,
+            0.10051019799948335
+          ],
+          "phase_medians": {
+            "baseline_validation_seconds": 0.23216157800015935,
+            "identity_update_seconds": 0.3240251629999875,
+            "materialization_and_hash_seconds": 0.09745902000031492,
+            "checking_seconds": 0.14967460500020024,
+            "persistence_seconds": 0.17795565200003693,
+            "producer_seconds": 0.04380131000016263
+          }
+        },
+        "theorem-leaf": {
+          "sample_count": 5,
+          "apply_median": 1.101456954999776,
+          "direct_median": 1.4069500949999565,
+          "setup_median": 14.288174731000254,
+          "unattributed_wall_residual_median": 0.03064590500025588,
+          "unattributed_wall_residual_range": [
+            0.029622909999034164,
+            0.11122450200082312
+          ],
+          "phase_medians": {
+            "baseline_validation_seconds": 0.2320405639998171,
+            "identity_update_seconds": 0.33659026399982395,
+            "materialization_and_hash_seconds": 0.09805041899971911,
+            "checking_seconds": 0.1375919749998502,
+            "persistence_seconds": 0.17875619599999482,
+            "producer_seconds": 0.04351376700014953
+          }
+        },
+        "baseline": {
+          "sample_count": 5,
+          "apply_median": 1.0352727010001672,
+          "direct_median": 1.4588211020000017,
+          "setup_median": 14.227639567000097,
+          "unattributed_wall_residual_median": 0.03066307599965512,
+          "unattributed_wall_residual_range": [
+            0.02881208299913851,
+            0.11356010799954674
+          ],
+          "phase_medians": {
+            "baseline_validation_seconds": 0.23441252300017368,
+            "identity_update_seconds": 0.3306168130002334,
+            "materialization_and_hash_seconds": 0.09783956799992666,
+            "checking_seconds": 0.07627489500009688,
+            "persistence_seconds": 0.17762432700010322,
+            "producer_seconds": 0.015010819000053743
+          }
+        }
+      }
+    }
+  },
+  "disk": {
+    "free_GiB_observed_approx": 3.3,
+    "rebuildable_debug_incremental_MiB": 687,
+    "action": "none; deleting debug incremental compiler state could preserve all retained evidence/release binaries; historical probes/caches not approved for removal"
+  }
+}

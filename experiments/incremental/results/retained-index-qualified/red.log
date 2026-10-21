@@ -1,0 +1,38 @@
+   Compiling sokonanoda v0.5.0 (/workspace/mathgraph-lean-kernel)
+error[E0599]: no method named `prepare_retained` found for struct `identity::IdentityBuilder` in the current scope
+   --> src/identity.rs:898:53
+    |
+ 88 | pub struct IdentityBuilder {
+    | -------------------------- method `prepare_retained` not found for this struct
+...
+898 |         let baseline = serde_json::to_value(builder.prepare_retained().unwrap()).unwrap();
+    |                                                     ^^^^^^^^^^^^^^^^ method not found in `identity::IdentityBuilder`
+
+error[E0609]: no field `retained` on type `identity::IdentityBuilder`
+   --> src/identity.rs:899:32
+    |
+899 |         let prepared = builder.retained.take().unwrap();
+    |                                ^^^^^^^^ unknown field
+    |
+    = note: available fields are: `names`, `levels`, `exprs`, `declarations`, `seen` ... and 5 others
+
+error[E0599]: no method named `prepare_retained` found for struct `identity::IdentityBuilder` in the current scope
+   --> src/identity.rs:913:21
+    |
+ 88 | pub struct IdentityBuilder {
+    | -------------------------- method `prepare_retained` not found for this struct
+...
+913 |             builder.prepare_retained().unwrap();
+    |                     ^^^^^^^^^^^^^^^^ method not found in `identity::IdentityBuilder`
+
+error[E0609]: no field `retained` on type `identity::IdentityBuilder`
+   --> src/identity.rs:914:36
+    |
+914 |             let prepared = builder.retained.take().unwrap();
+    |                                    ^^^^^^^^ unknown field
+    |
+    = note: available fields are: `names`, `levels`, `exprs`, `declarations`, `seen` ... and 5 others
+
+Some errors have detailed explanations: E0599, E0609.
+For more information about an error, try `rustc --explain E0599`.
+error: could not compile `sokonanoda` (lib test) due to 4 previous errors
