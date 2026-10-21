@@ -270,7 +270,7 @@ class DeltaSession:
     def __init__(self, root, workloads, producer, checker, indexer, index_session,
                  authority_key, index_mode='retained', sparse_index_wire=False,
                  sparse_receipt=False, frozen_baseline=False, retained_checker=None,
-                 receipt_index_comparison='shared_json'):
+                 receipt_index_comparison='shared_json', revision_chain=False):
         # Mode is an explicit, authenticated A/B policy rather than an
         # unrecorded subprocess switch. Both paths must produce the same index.
         if index_mode not in ('retained', 'full'):
@@ -297,6 +297,9 @@ class DeltaSession:
                 not sparse_index_wire or not sparse_receipt or not frozen_baseline):
             raise ValueError('retained native kernel requires immutable admitted baseline, sparse typed identity and signed acceptance')
         self.retained_checker_path = Path(retained_checker).resolve() if retained_checker is not None else None
+        if type(revision_chain) is not bool or (revision_chain and self.retained_checker_path is None):
+            raise ValueError('revision chain requires the retained native kernel')
+        self.revision_chain = revision_chain
         self.kernel_process = None
         self.root, self.workloads = Path(root).resolve(), Path(workloads).resolve()
         self.root.mkdir(parents=True, exist_ok=True)
@@ -374,20 +377,28 @@ class DeltaSession:
             self.delta_provenance['baseline_authority'] = 'source-owned-frozen-bytes-v1'
         if self.retained_checker_path is not None:
             self.delta_provenance['selected_kernel_backend'] = 'sha-pinned-retained-parser-v1'
+        if self.revision_chain:
+            self.delta_provenance['revision_mode'] = 'accepted-predecessor-v1'
+            self.delta_provenance['source_policy'] = 'complete-six-file-capture;fixed-imports;accepted-predecessor-replacement-set'
 
     def start(self):
         tick, cpu = time.perf_counter(), self.cpu_time()
         initial_export = self.temp / 'baseline.ndjson'
         init = self.temp / 'init.json'
-        init.write_bytes(engine.encoded(dict(source_files=lean_sources(self.baseline_sources),
-                                            profile=self.profile, roots=self.roots,
-                                            baseline_export=str(initial_export))))
+        initialization = dict(source_files=lean_sources(self.baseline_sources),
+                              profile=self.profile, roots=self.roots,
+                              baseline_export=str(initial_export))
+        if self.revision_chain:
+            initialization['revision_chain'] = True
+        init.write_bytes(engine.encoded(initialization))
         self.producer = JsonProcess([self.tools['producer'], init], self.root / 'producer.stderr',
                                     env=self.producer_environment)
         ready = self.producer.receive()
         if (ready.get('status') != 'ready' or ready.get('profile') != self.profile or
                 ready.get('roots') != self.roots):
             raise ValueError('producer did not establish a baseline')
+        if self.revision_chain and ready.get('revision') != 0:
+            raise ValueError('producer did not establish predecessor chain mode')
         produced = initial_export.read_bytes()
         expected = self.export_pins['baseline']
         if sha(produced) != expected:
@@ -442,14 +453,21 @@ class DeltaSession:
             command.append('--full-index')
         if self.sparse_index_wire:
             command.append('--sparse-response')
+        if self.revision_chain:
+            command.append('--revision-chain')
         self.index = JsonProcess(command, self.root / 'index.stderr')
         indexed = self.index.receive()
         if indexed.get('status') != 'ready' or engine.encoded(indexed.get('index')) != engine.encoded(self.old['index']):
             raise ValueError('retained typed index disagrees with authenticated baseline')
+        if self.revision_chain and (indexed.get('chain_mode') is not True or indexed.get('revision') != 0):
+            raise ValueError('typed index did not establish predecessor chain mode')
         kernel_ready = None
         if self.retained_checker_path is not None:
+            command = [self.tools['retained_checker'], config, expected]
+            if self.revision_chain:
+                command.append('--revision-chain')
             self.kernel_process = JsonProcess(
-                [self.tools['retained_checker'], config, expected],
+                command,
                 self.root / 'retained-kernel.stderr')
             kernel_ready = self.kernel_process.receive()
             if (kernel_ready.get('status') != 'ready' or
@@ -457,6 +475,8 @@ class DeltaSession:
                 kernel_ready.get('baseline_sha256') != expected or
                 kernel_ready.get('scope') != 'retained_parser_low_level_witness_not_acceptance_authority'):
                 raise ValueError('retained Rust parser failed exact authenticated baseline admission')
+            if self.revision_chain and (kernel_ready.get('chain_mode') is not True or kernel_ready.get('revision') != 0):
+                raise ValueError('retained Rust parser did not establish predecessor chain mode')
         self.start_report = dict(status='READY', base_evidence_id=self.base_id,
             source_root=self.source_root, producer=ready, retained_kernel_ready=kernel_ready,
             wall_seconds=time.perf_counter()-tick, cpu_seconds=self.cpu_time()-cpu,
@@ -563,6 +583,8 @@ class DeltaSession:
                                             expected_changed_names=list(claimed_names)))
         if report.get('status') != 'delta' or sorted(report.get('changed_names', [])) != sorted(claimed_names):
             raise ValueError('incomplete source-owned environment transition')
+        if self.revision_chain and report.get('revision') != self.revision + 1:
+            raise ValueError('producer predecessor revision mismatch')
         delta = delta_path.read_bytes()
         payload = dict(schema=TRANSITION, base_evidence_id=self.base_id,
             base_export_sha256=self.old['export_sha256'], baseline_source_root=self.source_root,
@@ -570,6 +592,7 @@ class DeltaSession:
             changed_names=sorted(claimed_names), provenance=self.delta_provenance,
             producer_report=report)
         return dict(attestation=seal(payload, self.key), delta_bytes=delta, producer_report=report,
+                    source_capture=dict(sources=sources, patch=patch, claimed_names=list(claimed_names)),
                     prepare_wall_seconds=time.perf_counter()-start,
                     prepare_cpu_seconds=self.cpu_time()-cpu, memory_after_producer=self.memory_observation())
 
@@ -613,12 +636,16 @@ class DeltaSession:
                 n = os.write(self.fd, view)
                 view = view[n:]
         view = memoryview(baseline)
+        dag_start = count
         for start, length in self.layout['dags']:
             write(view[start:start+length])
         for raw in dags:
             write(raw)
+        next_dags = [(dag_start, count-dag_start)] if count > dag_start else []
+        next_declarations = []
         seen = set()
         for name, kind, start, length in self.layout['declarations']:
+            new_start = count
             if name in replacements:
                 replacement_kind, raw = replacements[name]
                 if replacement_kind != kind:
@@ -627,6 +654,7 @@ class DeltaSession:
                 seen.add(name)
             else:
                 write(view[start:start+length])
+            next_declarations.append((name, kind, new_start, count-new_start))
         if seen != set(replacements):
             raise ValueError('new declaration or schedule change')
         # Linux UAPI constants; some Python distributions omit their names.
@@ -635,6 +663,7 @@ class DeltaSession:
         if fcntl.fcntl(self.fd, getattr(fcntl, 'F_GET_SEALS', 1034)) & seals != seals:
             raise ValueError('composite input could not be sealed')
         self.snapshot_path = f'/proc/{os.getpid()}/fd/{self.fd}'
+        self._materialized_layout = dict(names=names, dags=next_dags, declarations=next_declarations)
         return digest.hexdigest(), count
 
     def validate_apply(self, transaction):
@@ -657,7 +686,7 @@ class DeltaSession:
             baseline = self.frozen_baseline_bytes
             if (type(baseline) is not bytes or
                     self.frozen_baseline_sha256 != self.old['export_sha256'] or
-                    self.frozen_baseline_sha256 != self.export_pins['baseline']):
+                    (not self.revision_chain and self.frozen_baseline_sha256 != self.export_pins['baseline'])):
                 raise ValueError('missing exact authenticated immutable session baseline')
             # A source-owned immutable *historical snapshot* is the warm input.
             # On-disk corruption during this live session cannot change the
@@ -673,6 +702,8 @@ class DeltaSession:
         update = self.index.request(dict(delta_path=str(path)))
         if update.get('status') != 'indexed' or sorted(update.get('replaced_names', [])) != payload['changed_names']:
             raise ValueError('typed index mutation witness disagrees')
+        if self.revision_chain and (update.get('chain_mode') is not True or update.get('revision') != self.revision + 1):
+            raise ValueError('typed index predecessor revision mismatch')
         if self.sparse_index_wire and update.get('index_wire') == 'baseline_patch_v1':
             if 'index' in update:
                 raise ValueError('ambiguous full and sparse index response')
@@ -709,6 +740,10 @@ class DeltaSession:
                 delta_path=str(path), delta_sha256=payload['delta_sha256'],
                 selected_indices_path=str(indices),
                 expected_changed_names=payload['changed_names']))
+            if self.revision_chain and native_kernel_report.get('status') == 'checked' and (
+                    native_kernel_report.get('chain_mode') is not True or
+                    native_kernel_report.get('revision') != self.revision + 1):
+                raise ValueError('retained kernel predecessor revision mismatch')
             if (native_kernel_report.get('status') == 'checked' and
                 native_kernel_report.get('code') == 0 and
                 native_kernel_report.get('kernel') == 'sokonanoda_real_selected_declaration_check' and

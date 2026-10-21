@@ -906,6 +906,35 @@ impl IdentityBuilder {
         Ok(IdentityDelta { index, rows_processed, dag_rows, replaced_names,
                            retained_graph_used, recomputed_sccs, finish_nanos })
     }
+    /// Opt-in predecessor-chain cache transition. The caller must authenticate
+    /// this delta against the immediately preceding accepted state, run the
+    /// genuine selected checker, and discard the whole session on any failure.
+    /// A successful cache update is not acceptance authority.
+    pub fn apply_chained_delta(&mut self, input: &str) -> Result<IdentityDelta> {
+        let mut update = self.apply_delta(input)?;
+        let advance_start = std::time::Instant::now();
+        if let Some(cache) = &mut self.retained {
+            if update.retained_graph_used {
+                // The component graph is unchanged. Carry *all* predecessor
+                // identities and roots forward, including earlier unrelated edits.
+                for (number, component) in cache.components.iter().enumerate() {
+                    let first = component.members.first().ok_or("empty retained component")?;
+                    cache.roots[number] = update.index.declarations[*first].closure.0;
+                }
+                cache.baseline = update.index.clone();
+            } else {
+                // A full finish changed topology or builtin lookup assumptions.
+                // Re-establish the cache from that complete index before reuse.
+                *cache = RetainedClosure::capture(update.index.clone())?;
+            }
+        }
+        update.finish_nanos = update.finish_nanos.saturating_add(
+            advance_start.elapsed().as_nanos().min(u64::MAX as u128) as u64);
+        // apply_delta sets this before touching the DAG. Only a completely
+        // successful transition opens the next attempt; every error stays poisoned.
+        self.delta_attempted = false;
+        Ok(update)
+    }
     /// Cold-only admission of the original complete index and retained SCC DAG.
     pub fn prepare_retained(&mut self) -> Result<ExportIdentityIndex> {
         let baseline = self.finish()?;
@@ -1216,5 +1245,62 @@ mod session_tests {
           replacement(0)+"\n"+&replacement(0),
         ];
         for delta in cases { let mut retained=builder();assert!(retained.apply_delta(&delta).is_err(),"accepted {delta}");assert!(retained.apply_delta(&replacement(0)).is_err(),"failure must poison session"); }
+    }
+
+    fn assert_chained_matches_full(identity: &IdentityBuilder, update: &IdentityDelta) {
+        assert_eq!(serde_json::to_value(&update.index).unwrap(),
+                   serde_json::to_value(identity.finish().unwrap()).unwrap());
+    }
+
+    #[test]
+    fn chained_cumulative_edits_and_restore_keep_the_immediate_predecessor() {
+        let source = three_declarations();
+        let mut identity = crate::parser::export_identity_builder(source.as_bytes(), config()).unwrap();
+        let initial = identity.prepare_retained().unwrap();
+        let first = identity.apply_chained_delta(
+            &("{\"il\":1,\"succ\":0}\n{\"ie\":2,\"sort\":1}\n".to_owned()
+              + &replacement(2) + "\n")).unwrap();
+        assert_chained_matches_full(&identity, &first);
+        let change_c = replacement(2).replace("\"name\":1", "\"name\":3");
+        let second = identity.apply_chained_delta(&(change_c + "\n")).unwrap();
+        assert_chained_matches_full(&identity, &second);
+        assert_eq!(second.recomputed_sccs, 1);
+        let patch = second.index.sparse_patch_against(&first.index).unwrap().unwrap();
+        assert_eq!(patch["declarations"].as_array().unwrap().len(), 1);
+        assert_eq!(patch["declarations"][0]["index"], 2);
+        let restored = identity.apply_chained_delta(&(replacement(0) + "\n")).unwrap();
+        assert_chained_matches_full(&identity, &restored);
+        let value = serde_json::to_value(&restored.index).unwrap();
+        let before = serde_json::to_value(initial).unwrap();
+        assert_eq!(value["declarations"][0], before["declarations"][0]);
+        assert_eq!(value["declarations"][1], before["declarations"][1]);
+        assert_ne!(value["declarations"][2], before["declarations"][2]);
+        let noop = identity.apply_chained_delta("").unwrap();
+        assert_chained_matches_full(&identity, &noop);
+    }
+
+    #[test]
+    fn chained_topology_fallback_refreshes_the_graph_before_an_unrelated_edit() {
+        let source = three_declarations();
+        let mut identity = crate::parser::export_identity_builder(source.as_bytes(), config()).unwrap();
+        identity.prepare_retained().unwrap();
+        let cut_edge = replacement(0).replace("\"name\":1", "\"name\":2");
+        let first = identity.apply_chained_delta(&(cut_edge + "\n")).unwrap();
+        assert!(!first.retained_graph_used);
+        assert_chained_matches_full(&identity, &first);
+        let second = identity.apply_chained_delta(
+            &("{\"il\":1,\"succ\":0}\n{\"ie\":2,\"sort\":1}\n".to_owned()
+              + &replacement(2).replace("\"name\":1", "\"name\":3") + "\n")).unwrap();
+        assert!(second.retained_graph_used);
+        assert_chained_matches_full(&identity, &second);
+    }
+
+    #[test]
+    fn chained_identity_refuses_previous_revision_dag_overwrite_and_stays_poisoned() {
+        let mut identity = builder();
+        identity.prepare_retained().unwrap();
+        identity.apply_chained_delta("{\"ie\":2,\"sort\":0}\n").unwrap();
+        assert!(identity.apply_chained_delta("{\"ie\":2,\"sort\":0}\n").is_err());
+        assert!(identity.apply_chained_delta("").is_err());
     }
 }

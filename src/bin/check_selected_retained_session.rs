@@ -1,4 +1,4 @@
-//! One-shot retained genuine Rust parser, *not* an independent acceptance
+//! One-shot or opt-in predecessor-chain retained genuine Rust parser, *not* an independent acceptance
 //! certificate. The caller must independently HMAC-authenticate the exact
 //! original Lean/Std baseline, source-owned delta, applicable dependency cone
 //! and issuer policy. This process checks byte hashes and every changed node,
@@ -51,7 +51,9 @@ fn emit(value: &impl serde::Serialize) -> Result<(), Box<dyn Error>> {
 }
 fn run() -> Result<(), Box<dyn Error>> {
     let args = std::env::args().skip(1).collect::<Vec<_>>();
-    let [config_file, authenticated_baseline_sha256] = args.as_slice() else {
+    let revision_chain = args.last().is_some_and(|arg| arg == "--revision-chain");
+    let arguments = if revision_chain { &args[..args.len()-1] } else { args.as_slice() };
+    let [config_file, authenticated_baseline_sha256] = arguments else {
         return Err("usage: check-selected-retained-session CONFIG AUTHENTICATED_BASE_SHA256".into());
     };
     validate_hex_id(authenticated_baseline_sha256)?;
@@ -73,43 +75,67 @@ fn run() -> Result<(), Box<dyn Error>> {
     let total = parser.run_retained_baseline(&map)?;
     let baseline_parse_seconds = started.elapsed().as_secs_f64();
     drop(map);
-    emit(&json!({
+    let mut ready = json!({
         "status": "ready",
         "total_declarations": total,
         "baseline_sha256": authenticated_baseline_sha256,
         "baseline_parse_seconds": baseline_parse_seconds,
         "scope": "retained_parser_low_level_witness_not_acceptance_authority"
-    }))?;
+    });
+    if revision_chain {
+        ready["chain_mode"] = json!(true);
+        ready["revision"] = json!(0);
+    }
+    emit(&ready)?;
 
-    // One delta per baseline. No subsequent mutation of the parser state is
-    // permitted; every additional update must re-establish a fresh session.
-    let mut request_bytes = String::new();
-    if io::stdin().read_line(&mut request_bytes)? == 0 {
-        return Err("retained parser missing authenticated delta request".into());
+    // The default still consumes exactly one baseline-anchored parser. Chain
+    // mode retains each checked predecessor; any error terminates the process.
+    let mut parser = Some(parser);
+    let mut revision = 0u64;
+    loop {
+        let mut request_bytes = String::new();
+        if io::stdin().read_line(&mut request_bytes)? == 0 {
+            if revision_chain { break; }
+            return Err("retained parser missing authenticated delta request".into());
+        }
+        let request: Request = serde_json::from_str(&request_bytes)?;
+        validate_hex_id(&request.delta_sha256)?;
+        let delta = std::fs::read(request.delta_path)?;
+        if sha256(&delta) != request.delta_sha256 {
+            return Err("retained parser changed bytes failed attested hash check".into());
+        }
+        let indices: Vec<usize> = serde_json::from_reader(
+            std::fs::File::open(request.selected_indices_path)?)?;
+        let next_revision = revision.checked_add(1).ok_or("retained parser revision counter exhausted")?;
+        let (checked, total_again, parse_and_finish_seconds, selected_check_seconds) =
+            if revision_chain {
+                parser.as_mut().ok_or("missing retained predecessor")?
+                    .check_retained_simple_chained_delta(&delta, &request.expected_changed_names, &indices)?
+            } else {
+                parser.take().ok_or("missing retained baseline")?
+                    .check_retained_simple_delta(&delta, &request.expected_changed_names, &indices)?
+            };
+        if total_again != total || checked != indices.len() {
+            return Err("retained parser obligation count or fixed declaration schedule changed".into());
+        }
+        let mut response = json!({
+            "status": "checked",
+            "code": 0,
+            "checked": checked,
+            "total_declarations": total_again,
+            "scope": "selected_obligations_under_caller_trusted_environment",
+            "kernel": "sokonanoda_real_selected_declaration_check",
+            "delta_parse_and_finish_seconds": parse_and_finish_seconds,
+            "selected_check_seconds": selected_check_seconds
+        });
+        if revision_chain {
+            response["chain_mode"] = json!(true);
+            response["revision"] = json!(next_revision);
+        }
+        emit(&response)?;
+        if !revision_chain { break; }
+        revision = next_revision;
     }
-    let request: Request = serde_json::from_str(&request_bytes)?;
-    validate_hex_id(&request.delta_sha256)?;
-    let delta = std::fs::read(request.delta_path)?;
-    if sha256(&delta) != request.delta_sha256 {
-        return Err("retained parser changed bytes failed attested hash check".into());
-    }
-    let indices: Vec<usize> = serde_json::from_reader(
-        std::fs::File::open(request.selected_indices_path)?)?;
-    let (checked, total_again, parse_and_finish_seconds, selected_check_seconds) =
-        parser.check_retained_simple_delta(&delta, &request.expected_changed_names, &indices)?;
-    if total_again != total || checked != indices.len() {
-        return Err("retained parser obligation count or fixed declaration schedule changed".into());
-    }
-    emit(&json!({
-        "status": "checked",
-        "code": 0,
-        "checked": checked,
-        "total_declarations": total_again,
-        "scope": "selected_obligations_under_caller_trusted_environment",
-        "kernel": "sokonanoda_real_selected_declaration_check",
-        "delta_parse_and_finish_seconds": parse_and_finish_seconds,
-        "selected_check_seconds": selected_check_seconds
-    }))?;
     Ok(())
 }
 fn main() {

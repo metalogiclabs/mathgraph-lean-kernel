@@ -99,6 +99,8 @@ structure Session where
   state : LeanExport.State
   roots : List Name
   profile : String
+  revisionChain : Bool := false
+  revision : Nat := 0
 
 /-- Bounds allocations for this fixed workload; these maps still use copy-on-write on requests. -/
 def initialState : LeanExport.State := {
@@ -109,6 +111,11 @@ def initialState : LeanExport.State := {
 
 unsafe def initializeSession (request : Json) : IO Session := do
   let src ← source request
+  let revisionChain ← match request.getObjVal? "revision_chain" with
+    | .error _ => pure false
+    | .ok value => match value.getBool? with
+      | .ok enabled => pure enabled
+      | .error _ => fail "revision_chain must be a boolean"
   let roots ← strings (← get request "roots")
   let profile := request.getObjValD "profile" |>.getStr?.toOption |>.getD "original-v1"
   unless profile == "original-v1" || profile == "std-hashmap-expanded-v1" do fail "unsupported root profile"
@@ -152,17 +159,20 @@ unsafe def initializeSession (request : Json) : IO Session := do
       dumpMetadata
       for n in actualRoots do dumpConstant n
   let exportNs ← elapsed start
-  emit <| Json.mkObj [("status", "ready"), ("baseline_export", toJson path),
+  emit <| Json.mkObj ([("status", Json.str "ready"), ("baseline_export", toJson path),
     ("profile", toJson profile), ("roots", toJson roots),
     ("local_names", nameJson <| infos.map (·.1)),
     ("stats", Json.mkObj [("imported_constants", toJson base.constants.map₁.size),
       ("local_constants", toJson infos.size), ("exported_constants", toJson state.visitedConstants.size),
       ("dag_exprs", toJson state.visitedExprs.size)]),
     ("timings_ns", Json.mkObj [("import", toJson importNs), ("elaboration", toJson elabNs),
-      ("baseline_export", toJson exportNs)])]
-  pure {base, baseline, state, roots := actualRoots, profile}
+      ("baseline_export", toJson exportNs)])] ++
+    if revisionChain then [("revision", toJson (0 : Nat))] else [])
+  pure {base, baseline, state, roots := actualRoots, profile, revisionChain}
 
-unsafe def handle (session : Session) (request : Json) : IO Unit := do
+/-- In chain mode the caller must discard this speculative session after any
+downstream refusal. Legacy mode retains the immutable genesis environment. -/
+unsafe def handle (session : Session) (request : Json) : IO Session := do
   let src ← source request
   let start ← IO.monoNanosNow
   let env ← build session.base src
@@ -189,7 +199,7 @@ unsafe def handle (session : Session) (request : Json) : IO Unit := do
     emit <| Json.mkObj [("status", "fresh"), ("export_path", toJson path),
       ("changed_names", nameJson changed), ("timings_ns", Json.mkObj [
         ("elaboration", toJson elabNs), ("comparison", toJson compareNs), ("fresh_export", toJson (← elapsed start))])]
-    return
+    return session
   if op != "delta" then fail "unsupported operation"
   let expected ← strings (← get request "expected_changed_names")
   let names := changed.map toString
@@ -202,7 +212,7 @@ unsafe def handle (session : Session) (request : Json) : IO Unit := do
     IO.withStdout (.ofHandle h) <| StateT.run (s := state) <| ReaderT.run (r := {env}) do
       for name in changed do dumpConstant name
   let exportNs ← elapsed start
-  emit <| Json.mkObj [("status", "delta"), ("delta_path", toJson path),
+  emit <| Json.mkObj ([("status", Json.str "delta"), ("delta_path", toJson path),
     ("changed_names", nameJson changed), ("local_names", nameJson <| next.map (·.1)),
     ("stats", Json.mkObj [("compared_local_constants", toJson next.size),
       ("unchanged_local_constants", toJson unchanged), ("imported_identity_retained", true),
@@ -210,18 +220,26 @@ unsafe def handle (session : Session) (request : Json) : IO Unit := do
       ("new_names", toJson <| final.visitedNames.size - session.state.visitedNames.size),
       ("new_levels", toJson <| final.visitedLevels.size - session.state.visitedLevels.size)]),
     ("timings_ns", Json.mkObj [("elaboration", toJson elabNs), ("comparison", toJson compareNs),
-      ("delta_export", toJson exportNs)])]
+      ("delta_export", toJson exportNs)])] ++
+    if session.revisionChain then [("revision", toJson (session.revision + 1))] else [])
+  return if session.revisionChain then
+    {session with baseline := env, state := final, revision := session.revision + 1}
+  else session
 
 unsafe def run (args : List String) : IO Unit := do
   let [initPath] := args | fail "usage: delta-producer INIT.json"
   initSearchPath (← findSysroot)
-  let session ← initializeSession (← readJson (← IO.FS.readFile initPath))
+  let mut session ← initializeSession (← readJson (← IO.FS.readFile initPath))
   let input ← IO.getStdin
   repeat
     let line ← input.getLine
     if line.isEmpty then break
-    try handle session (← readJson line)
-    catch e => emit <| Json.mkObj [("status", "error"), ("error", toJson e.toString)]
+    try session ← handle session (← readJson line)
+    catch e =>
+      emit <| Json.mkObj [("status", "error"), ("error", toJson e.toString)]
+      -- No chain request may observe partially prepared exporter state after
+      -- failure. The issuer reconstructs the last accepted source sequence.
+      if session.revisionChain then IO.Process.exit 1
 
 end DeltaProducer
 

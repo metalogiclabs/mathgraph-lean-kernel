@@ -54,7 +54,7 @@ pub struct Parser<'a, R: BufRead> {
     scratch_idxs: Vec<u32>,
     identity: Option<crate::identity::IdentityBuilder>,
     identity_all: Vec<u32>,
-    // Opt-in one-shot genuine parser continuation after independently admitted baseline.
+    // Opt-in genuine parser continuation after independently admitted baseline.
     // This cache is never itself an acceptance certificate.
     retained_simple_names: BTreeSet<String>,
     delta_allowed: Option<BTreeSet<String>>,
@@ -62,6 +62,7 @@ pub struct Parser<'a, R: BufRead> {
     original_name_slots: usize,
     original_level_slots: usize,
     original_expr_slots: usize,
+    retained_poisoned: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
@@ -739,6 +740,7 @@ impl<'a, R: BufRead> Parser<'a, R> {
             original_name_slots: 0,
             original_level_slots: 0,
             original_expr_slots: 0,
+            retained_poisoned: false,
         }
     }
 
@@ -778,7 +780,7 @@ impl<'a, R: BufRead> Parser<'a, R> {
     pub fn check_retained_simple_delta(
         mut self, delta: &[u8], expected_names: &[String], selected: &[usize]
     ) -> Result<(usize, usize, f64, f64), Box<dyn Error>> {
-        if self.original_expr_slots == 0 || self.delta_allowed.is_some() {
+        if self.original_expr_slots == 0 || self.delta_allowed.is_some() || self.retained_poisoned {
             return Err("no admitted retained baseline or duplicate delta attempt".into());
         }
         let mut expected = BTreeSet::new();
@@ -807,6 +809,67 @@ impl<'a, R: BufRead> Parser<'a, R> {
         let selected_check_seconds = checker_started.elapsed().as_secs_f64();
         Ok((checked, export.declaration_count(), parse_and_finish_seconds,
             selected_check_seconds))
+    }
+
+    /// Opt-in continuation from the immediately preceding accepted environment.
+    /// The caller authenticates that predecessor and every changed byte, chooses
+    /// the complete conservative obligation set, and discards all retained
+    /// processes if any subsequent stage (including receipt persistence) fails.
+    /// This primitive supplies only a low-level parser/checker witness.
+    pub fn check_retained_simple_chained_delta(
+        &mut self, delta: &[u8], expected_names: &[String], selected: &[usize]
+    ) -> Result<(usize, usize, f64, f64), Box<dyn Error>> {
+        if self.original_expr_slots == 0 || self.delta_allowed.is_some() || self.retained_poisoned {
+            return Err("no admitted retained predecessor or poisoned delta attempt".into());
+        }
+        self.retained_poisoned = true;
+        let mut expected = BTreeSet::new();
+        for name in expected_names {
+            if name.is_empty() || !expected.insert(name.clone()) ||
+               !self.retained_simple_names.contains(name) {
+                return Err("unrecognized or repeated simple declaration replacement".into());
+            }
+        }
+        self.delta_allowed = Some(expected.clone());
+        self.delta_seen.clear();
+        let parser_started = std::time::Instant::now();
+        self.run_over(delta)?;
+        if self.delta_seen != expected {
+            return Err("the delta did not replace exactly the announced declarations".into());
+        }
+        if !self.skipped.is_empty() {
+            return Err("retained updated export contains skipped axioms".into());
+        }
+        // ExportFile owns the environment consumed by the ordinary checker.
+        // Move those same fields temporarily, retaining the parser's typed DAG
+        // index tables. No type-checking cache survives this check.
+        let name_cache = self.dag.mk_name_cache(self.anon);
+        let export = crate::util::ExportFile {
+            dag: std::mem::replace(&mut self.dag, Dag::new_local(&self.config)),
+            anon: self.anon,
+            zero: self.zero,
+            declars: std::mem::take(&mut self.declars),
+            notations: std::mem::take(&mut self.notations),
+            name_cache,
+            config: self.config.clone(),
+            mutual_block_sizes: std::mem::take(&mut self.mutual_block_sizes),
+        };
+        let parse_and_finish_seconds = parser_started.elapsed().as_secs_f64();
+        let checker_started = std::time::Instant::now();
+        let checked = export.check_selected_declars(selected)?;
+        let selected_check_seconds = checker_started.elapsed().as_secs_f64();
+        let total = export.declaration_count();
+        self.dag = export.dag;
+        self.declars = export.declars;
+        self.notations = export.notations;
+        self.mutual_block_sizes = export.mutual_block_sizes;
+        self.original_name_slots = self.names_by_idx.len();
+        self.original_level_slots = self.levels_by_idx.len();
+        self.original_expr_slots = self.exprs_by_idx.len();
+        self.delta_allowed = None;
+        self.delta_seen.clear();
+        self.retained_poisoned = false;
+        Ok((checked, total, parse_and_finish_seconds, selected_check_seconds))
     }
 
     fn push_name(&mut self, expected: BackRef, n: Name<'a>) {
@@ -1762,5 +1825,80 @@ mod tests {
         let mut parser = Parser::new(arena.as_arena_ref(), &b""[..], config());
         parser.do_sort(BackRef::Ie(0), 0);
         parser.go1_general(r#"{"ie":1,"lam":{"type":99,"body":0}}"#).unwrap();
+    }
+
+    fn retained_test_baseline() -> &'static [u8] {
+        concat!(
+            "{\"meta\":{\"lean\":{\"version\":\"4.35.0\",\"githash\":\"test\"},\"exporter\":{\"name\":\"lean4export\",\"version\":\"test\"},\"format\":{\"version\":\"3.1.0\"}}}\n",
+            "{\"in\":1,\"str\":{\"pre\":0,\"str\":\"a\"}}\n",
+            "{\"in\":2,\"str\":{\"pre\":0,\"str\":\"b\"}}\n",
+            "{\"il\":1,\"succ\":0}\n{\"il\":2,\"succ\":1}\n",
+            "{\"ie\":0,\"sort\":0}\n{\"ie\":1,\"sort\":1}\n{\"ie\":2,\"sort\":2}\n",
+            "{\"def\":{\"name\":1,\"levelParams\":[],\"type\":1,\"value\":0,\"hints\":\"abbrev\",\"safety\":\"safe\",\"all\":[]}}\n",
+            "{\"def\":{\"name\":2,\"levelParams\":[],\"type\":1,\"value\":0,\"hints\":\"abbrev\",\"safety\":\"safe\",\"all\":[]}}\n",
+        ).as_bytes()
+    }
+
+    fn retained_test_replacement(name: u32, ty: u32, value: u32) -> Vec<u8> {
+        format!("{{\"def\":{{\"name\":{name},\"levelParams\":[],\"type\":{ty},\"value\":{value},\"hints\":\"abbrev\",\"safety\":\"safe\",\"all\":[]}}}}\n").into_bytes()
+    }
+
+    #[test]
+    fn chained_parser_checks_cumulative_edits_and_restores_in_retained_slots() {
+        let arena = Arena::new();
+        let mut parser = Parser::new(arena.as_arena_ref(), &b""[..], config());
+        assert_eq!(parser.run_retained_baseline(retained_test_baseline()).unwrap(), 2);
+        for (name, ty, value) in [(1,2,1), (2,2,1), (1,1,0)] {
+            let rendered = if name == 1 { "a" } else { "b" }.to_owned();
+            let result = parser.check_retained_simple_chained_delta(
+                &retained_test_replacement(name,ty,value), &[rendered], &[name as usize - 1]).unwrap();
+            assert_eq!((result.0,result.1), (1,2));
+        }
+        match parser.declars.get(&parser.get_name_ptr(2)).unwrap() {
+            Declar::Definition { info, val, .. } => {
+                assert_eq!(info.ty, parser.get_expr_ptr(2));
+                assert_eq!(*val, parser.get_expr_ptr(1));
+            }
+            _ => panic!("declaration kind changed"),
+        }
+        let result = parser.check_retained_simple_chained_delta(b"", &[], &[0,1]).unwrap();
+        assert_eq!((result.0,result.1), (2,2));
+    }
+
+    #[test]
+    fn chained_parser_parses_unused_malformed_rows_under_zero_selection_and_poisoning() {
+        let arena = Arena::new();
+        let mut parser = Parser::new(arena.as_arena_ref(), &b""[..], config());
+        parser.run_retained_baseline(retained_test_baseline()).unwrap();
+        parser.check_retained_simple_chained_delta(b"", &[], &[]).unwrap();
+        let rejected = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            parser.check_retained_simple_chained_delta(
+                b"{\"ie\":3,\"bvar\":\"not-an-integer\"}\n", &[], &[]).is_err()
+        }));
+        assert!(rejected.is_err() || rejected.unwrap());
+        assert!(parser.check_retained_simple_chained_delta(b"", &[], &[]).is_err());
+    }
+
+    #[test]
+    fn chained_parser_cannot_overwrite_dag_nodes_from_a_previous_revision() {
+        let arena = Arena::new();
+        let mut parser = Parser::new(arena.as_arena_ref(), &b""[..], config());
+        parser.run_retained_baseline(retained_test_baseline()).unwrap();
+        parser.check_retained_simple_chained_delta(b"{\"ie\":3,\"sort\":0}\n", &[], &[]).unwrap();
+        let rejected = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            parser.check_retained_simple_chained_delta(b"{\"ie\":3,\"sort\":1}\n", &[], &[]).is_err()
+        }));
+        assert!(rejected.is_err() || rejected.unwrap());
+        assert!(parser.check_retained_simple_chained_delta(b"", &[], &[]).is_err());
+    }
+
+    #[test]
+    fn chained_parser_poison_cannot_be_bypassed_through_the_legacy_consuming_api() {
+        let arena = Arena::new();
+        let mut parser = Parser::new(arena.as_arena_ref(), &b""[..], config());
+        parser.run_retained_baseline(retained_test_baseline()).unwrap();
+        assert!(parser.check_retained_simple_chained_delta(
+            b"", &["foreign".to_owned()], &[]).is_err());
+        assert!(parser.check_retained_simple_delta(b"", &[], &[]).is_err());
     }
 }

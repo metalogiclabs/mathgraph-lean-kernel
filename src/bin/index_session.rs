@@ -1,4 +1,4 @@
-//! One baseline-anchored retained identity update. Cache witnesses only;
+//! Baseline-anchored, or opt-in predecessor-chain, retained identity updates. Cache witnesses only;
 //! authenticated producer admission and complete selected checking are external.
 use serde::Deserialize;
 use serde_json::json;
@@ -28,7 +28,15 @@ fn run() -> Result<(), Box<dyn Error>> {
     let args = std::env::args().skip(1).collect::<Vec<_>>();
     let config_path = args.first().ok_or("usage: index-session CONFIG [--full-index|--sparse-response]")?;
     let flags = &args[1..];
-    if flags.len() > 1 || flags.iter().any(|f| f != "--full-index" && f != "--sparse-response") {
+    let revision_chain = flags.iter().any(|f| f == "--revision-chain");
+    let valid_flags = if revision_chain {
+        flags.len() <= 2 && flags.iter().all(|f|
+            f == "--full-index" || f == "--sparse-response" || f == "--revision-chain") &&
+            flags.iter().filter(|f| *f == "--revision-chain").count() == 1
+    } else {
+        flags.len() <= 1 && flags.iter().all(|f| f == "--full-index" || f == "--sparse-response")
+    };
+    if !valid_flags {
         return Err("unsupported or duplicated index-session flags".into());
     }
     let full_index = flags.iter().any(|f| f == "--full-index");
@@ -46,13 +54,22 @@ fn run() -> Result<(), Box<dyn Error>> {
     // differs. Both return the same canonical full index and require the same
     // source attestation plus independent selected checker downstream.
     let initial_index = if full_index { identity.finish()? } else { identity.prepare_retained()? };
-    emit(&json!({"status":"ready", "index":&initial_index}))?;
+    let mut ready = json!({"status":"ready", "index":&initial_index});
+    if revision_chain {
+        ready["chain_mode"] = json!(true);
+        ready["revision"] = json!(0);
+    }
+    emit(&ready)?;
+    let mut previous_index = initial_index;
+    let mut revision = 0u64;
     for line in std::io::stdin().lock().lines() {
         // Struct deserialization rejects duplicate fields, unknown fields,
         // malformed JSON and unescaped controls before any DAG mutation.
         let request: Request = serde_json::from_str(&line?)?;
         let delta = std::fs::read_to_string(request.delta_path)?;
-        let update = identity.apply_delta(&delta)?;
+        let next_revision = revision.checked_add(1).ok_or("identity revision counter exhausted")?;
+        let update = if revision_chain { identity.apply_chained_delta(&delta)? }
+            else { identity.apply_delta(&delta)? };
         let metadata = json!({
             "status":"indexed",
             "rows_processed":update.rows_processed, "dag_rows":update.dag_rows,
@@ -63,8 +80,12 @@ fn run() -> Result<(), Box<dyn Error>> {
             "finish_mode":if full_index {"full"} else {"retained"},
         });
         let mut response = metadata;
+        if revision_chain {
+            response["chain_mode"] = json!(true);
+            response["revision"] = json!(next_revision);
+        }
         if sparse_response && update.retained_graph_used {
-            if let Some(patch) = update.index.sparse_patch_against(&initial_index)? {
+            if let Some(patch) = update.index.sparse_patch_against(&previous_index)? {
                 response["index_wire"] = json!("baseline_patch_v1");
                 response["index_patch"] = patch;
             } else {
@@ -76,6 +97,10 @@ fn run() -> Result<(), Box<dyn Error>> {
             response["index"] = serde_json::to_value(&update.index)?;
         }
         emit(&response)?;
+        if revision_chain {
+            previous_index = update.index;
+            revision = next_revision;
+        }
     }
     Ok(())
 }
