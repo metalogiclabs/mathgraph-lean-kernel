@@ -1,0 +1,75 @@
+name: Flash demand-driven unused beta argument evaluation
+on:
+  push:
+    branches: [research/flash-beta-demand-20261021]
+    paths:
+      - 'experiments/flash_beta_demand_patch_20261021.py'
+      - 'experiments/flash_beta_demand_gate_20261021.py'
+      - '.github/workflows/flash-beta-demand-20261021.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: flash-beta-judgment-cache-20261021
+  cancel-in-progress: true
+jobs:
+  protected-cost:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install full-process instruction counter
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq valgrind
+      - name: Freeze upstream and qualify source-isolated cache rewrite
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/flash-beta-evidence /tmp/flash-beta-zip /tmp/flash-beta-corpus
+          git rev-parse HEAD > /tmp/flash-beta-evidence/research-head.txt
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/flash-beta-base-src
+          git -C /tmp/flash-beta-base-src checkout --detach 7645b1e1fcacfe410c99141f1234381d995b325d
+          git -C /tmp/flash-beta-base-src worktree add --detach /tmp/flash-beta-beta-src 7645b1e1fcacfe410c99141f1234381d995b325d
+          for arm in base beta; do
+            python3 experiments/arena_soko_sparse_patch_v1.py /tmp/flash-beta-$arm-src
+            python3 experiments/arena_soko_growth_patch_v1.py /tmp/flash-beta-$arm-src
+            git -C /tmp/flash-beta-$arm-src diff --check
+          done
+          python3 experiments/flash_beta_demand_patch_20261021.py /tmp/flash-beta-beta-src
+          git -C /tmp/flash-beta-beta-src diff --check
+          git -C /tmp/flash-beta-base-src diff > /tmp/flash-beta-evidence/qualified-common.diff
+          git -C /tmp/flash-beta-beta-src diff > /tmp/flash-beta-evidence/beta-judgment.diff
+          gh api repos/leanprover/lean-kernel-arena/actions/artifacts/11505862349/zip > /tmp/flash-beta-portable.zip
+          unzip -q /tmp/flash-beta-portable.zip -d /tmp/flash-beta-zip
+          tar --no-same-owner -xzf /tmp/flash-beta-zip/lean-arena-tests.tar.gz -C /tmp/flash-beta-corpus
+          test -s /tmp/flash-beta-corpus/good/init-prelude.ndjson
+      - name: Build and test both checker implementations
+        run: |
+          set -euo pipefail
+          rustc -vV > /tmp/flash-beta-evidence/compiler.txt
+          for arm in base beta; do
+            CARGO_TARGET_DIR=/tmp/flash-beta-$arm-target RUSTFLAGS='-C target-cpu=x86-64' \
+              cargo build --release --locked --manifest-path /tmp/flash-beta-$arm-src/Cargo.toml
+            CARGO_TARGET_DIR=/tmp/flash-beta-$arm-target RUSTFLAGS='-C target-cpu=x86-64' \
+              cargo test --release --locked --manifest-path /tmp/flash-beta-$arm-src/Cargo.toml \
+              > /tmp/flash-beta-evidence/$arm-tests.log 2>&1 || {
+                tail -100 /tmp/flash-beta-evidence/$arm-tests.log; exit 1;
+              }
+          done
+          sha256sum /tmp/flash-beta-{base,beta}-target/release/sokonanoda > /tmp/flash-beta-evidence/binaries.sha256
+      - name: Exact frozen196 verdict equality and five-case source-faithful cost
+        run: |
+          set -euo pipefail
+          python3 experiments/flash_beta_demand_gate_20261021.py \
+            /tmp/flash-beta-corpus /tmp/flash-beta-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-beta-judgment-cache-${{ github.sha }}
+          path: /tmp/flash-beta-evidence/
+          if-no-files-found: warn
