@@ -1,0 +1,90 @@
+name: Flash worker-count exact full Mathlib instruction A/B
+on:
+  push:
+    branches: [research/flash-workers-fullmathlib-20261021]
+    paths:
+      - 'experiments/flash_workers_fullmathlib_20261021.py'
+      - '.github/workflows/flash-workers-fullmathlib-20261021.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: flash-workers-fullmathlib-20261021
+  cancel-in-progress: true
+jobs:
+  worker-instruction:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+      - name: Install guest instruction counter
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq valgrind
+      - name: Pin original Soko, exact Arena, and portable corpus
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/flash-workers-evidence /tmp/flash-workers-zip /tmp/flash-workers-corpus
+          git rev-parse HEAD > /tmp/flash-workers-evidence/experiment-head.txt
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/flash-workers-src
+          git -C /tmp/flash-workers-src checkout --detach 7645b1e1fcacfe410c99141f1234381d995b325d
+          python3 experiments/arena_soko_sparse_patch_v1.py /tmp/flash-workers-src
+          python3 experiments/arena_soko_growth_patch_v1.py /tmp/flash-workers-src
+          git -C /tmp/flash-workers-src diff --check
+          git -C /tmp/flash-workers-src diff > /tmp/flash-workers-evidence/qualified-common.diff
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/flash-workers-arena
+          git -C /tmp/flash-workers-arena checkout --detach b83254de5146ef34147ab82a48edbe1856b0edcc
+          gh api repos/leanprover/lean-kernel-arena/actions/artifacts/11505862349/zip > /tmp/flash-workers-testpack.zip
+          unzip -q /tmp/flash-workers-testpack.zip -d /tmp/flash-workers-zip
+          tar --no-same-owner -xzf /tmp/flash-workers-zip/lean-arena-tests.tar.gz -C /tmp/flash-workers-corpus
+          test -s /tmp/flash-workers-corpus/good/init-prelude.ndjson
+      - name: Obtain unchanged original complete Mathlib export
+        run: |
+          set -euo pipefail
+          cd /tmp/flash-workers-arena
+          nix develop -c ./lka.py build-test mathlib
+          test "$(stat -c '%s' _build/tests/mathlib.ndjson)" = 6184415052
+          echo '22c5de83469408950005589a3bc5ef5157c65549b5a802f85d567c29151306a6  _build/tests/mathlib.ndjson' | sha256sum -c -
+          sha256sum _build/tests/mathlib.ndjson > /tmp/flash-workers-evidence/mathlib.sha256
+      - name: Build one source-identical portable PGO checker binary for both runtime worker counts
+        run: |
+          set -euo pipefail
+          rustc -vV > /tmp/flash-workers-evidence/compiler.txt
+          HOST=$(rustc -vV | awk '/^host:/ {print $2}')
+          LLVM_PROFDATA="$(rustc --print sysroot)/lib/rustlib/$HOST/bin/llvm-profdata"
+          test -x "$LLVM_PROFDATA"
+          mkdir -p /tmp/flash-workers-pgo-data
+          CARGO_TARGET_DIR=/tmp/flash-workers-build \
+            RUSTFLAGS='-C target-cpu=x86-64 -Cprofile-generate=/tmp/flash-workers-pgo-data' \
+            cargo build --release --locked --manifest-path /tmp/flash-workers-src/Cargo.toml
+          /tmp/flash-workers-build/release/sokonanoda \
+            --stdin --nat-extension --string-extension --axiom-allow-all --threads 4 \
+            < /tmp/flash-workers-corpus/good/init-prelude.ndjson > /dev/null
+          "$LLVM_PROFDATA" merge -o /tmp/flash-workers-pgo-data/merged.profdata \
+            /tmp/flash-workers-pgo-data
+          test -s /tmp/flash-workers-pgo-data/merged.profdata
+          CARGO_TARGET_DIR=/tmp/flash-workers-build \
+            RUSTFLAGS='-C target-cpu=x86-64 -Cprofile-use=/tmp/flash-workers-pgo-data/merged.profdata' \
+            cargo build --release --locked --manifest-path /tmp/flash-workers-src/Cargo.toml
+          cp /tmp/flash-workers-build/release/sokonanoda /tmp/flash-workers-pgo
+          sha256sum /tmp/flash-workers-pgo > /tmp/flash-workers-evidence/binary.sha256
+      - name: Native matched run, protected196 parity and complete-Mathlib guest instruction A/B
+        run: |
+          set -euo pipefail
+          python3 experiments/flash_workers_fullmathlib_20261021.py \
+            /tmp/flash-workers-arena/_build/tests/mathlib.ndjson \
+            /tmp/flash-workers-corpus /tmp/flash-workers-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-workers-fullmathlib-${{ github.sha }}
+          path: /tmp/flash-workers-evidence/
+          if-no-files-found: warn
