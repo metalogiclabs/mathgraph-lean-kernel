@@ -1,0 +1,191 @@
+{
+  "actual_process_commands": 74,
+  "fresh_selected_commands": 18,
+  "full_case_inputs": [
+    {
+      "bytes": 15922194,
+      "name": "early-definition",
+      "profile": "original",
+      "sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882"
+    },
+    {
+      "bytes": 64116034,
+      "name": "early-definition",
+      "profile": "expanded",
+      "sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76"
+    },
+    {
+      "bytes": 15922025,
+      "name": "signed-invalid-proof",
+      "profile": "original",
+      "sha256": "43d98c93398a0d17604872ce6a11bb098b25ff62d4f27538bea26afaa9319f49"
+    },
+    {
+      "bytes": 15922028,
+      "name": "signed-invalid-axiom",
+      "profile": "original",
+      "sha256": "c40269431e15a0623ca61b5394c9dab8303462d6a482ca9678eb1e135ef72024"
+    },
+    {
+      "bytes": 15922067,
+      "name": "unused-invalid-node-zero-selection-parser",
+      "profile": "original",
+      "sha256": "0484083f89bdc9508596dd870534e87ef20d27a4ac2f57a3753778f4f8fe3b83"
+    },
+    {
+      "bytes": 15922067,
+      "name": "unused-invalid-node-dag-only-zero-selection-parser",
+      "profile": "original",
+      "sha256": "0484083f89bdc9508596dd870534e87ef20d27a4ac2f57a3753778f4f8fe3b83"
+    },
+    {
+      "bytes": 64115856,
+      "name": "signed-invalid-proof",
+      "profile": "expanded",
+      "sha256": "58f8091201c291c6ec490ceb82db1803221902cf0ca0f708a5c5c352da59ec08"
+    },
+    {
+      "bytes": 64115859,
+      "name": "signed-invalid-axiom",
+      "profile": "expanded",
+      "sha256": "ac4ace2468a0bb7e02b74f7d41131f9182dcba3d931758eda41394a89b9e2c92"
+    },
+    {
+      "bytes": 64115899,
+      "name": "unused-invalid-node-zero-selection-parser",
+      "profile": "expanded",
+      "sha256": "2ba6049b33587cf12b458afaa439741b56c7f1cca7bfe1150c5972533b377e2f"
+    },
+    {
+      "bytes": 64115899,
+      "name": "unused-invalid-node-dag-only-zero-selection-parser",
+      "profile": "expanded",
+      "sha256": "2ba6049b33587cf12b458afaa439741b56c7f1cca7bfe1150c5972533b377e2f"
+    }
+  ],
+  "full_kernel_commands": 46,
+  "full_summary_sha256": "2a5d128e1b3615c0f4c722eca40500d098fe479dc3ac37fc6902bec2e2f5f64c",
+  "retained_case_inputs": [
+    {
+      "complete_input_bytes": 15922194,
+      "complete_input_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "delta_sha256": "eb11fc45e122f70178e45383b980de2322645bf96e7e5b38a33335fcd171b36e",
+      "name": "early-definition",
+      "profile": "original",
+      "selected_count": 413
+    },
+    {
+      "complete_input_bytes": 15922152,
+      "complete_input_sha256": "1f452a46208ab2328d38c8e359fcee452513768b74d6c9ff2e59dec412ab5dfe",
+      "delta_sha256": "1ab25b7e5a270d0d511bcc7371fad135ce4725ad626d5043eb1c92228f2ebd23",
+      "name": "unrelated-definition",
+      "profile": "original",
+      "selected_count": 1
+    },
+    {
+      "complete_input_bytes": 15922025,
+      "complete_input_sha256": "43d98c93398a0d17604872ce6a11bb098b25ff62d4f27538bea26afaa9319f49",
+      "delta_sha256": "a3e3c89873713e99aed8646f0ae8c99d918279941f5da30595b3653fe6c1bb5f",
+      "name": "signed-invalid-proof",
+      "profile": "original",
+      "selected_count": 3436
+    },
+    {
+      "complete_input_bytes": 15922067,
+      "complete_input_sha256": "0484083f89bdc9508596dd870534e87ef20d27a4ac2f57a3753778f4f8fe3b83",
+      "delta_sha256": "7567e4c73df4ed2d3135f50dfa9e79bd180e4762c1430fd3a228f9ff4373105a",
+      "name": "unused-invalid-node-zero-selection-parser",
+      "profile": "original",
+      "selected_count": 0
+    },
+    {
+      "complete_input_bytes": 15922047,
+      "complete_input_sha256": "54a97ab46d4ba8df4c2bef1b89e3cdd71c54424956627c8c6477dfe02c4e9b31",
+      "delta_sha256": "12b91514dedab26e9fca60a09450da187d4a635af21064c70ded72ba341d9643",
+      "name": "overwrite-admitted-expression",
+      "profile": "original",
+      "selected_count": 0
+    },
+    {
+      "complete_input_bytes": 64116034,
+      "complete_input_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "delta_sha256": "0c5bcf2490822935ae4fe2166a82777a3eaca2e7f4eea4a2f4981ac829912ab7",
+      "name": "early-definition",
+      "profile": "expanded",
+      "selected_count": 672
+    },
+    {
+      "complete_input_bytes": 64115987,
+      "complete_input_sha256": "6456c02bf654a3877ee33bf0c8d61449d1dc4e98545d54f6e46c2c5667639d1a",
+      "delta_sha256": "ec1b3ec84ad470dba418a9adf1dd92fe2eae342fb601c4dab5f41f7de2b5edd9",
+      "name": "unrelated-definition",
+      "profile": "expanded",
+      "selected_count": 260
+    },
+    {
+      "complete_input_bytes": 64115856,
+      "complete_input_sha256": "58f8091201c291c6ec490ceb82db1803221902cf0ca0f708a5c5c352da59ec08",
+      "delta_sha256": "a3e3c89873713e99aed8646f0ae8c99d918279941f5da30595b3653fe6c1bb5f",
+      "name": "signed-invalid-proof",
+      "profile": "expanded",
+      "selected_count": 11653
+    },
+    {
+      "complete_input_bytes": 64115899,
+      "complete_input_sha256": "2ba6049b33587cf12b458afaa439741b56c7f1cca7bfe1150c5972533b377e2f",
+      "delta_sha256": "2014b92938083238a899a128428650166f5d02cfdd602b2b53bfb36e90f8b507",
+      "name": "unused-invalid-node-zero-selection-parser",
+      "profile": "expanded",
+      "selected_count": 0
+    },
+    {
+      "complete_input_bytes": 64115878,
+      "complete_input_sha256": "7da5dd1b8750bae0cab0907eed854f9ab1681377770284ae95c1ec0a7debd654",
+      "delta_sha256": "12b91514dedab26e9fca60a09450da187d4a635af21064c70ded72ba341d9643",
+      "name": "overwrite-admitted-expression",
+      "profile": "expanded",
+      "selected_count": 0
+    }
+  ],
+  "retained_native_sessions": 10,
+  "retained_summary_sha256": "553ca82c10ee794495dbf81971462eb745c0d0680c6177cf1417ddc604418212",
+  "scope": [
+    "Actual74 fresh process invocations, no new HMAC acceptance or incremental engine imports.",
+    "Forty full kernels plus eight zero parsers on10case roles, then10direct native sessions+10fresh selected+6additional full unrelated-oracle commands.",
+    "Overwrite guard conservatively refuses valid row overwrite even though fresh zero-selected parser accepts those two composites.",
+    "No timeout, unsupported execution or loader127 was accepted as rejection.",
+    "Rust/Cargo source bytes unchanged6e\u21925dfe; executable pins recorded separately."
+  ],
+  "source": "5dfe38b01ca7b1c67f70be4ffb2479978049239e",
+  "status": "PASS_INDEPENDENT_5DFE_FRESH_KERNELS_AND_DIRECT_RETAINED_PROTOCOL",
+  "tools": {
+    "current-rust": {
+      "path": "/workspace/mathgraph-lean-kernel/target/release/sokonanoda",
+      "sha256": "fe85456cceb6c0118b26d119594705b93a96fa7903a5d2101f521e9e0a01c6ef"
+    },
+    "current-zero-selected": {
+      "path": "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+      "sha256": "1134d284feee046aa4e7d10790e1658df3bb1ebd1019e416179a8a22d01b801e"
+    },
+    "normal-cpp": {
+      "path": "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+      "sha256": "12c38901cdbfab178f1bf6145dd30012e9a3b2c11ca695292a5884fa3cbaddb6"
+    },
+    "paranoid-cpp": {
+      "path": "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker-paranoid",
+      "sha256": "ca74d1e9a856149ed05acb600d8931a574dd9f465745beeaf93e3de7b7cbe274"
+    },
+    "qualified449-rust": {
+      "path": "/workspace/kernel-audit/retained-index/qualified-449-baseline/bin/sokonanoda",
+      "sha256": "e813211867f7e555f44e35f0a8b1e143be5ffbea5f7548e99022e704f3f7b441"
+    },
+    "qualified449-zero-selected": {
+      "path": "/workspace/kernel-audit/retained-index/qualified-449-baseline/bin/check-selected",
+      "sha256": "656c38d147833d2b08caea1829950e0ce631a44e0f8f10641fbc7201c85be6e9"
+    },
+    "retained-native": {
+      "path": "/workspace/mathgraph-lean-kernel/target/release/check-selected-retained-session",
+      "sha256": "1b48a98a13f8f80eef446facd4a57ac462bfcf6bda722849af7abe6bbf3be413"
+    }
+  }
+}

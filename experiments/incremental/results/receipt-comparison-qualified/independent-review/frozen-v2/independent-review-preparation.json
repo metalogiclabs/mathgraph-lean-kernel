@@ -1,0 +1,25 @@
+{
+  "schema": "independent.receipt-comparison-preparation.v2",
+  "reviewer_contract_revision": 2,
+  "target_source": "5dfe38b01ca7b1c67f70be4ffb2479978049239e",
+  "target_run": 39581949051,
+  "passed": false,
+  "qualified": false,
+  "status": "PREPARED_NOT_CI_REVIEWED",
+  "helper_sha256": "7633e6ada35ecfcaa1d7cba4633a24b7728824c8b8a0dbdb623357f304f3ba4a",
+  "test_sha256": "c9039c50298dd6f0d89672c4cea3e12d796872cb4f8cbcd3f886458181e93275",
+  "prior_helper_sha256": "fb6943f4c36126b16e9f36d87e1a18da0f4a2ffc35632ecc7d4e4f08960f801a",
+  "red_test_sha256": "db0878504c29606aec935ff3c4c24c694fca665ef9292c9c01ab363a7e939166",
+  "red_log_sha256": "3976842130a834446424662169361ed7a51999a711f28af2b8a54c643486089f",
+  "green_log_sha256": "424bbc0ca61a73e834c36f7e5463863881fc3a23e55b5790651516cf24c39654",
+  "synthetic_contract_tests_passed": 10,
+  "intended_report_falsifiers": 32,
+  "historical_hmac_authenticated_by_this_review": false,
+  "scope": "Read-only independent reviewer preparation; actual CI artifact has not been reviewed",
+  "changes": [
+    "Warm baselines require actual VERIFIED full-check counts and successful checker count, bound to setup evidence ID.",
+    "Cold baselines require prior-authentication scope and absent/None counts/checker result, bound to the original warm baseline evidence ID; existing receipt/decision parity unchanged.",
+    "None process observation is preserved as absent, never converted to zero."
+  ],
+  "source_and_workflow_mutations": false
+}

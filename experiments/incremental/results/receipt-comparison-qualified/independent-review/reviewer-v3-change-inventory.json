@@ -1,0 +1,31 @@
+{
+  "schema": "independent.receipt-comparison-reviewer-change-inventory.v3",
+  "target_source": "5dfe38b01ca7b1c67f70be4ffb2479978049239e",
+  "run_id": 39581949051,
+  "helper_sha256": "915467911481d05949e824eca0e707c5fdbef87967134f0605040008f805574d",
+  "prior_v1_sha256": "fb6943f4c36126b16e9f36d87e1a18da0f4a2ffc35632ecc7d4e4f08960f801a",
+  "prior_v2_sha256": "7633e6ada35ecfcaa1d7cba4633a24b7728824c8b8a0dbdb623357f304f3ba4a",
+  "actual_v2_failure_sha256": "a27b424d41d935ce6ca214c373268b37fd00c20c666107e39b5a91bf3b0bcf32",
+  "actual_v2_log_sha256": "c1f65659d53925debe17512530959baf3a3de6a5fbe0134f085f22f5e09de67e",
+  "red_tests_sha256": "4f885a3cab335cc3d8c73d651ba38400a29ec0c3756e5a8b1404411956ae0398",
+  "red_log_sha256": "180bb5ea96313b244729d9a79110dc43aba745712aff9ed9dc403bd33ed59ffe",
+  "green_log_sha256": "3a8cf1714a25a90191a3ac261c9ccbc7e340592e172b665863173775cee6c48a",
+  "actual_v3_log_sha256": "5aab967be00c0857b53a414a884e4a285d50dc1b31c73ab54134588521e72be3",
+  "actual_review_sha256": "9cd0f0a2c19021342dcf54a6c4fbe3b01117351b1d885e85a6c96ea15a9029b1",
+  "reuse_runner_sha256": "d190147b565582f454df839b768e53e7d87cc7492a53db93febda2d9995eaedc",
+  "synthetic_tests_passed": 11,
+  "falsifiers": 40,
+  "actual_check_count": 15067,
+  "changes": [
+    "Allow whole phase=None only for producer memory during authenticated cold replay; preserve None as absent.",
+    "Require the exact six memory phases and nonempty observation maps for all non-omitted phases.",
+    "Add falsifiers for warm/nonproducer/allNone memory, invalid/empty/missing phase observations and missing actual timings."
+  ],
+  "unchanged": [
+    "Acceptance and HMAC/schema/provenance controls",
+    "All actual checker, index, receipt, decision and source/executable bindings",
+    "All economics formulas/scopes/bootstrap seeds and timing values",
+    "Product/runtime/harness/workflow source bytes"
+  ],
+  "failure_cause": "All four actual cold arms have phases.memory.producer=None because replay does not call prepare; v2 incorrectly expected a dict. This was a reader contract rejection, not a runtime correctness failure."
+}

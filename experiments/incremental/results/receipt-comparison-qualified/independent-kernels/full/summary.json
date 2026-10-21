@@ -1,0 +1,830 @@
+{
+  "cases": [
+    {
+      "bytes": 15922194,
+      "name": "early-definition",
+      "profile": "original",
+      "runs": [
+        {
+          "classification": "ACCEPTED",
+          "command": [
+            "/workspace/mathgraph-lean-kernel/target/release/sokonanoda",
+            "/workspace/kernel-audit/retained-admission-continuation/independent-kernels-5dfe/full/original-early-definition.config.json"
+          ],
+          "elapsed_seconds": 0.3214640629994392,
+          "expected_returncode": 0,
+          "returncode": 0,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "ACCEPTED",
+          "command": [
+            "/workspace/kernel-audit/retained-index/qualified-449-baseline/bin/sokonanoda",
+            "/workspace/kernel-audit/retained-admission-continuation/independent-kernels-5dfe/full/original-early-definition.config.json"
+          ],
+          "elapsed_seconds": 0.30946167500042066,
+          "expected_returncode": 0,
+          "returncode": 0,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "ACCEPTED",
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-early-definition.ndjson"
+          ],
+          "elapsed_seconds": 1.6194053460003488,
+          "expected_returncode": 0,
+          "returncode": 0,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "ACCEPTED",
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker-paranoid",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-early-definition.ndjson"
+          ],
+          "elapsed_seconds": 1.8103035429994634,
+          "expected_returncode": 0,
+          "returncode": 0,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        }
+      ],
+      "sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882"
+    },
+    {
+      "bytes": 64116034,
+      "name": "early-definition",
+      "profile": "expanded",
+      "runs": [
+        {
+          "classification": "ACCEPTED",
+          "command": [
+            "/workspace/mathgraph-lean-kernel/target/release/sokonanoda",
+            "/workspace/kernel-audit/retained-admission-continuation/independent-kernels-5dfe/full/expanded-early-definition.config.json"
+          ],
+          "elapsed_seconds": 1.284662170000047,
+          "expected_returncode": 0,
+          "returncode": 0,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "ACCEPTED",
+          "command": [
+            "/workspace/kernel-audit/retained-index/qualified-449-baseline/bin/sokonanoda",
+            "/workspace/kernel-audit/retained-admission-continuation/independent-kernels-5dfe/full/expanded-early-definition.config.json"
+          ],
+          "elapsed_seconds": 1.3172884899995552,
+          "expected_returncode": 0,
+          "returncode": 0,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "ACCEPTED",
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-early-definition.ndjson"
+          ],
+          "elapsed_seconds": 10.222325312000066,
+          "expected_returncode": 0,
+          "returncode": 0,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "ACCEPTED",
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker-paranoid",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-early-definition.ndjson"
+          ],
+          "elapsed_seconds": 12.159810283000297,
+          "expected_returncode": 0,
+          "returncode": 0,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        }
+      ],
+      "sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76"
+    },
+    {
+      "bytes": 15922025,
+      "name": "signed-invalid-proof",
+      "profile": "original",
+      "runs": [
+        {
+          "classification": "KERNEL_REJECTED",
+          "command": [
+            "/workspace/mathgraph-lean-kernel/target/release/sokonanoda",
+            "/workspace/kernel-audit/retained-admission-continuation/independent-kernels-5dfe/full/original-signed-invalid-proof.config.json"
+          ],
+          "elapsed_seconds": 0.27444054699935805,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "d84bbfae42ba5083f9e5e35bbf0600c87e656fb139a8c65dd92b92b4174282b3",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "KERNEL_REJECTED",
+          "command": [
+            "/workspace/kernel-audit/retained-index/qualified-449-baseline/bin/sokonanoda",
+            "/workspace/kernel-audit/retained-admission-continuation/independent-kernels-5dfe/full/original-signed-invalid-proof.config.json"
+          ],
+          "elapsed_seconds": 0.2932637439998871,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "c8f617f94063d3cf9d328ff2188d60af950979639bc911876f96d005b3123878",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "KERNEL_REJECTED",
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-signed-invalid-proof.ndjson"
+          ],
+          "elapsed_seconds": 1.7192738229996394,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "KERNEL_REJECTED",
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker-paranoid",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-signed-invalid-proof.ndjson"
+          ],
+          "elapsed_seconds": 1.861343689000023,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        }
+      ],
+      "sha256": "43d98c93398a0d17604872ce6a11bb098b25ff62d4f27538bea26afaa9319f49"
+    },
+    {
+      "bytes": 15922028,
+      "name": "signed-invalid-axiom",
+      "profile": "original",
+      "runs": [
+        {
+          "classification": "KERNEL_REJECTED",
+          "command": [
+            "/workspace/mathgraph-lean-kernel/target/release/sokonanoda",
+            "/workspace/kernel-audit/retained-admission-continuation/independent-kernels-5dfe/full/original-signed-invalid-axiom.config.json"
+          ],
+          "elapsed_seconds": 0.02927687099963805,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "e0d470dbfb9a08623b6bdbee1fa8d507ade1150e3567b48855e3daa3df984192",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "KERNEL_REJECTED",
+          "command": [
+            "/workspace/kernel-audit/retained-index/qualified-449-baseline/bin/sokonanoda",
+            "/workspace/kernel-audit/retained-admission-continuation/independent-kernels-5dfe/full/original-signed-invalid-axiom.config.json"
+          ],
+          "elapsed_seconds": 0.027847082000334922,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "df99aacf0a0007d1392dec89442a7877edcd512b4dd7d86a0c1ede7bf0fb85a6",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "KERNEL_REJECTED",
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-signed-invalid-axiom.ndjson"
+          ],
+          "elapsed_seconds": 0.5156764410003234,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "KERNEL_REJECTED",
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker-paranoid",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-signed-invalid-axiom.ndjson"
+          ],
+          "elapsed_seconds": 0.6479488349996245,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        }
+      ],
+      "sha256": "c40269431e15a0623ca61b5394c9dab8303462d6a482ca9678eb1e135ef72024"
+    },
+    {
+      "bytes": 15922067,
+      "name": "unused-invalid-node-zero-selection-parser",
+      "profile": "original",
+      "runs": [
+        {
+          "classification": "PARSER_REFUSED",
+          "command": [
+            "/workspace/mathgraph-lean-kernel/target/release/sokonanoda",
+            "/workspace/kernel-audit/retained-admission-continuation/independent-kernels-5dfe/full/original-unused-invalid-node-zero-selection-parser.config.json"
+          ],
+          "elapsed_seconds": 0.01331582900002104,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "1e40b5261928d7aac961037aed187b8d0bc1dd46de9aab855489931c49089e98",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "PARSER_REFUSED",
+          "command": [
+            "/workspace/kernel-audit/retained-index/qualified-449-baseline/bin/sokonanoda",
+            "/workspace/kernel-audit/retained-admission-continuation/independent-kernels-5dfe/full/original-unused-invalid-node-zero-selection-parser.config.json"
+          ],
+          "elapsed_seconds": 0.022346616000504582,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "1e40b5261928d7aac961037aed187b8d0bc1dd46de9aab855489931c49089e98",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "PARSER_REFUSED",
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-zero-selection-parser.ndjson"
+          ],
+          "elapsed_seconds": 0.5301336830007131,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "74ffa5806ba620027c25f9a5494051d48b6aab6372cd3dacf9da624cce5ce1a6",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "PARSER_REFUSED",
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker-paranoid",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-zero-selection-parser.ndjson"
+          ],
+          "elapsed_seconds": 0.5986486269994202,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "74ffa5806ba620027c25f9a5494051d48b6aab6372cd3dacf9da624cce5ce1a6",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "PARSER_REFUSED_ZERO_SELECTED",
+          "command": [
+            "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+            "/workspace/kernel-audit/retained-admission-continuation/independent-kernels-5dfe/full/original-unused-invalid-node-zero-selection-parser.config.json",
+            "/workspace/kernel-audit/retained-admission-continuation/independent-kernels-5dfe/full/original-unused-invalid-node-zero-selection-parser.indices.json"
+          ],
+          "elapsed_seconds": 0.01318695400004799,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "a5fe75f0796d55ea056b0307ccdc666585a357cfeb191f24db17a8572841be46",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "PARSER_REFUSED_ZERO_SELECTED",
+          "command": [
+            "/workspace/kernel-audit/retained-index/qualified-449-baseline/bin/check-selected",
+            "/workspace/kernel-audit/retained-admission-continuation/independent-kernels-5dfe/full/original-unused-invalid-node-zero-selection-parser.config.json",
+            "/workspace/kernel-audit/retained-admission-continuation/independent-kernels-5dfe/full/original-unused-invalid-node-zero-selection-parser.indices.json"
+          ],
+          "elapsed_seconds": 0.014205210999534756,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "a5fe75f0796d55ea056b0307ccdc666585a357cfeb191f24db17a8572841be46",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        }
+      ],
+      "sha256": "0484083f89bdc9508596dd870534e87ef20d27a4ac2f57a3753778f4f8fe3b83"
+    },
+    {
+      "bytes": 15922067,
+      "name": "unused-invalid-node-dag-only-zero-selection-parser",
+      "profile": "original",
+      "runs": [
+        {
+          "classification": "PARSER_REFUSED",
+          "command": [
+            "/workspace/mathgraph-lean-kernel/target/release/sokonanoda",
+            "/workspace/kernel-audit/retained-admission-continuation/independent-kernels-5dfe/full/original-unused-invalid-node-dag-only-zero-selection-parser.config.json"
+          ],
+          "elapsed_seconds": 0.013788578000458074,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "1e40b5261928d7aac961037aed187b8d0bc1dd46de9aab855489931c49089e98",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "PARSER_REFUSED",
+          "command": [
+            "/workspace/kernel-audit/retained-index/qualified-449-baseline/bin/sokonanoda",
+            "/workspace/kernel-audit/retained-admission-continuation/independent-kernels-5dfe/full/original-unused-invalid-node-dag-only-zero-selection-parser.config.json"
+          ],
+          "elapsed_seconds": 0.014413605999834544,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "1e40b5261928d7aac961037aed187b8d0bc1dd46de9aab855489931c49089e98",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "PARSER_REFUSED",
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-dag-only-zero-selection-parser.ndjson"
+          ],
+          "elapsed_seconds": 0.5101099200001045,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "74ffa5806ba620027c25f9a5494051d48b6aab6372cd3dacf9da624cce5ce1a6",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "PARSER_REFUSED",
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker-paranoid",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/original-unused-invalid-node-dag-only-zero-selection-parser.ndjson"
+          ],
+          "elapsed_seconds": 0.5677587660002246,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "74ffa5806ba620027c25f9a5494051d48b6aab6372cd3dacf9da624cce5ce1a6",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "PARSER_REFUSED_ZERO_SELECTED",
+          "command": [
+            "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+            "/workspace/kernel-audit/retained-admission-continuation/independent-kernels-5dfe/full/original-unused-invalid-node-dag-only-zero-selection-parser.config.json",
+            "/workspace/kernel-audit/retained-admission-continuation/independent-kernels-5dfe/full/original-unused-invalid-node-dag-only-zero-selection-parser.indices.json"
+          ],
+          "elapsed_seconds": 0.017310360000010405,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "a5fe75f0796d55ea056b0307ccdc666585a357cfeb191f24db17a8572841be46",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "PARSER_REFUSED_ZERO_SELECTED",
+          "command": [
+            "/workspace/kernel-audit/retained-index/qualified-449-baseline/bin/check-selected",
+            "/workspace/kernel-audit/retained-admission-continuation/independent-kernels-5dfe/full/original-unused-invalid-node-dag-only-zero-selection-parser.config.json",
+            "/workspace/kernel-audit/retained-admission-continuation/independent-kernels-5dfe/full/original-unused-invalid-node-dag-only-zero-selection-parser.indices.json"
+          ],
+          "elapsed_seconds": 0.01373921699996572,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "a5fe75f0796d55ea056b0307ccdc666585a357cfeb191f24db17a8572841be46",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        }
+      ],
+      "sha256": "0484083f89bdc9508596dd870534e87ef20d27a4ac2f57a3753778f4f8fe3b83"
+    },
+    {
+      "bytes": 64115856,
+      "name": "signed-invalid-proof",
+      "profile": "expanded",
+      "runs": [
+        {
+          "classification": "KERNEL_REJECTED",
+          "command": [
+            "/workspace/mathgraph-lean-kernel/target/release/sokonanoda",
+            "/workspace/kernel-audit/retained-admission-continuation/independent-kernels-5dfe/full/expanded-signed-invalid-proof.config.json"
+          ],
+          "elapsed_seconds": 0.36650296000061644,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "cd37479f5cc23b981b77a6be2e5458f4f0d8532c16a55405472d3bc70ce5abec",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "KERNEL_REJECTED",
+          "command": [
+            "/workspace/kernel-audit/retained-index/qualified-449-baseline/bin/sokonanoda",
+            "/workspace/kernel-audit/retained-admission-continuation/independent-kernels-5dfe/full/expanded-signed-invalid-proof.config.json"
+          ],
+          "elapsed_seconds": 0.306277757999851,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "a154dd2e48217506c0ebfa41ecc37ea0fbb892e55a84c6ad50484af57fd1cdef",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "KERNEL_REJECTED",
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-signed-invalid-proof.ndjson"
+          ],
+          "elapsed_seconds": 8.620407004999834,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "KERNEL_REJECTED",
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker-paranoid",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-signed-invalid-proof.ndjson"
+          ],
+          "elapsed_seconds": 10.502781195999887,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        }
+      ],
+      "sha256": "58f8091201c291c6ec490ceb82db1803221902cf0ca0f708a5c5c352da59ec08"
+    },
+    {
+      "bytes": 64115859,
+      "name": "signed-invalid-axiom",
+      "profile": "expanded",
+      "runs": [
+        {
+          "classification": "KERNEL_REJECTED",
+          "command": [
+            "/workspace/mathgraph-lean-kernel/target/release/sokonanoda",
+            "/workspace/kernel-audit/retained-admission-continuation/independent-kernels-5dfe/full/expanded-signed-invalid-axiom.config.json"
+          ],
+          "elapsed_seconds": 0.07525815600001806,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "5d5884134740b7089ce5e8c27d3875d072028a5dbcf10a1a06878fb92da1a826",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "KERNEL_REJECTED",
+          "command": [
+            "/workspace/kernel-audit/retained-index/qualified-449-baseline/bin/sokonanoda",
+            "/workspace/kernel-audit/retained-admission-continuation/independent-kernels-5dfe/full/expanded-signed-invalid-axiom.config.json"
+          ],
+          "elapsed_seconds": 0.0686368560000119,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "fc6f0388f7e7d134f2f31cb3ea336980cba6b27b019b9cae3abf2ea1478a54de",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "KERNEL_REJECTED",
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-signed-invalid-axiom.ndjson"
+          ],
+          "elapsed_seconds": 2.0686844930005464,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "KERNEL_REJECTED",
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker-paranoid",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-signed-invalid-axiom.ndjson"
+          ],
+          "elapsed_seconds": 2.5506217450001714,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        }
+      ],
+      "sha256": "ac4ace2468a0bb7e02b74f7d41131f9182dcba3d931758eda41394a89b9e2c92"
+    },
+    {
+      "bytes": 64115899,
+      "name": "unused-invalid-node-zero-selection-parser",
+      "profile": "expanded",
+      "runs": [
+        {
+          "classification": "PARSER_REFUSED",
+          "command": [
+            "/workspace/mathgraph-lean-kernel/target/release/sokonanoda",
+            "/workspace/kernel-audit/retained-admission-continuation/independent-kernels-5dfe/full/expanded-unused-invalid-node-zero-selection-parser.config.json"
+          ],
+          "elapsed_seconds": 0.047953352999684284,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "b0bdb276876ba924db0d709cd41caad33bed735cb926a7dd960f1e964f65f716",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "PARSER_REFUSED",
+          "command": [
+            "/workspace/kernel-audit/retained-index/qualified-449-baseline/bin/sokonanoda",
+            "/workspace/kernel-audit/retained-admission-continuation/independent-kernels-5dfe/full/expanded-unused-invalid-node-zero-selection-parser.config.json"
+          ],
+          "elapsed_seconds": 0.05650928400064004,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "b0bdb276876ba924db0d709cd41caad33bed735cb926a7dd960f1e964f65f716",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "PARSER_REFUSED",
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-zero-selection-parser.ndjson"
+          ],
+          "elapsed_seconds": 1.9093459400000938,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "74ffa5806ba620027c25f9a5494051d48b6aab6372cd3dacf9da624cce5ce1a6",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "PARSER_REFUSED",
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker-paranoid",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-zero-selection-parser.ndjson"
+          ],
+          "elapsed_seconds": 2.3194230660001267,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "74ffa5806ba620027c25f9a5494051d48b6aab6372cd3dacf9da624cce5ce1a6",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "PARSER_REFUSED_ZERO_SELECTED",
+          "command": [
+            "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+            "/workspace/kernel-audit/retained-admission-continuation/independent-kernels-5dfe/full/expanded-unused-invalid-node-zero-selection-parser.config.json",
+            "/workspace/kernel-audit/retained-admission-continuation/independent-kernels-5dfe/full/expanded-unused-invalid-node-zero-selection-parser.indices.json"
+          ],
+          "elapsed_seconds": 0.05018192900024587,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "af110d98c0f6142d3400c71b5c9d3c8775d54b225d4637e6c74d216737f1c31d",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "PARSER_REFUSED_ZERO_SELECTED",
+          "command": [
+            "/workspace/kernel-audit/retained-index/qualified-449-baseline/bin/check-selected",
+            "/workspace/kernel-audit/retained-admission-continuation/independent-kernels-5dfe/full/expanded-unused-invalid-node-zero-selection-parser.config.json",
+            "/workspace/kernel-audit/retained-admission-continuation/independent-kernels-5dfe/full/expanded-unused-invalid-node-zero-selection-parser.indices.json"
+          ],
+          "elapsed_seconds": 0.04818716600038897,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "af110d98c0f6142d3400c71b5c9d3c8775d54b225d4637e6c74d216737f1c31d",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        }
+      ],
+      "sha256": "2ba6049b33587cf12b458afaa439741b56c7f1cca7bfe1150c5972533b377e2f"
+    },
+    {
+      "bytes": 64115899,
+      "name": "unused-invalid-node-dag-only-zero-selection-parser",
+      "profile": "expanded",
+      "runs": [
+        {
+          "classification": "PARSER_REFUSED",
+          "command": [
+            "/workspace/mathgraph-lean-kernel/target/release/sokonanoda",
+            "/workspace/kernel-audit/retained-admission-continuation/independent-kernels-5dfe/full/expanded-unused-invalid-node-dag-only-zero-selection-parser.config.json"
+          ],
+          "elapsed_seconds": 0.04898116399999708,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "b0bdb276876ba924db0d709cd41caad33bed735cb926a7dd960f1e964f65f716",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "PARSER_REFUSED",
+          "command": [
+            "/workspace/kernel-audit/retained-index/qualified-449-baseline/bin/sokonanoda",
+            "/workspace/kernel-audit/retained-admission-continuation/independent-kernels-5dfe/full/expanded-unused-invalid-node-dag-only-zero-selection-parser.config.json"
+          ],
+          "elapsed_seconds": 0.04603311400023813,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "b0bdb276876ba924db0d709cd41caad33bed735cb926a7dd960f1e964f65f716",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "PARSER_REFUSED",
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-dag-only-zero-selection-parser.ndjson"
+          ],
+          "elapsed_seconds": 1.8779326290004974,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "74ffa5806ba620027c25f9a5494051d48b6aab6372cd3dacf9da624cce5ce1a6",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "PARSER_REFUSED",
+          "command": [
+            "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker-paranoid",
+            "--silent",
+            "--from-export",
+            "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-dag-only-zero-selection-parser.ndjson"
+          ],
+          "elapsed_seconds": 2.2487450999997236,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "74ffa5806ba620027c25f9a5494051d48b6aab6372cd3dacf9da624cce5ce1a6",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "PARSER_REFUSED_ZERO_SELECTED",
+          "command": [
+            "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+            "/workspace/kernel-audit/retained-admission-continuation/independent-kernels-5dfe/full/expanded-unused-invalid-node-dag-only-zero-selection-parser.config.json",
+            "/workspace/kernel-audit/retained-admission-continuation/independent-kernels-5dfe/full/expanded-unused-invalid-node-dag-only-zero-selection-parser.indices.json"
+          ],
+          "elapsed_seconds": 0.0491106449999279,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "af110d98c0f6142d3400c71b5c9d3c8775d54b225d4637e6c74d216737f1c31d",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        },
+        {
+          "classification": "PARSER_REFUSED_ZERO_SELECTED",
+          "command": [
+            "/workspace/kernel-audit/retained-index/qualified-449-baseline/bin/check-selected",
+            "/workspace/kernel-audit/retained-admission-continuation/independent-kernels-5dfe/full/expanded-unused-invalid-node-dag-only-zero-selection-parser.config.json",
+            "/workspace/kernel-audit/retained-admission-continuation/independent-kernels-5dfe/full/expanded-unused-invalid-node-dag-only-zero-selection-parser.indices.json"
+          ],
+          "elapsed_seconds": 0.04868913399968733,
+          "expected_returncode": 1,
+          "returncode": 1,
+          "stderr_sha256": "af110d98c0f6142d3400c71b5c9d3c8775d54b225d4637e6c74d216737f1c31d",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "timed_out": false
+        }
+      ],
+      "sha256": "2ba6049b33587cf12b458afaa439741b56c7f1cca7bfe1150c5972533b377e2f"
+    }
+  ],
+  "full_kernel_commands": 40,
+  "helper_sha256": "2d26174845d3751c91dba30142fdfade18729113fbd956b0fb8db30417ecfab9",
+  "recipes_sha256": "0a7dc11e795268c1bc5ae8044f81595293f489a9136746b1b79a87e0630c6021",
+  "scope": [
+    "Actual standalone kernel processes on independently hash-pinned complete input bytes; no producer_delta or engine imports.",
+    "Times diagnostic only, not benchmark; executable hashes separately identify current and preserved449 builds.",
+    "Negative semantic classifications follow the fixed malformed-node/proof/axiom fixtures and preserved raw diagnostics; code127 is never rejection."
+  ],
+  "source": "5dfe38b01ca7b1c67f70be4ffb2479978049239e",
+  "source_Rust_unchanged_from6e": {
+    "Cargo.lock": "19fe44c5bc9ea6eb2aadaaf891f46bed34bfb88c7f92f235d6bef1de121a4249",
+    "Cargo.toml": "4dd8aef398c79ce989f3d082f598960e4c4b364ec64b1264622d68b7e791f2b0",
+    "src/bin/check_selected.rs": "cfdb173d17f29259289d6df99870aa3d3ee887a77588d368dcd7d1d22e13466c",
+    "src/bin/check_selected_retained_session.rs": "d732e8695ae196b7b77a287fe5138b828684c413e7fe001122c1a044762a92cd",
+    "src/bin/export_index.rs": "f5b557a12b7555d6683b39e691ccb28c87254cdb634531b52e0b2fdc94e74ddc",
+    "src/bin/index_session.rs": "61b0557ccd3c84db5dd0e29b7dc6d57eb1f75cc730af55b0f15799b105f2d02d",
+    "src/conv.rs": "79ff3581d0d0347c67b267e789866f947ba22dbd152178566f52e409eb19ec20",
+    "src/debug_printer.rs": "02a5afd74a72521a9a44dd30aa15ff3cb708f9ab9b823549e9b0e51fdb8200f9",
+    "src/env.rs": "e4666cd98c97021a5b22af5d7cb29e6ef82311283087bf8313ec5ddf371b1b01",
+    "src/eval.rs": "2cdae4102d867315bcaa1d6c233f858ca5edead18e11cbfd64569b07acba178b",
+    "src/expr.rs": "82bcf59fd2e4b93d56fc02981778eaf4a2bc525cf5e9f863d4773330dc3bd64f",
+    "src/flash.rs": "e268693db385c4295ab47020883a5edee6ca991acb4c3cda49a0c2c39917cfef",
+    "src/identity.rs": "94fb398533900c80b44679f3539336c92d06473c5ba66250f27f64e3f2d0540e",
+    "src/identity_support.rs": "6d50c7bda3f855a98140363aab935a16da8a04d4b2bc62e913da42853772f95c",
+    "src/inductive.rs": "3adb50c518e3df64d1ada7ec1a046c3520f62a68143bf3ac361860d347e3f320",
+    "src/infer.rs": "833c7a30a07c67bfd5eeaffd1f69195e79095df0b9182ae24f58407e7969f977",
+    "src/level.rs": "af3b0754d7a665411184c6e355a0b298b3911e3aad9059f14ed9224faa139227",
+    "src/lib.rs": "fc6615df29c4f1244746ea79910955360a112748650bf9792b59bcc62a053d4a",
+    "src/main.rs": "a1e41cb60edacaed4a4a6bc4dccd7c84f8113c020986e1fa6a36911d9ddd0592",
+    "src/name.rs": "88024c8461118839504eed8f26c053c2b0843d86011935253047dbc3b87c4481",
+    "src/parser.rs": "a49ea93f9d9a990b6ca5ea402304a237f2a76bd52a3874e0ea7648cff77a3938",
+    "src/quot.rs": "ca9ba5ca4b2be53210f9bbdbfc42f66b6fd1017b6ee4d2828dac01df17d497e7",
+    "src/quote.rs": "f6c24a59e4f8a14308a3a4ac7ec84b5ccda708de890a5b64dfbcc1d0b4ce6992",
+    "src/relevance.rs": "47a8af94bc6aaeb54a9ad4914340013c71333b1833c0b5d2228df973646528b0",
+    "src/tc.rs": "0f0d84f415638b70f328ffd3e491c800d61e2d26de6c9f94fc9c516471b41648",
+    "src/tests.rs": "594aac68cef5af3c6c9513c09846c27b041d43b855828e2ec742ca1dd4173e56",
+    "src/tests/level.rs": "d1b4714911480885a0571d7ee4111e3b10b1f8722fb61c4be1c33b0431aebb04",
+    "src/tests/natlit.rs": "49e012cf9af881c4d3205795d2ced385e39128baa53770806489b69aaa1674fe",
+    "src/tests/util.rs": "5d70289aa6c30e30d34a691e5a1c51c2041b34ba2596d360c3e9032e7da16d15",
+    "src/util.rs": "f88b6e9babd1a2ab19de60ee4eb63cd66c9ef5b4ed21c7b5a8f95472a74f0af7",
+    "src/value.rs": "c2732653cc40aa37f38fa4c47d95420fdf42bc4f938462fe8b1fdf094f946fce"
+  },
+  "status": "PASS_FRESH_STANDALONE_40_FULL_8_ZERO_SELECTED",
+  "tools": {
+    "current-rust": {
+      "path": "/workspace/mathgraph-lean-kernel/target/release/sokonanoda",
+      "sha256": "fe85456cceb6c0118b26d119594705b93a96fa7903a5d2101f521e9e0a01c6ef"
+    },
+    "current-zero-selected": {
+      "path": "/workspace/mathgraph-lean-kernel/target/release/check-selected",
+      "sha256": "1134d284feee046aa4e7d10790e1658df3bb1ebd1019e416179a8a22d01b801e"
+    },
+    "normal-cpp": {
+      "path": "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+      "sha256": "12c38901cdbfab178f1bf6145dd30012e9a3b2c11ca695292a5884fa3cbaddb6"
+    },
+    "paranoid-cpp": {
+      "path": "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker-paranoid",
+      "sha256": "ca74d1e9a856149ed05acb600d8931a574dd9f465745beeaf93e3de7b7cbe274"
+    },
+    "qualified449-rust": {
+      "path": "/workspace/kernel-audit/retained-index/qualified-449-baseline/bin/sokonanoda",
+      "sha256": "e813211867f7e555f44e35f0a8b1e143be5ffbea5f7548e99022e704f3f7b441"
+    },
+    "qualified449-zero-selected": {
+      "path": "/workspace/kernel-audit/retained-index/qualified-449-baseline/bin/check-selected",
+      "sha256": "656c38d147833d2b08caea1829950e0ce631a44e0f8f10641fbc7201c85be6e9"
+    },
+    "retained-native": {
+      "path": "/workspace/mathgraph-lean-kernel/target/release/check-selected-retained-session",
+      "sha256": "1b48a98a13f8f80eef446facd4a57ac462bfcf6bda722849af7abe6bbf3be413"
+    }
+  },
+  "zero_selected_parser_commands": 8
+}

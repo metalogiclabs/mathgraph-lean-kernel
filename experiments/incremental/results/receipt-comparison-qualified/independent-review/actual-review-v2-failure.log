@@ -1,0 +1,17 @@
+Traceback (most recent call last):
+  File "/workspace/kernel-audit/retained-admission-continuation/receipt-comparison-review/review_receipt_comparison.py", line 544, in <module>
+    if __name__=='__main__':main()
+                            ^^^^^^
+  File "/workspace/kernel-audit/retained-admission-continuation/receipt-comparison-review/review_receipt_comparison.py", line 541, in main
+    result=review(args);print(json.dumps({k:result[k] for k in ('status','passed','check_count','source')}))
+           ^^^^^^^^^^^^
+  File "/workspace/kernel-audit/retained-admission-continuation/receipt-comparison-review/review_receipt_comparison.py", line 428, in review
+    r=art.load('receipt-comparison/summary.json');out=comparison_check(r,args.source,c);source_check(c,r,args.repo,args.source)
+                                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/kernel-audit/retained-admission-continuation/receipt-comparison-review/review_receipt_comparison.py", line 175, in comparison_check
+    c.eq('comparison:cold passed',cold['passed'],True);arm_check(c,cold['arm'],profile,'early-definition',mode,report['binary_sha256'],cold=True)
+                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/kernel-audit/retained-admission-continuation/receipt-comparison-review/review_receipt_comparison.py", line 130, in arm_check
+    c.need('arm:honest memory scope','cumulative' in m['scope'] and 'not exact phase peaks' in m['scope'])
+                                                     ~^^^^^^^^^
+TypeError: 'NoneType' object is not subscriptable

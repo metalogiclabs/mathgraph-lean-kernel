@@ -1,0 +1,628 @@
+{
+  "schema": "mathgraph.receipt-comparison-decoded-ci-log-review.v1",
+  "scope": "Provider decoded log and strict publisher observations; artifact arithmetic/phase replay reviewed separately.",
+  "observations": {
+    "original-197": {
+      "summary_sha256": "534486cbf76256669caca70a7f630194b5fb46ea0129091cd386ae17f7cb256e",
+      "gates": 197,
+      "all_gates_passed": true,
+      "economic_status": null
+    },
+    "native-335": {
+      "summary_sha256": "8c3176240ff3940f619aa05113ba1393f0fa3ff5e911c6be7143599be19bbbda",
+      "gates": 335,
+      "all_gates_passed": true,
+      "economic_status": null
+    },
+    "independent-719": {
+      "summary_sha256": "5665cc9928818294f0e0c927e34dec5f9c6dea07860a5dfda4dc9a9f46c889d1",
+      "gates": 719,
+      "all_gates_passed": true,
+      "economic_status": null
+    },
+    "old-binary-251": {
+      "summary_sha256": "4143459ef04fd5d4651a9b9d677b73f8a3991306cf2c4cee75f58f7017ec824c",
+      "gates": 251,
+      "all_gates_passed": true,
+      "economic_status": "NO_SPEEDUP"
+    },
+    "source-and-binaries": {
+      "source_manifest_sha256": "c97db2d1ef4ec0d372435644c3dd994e2bbfe9738808be2cce49e2219a5c6779",
+      "binary_manifest_sha256": "2194d60a60027709530f1833884dab309f91b02e4d64303914c12cbb432ded64",
+      "stable": true
+    },
+    "protected-shared-default": {
+      "summary_sha256": "ea0f548ba117a4b4b4ee624f54479f7f4fb2991f0f8cb05f0187b33785f7b66b",
+      "required_gates": {
+        "original": 246,
+        "expanded": 229
+      }
+    },
+    "retained-parser-shadow": {
+      "summary_sha256": "e01e73c84144b22feb2e6e14bbfd7e6f76f41da2d3b7348777199946bb6b1a25",
+      "negative_controls": 4,
+      "complete": true
+    },
+    "receipt-comparison": {
+      "summary_sha256": "bcc69f28a8fd2c088a60fcaf83b844e2f6bf80c1d84e36b1b32320445291905b",
+      "pairs": 20,
+      "actual_arms": 40,
+      "cold_replays": 4,
+      "economics": {
+        "original": {
+          "early-definition": {
+            "warm_economics": {
+              "passed": true,
+              "status": "SPEEDUP",
+              "apply_median_wall_seconds": 0.135640389999935,
+              "direct_median_wall_seconds": 0.16490737200001604,
+              "median_ratio": 0.8225247201193758,
+              "paired_wins": 5,
+              "paired_count": 5,
+              "bootstrap_ratio_interval_95": [
+                0.8038410001129345,
+                0.8758519491957337
+              ],
+              "bootstrap_repetitions": 10000,
+              "bootstrap_seed": 20261017,
+              "setup_in_timed_update": false,
+              "scope": "Same-source retained-kernel receipt issuance: shared JSON comparison versus canonical JSON comparison. Observed wall_seconds.",
+              "measurement": "wall_seconds",
+              "candidate_arm": "shared_json",
+              "control_arm": "canonical_json"
+            },
+            "warm_cpu_economics": {
+              "passed": true,
+              "status": "SPEEDUP",
+              "apply_median_wall_seconds": 0.13601200000000802,
+              "direct_median_wall_seconds": 0.1635570000000115,
+              "median_ratio": 0.8315877645102224,
+              "paired_wins": 5,
+              "paired_count": 5,
+              "bootstrap_ratio_interval_95": [
+                0.6919783923154341,
+                0.9484259005572448
+              ],
+              "bootstrap_repetitions": 10000,
+              "bootstrap_seed": 20261028,
+              "setup_in_timed_update": false,
+              "scope": "Same-source retained-kernel receipt issuance: shared JSON comparison versus canonical JSON comparison. Complete apply CPU.",
+              "measurement": "cpu_seconds",
+              "candidate_arm": "shared_json",
+              "control_arm": "canonical_json"
+            },
+            "persistence_economics": {
+              "passed": true,
+              "status": "SPEEDUP",
+              "apply_median_wall_seconds": 0.03647037200016712,
+              "direct_median_wall_seconds": 0.06417390200022055,
+              "median_ratio": 0.568305352541003,
+              "paired_wins": 5,
+              "paired_count": 5,
+              "bootstrap_ratio_interval_95": [
+                0.2810487161452455,
+                0.5964599144684561
+              ],
+              "bootstrap_repetitions": 10000,
+              "bootstrap_seed": 20261030,
+              "setup_in_timed_update": false,
+              "scope": "Same-source retained-kernel receipt issuance: shared JSON comparison versus canonical JSON comparison. Observed persistence_seconds.",
+              "measurement": "persistence_seconds",
+              "candidate_arm": "shared_json",
+              "control_arm": "canonical_json"
+            },
+            "setup_plus_one_apply_component_sum_economics": {
+              "passed": true,
+              "status": "SPEEDUP",
+              "apply_median_wall_seconds": 4.193440280000232,
+              "direct_median_wall_seconds": 4.2228021280002395,
+              "median_ratio": 0.9930468330956552,
+              "paired_wins": 5,
+              "paired_count": 5,
+              "bootstrap_ratio_interval_95": [
+                0.9908533294174682,
+                0.999416508645015
+              ],
+              "bootstrap_repetitions": 10000,
+              "bootstrap_seed": 20261031,
+              "setup_in_timed_update": true,
+              "scope": "Same-source retained-kernel receipt issuance: shared JSON comparison versus canonical JSON comparison. Observed setup_plus_apply_component_sum_seconds.",
+              "measurement": "setup_plus_apply_component_sum_seconds",
+              "candidate_arm": "shared_json",
+              "control_arm": "canonical_json"
+            },
+            "direct_full_rust_economics": {
+              "canonical_json": {
+                "passed": true,
+                "status": "SPEEDUP",
+                "apply_median_wall_seconds": 0.16490737200001604,
+                "direct_median_wall_seconds": 0.2783870430002935,
+                "median_ratio": 0.5923672676096573,
+                "paired_wins": 5,
+                "paired_count": 5,
+                "bootstrap_ratio_interval_95": [
+                  0.48060637788232186,
+                  0.5923672676096573
+                ],
+                "bootstrap_repetitions": 10000,
+                "bootstrap_seed": 20261029,
+                "setup_in_timed_update": false,
+                "scope": "Complete warm canonical_json apply versus fresh full Rust check of the same live sealed snapshot; distinct from receipt comparison.",
+                "measurement": "wall_seconds",
+                "candidate_arm": "canonical_json",
+                "control_arm": "same_snapshot_fresh_full_rust"
+              },
+              "shared_json": {
+                "passed": true,
+                "status": "SPEEDUP",
+                "apply_median_wall_seconds": 0.135640389999935,
+                "direct_median_wall_seconds": 0.284934106000037,
+                "median_ratio": 0.4760412570614393,
+                "paired_wins": 5,
+                "paired_count": 5,
+                "bootstrap_ratio_interval_95": [
+                  0.38436140060188567,
+                  0.5214605328299701
+                ],
+                "bootstrap_repetitions": 10000,
+                "bootstrap_seed": 20261029,
+                "setup_in_timed_update": false,
+                "scope": "Complete warm shared_json apply versus fresh full Rust check of the same live sealed snapshot; distinct from receipt comparison.",
+                "measurement": "wall_seconds",
+                "candidate_arm": "shared_json",
+                "control_arm": "same_snapshot_fresh_full_rust"
+              }
+            }
+          },
+          "unrelated-definition": {
+            "warm_economics": {
+              "passed": true,
+              "status": "SPEEDUP",
+              "apply_median_wall_seconds": 0.10301375500012,
+              "direct_median_wall_seconds": 0.13064146499982598,
+              "median_ratio": 0.7885226562658129,
+              "paired_wins": 5,
+              "paired_count": 5,
+              "bootstrap_ratio_interval_95": [
+                0.591586813389589,
+                0.8283502859143088
+              ],
+              "bootstrap_repetitions": 10000,
+              "bootstrap_seed": 20261017,
+              "setup_in_timed_update": false,
+              "scope": "Same-source retained-kernel receipt issuance: shared JSON comparison versus canonical JSON comparison. Observed wall_seconds.",
+              "measurement": "wall_seconds",
+              "candidate_arm": "shared_json",
+              "control_arm": "canonical_json"
+            },
+            "warm_cpu_economics": {
+              "passed": true,
+              "status": "SPEEDUP",
+              "apply_median_wall_seconds": 0.09789800000001492,
+              "direct_median_wall_seconds": 0.1253229999999803,
+              "median_ratio": 0.7811654684298197,
+              "paired_wins": 5,
+              "paired_count": 5,
+              "bootstrap_ratio_interval_95": [
+                0.6558988413064653,
+                0.8295596750999551
+              ],
+              "bootstrap_repetitions": 10000,
+              "bootstrap_seed": 20261028,
+              "setup_in_timed_update": false,
+              "scope": "Same-source retained-kernel receipt issuance: shared JSON comparison versus canonical JSON comparison. Complete apply CPU.",
+              "measurement": "cpu_seconds",
+              "candidate_arm": "shared_json",
+              "control_arm": "canonical_json"
+            },
+            "persistence_economics": {
+              "passed": true,
+              "status": "SPEEDUP",
+              "apply_median_wall_seconds": 0.036987781999869185,
+              "direct_median_wall_seconds": 0.06258524900022167,
+              "median_ratio": 0.5909983996346836,
+              "paired_wins": 5,
+              "paired_count": 5,
+              "bootstrap_ratio_interval_95": [
+                0.14076968173480456,
+                0.6080676560280353
+              ],
+              "bootstrap_repetitions": 10000,
+              "bootstrap_seed": 20261030,
+              "setup_in_timed_update": false,
+              "scope": "Same-source retained-kernel receipt issuance: shared JSON comparison versus canonical JSON comparison. Observed persistence_seconds.",
+              "measurement": "persistence_seconds",
+              "candidate_arm": "shared_json",
+              "control_arm": "canonical_json"
+            },
+            "setup_plus_one_apply_component_sum_economics": {
+              "passed": false,
+              "status": "NO_SPEEDUP",
+              "apply_median_wall_seconds": 4.172808613000143,
+              "direct_median_wall_seconds": 4.184865395999623,
+              "median_ratio": 0.9971189556034454,
+              "paired_wins": 4,
+              "paired_count": 5,
+              "bootstrap_ratio_interval_95": [
+                0.9942744168610718,
+                1.0023252574452173
+              ],
+              "bootstrap_repetitions": 10000,
+              "bootstrap_seed": 20261031,
+              "setup_in_timed_update": true,
+              "scope": "Same-source retained-kernel receipt issuance: shared JSON comparison versus canonical JSON comparison. Observed setup_plus_apply_component_sum_seconds.",
+              "measurement": "setup_plus_apply_component_sum_seconds",
+              "candidate_arm": "shared_json",
+              "control_arm": "canonical_json"
+            },
+            "direct_full_rust_economics": {
+              "canonical_json": {
+                "passed": true,
+                "status": "SPEEDUP",
+                "apply_median_wall_seconds": 0.13064146499982598,
+                "direct_median_wall_seconds": 0.2807821699998385,
+                "median_ratio": 0.46527692623752115,
+                "paired_wins": 5,
+                "paired_count": 5,
+                "bootstrap_ratio_interval_95": [
+                  0.4461478804006592,
+                  0.47183913964036783
+                ],
+                "bootstrap_repetitions": 10000,
+                "bootstrap_seed": 20261029,
+                "setup_in_timed_update": false,
+                "scope": "Complete warm canonical_json apply versus fresh full Rust check of the same live sealed snapshot; distinct from receipt comparison.",
+                "measurement": "wall_seconds",
+                "candidate_arm": "canonical_json",
+                "control_arm": "same_snapshot_fresh_full_rust"
+              },
+              "shared_json": {
+                "passed": true,
+                "status": "SPEEDUP",
+                "apply_median_wall_seconds": 0.10301375500012,
+                "direct_median_wall_seconds": 0.2785947259999375,
+                "median_ratio": 0.3697620428038652,
+                "paired_wins": 5,
+                "paired_count": 5,
+                "bootstrap_ratio_interval_95": [
+                  0.26600754459468484,
+                  0.37469125848683715
+                ],
+                "bootstrap_repetitions": 10000,
+                "bootstrap_seed": 20261029,
+                "setup_in_timed_update": false,
+                "scope": "Complete warm shared_json apply versus fresh full Rust check of the same live sealed snapshot; distinct from receipt comparison.",
+                "measurement": "wall_seconds",
+                "candidate_arm": "shared_json",
+                "control_arm": "same_snapshot_fresh_full_rust"
+              }
+            }
+          }
+        },
+        "expanded": {
+          "early-definition": {
+            "warm_economics": {
+              "passed": true,
+              "status": "SPEEDUP",
+              "apply_median_wall_seconds": 0.40183003499987535,
+              "direct_median_wall_seconds": 0.4191354859999592,
+              "median_ratio": 0.9587115584861609,
+              "paired_wins": 5,
+              "paired_count": 5,
+              "bootstrap_ratio_interval_95": [
+                0.5399026602846984,
+                0.9769473897517028
+              ],
+              "bootstrap_repetitions": 10000,
+              "bootstrap_seed": 20261017,
+              "setup_in_timed_update": false,
+              "scope": "Same-source retained-kernel receipt issuance: shared JSON comparison versus canonical JSON comparison. Observed wall_seconds.",
+              "measurement": "wall_seconds",
+              "candidate_arm": "shared_json",
+              "control_arm": "canonical_json"
+            },
+            "warm_cpu_economics": {
+              "passed": true,
+              "status": "SPEEDUP",
+              "apply_median_wall_seconds": 0.39963699999987057,
+              "direct_median_wall_seconds": 0.4225549999998748,
+              "median_ratio": 0.9457632734200021,
+              "paired_wins": 5,
+              "paired_count": 5,
+              "bootstrap_ratio_interval_95": [
+                0.5363341974887671,
+                0.9873476854080843
+              ],
+              "bootstrap_repetitions": 10000,
+              "bootstrap_seed": 20261028,
+              "setup_in_timed_update": false,
+              "scope": "Same-source retained-kernel receipt issuance: shared JSON comparison versus canonical JSON comparison. Complete apply CPU.",
+              "measurement": "cpu_seconds",
+              "candidate_arm": "shared_json",
+              "control_arm": "canonical_json"
+            },
+            "persistence_economics": {
+              "passed": true,
+              "status": "SPEEDUP",
+              "apply_median_wall_seconds": 0.029815318000146362,
+              "direct_median_wall_seconds": 0.16281862400001046,
+              "median_ratio": 0.18311982540857516,
+              "paired_wins": 5,
+              "paired_count": 5,
+              "bootstrap_ratio_interval_95": [
+                0.10304313773805501,
+                0.9557676890816601
+              ],
+              "bootstrap_repetitions": 10000,
+              "bootstrap_seed": 20261030,
+              "setup_in_timed_update": false,
+              "scope": "Same-source retained-kernel receipt issuance: shared JSON comparison versus canonical JSON comparison. Observed persistence_seconds.",
+              "measurement": "persistence_seconds",
+              "candidate_arm": "shared_json",
+              "control_arm": "canonical_json"
+            },
+            "setup_plus_one_apply_component_sum_economics": {
+              "passed": false,
+              "status": "NO_SPEEDUP",
+              "apply_median_wall_seconds": 15.557456122000076,
+              "direct_median_wall_seconds": 15.586374497999714,
+              "median_ratio": 0.9981446374201166,
+              "paired_wins": 3,
+              "paired_count": 5,
+              "bootstrap_ratio_interval_95": [
+                0.9780586082927232,
+                1.007043339969814
+              ],
+              "bootstrap_repetitions": 10000,
+              "bootstrap_seed": 20261031,
+              "setup_in_timed_update": true,
+              "scope": "Same-source retained-kernel receipt issuance: shared JSON comparison versus canonical JSON comparison. Observed setup_plus_apply_component_sum_seconds.",
+              "measurement": "setup_plus_apply_component_sum_seconds",
+              "candidate_arm": "shared_json",
+              "control_arm": "canonical_json"
+            },
+            "direct_full_rust_economics": {
+              "canonical_json": {
+                "passed": true,
+                "status": "SPEEDUP",
+                "apply_median_wall_seconds": 0.4191354859999592,
+                "direct_median_wall_seconds": 1.1754771350001647,
+                "median_ratio": 0.356566260219005,
+                "paired_wins": 5,
+                "paired_count": 5,
+                "bootstrap_ratio_interval_95": [
+                  0.3374755960623302,
+                  0.45817057401343725
+                ],
+                "bootstrap_repetitions": 10000,
+                "bootstrap_seed": 20261029,
+                "setup_in_timed_update": false,
+                "scope": "Complete warm canonical_json apply versus fresh full Rust check of the same live sealed snapshot; distinct from receipt comparison.",
+                "measurement": "wall_seconds",
+                "candidate_arm": "canonical_json",
+                "control_arm": "same_snapshot_fresh_full_rust"
+              },
+              "shared_json": {
+                "passed": true,
+                "status": "SPEEDUP",
+                "apply_median_wall_seconds": 0.40183003499987535,
+                "direct_median_wall_seconds": 1.1839288149999447,
+                "median_ratio": 0.3394038813050547,
+                "paired_wins": 5,
+                "paired_count": 5,
+                "bootstrap_ratio_interval_95": [
+                  0.242338547522622,
+                  0.3538966313940147
+                ],
+                "bootstrap_repetitions": 10000,
+                "bootstrap_seed": 20261029,
+                "setup_in_timed_update": false,
+                "scope": "Complete warm shared_json apply versus fresh full Rust check of the same live sealed snapshot; distinct from receipt comparison.",
+                "measurement": "wall_seconds",
+                "candidate_arm": "shared_json",
+                "control_arm": "same_snapshot_fresh_full_rust"
+              }
+            }
+          },
+          "unrelated-definition": {
+            "warm_economics": {
+              "passed": true,
+              "status": "SPEEDUP",
+              "apply_median_wall_seconds": 0.2605041460001303,
+              "direct_median_wall_seconds": 0.5030917200001568,
+              "median_ratio": 0.517806466781145,
+              "paired_wins": 5,
+              "paired_count": 5,
+              "bootstrap_ratio_interval_95": [
+                0.5008166558817669,
+                0.9643897138069619
+              ],
+              "bootstrap_repetitions": 10000,
+              "bootstrap_seed": 20261017,
+              "setup_in_timed_update": false,
+              "scope": "Same-source retained-kernel receipt issuance: shared JSON comparison versus canonical JSON comparison. Observed wall_seconds.",
+              "measurement": "wall_seconds",
+              "candidate_arm": "shared_json",
+              "control_arm": "canonical_json"
+            },
+            "warm_cpu_economics": {
+              "passed": true,
+              "status": "SPEEDUP",
+              "apply_median_wall_seconds": 0.2807439999999133,
+              "direct_median_wall_seconds": 0.5147149999999101,
+              "median_ratio": 0.5454358237081925,
+              "paired_wins": 5,
+              "paired_count": 5,
+              "bootstrap_ratio_interval_95": [
+                0.4454795372198846,
+                0.968847752284283
+              ],
+              "bootstrap_repetitions": 10000,
+              "bootstrap_seed": 20261028,
+              "setup_in_timed_update": false,
+              "scope": "Same-source retained-kernel receipt issuance: shared JSON comparison versus canonical JSON comparison. Complete apply CPU.",
+              "measurement": "cpu_seconds",
+              "candidate_arm": "shared_json",
+              "control_arm": "canonical_json"
+            },
+            "persistence_economics": {
+              "passed": true,
+              "status": "SPEEDUP",
+              "apply_median_wall_seconds": 0.0293255350002255,
+              "direct_median_wall_seconds": 0.26858917600020504,
+              "median_ratio": 0.10918360686360315,
+              "paired_wins": 5,
+              "paired_count": 5,
+              "bootstrap_ratio_interval_95": [
+                0.10151775324864244,
+                0.19072235178141278
+              ],
+              "bootstrap_repetitions": 10000,
+              "bootstrap_seed": 20261030,
+              "setup_in_timed_update": false,
+              "scope": "Same-source retained-kernel receipt issuance: shared JSON comparison versus canonical JSON comparison. Observed persistence_seconds.",
+              "measurement": "persistence_seconds",
+              "candidate_arm": "shared_json",
+              "control_arm": "canonical_json"
+            },
+            "setup_plus_one_apply_component_sum_economics": {
+              "passed": false,
+              "status": "NO_SPEEDUP",
+              "apply_median_wall_seconds": 15.422269593999772,
+              "direct_median_wall_seconds": 15.670200893000583,
+              "median_ratio": 0.9841781671662196,
+              "paired_wins": 4,
+              "paired_count": 5,
+              "bootstrap_ratio_interval_95": [
+                0.9704584317614972,
+                1.0093838478277037
+              ],
+              "bootstrap_repetitions": 10000,
+              "bootstrap_seed": 20261031,
+              "setup_in_timed_update": true,
+              "scope": "Same-source retained-kernel receipt issuance: shared JSON comparison versus canonical JSON comparison. Observed setup_plus_apply_component_sum_seconds.",
+              "measurement": "setup_plus_apply_component_sum_seconds",
+              "candidate_arm": "shared_json",
+              "control_arm": "canonical_json"
+            },
+            "direct_full_rust_economics": {
+              "canonical_json": {
+                "passed": true,
+                "status": "SPEEDUP",
+                "apply_median_wall_seconds": 0.5030917200001568,
+                "direct_median_wall_seconds": 1.1613280430001396,
+                "median_ratio": 0.4332037989029223,
+                "paired_wins": 5,
+                "paired_count": 5,
+                "bootstrap_ratio_interval_95": [
+                  0.33654430232323335,
+                  0.4511897535864864
+                ],
+                "bootstrap_repetitions": 10000,
+                "bootstrap_seed": 20261029,
+                "setup_in_timed_update": false,
+                "scope": "Complete warm canonical_json apply versus fresh full Rust check of the same live sealed snapshot; distinct from receipt comparison.",
+                "measurement": "wall_seconds",
+                "candidate_arm": "canonical_json",
+                "control_arm": "same_snapshot_fresh_full_rust"
+              },
+              "shared_json": {
+                "passed": true,
+                "status": "SPEEDUP",
+                "apply_median_wall_seconds": 0.2605041460001303,
+                "direct_median_wall_seconds": 1.1743518019998191,
+                "median_ratio": 0.22182802934905396,
+                "paired_wins": 5,
+                "paired_count": 5,
+                "bootstrap_ratio_interval_95": [
+                  0.21700909218902145,
+                  0.3209604399276761
+                ],
+                "bootstrap_repetitions": 10000,
+                "bootstrap_seed": 20261029,
+                "setup_in_timed_update": false,
+                "scope": "Complete warm shared_json apply versus fresh full Rust check of the same live sealed snapshot; distinct from receipt comparison.",
+                "measurement": "wall_seconds",
+                "candidate_arm": "shared_json",
+                "control_arm": "same_snapshot_fresh_full_rust"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "compact_warm_rows": [
+    {
+      "profile": "original",
+      "variant": "early-definition",
+      "warm_status": "SPEEDUP",
+      "canonical_ms": 164.90737200001604,
+      "shared_ms": 135.640389999935,
+      "saving_percent": 17.747527988062416,
+      "wins": 5,
+      "pairs": 5,
+      "ratio_ci95": [
+        0.8038410001129345,
+        0.8758519491957337
+      ],
+      "warm_cpu_status": "SPEEDUP",
+      "setup_plus_one_apply_components_status": "SPEEDUP",
+      "persistence_status": "SPEEDUP"
+    },
+    {
+      "profile": "original",
+      "variant": "unrelated-definition",
+      "warm_status": "SPEEDUP",
+      "canonical_ms": 130.64146499982598,
+      "shared_ms": 103.01375500012,
+      "saving_percent": 21.147734373418714,
+      "wins": 5,
+      "pairs": 5,
+      "ratio_ci95": [
+        0.591586813389589,
+        0.8283502859143088
+      ],
+      "warm_cpu_status": "SPEEDUP",
+      "setup_plus_one_apply_components_status": "NO_SPEEDUP",
+      "persistence_status": "SPEEDUP"
+    },
+    {
+      "profile": "expanded",
+      "variant": "early-definition",
+      "warm_status": "SPEEDUP",
+      "canonical_ms": 419.1354859999592,
+      "shared_ms": 401.83003499987535,
+      "saving_percent": 4.128844151383914,
+      "wins": 5,
+      "pairs": 5,
+      "ratio_ci95": [
+        0.5399026602846984,
+        0.9769473897517028
+      ],
+      "warm_cpu_status": "SPEEDUP",
+      "setup_plus_one_apply_components_status": "NO_SPEEDUP",
+      "persistence_status": "SPEEDUP"
+    },
+    {
+      "profile": "expanded",
+      "variant": "unrelated-definition",
+      "warm_status": "SPEEDUP",
+      "canonical_ms": 503.0917200001568,
+      "shared_ms": 260.5041460001303,
+      "saving_percent": 48.21935332188551,
+      "wins": 5,
+      "pairs": 5,
+      "ratio_ci95": [
+        0.5008166558817669,
+        0.9643897138069619
+      ],
+      "warm_cpu_status": "SPEEDUP",
+      "setup_plus_one_apply_components_status": "NO_SPEEDUP",
+      "persistence_status": "SPEEDUP"
+    }
+  ],
+  "failed_provider_steps": [],
+  "new_receipt_economics_distinct_from_old_binary_251": true,
+  "no_full_archive_downloaded": true
+}

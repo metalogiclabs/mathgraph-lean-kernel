@@ -1,0 +1,1167 @@
+{
+  "schema": "mathgraph.independent-receipt-comparison-economics.v1",
+  "source_sha": "5dfe38b01ca7b1c67f70be4ffb2479978049239e",
+  "summary_sha256": "bcc69f28a8fd2c088a60fcaf83b844e2f6bf80c1d84e36b1b32320445291905b",
+  "imports_project_code": false,
+  "arithmetic_checks": [
+    {
+      "case": "original/early-definition/warm_economics",
+      "all_published_arithmetic_exact": true,
+      "status": "SPEEDUP"
+    },
+    {
+      "case": "original/early-definition/selected_kernel_economics",
+      "all_published_arithmetic_exact": true,
+      "status": "NO_SPEEDUP"
+    },
+    {
+      "case": "original/early-definition/persistence_economics",
+      "all_published_arithmetic_exact": true,
+      "status": "SPEEDUP"
+    },
+    {
+      "case": "original/early-definition/setup_plus_one_apply_component_sum_economics",
+      "all_published_arithmetic_exact": true,
+      "status": "SPEEDUP"
+    },
+    {
+      "case": "original/early-definition/CPU",
+      "all_published_arithmetic_exact": true,
+      "status": "SPEEDUP"
+    },
+    {
+      "case": "original/early-definition/direct/canonical_json",
+      "all_published_arithmetic_exact": true,
+      "status": "SPEEDUP"
+    },
+    {
+      "case": "original/early-definition/direct/shared_json",
+      "all_published_arithmetic_exact": true,
+      "status": "SPEEDUP"
+    },
+    {
+      "case": "original/unrelated-definition/warm_economics",
+      "all_published_arithmetic_exact": true,
+      "status": "SPEEDUP"
+    },
+    {
+      "case": "original/unrelated-definition/selected_kernel_economics",
+      "all_published_arithmetic_exact": true,
+      "status": "NO_SPEEDUP"
+    },
+    {
+      "case": "original/unrelated-definition/persistence_economics",
+      "all_published_arithmetic_exact": true,
+      "status": "SPEEDUP"
+    },
+    {
+      "case": "original/unrelated-definition/setup_plus_one_apply_component_sum_economics",
+      "all_published_arithmetic_exact": true,
+      "status": "NO_SPEEDUP"
+    },
+    {
+      "case": "original/unrelated-definition/CPU",
+      "all_published_arithmetic_exact": true,
+      "status": "SPEEDUP"
+    },
+    {
+      "case": "original/unrelated-definition/direct/canonical_json",
+      "all_published_arithmetic_exact": true,
+      "status": "SPEEDUP"
+    },
+    {
+      "case": "original/unrelated-definition/direct/shared_json",
+      "all_published_arithmetic_exact": true,
+      "status": "SPEEDUP"
+    },
+    {
+      "case": "expanded/early-definition/warm_economics",
+      "all_published_arithmetic_exact": true,
+      "status": "SPEEDUP"
+    },
+    {
+      "case": "expanded/early-definition/selected_kernel_economics",
+      "all_published_arithmetic_exact": true,
+      "status": "NO_SPEEDUP"
+    },
+    {
+      "case": "expanded/early-definition/persistence_economics",
+      "all_published_arithmetic_exact": true,
+      "status": "SPEEDUP"
+    },
+    {
+      "case": "expanded/early-definition/setup_plus_one_apply_component_sum_economics",
+      "all_published_arithmetic_exact": true,
+      "status": "NO_SPEEDUP"
+    },
+    {
+      "case": "expanded/early-definition/CPU",
+      "all_published_arithmetic_exact": true,
+      "status": "SPEEDUP"
+    },
+    {
+      "case": "expanded/early-definition/direct/canonical_json",
+      "all_published_arithmetic_exact": true,
+      "status": "SPEEDUP"
+    },
+    {
+      "case": "expanded/early-definition/direct/shared_json",
+      "all_published_arithmetic_exact": true,
+      "status": "SPEEDUP"
+    },
+    {
+      "case": "expanded/unrelated-definition/warm_economics",
+      "all_published_arithmetic_exact": true,
+      "status": "SPEEDUP"
+    },
+    {
+      "case": "expanded/unrelated-definition/selected_kernel_economics",
+      "all_published_arithmetic_exact": true,
+      "status": "NO_SPEEDUP"
+    },
+    {
+      "case": "expanded/unrelated-definition/persistence_economics",
+      "all_published_arithmetic_exact": true,
+      "status": "SPEEDUP"
+    },
+    {
+      "case": "expanded/unrelated-definition/setup_plus_one_apply_component_sum_economics",
+      "all_published_arithmetic_exact": true,
+      "status": "NO_SPEEDUP"
+    },
+    {
+      "case": "expanded/unrelated-definition/CPU",
+      "all_published_arithmetic_exact": true,
+      "status": "SPEEDUP"
+    },
+    {
+      "case": "expanded/unrelated-definition/direct/canonical_json",
+      "all_published_arithmetic_exact": true,
+      "status": "SPEEDUP"
+    },
+    {
+      "case": "expanded/unrelated-definition/direct/shared_json",
+      "all_published_arithmetic_exact": true,
+      "status": "SPEEDUP"
+    }
+  ],
+  "all_28_published_comparisons_exact": true,
+  "cases": [
+    {
+      "profile": "original",
+      "variant": "early-definition",
+      "checked": 413,
+      "reused": 3023,
+      "independently_recomputed_economics": {
+        "warm_economics": {
+          "apply_median_wall_seconds": 0.135640389999935,
+          "direct_median_wall_seconds": 0.16490737200001604,
+          "median_ratio": 0.8225247201193758,
+          "paired_wins": 5,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.8038410001129345,
+            0.8758519491957337
+          ],
+          "passed": true,
+          "status": "SPEEDUP"
+        },
+        "selected_kernel_economics": {
+          "apply_median_wall_seconds": 0.036367902000165486,
+          "direct_median_wall_seconds": 0.03628211500017642,
+          "median_ratio": 1.0023644431971137,
+          "paired_wins": 2,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.9118155312512284,
+            1.1674945058460053
+          ],
+          "passed": false,
+          "status": "NO_SPEEDUP"
+        },
+        "persistence_economics": {
+          "apply_median_wall_seconds": 0.03647037200016712,
+          "direct_median_wall_seconds": 0.06417390200022055,
+          "median_ratio": 0.568305352541003,
+          "paired_wins": 5,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.2810487161452455,
+            0.5964599144684561
+          ],
+          "passed": true,
+          "status": "SPEEDUP"
+        },
+        "setup_plus_one_apply_component_sum_economics": {
+          "apply_median_wall_seconds": 4.193440280000232,
+          "direct_median_wall_seconds": 4.2228021280002395,
+          "median_ratio": 0.9930468330956552,
+          "paired_wins": 5,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.9908533294174682,
+            0.999416508645015
+          ],
+          "passed": true,
+          "status": "SPEEDUP"
+        },
+        "warm_cpu_economics": {
+          "apply_median_wall_seconds": 0.13601200000000802,
+          "direct_median_wall_seconds": 0.1635570000000115,
+          "median_ratio": 0.8315877645102224,
+          "paired_wins": 5,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.6919783923154341,
+            0.9484259005572448
+          ],
+          "passed": true,
+          "status": "SPEEDUP"
+        }
+      },
+      "median_phase_seconds": {
+        "canonical_json": {
+          "baseline_validation_cpu_seconds": 0.00014399999999170632,
+          "baseline_validation_seconds": 0.00014409899995371234,
+          "checking_cpu_seconds": 0.04032799999998815,
+          "checking_seconds": 0.03628211500017642,
+          "consumer_cpu_seconds": 0.14036400000000526,
+          "consumer_seconds": 0.14025411700004042,
+          "end_to_end_cpu_seconds": 0.1635570000000115,
+          "end_to_end_seconds": 0.1647750659999474,
+          "identity_update_cpu_seconds": 0.00030399999999985994,
+          "identity_update_seconds": 0.0012714670001514605,
+          "materialization_and_hash_cpu_seconds": 0.029539999999997235,
+          "materialization_and_hash_seconds": 0.029545618999691214,
+          "persistence_cpu_seconds": 0.06262999999999863,
+          "persistence_seconds": 0.06417390200022055,
+          "producer_seconds": 0.023956955000357993,
+          "setup_wall_seconds": 4.059982608000155,
+          "setup_start_cpu_seconds": 3.6507779999999883
+        },
+        "shared_json": {
+          "baseline_validation_cpu_seconds": 0.00012800000000368073,
+          "baseline_validation_seconds": 0.00012742800026899204,
+          "checking_cpu_seconds": 0.030362999999994145,
+          "checking_seconds": 0.036367902000165486,
+          "consumer_cpu_seconds": 0.10524499999999648,
+          "consumer_seconds": 0.11126488300033088,
+          "end_to_end_cpu_seconds": 0.13601200000000802,
+          "end_to_end_seconds": 0.13550757299981342,
+          "identity_update_cpu_seconds": 0.00031700000000256523,
+          "identity_update_seconds": 0.0012569420000545506,
+          "materialization_and_hash_cpu_seconds": 0.029722999999997057,
+          "materialization_and_hash_seconds": 0.029728386999977374,
+          "persistence_cpu_seconds": 0.03515700000001232,
+          "persistence_seconds": 0.03647037200016712,
+          "producer_seconds": 0.023934104000090883,
+          "setup_wall_seconds": 4.0588563109999996,
+          "setup_start_cpu_seconds": 3.6639419999999916
+        }
+      },
+      "post_persistence_procfs_memory": {
+        "canonical_json": {
+          "adapter": {
+            "VmRSS": {
+              "observations": 5,
+              "median_kib": 169896,
+              "range_kib": [
+                138756,
+                171332
+              ]
+            },
+            "VmHWM": {
+              "observations": 5,
+              "median_kib": 399960,
+              "range_kib": [
+                324420,
+                401316
+              ]
+            }
+          },
+          "producer": {
+            "VmRSS": {
+              "observations": 5,
+              "median_kib": 595256,
+              "range_kib": [
+                592888,
+                595592
+              ]
+            },
+            "VmHWM": {
+              "observations": 5,
+              "median_kib": 595256,
+              "range_kib": [
+                592888,
+                595592
+              ]
+            }
+          },
+          "index": {
+            "VmRSS": {
+              "observations": 5,
+              "median_kib": 93656,
+              "range_kib": [
+                93588,
+                93656
+              ]
+            },
+            "VmHWM": {
+              "observations": 5,
+              "median_kib": 93656,
+              "range_kib": [
+                93588,
+                93656
+              ]
+            }
+          },
+          "retained_kernel": {
+            "VmRSS": {
+              "observations": 0,
+              "median_kib": null,
+              "range_kib": null
+            },
+            "VmHWM": {
+              "observations": 0,
+              "median_kib": null,
+              "range_kib": null
+            }
+          }
+        },
+        "shared_json": {
+          "adapter": {
+            "VmRSS": {
+              "observations": 5,
+              "median_kib": 168368,
+              "range_kib": [
+                149040,
+                170408
+              ]
+            },
+            "VmHWM": {
+              "observations": 5,
+              "median_kib": 400176,
+              "range_kib": [
+                359840,
+                401316
+              ]
+            }
+          },
+          "producer": {
+            "VmRSS": {
+              "observations": 5,
+              "median_kib": 595256,
+              "range_kib": [
+                593000,
+                595892
+              ]
+            },
+            "VmHWM": {
+              "observations": 5,
+              "median_kib": 595256,
+              "range_kib": [
+                593000,
+                595892
+              ]
+            }
+          },
+          "index": {
+            "VmRSS": {
+              "observations": 5,
+              "median_kib": 93592,
+              "range_kib": [
+                93584,
+                93652
+              ]
+            },
+            "VmHWM": {
+              "observations": 5,
+              "median_kib": 93592,
+              "range_kib": [
+                93584,
+                93652
+              ]
+            }
+          },
+          "retained_kernel": {
+            "VmRSS": {
+              "observations": 0,
+              "median_kib": null,
+              "range_kib": null
+            },
+            "VmHWM": {
+              "observations": 0,
+              "median_kib": null,
+              "range_kib": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "profile": "original",
+      "variant": "unrelated-definition",
+      "checked": 1,
+      "reused": 3435,
+      "independently_recomputed_economics": {
+        "warm_economics": {
+          "apply_median_wall_seconds": 0.10301375500012,
+          "direct_median_wall_seconds": 0.13064146499982598,
+          "median_ratio": 0.7885226562658129,
+          "paired_wins": 5,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.591586813389589,
+            0.8283502859143088
+          ],
+          "passed": true,
+          "status": "SPEEDUP"
+        },
+        "selected_kernel_economics": {
+          "apply_median_wall_seconds": 0.0019099099999948521,
+          "direct_median_wall_seconds": 0.001909518000047683,
+          "median_ratio": 1.0002052873799354,
+          "paired_wins": 3,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.976924568179822,
+            1.0606250760817457
+          ],
+          "passed": false,
+          "status": "NO_SPEEDUP"
+        },
+        "persistence_economics": {
+          "apply_median_wall_seconds": 0.036987781999869185,
+          "direct_median_wall_seconds": 0.06258524900022167,
+          "median_ratio": 0.5909983996346836,
+          "paired_wins": 5,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.14076968173480456,
+            0.6080676560280353
+          ],
+          "passed": true,
+          "status": "SPEEDUP"
+        },
+        "setup_plus_one_apply_component_sum_economics": {
+          "apply_median_wall_seconds": 4.172808613000143,
+          "direct_median_wall_seconds": 4.184865395999623,
+          "median_ratio": 0.9971189556034454,
+          "paired_wins": 4,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.9942744168610718,
+            1.0023252574452173
+          ],
+          "passed": false,
+          "status": "NO_SPEEDUP"
+        },
+        "warm_cpu_economics": {
+          "apply_median_wall_seconds": 0.09789800000001492,
+          "direct_median_wall_seconds": 0.1253229999999803,
+          "median_ratio": 0.7811654684298197,
+          "paired_wins": 5,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.6558988413064653,
+            0.8295596750999551
+          ],
+          "passed": true,
+          "status": "SPEEDUP"
+        }
+      },
+      "median_phase_seconds": {
+        "canonical_json": {
+          "baseline_validation_cpu_seconds": 0.0001469999999983429,
+          "baseline_validation_seconds": 0.00014725399978487985,
+          "checking_cpu_seconds": 0.0002539999999982001,
+          "checking_seconds": 0.001909518000047683,
+          "consumer_cpu_seconds": 0.10163399999999001,
+          "consumer_seconds": 0.10584749800000282,
+          "end_to_end_cpu_seconds": 0.1253229999999803,
+          "end_to_end_seconds": 0.1305076859998735,
+          "identity_update_cpu_seconds": 0.0002639999999871634,
+          "identity_update_seconds": 0.0012570620001497446,
+          "materialization_and_hash_cpu_seconds": 0.029706000000032873,
+          "materialization_and_hash_seconds": 0.029701273000227957,
+          "persistence_cpu_seconds": 0.06130799999999681,
+          "persistence_seconds": 0.06258524900022167,
+          "producer_seconds": 0.023298056999919936,
+          "setup_wall_seconds": 4.053291372000331,
+          "setup_start_cpu_seconds": 3.6500500000000216
+        },
+        "shared_json": {
+          "baseline_validation_cpu_seconds": 0.00013200000000779255,
+          "baseline_validation_seconds": 0.0001318260001426097,
+          "checking_cpu_seconds": 0.0002550000000098862,
+          "checking_seconds": 0.0019099099999948521,
+          "consumer_cpu_seconds": 0.07363399999999842,
+          "consumer_seconds": 0.0778795269998227,
+          "end_to_end_cpu_seconds": 0.09789800000001492,
+          "end_to_end_seconds": 0.10287872300023082,
+          "identity_update_cpu_seconds": 0.00027300000000707314,
+          "identity_update_seconds": 0.0012588260001393792,
+          "materialization_and_hash_cpu_seconds": 0.029801999999989448,
+          "materialization_and_hash_seconds": 0.02979962900008104,
+          "persistence_cpu_seconds": 0.03552799999999934,
+          "persistence_seconds": 0.036987781999869185,
+          "producer_seconds": 0.023397247000048083,
+          "setup_wall_seconds": 4.073595809999915,
+          "setup_start_cpu_seconds": 3.669933999999998
+        }
+      },
+      "post_persistence_procfs_memory": {
+        "canonical_json": {
+          "adapter": {
+            "VmRSS": {
+              "observations": 5,
+              "median_kib": 170308,
+              "range_kib": [
+                168572,
+                172356
+              ]
+            },
+            "VmHWM": {
+              "observations": 5,
+              "median_kib": 400192,
+              "range_kib": [
+                396908,
+                402416
+              ]
+            }
+          },
+          "producer": {
+            "VmRSS": {
+              "observations": 5,
+              "median_kib": 595064,
+              "range_kib": [
+                584940,
+                595328
+              ]
+            },
+            "VmHWM": {
+              "observations": 5,
+              "median_kib": 595064,
+              "range_kib": [
+                584940,
+                595328
+              ]
+            }
+          },
+          "index": {
+            "VmRSS": {
+              "observations": 5,
+              "median_kib": 93648,
+              "range_kib": [
+                93588,
+                93656
+              ]
+            },
+            "VmHWM": {
+              "observations": 5,
+              "median_kib": 93648,
+              "range_kib": [
+                93588,
+                93656
+              ]
+            }
+          },
+          "retained_kernel": {
+            "VmRSS": {
+              "observations": 0,
+              "median_kib": null,
+              "range_kib": null
+            },
+            "VmHWM": {
+              "observations": 0,
+              "median_kib": null,
+              "range_kib": null
+            }
+          }
+        },
+        "shared_json": {
+          "adapter": {
+            "VmRSS": {
+              "observations": 5,
+              "median_kib": 168368,
+              "range_kib": [
+                165528,
+                170416
+              ]
+            },
+            "VmHWM": {
+              "observations": 5,
+              "median_kib": 400176,
+              "range_kib": [
+                391328,
+                402312
+              ]
+            }
+          },
+          "producer": {
+            "VmRSS": {
+              "observations": 5,
+              "median_kib": 595388,
+              "range_kib": [
+                584828,
+                595628
+              ]
+            },
+            "VmHWM": {
+              "observations": 5,
+              "median_kib": 595388,
+              "range_kib": [
+                584828,
+                595628
+              ]
+            }
+          },
+          "index": {
+            "VmRSS": {
+              "observations": 5,
+              "median_kib": 93652,
+              "range_kib": [
+                93588,
+                93656
+              ]
+            },
+            "VmHWM": {
+              "observations": 5,
+              "median_kib": 93652,
+              "range_kib": [
+                93588,
+                93656
+              ]
+            }
+          },
+          "retained_kernel": {
+            "VmRSS": {
+              "observations": 0,
+              "median_kib": null,
+              "range_kib": null
+            },
+            "VmHWM": {
+              "observations": 0,
+              "median_kib": null,
+              "range_kib": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "profile": "expanded",
+      "variant": "early-definition",
+      "checked": 672,
+      "reused": 10981,
+      "independently_recomputed_economics": {
+        "warm_economics": {
+          "apply_median_wall_seconds": 0.40183003499987535,
+          "direct_median_wall_seconds": 0.4191354859999592,
+          "median_ratio": 0.9587115584861609,
+          "paired_wins": 5,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.5399026602846984,
+            0.9769473897517028
+          ],
+          "passed": true,
+          "status": "SPEEDUP"
+        },
+        "selected_kernel_economics": {
+          "apply_median_wall_seconds": 0.06877307600007043,
+          "direct_median_wall_seconds": 0.0666015920000973,
+          "median_ratio": 1.0326040854994871,
+          "paired_wins": 1,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.9792429897719781,
+            1.05940214272473
+          ],
+          "passed": false,
+          "status": "NO_SPEEDUP"
+        },
+        "persistence_economics": {
+          "apply_median_wall_seconds": 0.029815318000146362,
+          "direct_median_wall_seconds": 0.16281862400001046,
+          "median_ratio": 0.18311982540857516,
+          "paired_wins": 5,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.10304313773805501,
+            0.9557676890816601
+          ],
+          "passed": true,
+          "status": "SPEEDUP"
+        },
+        "setup_plus_one_apply_component_sum_economics": {
+          "apply_median_wall_seconds": 15.557456122000076,
+          "direct_median_wall_seconds": 15.586374497999714,
+          "median_ratio": 0.9981446374201166,
+          "paired_wins": 3,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.9780586082927232,
+            1.007043339969814
+          ],
+          "passed": false,
+          "status": "NO_SPEEDUP"
+        },
+        "warm_cpu_economics": {
+          "apply_median_wall_seconds": 0.39963699999987057,
+          "direct_median_wall_seconds": 0.4225549999998748,
+          "median_ratio": 0.9457632734200021,
+          "paired_wins": 5,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.5363341974887671,
+            0.9873476854080843
+          ],
+          "passed": true,
+          "status": "SPEEDUP"
+        }
+      },
+      "median_phase_seconds": {
+        "canonical_json": {
+          "baseline_validation_cpu_seconds": 0.00013599999999769352,
+          "baseline_validation_seconds": 0.00013578300013250555,
+          "checking_cpu_seconds": 0.07033999999998741,
+          "checking_seconds": 0.0666015920000973,
+          "consumer_cpu_seconds": 0.37812399999995705,
+          "consumer_seconds": 0.37691367900015393,
+          "end_to_end_cpu_seconds": 0.4225549999998748,
+          "end_to_end_seconds": 0.41899008600012166,
+          "identity_update_cpu_seconds": 0.010524000000032174,
+          "identity_update_seconds": 0.009203108999827236,
+          "materialization_and_hash_cpu_seconds": 0.1139599999999632,
+          "materialization_and_hash_seconds": 0.11396445500031405,
+          "persistence_cpu_seconds": 0.16115100000001803,
+          "persistence_seconds": 0.16281862400001046,
+          "producer_seconds": 0.04093868699965242,
+          "setup_wall_seconds": 15.136252943999807,
+          "setup_start_cpu_seconds": 14.742206000000124
+        },
+        "shared_json": {
+          "baseline_validation_cpu_seconds": 0.00013400000000274304,
+          "baseline_validation_seconds": 0.00013458100011121132,
+          "checking_cpu_seconds": 0.07038799999997991,
+          "checking_seconds": 0.06877307600007043,
+          "consumer_cpu_seconds": 0.35538499999995565,
+          "consumer_seconds": 0.36058782399959455,
+          "end_to_end_cpu_seconds": 0.39963699999987057,
+          "end_to_end_seconds": 0.40168789099971036,
+          "identity_update_cpu_seconds": 0.00042899999994006066,
+          "identity_update_seconds": 0.00913793399968199,
+          "materialization_and_hash_cpu_seconds": 0.11346400000002177,
+          "materialization_and_hash_seconds": 0.11345863899987307,
+          "persistence_cpu_seconds": 0.029365999999981796,
+          "persistence_seconds": 0.029815318000146362,
+          "producer_seconds": 0.040328750999833574,
+          "setup_wall_seconds": 15.213289673999952,
+          "setup_start_cpu_seconds": 14.827679000000217
+        }
+      },
+      "post_persistence_procfs_memory": {
+        "canonical_json": {
+          "adapter": {
+            "VmRSS": {
+              "observations": 5,
+              "median_kib": 630596,
+              "range_kib": [
+                488968,
+                644836
+              ]
+            },
+            "VmHWM": {
+              "observations": 5,
+              "median_kib": 823920,
+              "range_kib": [
+                658040,
+                838568
+              ]
+            }
+          },
+          "producer": {
+            "VmRSS": {
+              "observations": 5,
+              "median_kib": 664196,
+              "range_kib": [
+                663956,
+                664988
+              ]
+            },
+            "VmHWM": {
+              "observations": 5,
+              "median_kib": 664196,
+              "range_kib": [
+                663956,
+                664988
+              ]
+            }
+          },
+          "index": {
+            "VmRSS": {
+              "observations": 5,
+              "median_kib": 184428,
+              "range_kib": [
+                184364,
+                184432
+              ]
+            },
+            "VmHWM": {
+              "observations": 5,
+              "median_kib": 274912,
+              "range_kib": [
+                274896,
+                275032
+              ]
+            }
+          },
+          "retained_kernel": {
+            "VmRSS": {
+              "observations": 0,
+              "median_kib": null,
+              "range_kib": null
+            },
+            "VmHWM": {
+              "observations": 0,
+              "median_kib": null,
+              "range_kib": null
+            }
+          }
+        },
+        "shared_json": {
+          "adapter": {
+            "VmRSS": {
+              "observations": 5,
+              "median_kib": 680148,
+              "range_kib": [
+                572536,
+                695552
+              ]
+            },
+            "VmHWM": {
+              "observations": 5,
+              "median_kib": 827072,
+              "range_kib": [
+                693208,
+                839796
+              ]
+            }
+          },
+          "producer": {
+            "VmRSS": {
+              "observations": 5,
+              "median_kib": 664304,
+              "range_kib": [
+                664124,
+                664856
+              ]
+            },
+            "VmHWM": {
+              "observations": 5,
+              "median_kib": 664304,
+              "range_kib": [
+                664124,
+                664856
+              ]
+            }
+          },
+          "index": {
+            "VmRSS": {
+              "observations": 5,
+              "median_kib": 184368,
+              "range_kib": [
+                184360,
+                184424
+              ]
+            },
+            "VmHWM": {
+              "observations": 5,
+              "median_kib": 274916,
+              "range_kib": [
+                274784,
+                275040
+              ]
+            }
+          },
+          "retained_kernel": {
+            "VmRSS": {
+              "observations": 0,
+              "median_kib": null,
+              "range_kib": null
+            },
+            "VmHWM": {
+              "observations": 0,
+              "median_kib": null,
+              "range_kib": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "profile": "expanded",
+      "variant": "unrelated-definition",
+      "checked": 260,
+      "reused": 11393,
+      "independently_recomputed_economics": {
+        "warm_economics": {
+          "apply_median_wall_seconds": 0.2605041460001303,
+          "direct_median_wall_seconds": 0.5030917200001568,
+          "median_ratio": 0.517806466781145,
+          "paired_wins": 5,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.5008166558817669,
+            0.9643897138069619
+          ],
+          "passed": true,
+          "status": "SPEEDUP"
+        },
+        "selected_kernel_economics": {
+          "apply_median_wall_seconds": 0.03957592799997656,
+          "direct_median_wall_seconds": 0.040340734000437806,
+          "median_ratio": 0.9810413464352694,
+          "paired_wins": 3,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.9498273192390096,
+            1.0218772419835964
+          ],
+          "passed": false,
+          "status": "NO_SPEEDUP"
+        },
+        "persistence_economics": {
+          "apply_median_wall_seconds": 0.0293255350002255,
+          "direct_median_wall_seconds": 0.26858917600020504,
+          "median_ratio": 0.10918360686360315,
+          "paired_wins": 5,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.10151775324864244,
+            0.19072235178141278
+          ],
+          "passed": true,
+          "status": "SPEEDUP"
+        },
+        "setup_plus_one_apply_component_sum_economics": {
+          "apply_median_wall_seconds": 15.422269593999772,
+          "direct_median_wall_seconds": 15.670200893000583,
+          "median_ratio": 0.9841781671662196,
+          "paired_wins": 4,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.9704584317614972,
+            1.0093838478277037
+          ],
+          "passed": false,
+          "status": "NO_SPEEDUP"
+        },
+        "warm_cpu_economics": {
+          "apply_median_wall_seconds": 0.2807439999999133,
+          "direct_median_wall_seconds": 0.5147149999999101,
+          "median_ratio": 0.5454358237081925,
+          "paired_wins": 5,
+          "paired_count": 5,
+          "bootstrap_ratio_interval_95": [
+            0.4454795372198846,
+            0.968847752284283
+          ],
+          "passed": true,
+          "status": "SPEEDUP"
+        }
+      },
+      "median_phase_seconds": {
+        "canonical_json": {
+          "baseline_validation_cpu_seconds": 0.00013500000000021828,
+          "baseline_validation_seconds": 0.00013546199988923036,
+          "checking_cpu_seconds": 0.040374999999812644,
+          "checking_seconds": 0.040340734000437806,
+          "consumer_cpu_seconds": 0.4640909999999394,
+          "consumer_seconds": 0.461585561999982,
+          "end_to_end_cpu_seconds": 0.5147149999999101,
+          "end_to_end_seconds": 0.5029477619996214,
+          "identity_update_cpu_seconds": 0.010393000000021857,
+          "identity_update_seconds": 0.008976611999969464,
+          "materialization_and_hash_cpu_seconds": 0.11386599999991631,
+          "materialization_and_hash_seconds": 0.11386271699984718,
+          "persistence_cpu_seconds": 0.2669309999999996,
+          "persistence_seconds": 0.26858917600020504,
+          "producer_seconds": 0.04025920200001565,
+          "setup_wall_seconds": 15.17462731400019,
+          "setup_start_cpu_seconds": 14.785609000000136
+        },
+        "shared_json": {
+          "baseline_validation_cpu_seconds": 0.0001539999999522479,
+          "baseline_validation_seconds": 0.00015388599967991468,
+          "checking_cpu_seconds": 0.04039099999999962,
+          "checking_seconds": 0.03957592799997656,
+          "consumer_cpu_seconds": 0.23640399999999318,
+          "consumer_seconds": 0.21789081299993995,
+          "end_to_end_cpu_seconds": 0.2807439999999133,
+          "end_to_end_seconds": 0.2603581739999754,
+          "identity_update_cpu_seconds": 0.010386999999923319,
+          "identity_update_seconds": 0.00870378499985236,
+          "materialization_and_hash_cpu_seconds": 0.11371300000001838,
+          "materialization_and_hash_seconds": 0.11372292099986225,
+          "persistence_cpu_seconds": 0.02683700000011413,
+          "persistence_seconds": 0.0293255350002255,
+          "producer_seconds": 0.040193779000219365,
+          "setup_wall_seconds": 15.153913111999827,
+          "setup_start_cpu_seconds": 14.765920000000165
+        }
+      },
+      "post_persistence_procfs_memory": {
+        "canonical_json": {
+          "adapter": {
+            "VmRSS": {
+              "observations": 5,
+              "median_kib": 634628,
+              "range_kib": [
+                575924,
+                650500
+              ]
+            },
+            "VmHWM": {
+              "observations": 5,
+              "median_kib": 830900,
+              "range_kib": [
+                759024,
+                844020
+              ]
+            }
+          },
+          "producer": {
+            "VmRSS": {
+              "observations": 5,
+              "median_kib": 663952,
+              "range_kib": [
+                663660,
+                664968
+              ]
+            },
+            "VmHWM": {
+              "observations": 5,
+              "median_kib": 663952,
+              "range_kib": [
+                663660,
+                664968
+              ]
+            }
+          },
+          "index": {
+            "VmRSS": {
+              "observations": 5,
+              "median_kib": 184368,
+              "range_kib": [
+                184364,
+                184432
+              ]
+            },
+            "VmHWM": {
+              "observations": 5,
+              "median_kib": 274912,
+              "range_kib": [
+                274848,
+                275032
+              ]
+            }
+          },
+          "retained_kernel": {
+            "VmRSS": {
+              "observations": 0,
+              "median_kib": null,
+              "range_kib": null
+            },
+            "VmHWM": {
+              "observations": 0,
+              "median_kib": null,
+              "range_kib": null
+            }
+          }
+        },
+        "shared_json": {
+          "adapter": {
+            "VmRSS": {
+              "observations": 5,
+              "median_kib": 682164,
+              "range_kib": [
+                589436,
+                696796
+              ]
+            },
+            "VmHWM": {
+              "observations": 5,
+              "median_kib": 827072,
+              "range_kib": [
+                720152,
+                844020
+              ]
+            }
+          },
+          "producer": {
+            "VmRSS": {
+              "observations": 5,
+              "median_kib": 663884,
+              "range_kib": [
+                655940,
+                664992
+              ]
+            },
+            "VmHWM": {
+              "observations": 5,
+              "median_kib": 663884,
+              "range_kib": [
+                655940,
+                664992
+              ]
+            }
+          },
+          "index": {
+            "VmRSS": {
+              "observations": 5,
+              "median_kib": 184428,
+              "range_kib": [
+                184344,
+                184432
+              ]
+            },
+            "VmHWM": {
+              "observations": 5,
+              "median_kib": 275032,
+              "range_kib": [
+                274872,
+                275040
+              ]
+            }
+          },
+          "retained_kernel": {
+            "VmRSS": {
+              "observations": 0,
+              "median_kib": null,
+              "range_kib": null
+            },
+            "VmHWM": {
+              "observations": 0,
+              "median_kib": null,
+              "range_kib": null
+            }
+          }
+        }
+      }
+    }
+  ],
+  "memory_limits": [
+    "Raw process observations, not aggregate or phase peak memory.",
+    "Adapter measurements include the benchmark process and loaded oracle references.",
+    "VmHWM is cumulative across earlier setup/oracles/samples in the same process.",
+    "Missing/exited process observations remain absent, never zero."
+  ],
+  "lifecycle_limits": [
+    "Setup plus one apply is an observed component sum; close and harness oracles excluded.",
+    "Setup CPU field covers session.start, not constructor CPU.",
+    "No multi-update stream, amortization or break-even extrapolation is supported."
+  ],
+  "qualification_scope": "Independent economics arithmetic only; authority/source/witness replay checked by separate frozen reviewer."
+}

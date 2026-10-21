@@ -1,0 +1,1141 @@
+{
+  "ci_report_files": {
+    "receipt-comparison/summary.json": {
+      "bytes": 25237673,
+      "sha256": "bcc69f28a8fd2c088a60fcaf83b844e2f6bf80c1d84e36b1b32320445291905b"
+    },
+    "receipt-protected/expanded/protected-matrix/retained_selected/summary.json": {
+      "bytes": 27313566,
+      "sha256": "2494e2d0f7409b1e9dc564b58700b2c6e0173c8975d869fc29dc7e81842282c1"
+    },
+    "receipt-protected/original/protected-matrix/retained_selected/summary.json": {
+      "bytes": 1536943,
+      "sha256": "a64b0225c66bd52de5e3ee77958aee9db563364ed3160f72b5cb22578eff520b"
+    }
+  },
+  "counts": {
+    "covered_role_keys": 12,
+    "extra_local_overwrite_roles": 2,
+    "local_claims": 18,
+    "matched_snapshots": 74,
+    "metadata_errors": 0,
+    "mismatched": 0,
+    "missing": 0
+  },
+  "extra_ci_roles_outside_replay": [
+    {
+      "profile": "original",
+      "reason": "Protected positive role outside local full/native replay coverage",
+      "role": "baseline"
+    },
+    {
+      "profile": "original",
+      "reason": "Protected positive role outside local full/native replay coverage",
+      "role": "theorem-leaf"
+    },
+    {
+      "profile": "original",
+      "reason": "Protected positive role outside local full/native replay coverage",
+      "role": "baseline"
+    },
+    {
+      "profile": "original",
+      "reason": "Protected positive role outside local full/native replay coverage",
+      "role": "theorem-leaf"
+    },
+    {
+      "profile": "original",
+      "reason": "Protected positive role outside local full/native replay coverage",
+      "role": "theorem-leaf"
+    },
+    {
+      "profile": "original",
+      "reason": "Protected positive role outside local full/native replay coverage",
+      "role": "baseline"
+    },
+    {
+      "profile": "original",
+      "reason": "Protected positive role outside local full/native replay coverage",
+      "role": "baseline"
+    },
+    {
+      "profile": "original",
+      "reason": "Protected positive role outside local full/native replay coverage",
+      "role": "theorem-leaf"
+    },
+    {
+      "profile": "original",
+      "reason": "Protected positive role outside local full/native replay coverage",
+      "role": "theorem-leaf"
+    },
+    {
+      "profile": "original",
+      "reason": "Protected positive role outside local full/native replay coverage",
+      "role": "baseline"
+    },
+    {
+      "profile": "expanded",
+      "reason": "Protected positive role outside local full/native replay coverage",
+      "role": "baseline"
+    },
+    {
+      "profile": "expanded",
+      "reason": "Protected positive role outside local full/native replay coverage",
+      "role": "theorem-leaf"
+    },
+    {
+      "profile": "expanded",
+      "reason": "Protected positive role outside local full/native replay coverage",
+      "role": "baseline"
+    },
+    {
+      "profile": "expanded",
+      "reason": "Protected positive role outside local full/native replay coverage",
+      "role": "theorem-leaf"
+    },
+    {
+      "profile": "expanded",
+      "reason": "Protected positive role outside local full/native replay coverage",
+      "role": "theorem-leaf"
+    },
+    {
+      "profile": "expanded",
+      "reason": "Protected positive role outside local full/native replay coverage",
+      "role": "baseline"
+    },
+    {
+      "profile": "expanded",
+      "reason": "Protected positive role outside local full/native replay coverage",
+      "role": "baseline"
+    },
+    {
+      "profile": "expanded",
+      "reason": "Protected positive role outside local full/native replay coverage",
+      "role": "theorem-leaf"
+    },
+    {
+      "profile": "expanded",
+      "reason": "Protected positive role outside local full/native replay coverage",
+      "role": "theorem-leaf"
+    },
+    {
+      "profile": "expanded",
+      "reason": "Protected positive role outside local full/native replay coverage",
+      "role": "baseline"
+    }
+  ],
+  "extra_local_overwrite_roles": [
+    {
+      "bytes": 15922047,
+      "classification": "LOCAL_ONLY_CONSERVATIVE_OVERWRITE_POLICY",
+      "group": "retained_case_inputs",
+      "profile": "original",
+      "role": "overwrite-admitted-expression",
+      "scope": "No corresponding CI kernel-negative role expected; fresh zero-selected parser accepted while retained policy refused.",
+      "sha256": "54a97ab46d4ba8df4c2bef1b89e3cdd71c54424956627c8c6477dfe02c4e9b31"
+    },
+    {
+      "bytes": 64115878,
+      "classification": "LOCAL_ONLY_CONSERVATIVE_OVERWRITE_POLICY",
+      "group": "retained_case_inputs",
+      "profile": "expanded",
+      "role": "overwrite-admitted-expression",
+      "scope": "No corresponding CI kernel-negative role expected; fresh zero-selected parser accepted while retained policy refused.",
+      "sha256": "7da5dd1b8750bae0cab0907eed854f9ab1681377770284ae95c1ec0a7debd654"
+    }
+  ],
+  "helper_sha256": "4d90f3683aa24ecd63a92c9456b37a4b92136b3e9d6e7bbb33124d079284c34f",
+  "local_claim_coverage": [
+    {
+      "bytes": 15922194,
+      "claim_supported": true,
+      "group": "full_case_inputs",
+      "matching_snapshot_count": 18,
+      "profile": "original",
+      "role": "early-definition",
+      "sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882"
+    },
+    {
+      "bytes": 64116034,
+      "claim_supported": true,
+      "group": "full_case_inputs",
+      "matching_snapshot_count": 18,
+      "profile": "expanded",
+      "role": "early-definition",
+      "sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76"
+    },
+    {
+      "bytes": 15922025,
+      "claim_supported": true,
+      "group": "full_case_inputs",
+      "matching_snapshot_count": 1,
+      "profile": "original",
+      "role": "signed-invalid-proof",
+      "sha256": "43d98c93398a0d17604872ce6a11bb098b25ff62d4f27538bea26afaa9319f49"
+    },
+    {
+      "bytes": 15922028,
+      "claim_supported": true,
+      "group": "full_case_inputs",
+      "matching_snapshot_count": 1,
+      "profile": "original",
+      "role": "signed-invalid-axiom",
+      "sha256": "c40269431e15a0623ca61b5394c9dab8303462d6a482ca9678eb1e135ef72024"
+    },
+    {
+      "bytes": 15922067,
+      "claim_supported": true,
+      "group": "full_case_inputs",
+      "matching_snapshot_count": 1,
+      "profile": "original",
+      "role": "unused-invalid-node-zero-selection-parser",
+      "sha256": "0484083f89bdc9508596dd870534e87ef20d27a4ac2f57a3753778f4f8fe3b83"
+    },
+    {
+      "bytes": 15922067,
+      "claim_supported": true,
+      "group": "full_case_inputs",
+      "matching_snapshot_count": 1,
+      "profile": "original",
+      "role": "unused-invalid-node-dag-only-zero-selection-parser",
+      "sha256": "0484083f89bdc9508596dd870534e87ef20d27a4ac2f57a3753778f4f8fe3b83"
+    },
+    {
+      "bytes": 64115856,
+      "claim_supported": true,
+      "group": "full_case_inputs",
+      "matching_snapshot_count": 1,
+      "profile": "expanded",
+      "role": "signed-invalid-proof",
+      "sha256": "58f8091201c291c6ec490ceb82db1803221902cf0ca0f708a5c5c352da59ec08"
+    },
+    {
+      "bytes": 64115859,
+      "claim_supported": true,
+      "group": "full_case_inputs",
+      "matching_snapshot_count": 1,
+      "profile": "expanded",
+      "role": "signed-invalid-axiom",
+      "sha256": "ac4ace2468a0bb7e02b74f7d41131f9182dcba3d931758eda41394a89b9e2c92"
+    },
+    {
+      "bytes": 64115899,
+      "claim_supported": true,
+      "group": "full_case_inputs",
+      "matching_snapshot_count": 1,
+      "profile": "expanded",
+      "role": "unused-invalid-node-zero-selection-parser",
+      "sha256": "2ba6049b33587cf12b458afaa439741b56c7f1cca7bfe1150c5972533b377e2f"
+    },
+    {
+      "bytes": 64115899,
+      "claim_supported": true,
+      "group": "full_case_inputs",
+      "matching_snapshot_count": 1,
+      "profile": "expanded",
+      "role": "unused-invalid-node-dag-only-zero-selection-parser",
+      "sha256": "2ba6049b33587cf12b458afaa439741b56c7f1cca7bfe1150c5972533b377e2f"
+    },
+    {
+      "bytes": 15922194,
+      "claim_supported": true,
+      "group": "retained_case_inputs",
+      "matching_snapshot_count": 18,
+      "profile": "original",
+      "role": "early-definition",
+      "sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882"
+    },
+    {
+      "bytes": 15922152,
+      "claim_supported": true,
+      "group": "retained_case_inputs",
+      "matching_snapshot_count": 15,
+      "profile": "original",
+      "role": "unrelated-definition",
+      "sha256": "1f452a46208ab2328d38c8e359fcee452513768b74d6c9ff2e59dec412ab5dfe"
+    },
+    {
+      "bytes": 15922025,
+      "claim_supported": true,
+      "group": "retained_case_inputs",
+      "matching_snapshot_count": 1,
+      "profile": "original",
+      "role": "signed-invalid-proof",
+      "sha256": "43d98c93398a0d17604872ce6a11bb098b25ff62d4f27538bea26afaa9319f49"
+    },
+    {
+      "bytes": 15922067,
+      "claim_supported": true,
+      "group": "retained_case_inputs",
+      "matching_snapshot_count": 1,
+      "profile": "original",
+      "role": "unused-invalid-node-zero-selection-parser",
+      "sha256": "0484083f89bdc9508596dd870534e87ef20d27a4ac2f57a3753778f4f8fe3b83"
+    },
+    {
+      "bytes": 64116034,
+      "claim_supported": true,
+      "group": "retained_case_inputs",
+      "matching_snapshot_count": 18,
+      "profile": "expanded",
+      "role": "early-definition",
+      "sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76"
+    },
+    {
+      "bytes": 64115987,
+      "claim_supported": true,
+      "group": "retained_case_inputs",
+      "matching_snapshot_count": 15,
+      "profile": "expanded",
+      "role": "unrelated-definition",
+      "sha256": "6456c02bf654a3877ee33bf0c8d61449d1dc4e98545d54f6e46c2c5667639d1a"
+    },
+    {
+      "bytes": 64115856,
+      "claim_supported": true,
+      "group": "retained_case_inputs",
+      "matching_snapshot_count": 1,
+      "profile": "expanded",
+      "role": "signed-invalid-proof",
+      "sha256": "58f8091201c291c6ec490ceb82db1803221902cf0ca0f708a5c5c352da59ec08"
+    },
+    {
+      "bytes": 64115899,
+      "claim_supported": true,
+      "group": "retained_case_inputs",
+      "matching_snapshot_count": 1,
+      "profile": "expanded",
+      "role": "unused-invalid-node-zero-selection-parser",
+      "sha256": "2ba6049b33587cf12b458afaa439741b56c7f1cca7bfe1150c5972533b377e2f"
+    }
+  ],
+  "local_summary_sha256": "97ae21b2dfaa46944ca8415044b7758b64d2605c7a0fb73bea4cbc380a677f6f",
+  "matches": [
+    {
+      "actual_bytes": 15922194,
+      "actual_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 15922194,
+      "expected_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "profile": "original",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "early-definition",
+      "where": "protected/original/samples/early-definition/0"
+    },
+    {
+      "actual_bytes": 15922194,
+      "actual_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 15922194,
+      "expected_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "profile": "original",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "early-definition",
+      "where": "protected/original/samples/early-definition/1"
+    },
+    {
+      "actual_bytes": 15922194,
+      "actual_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 15922194,
+      "expected_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "profile": "original",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "early-definition",
+      "where": "protected/original/samples/early-definition/2"
+    },
+    {
+      "actual_bytes": 15922194,
+      "actual_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 15922194,
+      "expected_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "profile": "original",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "early-definition",
+      "where": "protected/original/samples/early-definition/3"
+    },
+    {
+      "actual_bytes": 15922194,
+      "actual_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 15922194,
+      "expected_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "profile": "original",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "early-definition",
+      "where": "protected/original/samples/early-definition/4"
+    },
+    {
+      "actual_bytes": 15922194,
+      "actual_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 15922194,
+      "expected_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "profile": "original",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "early-definition",
+      "where": "protected/original/samples/early-definition/5"
+    },
+    {
+      "actual_bytes": 15922152,
+      "actual_sha256": "1f452a46208ab2328d38c8e359fcee452513768b74d6c9ff2e59dec412ab5dfe",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 15922152,
+      "expected_sha256": "1f452a46208ab2328d38c8e359fcee452513768b74d6c9ff2e59dec412ab5dfe",
+      "profile": "original",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "unrelated-definition",
+      "where": "protected/original/samples/unrelated-definition/0"
+    },
+    {
+      "actual_bytes": 15922152,
+      "actual_sha256": "1f452a46208ab2328d38c8e359fcee452513768b74d6c9ff2e59dec412ab5dfe",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 15922152,
+      "expected_sha256": "1f452a46208ab2328d38c8e359fcee452513768b74d6c9ff2e59dec412ab5dfe",
+      "profile": "original",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "unrelated-definition",
+      "where": "protected/original/samples/unrelated-definition/1"
+    },
+    {
+      "actual_bytes": 15922152,
+      "actual_sha256": "1f452a46208ab2328d38c8e359fcee452513768b74d6c9ff2e59dec412ab5dfe",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 15922152,
+      "expected_sha256": "1f452a46208ab2328d38c8e359fcee452513768b74d6c9ff2e59dec412ab5dfe",
+      "profile": "original",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "unrelated-definition",
+      "where": "protected/original/samples/unrelated-definition/2"
+    },
+    {
+      "actual_bytes": 15922152,
+      "actual_sha256": "1f452a46208ab2328d38c8e359fcee452513768b74d6c9ff2e59dec412ab5dfe",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 15922152,
+      "expected_sha256": "1f452a46208ab2328d38c8e359fcee452513768b74d6c9ff2e59dec412ab5dfe",
+      "profile": "original",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "unrelated-definition",
+      "where": "protected/original/samples/unrelated-definition/3"
+    },
+    {
+      "actual_bytes": 15922152,
+      "actual_sha256": "1f452a46208ab2328d38c8e359fcee452513768b74d6c9ff2e59dec412ab5dfe",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 15922152,
+      "expected_sha256": "1f452a46208ab2328d38c8e359fcee452513768b74d6c9ff2e59dec412ab5dfe",
+      "profile": "original",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "unrelated-definition",
+      "where": "protected/original/samples/unrelated-definition/4"
+    },
+    {
+      "actual_bytes": 15922025,
+      "actual_sha256": "43d98c93398a0d17604872ce6a11bb098b25ff62d4f27538bea26afaa9319f49",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 15922025,
+      "expected_sha256": "43d98c93398a0d17604872ce6a11bb098b25ff62d4f27538bea26afaa9319f49",
+      "profile": "original",
+      "reported_outcome": "REJECTED_REPORTED",
+      "role": "signed-invalid-proof",
+      "where": "protected/original/controls/signed-invalid-proof"
+    },
+    {
+      "actual_bytes": 15922028,
+      "actual_sha256": "c40269431e15a0623ca61b5394c9dab8303462d6a482ca9678eb1e135ef72024",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 15922028,
+      "expected_sha256": "c40269431e15a0623ca61b5394c9dab8303462d6a482ca9678eb1e135ef72024",
+      "profile": "original",
+      "reported_outcome": "REJECTED_REPORTED",
+      "role": "signed-invalid-axiom",
+      "where": "protected/original/controls/signed-invalid-axiom"
+    },
+    {
+      "actual_bytes": 15922067,
+      "actual_sha256": "0484083f89bdc9508596dd870534e87ef20d27a4ac2f57a3753778f4f8fe3b83",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 15922067,
+      "expected_sha256": "0484083f89bdc9508596dd870534e87ef20d27a4ac2f57a3753778f4f8fe3b83",
+      "profile": "original",
+      "reported_outcome": "REJECTED_REPORTED",
+      "role": "unused-invalid-node-zero-selection-parser",
+      "where": "protected/original/controls/unused-invalid-node-zero-selection-parser"
+    },
+    {
+      "actual_bytes": 15922067,
+      "actual_sha256": "0484083f89bdc9508596dd870534e87ef20d27a4ac2f57a3753778f4f8fe3b83",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 15922067,
+      "expected_sha256": "0484083f89bdc9508596dd870534e87ef20d27a4ac2f57a3753778f4f8fe3b83",
+      "profile": "original",
+      "reported_outcome": "REJECTED_REPORTED",
+      "role": "unused-invalid-node-dag-only-zero-selection-parser",
+      "where": "protected/original/controls/unused-invalid-node-dag-only-zero-selection-parser"
+    },
+    {
+      "actual_bytes": 64116034,
+      "actual_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 64116034,
+      "expected_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "profile": "expanded",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "early-definition",
+      "where": "protected/expanded/samples/early-definition/0"
+    },
+    {
+      "actual_bytes": 64116034,
+      "actual_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 64116034,
+      "expected_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "profile": "expanded",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "early-definition",
+      "where": "protected/expanded/samples/early-definition/1"
+    },
+    {
+      "actual_bytes": 64116034,
+      "actual_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 64116034,
+      "expected_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "profile": "expanded",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "early-definition",
+      "where": "protected/expanded/samples/early-definition/2"
+    },
+    {
+      "actual_bytes": 64116034,
+      "actual_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 64116034,
+      "expected_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "profile": "expanded",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "early-definition",
+      "where": "protected/expanded/samples/early-definition/3"
+    },
+    {
+      "actual_bytes": 64116034,
+      "actual_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 64116034,
+      "expected_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "profile": "expanded",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "early-definition",
+      "where": "protected/expanded/samples/early-definition/4"
+    },
+    {
+      "actual_bytes": 64116034,
+      "actual_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 64116034,
+      "expected_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "profile": "expanded",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "early-definition",
+      "where": "protected/expanded/samples/early-definition/5"
+    },
+    {
+      "actual_bytes": 64115987,
+      "actual_sha256": "6456c02bf654a3877ee33bf0c8d61449d1dc4e98545d54f6e46c2c5667639d1a",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 64115987,
+      "expected_sha256": "6456c02bf654a3877ee33bf0c8d61449d1dc4e98545d54f6e46c2c5667639d1a",
+      "profile": "expanded",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "unrelated-definition",
+      "where": "protected/expanded/samples/unrelated-definition/0"
+    },
+    {
+      "actual_bytes": 64115987,
+      "actual_sha256": "6456c02bf654a3877ee33bf0c8d61449d1dc4e98545d54f6e46c2c5667639d1a",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 64115987,
+      "expected_sha256": "6456c02bf654a3877ee33bf0c8d61449d1dc4e98545d54f6e46c2c5667639d1a",
+      "profile": "expanded",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "unrelated-definition",
+      "where": "protected/expanded/samples/unrelated-definition/1"
+    },
+    {
+      "actual_bytes": 64115987,
+      "actual_sha256": "6456c02bf654a3877ee33bf0c8d61449d1dc4e98545d54f6e46c2c5667639d1a",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 64115987,
+      "expected_sha256": "6456c02bf654a3877ee33bf0c8d61449d1dc4e98545d54f6e46c2c5667639d1a",
+      "profile": "expanded",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "unrelated-definition",
+      "where": "protected/expanded/samples/unrelated-definition/2"
+    },
+    {
+      "actual_bytes": 64115987,
+      "actual_sha256": "6456c02bf654a3877ee33bf0c8d61449d1dc4e98545d54f6e46c2c5667639d1a",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 64115987,
+      "expected_sha256": "6456c02bf654a3877ee33bf0c8d61449d1dc4e98545d54f6e46c2c5667639d1a",
+      "profile": "expanded",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "unrelated-definition",
+      "where": "protected/expanded/samples/unrelated-definition/3"
+    },
+    {
+      "actual_bytes": 64115987,
+      "actual_sha256": "6456c02bf654a3877ee33bf0c8d61449d1dc4e98545d54f6e46c2c5667639d1a",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 64115987,
+      "expected_sha256": "6456c02bf654a3877ee33bf0c8d61449d1dc4e98545d54f6e46c2c5667639d1a",
+      "profile": "expanded",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "unrelated-definition",
+      "where": "protected/expanded/samples/unrelated-definition/4"
+    },
+    {
+      "actual_bytes": 64115856,
+      "actual_sha256": "58f8091201c291c6ec490ceb82db1803221902cf0ca0f708a5c5c352da59ec08",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 64115856,
+      "expected_sha256": "58f8091201c291c6ec490ceb82db1803221902cf0ca0f708a5c5c352da59ec08",
+      "profile": "expanded",
+      "reported_outcome": "REJECTED_REPORTED",
+      "role": "signed-invalid-proof",
+      "where": "protected/expanded/controls/signed-invalid-proof"
+    },
+    {
+      "actual_bytes": 64115859,
+      "actual_sha256": "ac4ace2468a0bb7e02b74f7d41131f9182dcba3d931758eda41394a89b9e2c92",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 64115859,
+      "expected_sha256": "ac4ace2468a0bb7e02b74f7d41131f9182dcba3d931758eda41394a89b9e2c92",
+      "profile": "expanded",
+      "reported_outcome": "REJECTED_REPORTED",
+      "role": "signed-invalid-axiom",
+      "where": "protected/expanded/controls/signed-invalid-axiom"
+    },
+    {
+      "actual_bytes": 64115899,
+      "actual_sha256": "2ba6049b33587cf12b458afaa439741b56c7f1cca7bfe1150c5972533b377e2f",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 64115899,
+      "expected_sha256": "2ba6049b33587cf12b458afaa439741b56c7f1cca7bfe1150c5972533b377e2f",
+      "profile": "expanded",
+      "reported_outcome": "REJECTED_REPORTED",
+      "role": "unused-invalid-node-zero-selection-parser",
+      "where": "protected/expanded/controls/unused-invalid-node-zero-selection-parser"
+    },
+    {
+      "actual_bytes": 64115899,
+      "actual_sha256": "2ba6049b33587cf12b458afaa439741b56c7f1cca7bfe1150c5972533b377e2f",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 64115899,
+      "expected_sha256": "2ba6049b33587cf12b458afaa439741b56c7f1cca7bfe1150c5972533b377e2f",
+      "profile": "expanded",
+      "reported_outcome": "REJECTED_REPORTED",
+      "role": "unused-invalid-node-dag-only-zero-selection-parser",
+      "where": "protected/expanded/controls/unused-invalid-node-dag-only-zero-selection-parser"
+    },
+    {
+      "actual_bytes": 15922194,
+      "actual_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 15922194,
+      "expected_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "profile": "original",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "early-definition",
+      "where": "comparison/original/early-definition/0/canonical_json"
+    },
+    {
+      "actual_bytes": 15922194,
+      "actual_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 15922194,
+      "expected_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "profile": "original",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "early-definition",
+      "where": "comparison/original/early-definition/0/shared_json"
+    },
+    {
+      "actual_bytes": 15922194,
+      "actual_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 15922194,
+      "expected_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "profile": "original",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "early-definition",
+      "where": "comparison/original/early-definition/1/canonical_json"
+    },
+    {
+      "actual_bytes": 15922194,
+      "actual_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 15922194,
+      "expected_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "profile": "original",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "early-definition",
+      "where": "comparison/original/early-definition/1/shared_json"
+    },
+    {
+      "actual_bytes": 15922194,
+      "actual_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 15922194,
+      "expected_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "profile": "original",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "early-definition",
+      "where": "comparison/original/early-definition/2/canonical_json"
+    },
+    {
+      "actual_bytes": 15922194,
+      "actual_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 15922194,
+      "expected_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "profile": "original",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "early-definition",
+      "where": "comparison/original/early-definition/2/shared_json"
+    },
+    {
+      "actual_bytes": 15922194,
+      "actual_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 15922194,
+      "expected_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "profile": "original",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "early-definition",
+      "where": "comparison/original/early-definition/3/canonical_json"
+    },
+    {
+      "actual_bytes": 15922194,
+      "actual_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 15922194,
+      "expected_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "profile": "original",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "early-definition",
+      "where": "comparison/original/early-definition/3/shared_json"
+    },
+    {
+      "actual_bytes": 15922194,
+      "actual_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 15922194,
+      "expected_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "profile": "original",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "early-definition",
+      "where": "comparison/original/early-definition/4/canonical_json"
+    },
+    {
+      "actual_bytes": 15922194,
+      "actual_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 15922194,
+      "expected_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "profile": "original",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "early-definition",
+      "where": "comparison/original/early-definition/4/shared_json"
+    },
+    {
+      "actual_bytes": 15922152,
+      "actual_sha256": "1f452a46208ab2328d38c8e359fcee452513768b74d6c9ff2e59dec412ab5dfe",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 15922152,
+      "expected_sha256": "1f452a46208ab2328d38c8e359fcee452513768b74d6c9ff2e59dec412ab5dfe",
+      "profile": "original",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "unrelated-definition",
+      "where": "comparison/original/unrelated-definition/0/canonical_json"
+    },
+    {
+      "actual_bytes": 15922152,
+      "actual_sha256": "1f452a46208ab2328d38c8e359fcee452513768b74d6c9ff2e59dec412ab5dfe",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 15922152,
+      "expected_sha256": "1f452a46208ab2328d38c8e359fcee452513768b74d6c9ff2e59dec412ab5dfe",
+      "profile": "original",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "unrelated-definition",
+      "where": "comparison/original/unrelated-definition/0/shared_json"
+    },
+    {
+      "actual_bytes": 15922152,
+      "actual_sha256": "1f452a46208ab2328d38c8e359fcee452513768b74d6c9ff2e59dec412ab5dfe",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 15922152,
+      "expected_sha256": "1f452a46208ab2328d38c8e359fcee452513768b74d6c9ff2e59dec412ab5dfe",
+      "profile": "original",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "unrelated-definition",
+      "where": "comparison/original/unrelated-definition/1/canonical_json"
+    },
+    {
+      "actual_bytes": 15922152,
+      "actual_sha256": "1f452a46208ab2328d38c8e359fcee452513768b74d6c9ff2e59dec412ab5dfe",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 15922152,
+      "expected_sha256": "1f452a46208ab2328d38c8e359fcee452513768b74d6c9ff2e59dec412ab5dfe",
+      "profile": "original",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "unrelated-definition",
+      "where": "comparison/original/unrelated-definition/1/shared_json"
+    },
+    {
+      "actual_bytes": 15922152,
+      "actual_sha256": "1f452a46208ab2328d38c8e359fcee452513768b74d6c9ff2e59dec412ab5dfe",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 15922152,
+      "expected_sha256": "1f452a46208ab2328d38c8e359fcee452513768b74d6c9ff2e59dec412ab5dfe",
+      "profile": "original",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "unrelated-definition",
+      "where": "comparison/original/unrelated-definition/2/canonical_json"
+    },
+    {
+      "actual_bytes": 15922152,
+      "actual_sha256": "1f452a46208ab2328d38c8e359fcee452513768b74d6c9ff2e59dec412ab5dfe",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 15922152,
+      "expected_sha256": "1f452a46208ab2328d38c8e359fcee452513768b74d6c9ff2e59dec412ab5dfe",
+      "profile": "original",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "unrelated-definition",
+      "where": "comparison/original/unrelated-definition/2/shared_json"
+    },
+    {
+      "actual_bytes": 15922152,
+      "actual_sha256": "1f452a46208ab2328d38c8e359fcee452513768b74d6c9ff2e59dec412ab5dfe",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 15922152,
+      "expected_sha256": "1f452a46208ab2328d38c8e359fcee452513768b74d6c9ff2e59dec412ab5dfe",
+      "profile": "original",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "unrelated-definition",
+      "where": "comparison/original/unrelated-definition/3/canonical_json"
+    },
+    {
+      "actual_bytes": 15922152,
+      "actual_sha256": "1f452a46208ab2328d38c8e359fcee452513768b74d6c9ff2e59dec412ab5dfe",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 15922152,
+      "expected_sha256": "1f452a46208ab2328d38c8e359fcee452513768b74d6c9ff2e59dec412ab5dfe",
+      "profile": "original",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "unrelated-definition",
+      "where": "comparison/original/unrelated-definition/3/shared_json"
+    },
+    {
+      "actual_bytes": 15922152,
+      "actual_sha256": "1f452a46208ab2328d38c8e359fcee452513768b74d6c9ff2e59dec412ab5dfe",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 15922152,
+      "expected_sha256": "1f452a46208ab2328d38c8e359fcee452513768b74d6c9ff2e59dec412ab5dfe",
+      "profile": "original",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "unrelated-definition",
+      "where": "comparison/original/unrelated-definition/4/canonical_json"
+    },
+    {
+      "actual_bytes": 15922152,
+      "actual_sha256": "1f452a46208ab2328d38c8e359fcee452513768b74d6c9ff2e59dec412ab5dfe",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 15922152,
+      "expected_sha256": "1f452a46208ab2328d38c8e359fcee452513768b74d6c9ff2e59dec412ab5dfe",
+      "profile": "original",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "unrelated-definition",
+      "where": "comparison/original/unrelated-definition/4/shared_json"
+    },
+    {
+      "actual_bytes": 15922194,
+      "actual_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 15922194,
+      "expected_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "profile": "original",
+      "reported_outcome": "COLD_ACCEPTED_REPORTED",
+      "role": "early-definition",
+      "where": "comparison/original/cold_restart/canonical_json"
+    },
+    {
+      "actual_bytes": 15922194,
+      "actual_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 15922194,
+      "expected_sha256": "206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882",
+      "profile": "original",
+      "reported_outcome": "COLD_ACCEPTED_REPORTED",
+      "role": "early-definition",
+      "where": "comparison/original/cold_restart/shared_json"
+    },
+    {
+      "actual_bytes": 64116034,
+      "actual_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 64116034,
+      "expected_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "profile": "expanded",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "early-definition",
+      "where": "comparison/expanded/early-definition/0/canonical_json"
+    },
+    {
+      "actual_bytes": 64116034,
+      "actual_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 64116034,
+      "expected_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "profile": "expanded",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "early-definition",
+      "where": "comparison/expanded/early-definition/0/shared_json"
+    },
+    {
+      "actual_bytes": 64116034,
+      "actual_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 64116034,
+      "expected_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "profile": "expanded",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "early-definition",
+      "where": "comparison/expanded/early-definition/1/canonical_json"
+    },
+    {
+      "actual_bytes": 64116034,
+      "actual_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 64116034,
+      "expected_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "profile": "expanded",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "early-definition",
+      "where": "comparison/expanded/early-definition/1/shared_json"
+    },
+    {
+      "actual_bytes": 64116034,
+      "actual_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 64116034,
+      "expected_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "profile": "expanded",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "early-definition",
+      "where": "comparison/expanded/early-definition/2/canonical_json"
+    },
+    {
+      "actual_bytes": 64116034,
+      "actual_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 64116034,
+      "expected_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "profile": "expanded",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "early-definition",
+      "where": "comparison/expanded/early-definition/2/shared_json"
+    },
+    {
+      "actual_bytes": 64116034,
+      "actual_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 64116034,
+      "expected_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "profile": "expanded",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "early-definition",
+      "where": "comparison/expanded/early-definition/3/canonical_json"
+    },
+    {
+      "actual_bytes": 64116034,
+      "actual_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 64116034,
+      "expected_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "profile": "expanded",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "early-definition",
+      "where": "comparison/expanded/early-definition/3/shared_json"
+    },
+    {
+      "actual_bytes": 64116034,
+      "actual_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 64116034,
+      "expected_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "profile": "expanded",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "early-definition",
+      "where": "comparison/expanded/early-definition/4/canonical_json"
+    },
+    {
+      "actual_bytes": 64116034,
+      "actual_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 64116034,
+      "expected_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "profile": "expanded",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "early-definition",
+      "where": "comparison/expanded/early-definition/4/shared_json"
+    },
+    {
+      "actual_bytes": 64115987,
+      "actual_sha256": "6456c02bf654a3877ee33bf0c8d61449d1dc4e98545d54f6e46c2c5667639d1a",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 64115987,
+      "expected_sha256": "6456c02bf654a3877ee33bf0c8d61449d1dc4e98545d54f6e46c2c5667639d1a",
+      "profile": "expanded",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "unrelated-definition",
+      "where": "comparison/expanded/unrelated-definition/0/canonical_json"
+    },
+    {
+      "actual_bytes": 64115987,
+      "actual_sha256": "6456c02bf654a3877ee33bf0c8d61449d1dc4e98545d54f6e46c2c5667639d1a",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 64115987,
+      "expected_sha256": "6456c02bf654a3877ee33bf0c8d61449d1dc4e98545d54f6e46c2c5667639d1a",
+      "profile": "expanded",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "unrelated-definition",
+      "where": "comparison/expanded/unrelated-definition/0/shared_json"
+    },
+    {
+      "actual_bytes": 64115987,
+      "actual_sha256": "6456c02bf654a3877ee33bf0c8d61449d1dc4e98545d54f6e46c2c5667639d1a",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 64115987,
+      "expected_sha256": "6456c02bf654a3877ee33bf0c8d61449d1dc4e98545d54f6e46c2c5667639d1a",
+      "profile": "expanded",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "unrelated-definition",
+      "where": "comparison/expanded/unrelated-definition/1/canonical_json"
+    },
+    {
+      "actual_bytes": 64115987,
+      "actual_sha256": "6456c02bf654a3877ee33bf0c8d61449d1dc4e98545d54f6e46c2c5667639d1a",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 64115987,
+      "expected_sha256": "6456c02bf654a3877ee33bf0c8d61449d1dc4e98545d54f6e46c2c5667639d1a",
+      "profile": "expanded",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "unrelated-definition",
+      "where": "comparison/expanded/unrelated-definition/1/shared_json"
+    },
+    {
+      "actual_bytes": 64115987,
+      "actual_sha256": "6456c02bf654a3877ee33bf0c8d61449d1dc4e98545d54f6e46c2c5667639d1a",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 64115987,
+      "expected_sha256": "6456c02bf654a3877ee33bf0c8d61449d1dc4e98545d54f6e46c2c5667639d1a",
+      "profile": "expanded",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "unrelated-definition",
+      "where": "comparison/expanded/unrelated-definition/2/canonical_json"
+    },
+    {
+      "actual_bytes": 64115987,
+      "actual_sha256": "6456c02bf654a3877ee33bf0c8d61449d1dc4e98545d54f6e46c2c5667639d1a",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 64115987,
+      "expected_sha256": "6456c02bf654a3877ee33bf0c8d61449d1dc4e98545d54f6e46c2c5667639d1a",
+      "profile": "expanded",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "unrelated-definition",
+      "where": "comparison/expanded/unrelated-definition/2/shared_json"
+    },
+    {
+      "actual_bytes": 64115987,
+      "actual_sha256": "6456c02bf654a3877ee33bf0c8d61449d1dc4e98545d54f6e46c2c5667639d1a",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 64115987,
+      "expected_sha256": "6456c02bf654a3877ee33bf0c8d61449d1dc4e98545d54f6e46c2c5667639d1a",
+      "profile": "expanded",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "unrelated-definition",
+      "where": "comparison/expanded/unrelated-definition/3/canonical_json"
+    },
+    {
+      "actual_bytes": 64115987,
+      "actual_sha256": "6456c02bf654a3877ee33bf0c8d61449d1dc4e98545d54f6e46c2c5667639d1a",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 64115987,
+      "expected_sha256": "6456c02bf654a3877ee33bf0c8d61449d1dc4e98545d54f6e46c2c5667639d1a",
+      "profile": "expanded",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "unrelated-definition",
+      "where": "comparison/expanded/unrelated-definition/3/shared_json"
+    },
+    {
+      "actual_bytes": 64115987,
+      "actual_sha256": "6456c02bf654a3877ee33bf0c8d61449d1dc4e98545d54f6e46c2c5667639d1a",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 64115987,
+      "expected_sha256": "6456c02bf654a3877ee33bf0c8d61449d1dc4e98545d54f6e46c2c5667639d1a",
+      "profile": "expanded",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "unrelated-definition",
+      "where": "comparison/expanded/unrelated-definition/4/canonical_json"
+    },
+    {
+      "actual_bytes": 64115987,
+      "actual_sha256": "6456c02bf654a3877ee33bf0c8d61449d1dc4e98545d54f6e46c2c5667639d1a",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 64115987,
+      "expected_sha256": "6456c02bf654a3877ee33bf0c8d61449d1dc4e98545d54f6e46c2c5667639d1a",
+      "profile": "expanded",
+      "reported_outcome": "ACCEPTED_REPORTED",
+      "role": "unrelated-definition",
+      "where": "comparison/expanded/unrelated-definition/4/shared_json"
+    },
+    {
+      "actual_bytes": 64116034,
+      "actual_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 64116034,
+      "expected_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "profile": "expanded",
+      "reported_outcome": "COLD_ACCEPTED_REPORTED",
+      "role": "early-definition",
+      "where": "comparison/expanded/cold_restart/canonical_json"
+    },
+    {
+      "actual_bytes": 64116034,
+      "actual_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "exact_sha_and_size_match": true,
+      "expected_bytes": 64116034,
+      "expected_sha256": "a5897a86683967681a49b0865db88e4d23dc31bf3a639f2835095393745ffc76",
+      "profile": "expanded",
+      "reported_outcome": "COLD_ACCEPTED_REPORTED",
+      "role": "early-definition",
+      "where": "comparison/expanded/cold_restart/shared_json"
+    }
+  ],
+  "metadata_errors": [],
+  "mismatched": [],
+  "missing": [],
+  "scope": [
+    "Compares explicit CI snapshot SHA256 AND exact integer byte sizes to fixed actual74-process replay inputs.",
+    "Compact reports supply CI input identity under SHA256 collision resistance; no remote process/machine attestation is inferred.",
+    "Reported outcomes and no-persistence gates are checked separately from input identity; HMAC keys and economic claims are not inspected.",
+    "Extra local overwrite-policy roles are intentionally outside CI-role coverage, not silently counted as matches.",
+    "Baseline/theorem-leaf protected positives outside local full-kernel replay are listed as extra CI scope, not certified by this helper."
+  ],
+  "source": "5dfe38b01ca7b1c67f70be4ffb2479978049239e",
+  "status": "PASS_EXACT_REPORTED_CI_INPUT_PARITY"
+}

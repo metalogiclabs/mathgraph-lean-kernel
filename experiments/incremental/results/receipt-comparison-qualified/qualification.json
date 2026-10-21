@@ -1,0 +1,35 @@
+{
+  "schema": "mathgraph.receipt-comparison.preserved-qualification.v1",
+  "source": "5dfe38b01ca7b1c67f70be4ffb2479978049239e",
+  "branch": "research/incremental-retained-continuation-20261021",
+  "base_source": "6e717043b85acdad63c2399131cb5f9a7432ee37",
+  "run_id": 39581949051,
+  "job_id": 119161428100,
+  "ci_conclusion": "success",
+  "compact_artifact": {
+    "id": 12342450124,
+    "bytes": 58533476,
+    "sha256": "7aa231dff8ddda4d1f6cbd073d62ea408ac5e8f491f421f1ceeebfa5a01f4847",
+    "downloaded_and_digest_verified": true,
+    "crc_verified": true,
+    "members": 180,
+    "uncompressed_bytes": 279277822
+  },
+  "full_artifact": {
+    "id": 12342135278,
+    "bytes": 3187925325,
+    "provider_sha256": "c2c43ed69e1f279ea4fddd6bfc32ddc8ea90e80eb7ac067d3aebd04a3f79af30",
+    "downloaded": false,
+    "reason": "Full artifact exceeds available local volume; exact compact archive and independently replayable representative inputs preserved."
+  },
+  "qualification_scope": "Bounded warm update improvement only; full materialization/hash, cold initialization and complete applicability work remain; not formal executable proof or multi-update lifetime qualification.",
+  "independent_review": {
+    "helper_sha256": "915467911481d05949e824eca0e707c5fdbef87967134f0605040008f805574d",
+    "checks": 15067,
+    "falsifiers": 40,
+    "representative_complete_witnesses": 8
+  },
+  "independent_kernel_processes": 74,
+  "independent_reported_ci_input_matches": 74,
+  "independent_arithmetic_comparisons": 28
+}

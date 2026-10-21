@@ -1,0 +1,15 @@
+{
+  "classification": "ACCEPTED",
+  "command": [
+    "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker-paranoid",
+    "--silent",
+    "--from-export",
+    "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-early-definition.ndjson"
+  ],
+  "elapsed_seconds": 12.159810283000297,
+  "expected_returncode": 0,
+  "returncode": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "timed_out": false
+}

@@ -1,0 +1,33 @@
+test_actual_cold_baseline_projection_is_prior_authentication (__main__.Contracts.test_actual_cold_baseline_projection_is_prior_authentication) ... ERROR
+test_missing_exited_process_observation_is_not_zero (__main__.Contracts.test_missing_exited_process_observation_is_not_zero) ... ERROR
+
+======================================================================
+ERROR: test_actual_cold_baseline_projection_is_prior_authentication (__main__.Contracts.test_actual_cold_baseline_projection_is_prior_authentication)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/kernel-audit/retained-admission-continuation/receipt-comparison-review/test_review_receipt_comparison.py", line 52, in test_actual_cold_baseline_projection_is_prior_authentication
+    r=copy.deepcopy(self.r);m.comparison_check(r,'a'*40,m.Checks())
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/kernel-audit/retained-admission-continuation/receipt-comparison-review/review_receipt_comparison.py", line 158, in comparison_check
+    c.eq('comparison:cold passed',cold['passed'],True);arm_check(c,cold['arm'],profile,'early-definition',mode,report['binary_sha256'])
+                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/kernel-audit/retained-admission-continuation/receipt-comparison-review/review_receipt_comparison.py", line 136, in arm_check
+    b=a['baseline_result'];c.eq('arm:baseline verified',b['status'],'VERIFIED');c.eq('arm:baseline full check',b['counts']['rechecked'],n)
+                                                                                                               ~~~~~~~~~~~^^^^^^^^^^^^^
+TypeError: 'NoneType' object is not subscriptable
+
+======================================================================
+ERROR: test_missing_exited_process_observation_is_not_zero (__main__.Contracts.test_missing_exited_process_observation_is_not_zero)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/kernel-audit/retained-admission-continuation/receipt-comparison-review/test_review_receipt_comparison.py", line 60, in test_missing_exited_process_observation_is_not_zero
+    m.arm_check(m.Checks(),a,'original','early-definition','shared_json',r['binary_sha256'])
+  File "/workspace/kernel-audit/retained-admission-continuation/receipt-comparison-review/review_receipt_comparison.py", line 133, in arm_check
+    for key,value in fields.items():c.need('arm:procfs numeric',type(value) is int and value>=0)
+                     ^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'items'
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.697s
+
+FAILED (errors=2)

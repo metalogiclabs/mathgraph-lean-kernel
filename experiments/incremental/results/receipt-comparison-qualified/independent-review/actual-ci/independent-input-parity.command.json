@@ -1,0 +1,21 @@
+{
+  "actual_ci_artifact_source": "5dfe38b01ca7b1c67f70be4ffb2479978049239e",
+  "command": [
+    "python",
+    "/workspace/kernel-audit/retained-admission-continuation/ci-input-parity-helper/compare_inputs.py",
+    "--ci-root",
+    "/workspace/kernel-audit/retained-admission-continuation/receipt-comparison-review/actual-ci/artifact",
+    "--local-summary",
+    "/workspace/kernel-audit/retained-admission-continuation/ci-input-parity-helper/local-replay-summary.json",
+    "--out",
+    "/workspace/kernel-audit/retained-admission-continuation/receipt-comparison-review/actual-ci/independent-input-parity.json"
+  ],
+  "frozen_helper_sha256": "4d90f3683aa24ecd63a92c9456b37a4b92136b3e9d6e7bbb33124d079284c34f",
+  "helper_sha256": "4d90f3683aa24ecd63a92c9456b37a4b92136b3e9d6e7bbb33124d079284c34f",
+  "local_summary_sha256": "97ae21b2dfaa46944ca8415044b7758b64d2605c7a0fb73bea4cbc380a677f6f",
+  "output_sha256": "146c1629d5b2a801a834d8f62408c1ff2ddd6d75742074c90bec380bf6e13101",
+  "returncode": 0,
+  "scope": "Frozen comparator executed against the existing shared extraction; no second extraction or runtime replay. Explicit reported input SHA/size parity only.",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout_sha256": "2d44dc30c3a5e3f01957789b459a9baa40f85d56f4e42701ed730c7c8347a5a7"
+}

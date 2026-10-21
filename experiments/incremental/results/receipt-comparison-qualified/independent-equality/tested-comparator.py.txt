@@ -1,0 +1,32 @@
+def _same_index_json(left, right):
+    """Compare already admitted acyclic JSON indexes as their canonical bytes.
+
+    The authenticated baseline and decoded patches contain plain serializable
+    JSON values. Unchanged reconstructed subtrees share that private baseline;
+    identity can skip those subtrees without re-encoding them. This is not an
+    input validator or an equality definition for arbitrary mutable Python
+    objects. Float representation and non-ASCII aliases use the old encoder.
+    """
+    kind = type(left)
+    if type(right) is not kind or kind not in (dict, list, str, int, bool, float, type(None)):
+        return engine.encoded(left) == engine.encoded(right)
+    if kind is float:
+        return engine.encoded(left) == engine.encoded(right)
+    if kind is str:
+        if left == right:
+            return True
+        if left.isascii() and right.isascii():
+            return False
+        return engine.encoded(left) == engine.encoded(right)
+    if kind not in (dict, list):
+        return left == right
+    if left is right:
+        return True
+    if kind is dict:
+        if not all(type(k) is str and k.isascii() for k in left) or not all(
+                type(k) is str and k.isascii() for k in right):
+            return engine.encoded(left) == engine.encoded(right)
+        return left.keys() == right.keys() and all(
+            _same_index_json(value, right[key]) for key, value in left.items())
+    return len(left) == len(right) and all(
+        _same_index_json(a, b) for a, b in zip(left, right))

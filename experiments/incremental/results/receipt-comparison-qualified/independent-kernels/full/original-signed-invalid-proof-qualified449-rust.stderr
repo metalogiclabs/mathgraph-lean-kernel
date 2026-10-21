@@ -1,0 +1,7 @@
+
+thread '<unnamed>' (4084) panicked at src/infer.rs:281:9:
+def_eq failed
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+thread 'main' (4083) panicked at src/tc.rs:242:18:
+serial checker thread panicked: Any { .. }

@@ -1,0 +1,97 @@
+{
+  "scope": "Synthetic independent reviewer contract tests, not qualification evidence",
+  "qualification_claim": false,
+  "passed": true,
+  "falsifiers": [
+    {
+      "name": "partial",
+      "passed": true,
+      "refusal": "comparison:completed"
+    },
+    {
+      "name": "false correctness",
+      "passed": true,
+      "refusal": "comparison:correctness_passed"
+    },
+    {
+      "name": "wrong source",
+      "passed": true,
+      "refusal": "comparison:source"
+    },
+    {
+      "name": "missing pair",
+      "passed": true,
+      "refusal": "comparison:five pairs"
+    },
+    {
+      "name": "duplicate repetition",
+      "passed": true,
+      "refusal": "comparison:repetitions"
+    },
+    {
+      "name": "wrong count",
+      "passed": true,
+      "refusal": "arm:checked"
+    },
+    {
+      "name": "wrong policy",
+      "passed": true,
+      "refusal": "arm:comparison policy"
+    },
+    {
+      "name": "wrong kernel",
+      "passed": true,
+      "refusal": "arm:kernel kind"
+    },
+    {
+      "name": "false audit",
+      "passed": true,
+      "refusal": "arm:observed audit:issuer_hmac_valid"
+    },
+    {
+      "name": "timeout comparator",
+      "passed": true,
+      "refusal": "arm:direct_rust:timeout"
+    },
+    {
+      "name": "altered timing",
+      "passed": true,
+      "refusal": "arm:setup+apply"
+    },
+    {
+      "name": "wrong CPU metric",
+      "passed": true,
+      "refusal": "CPU:scope:measurement"
+    },
+    {
+      "name": "wrong economic scope",
+      "passed": true,
+      "refusal": "warm_economics:scope:scope"
+    },
+    {
+      "name": "false cold",
+      "passed": true,
+      "refusal": "comparison:cold passed"
+    },
+    {
+      "name": "wrong mode refusal",
+      "passed": true,
+      "refusal": "comparison:control actual cause"
+    },
+    {
+      "name": "persisted cross-mode acceptance",
+      "passed": true,
+      "refusal": "comparison:control no new acceptance"
+    },
+    {
+      "name": "missing witness",
+      "passed": true,
+      "refusal": "comparison:representative witnesses"
+    },
+    {
+      "name": "negative phase",
+      "passed": true,
+      "refusal": "arm:phase finite:end_to_end_cpu_seconds"
+    }
+  ]
+}

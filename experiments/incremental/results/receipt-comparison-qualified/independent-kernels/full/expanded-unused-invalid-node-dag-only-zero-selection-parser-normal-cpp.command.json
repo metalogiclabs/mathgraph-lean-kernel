@@ -1,0 +1,15 @@
+{
+  "classification": "PARSER_REFUSED",
+  "command": [
+    "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+    "--silent",
+    "--from-export",
+    "/workspace/kernel-audit/retained-index/independent-real-inputs-final/expanded-unused-invalid-node-dag-only-zero-selection-parser.ndjson"
+  ],
+  "elapsed_seconds": 1.8779326290004974,
+  "expected_returncode": 1,
+  "returncode": 1,
+  "stderr_sha256": "74ffa5806ba620027c25f9a5494051d48b6aab6372cd3dacf9da624cce5ce1a6",
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "timed_out": false
+}

@@ -1,0 +1,29 @@
+{
+  "schema": "independent.receipt-comparison-statistical-gate-audit.v2",
+  "scope": "Synthetic reviewer classification diagnostic, not measured performance or CI qualification",
+  "qualification_claim": false,
+  "negative_economics_accepted": true,
+  "correctness_qualification_promoted": false,
+  "unchanged_correctness_status": true,
+  "negative_economics": {
+    "apply_median_wall_seconds": 2.02,
+    "direct_median_wall_seconds": 1.01,
+    "median_ratio": 2.0,
+    "paired_wins": 0,
+    "paired_count": 5,
+    "bootstrap_ratio_interval_95": [
+      2.0,
+      2.0
+    ],
+    "bootstrap_repetitions": 10000,
+    "bootstrap_seed": 20261017,
+    "passed": false,
+    "status": "NO_SPEEDUP",
+    "saving_percent": -100.0,
+    "scope": "Same-source retained-kernel receipt issuance: shared JSON comparison versus canonical JSON comparison. Observed wall_seconds.",
+    "measurement": "wall_seconds"
+  },
+  "authentication_gap_refused": "arm:observed audit:issuer_hmac_valid",
+  "checks": 5119,
+  "helper_sha256": "7633e6ada35ecfcaa1d7cba4633a24b7728824c8b8a0dbdb623357f304f3ba4a"
+}
