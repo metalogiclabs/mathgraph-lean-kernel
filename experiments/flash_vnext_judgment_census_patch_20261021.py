@@ -96,11 +96,11 @@ mod joint_census {
         static COUNTERS: Counters = const { Counters::new() };
     }
 
-    pub(super) fn type_lookup(hit: bool, with_value: bool) {
+    pub(crate) fn type_lookup(hit: bool, with_value: bool) {
         COUNTERS.with(|c| c.type_lookup(hit, with_value));
     }
 
-    pub(super) fn eval_lookup(hit: bool, with_type: bool, with_checked_type: bool) {
+    pub(crate) fn eval_lookup(hit: bool, with_type: bool, with_checked_type: bool) {
         COUNTERS.with(|c| c.eval_lookup(hit, with_type, with_checked_type));
     }
 }
