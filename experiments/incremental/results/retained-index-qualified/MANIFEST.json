@@ -58,6 +58,11 @@
       "sha256": "b3b821885dd007c3de4b5cd68e662909d8fe925a292edd94013e535649863136"
     },
     {
+      "path": "ci/independent-public-evidence-read.json",
+      "bytes": 595,
+      "sha256": "b5d95072796ede8adfbff6aee80663c161f1720c5f9d96401ea31e7ace5625ea"
+    },
+    {
       "path": "ci/independent-review-SHA256SUMS",
       "bytes": 788,
       "sha256": "63c5724034182c698ffc4e148f65ab8c04df4a1eb0905348fbf0d438e5704367"
@@ -1463,6 +1468,16 @@
       "sha256": "d8ba1b5f5ed5c39bfa5cc9ad2e999e1d32410d80ab5d1bfaa8c26d0625a1d85e"
     },
     {
+      "path": "research-os-sync.json",
+      "bytes": 886,
+      "sha256": "cc415260772dcca4068c724f18ef273e10c79fc2a7ddb6974f2edc8dc6be5a73"
+    },
+    {
+      "path": "ros-entry.md",
+      "bytes": 8170,
+      "sha256": "6e255d510d70fad0d750f6d02ae2c6ae6c06ef46d5d9de7cdba5f28a95150b06"
+    },
+    {
       "path": "sparse-storage-v4/findings.md",
       "bytes": 2630,
       "sha256": "9616753f56b6c32df37f7e8769f7cf5b7a2fbfabf7bf96046cf982be48e29659"
@@ -1488,5 +1503,5 @@
       "sha256": "61004cdb3d19d278e19485cdcf70e7ee6d6b810a96ab7a517d48589e9ba2dbbf"
     }
   ],
-  "scope": "Exact source CI reports/archive plus separately scoped local diagnostic/failure/replay evidence. Private issuer keys, generated Python bytecode caches and regenerable full exports are not published."
+  "scope": "Exact source CI reports/archive plus separately scoped local diagnostic/failure/replay and verified ROS synchronization evidence. Private issuer keys, generated Python bytecode and regenerable full exports are not published."
 }
