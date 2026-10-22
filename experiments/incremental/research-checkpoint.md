@@ -8,7 +8,7 @@ Independent review passed 3,017,800 decisions, 2,440 object links, all 88 econom
 
 **Remaining UNKNOWN:** remove per-update full export materialization/hash/readback and index copies/scans without weakening authenticated source-to-export integrity. These remain O(total size); recovery remains O(history). The measured forty-update lifecycle wins do not establish asymptotically change-proportional total cost or arbitrary Lean/Mathlib support. Prior stronger warm-only evidence remains intact in the canonical Research OS checkpoint.
 
-Canonical [Research OS checkpoint](https://app.notion.com/p/3fb3e523d7ab81c68c89c1442eb0bb05): synchronization follows permanent evidence push; its readback proof will be committed separately. Earlier checkpoint and failures are preserved below.
+Canonical [Research OS checkpoint](https://app.notion.com/p/3fb3e523d7ab81c68c89c1442eb0bb05): synchronized and read back, with the previous 81,733-byte body preserved exactly; [synchronization proof](results/revision-chain-qualified/ros/readback-proof.json) and [published-evidence readback](results/revision-chain-qualified/published-readback/assessment.json) are committed. Earlier checkpoint and failures are preserved below.
 
 ---
 

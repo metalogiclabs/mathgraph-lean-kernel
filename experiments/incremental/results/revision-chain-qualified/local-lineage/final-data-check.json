@@ -1,0 +1,13 @@
+{
+  "schema": "mathgraph.final-data-only-check.v1",
+  "passed": true,
+  "source": "d1b22447d23a928ae536cbe838a47fc9682a4b39",
+  "changed_tracked_paths": 281,
+  "all_changes_confined_to_evidence_and_checkpoint": true,
+  "all_preserved_sha256s_passed": true,
+  "corrections": [
+    "Initial checksum invocation used repository root instead of manifest-relative directory and failed on relative paths.",
+    "A relative Git exclusion guard displayed expected evidence changes; replaced with explicit repository-root name checks."
+  ],
+  "scope": "Final evidence packaging invocation corrections; no checker or qualification source repair."
+}

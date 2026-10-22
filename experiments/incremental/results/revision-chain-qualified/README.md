@@ -103,3 +103,7 @@ Preserve source/binary hashes, raw paired measurements, independent reader sourc
 ## Remaining residual
 
 Per-update complete export materialization/hash, full successor readback, full index cloning and remaining declaration/receipt scans still scale with total development size. Cold recovery scales with accepted history. **UNKNOWN:** how to remove those full-development costs while preserving the same authenticated source-to-export integrity and independently checkable acceptance boundary. The qualified lifecycle speedup is bounded and concrete; total verification is not yet asymptotically proportional only to the affected dependency cone.
+
+## Research authority and publication
+
+The [canonical Research OS checkpoint](https://app.notion.com/p/3fb3e523d7ab81c68c89c1442eb0bb05) is synchronized and read back. Its previous 81,733-byte body remains an exact suffix; see [sync proof](ros/readback-proof.json). [Published evidence readback](published-readback/assessment.json) confirms every original evidence Git blob identity and independently decoded critical report bytes at `d5aa24cc52f6a38c79d097be58226547181cc97b`. This subsequent metadata commit changes no qualified runtime code.

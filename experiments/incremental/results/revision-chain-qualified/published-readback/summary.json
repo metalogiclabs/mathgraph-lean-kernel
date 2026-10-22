@@ -1,0 +1,47 @@
+{
+  "schema": "mathgraph.published-evidence-readback.v1",
+  "passed": true,
+  "commit": "d5aa24cc52f6a38c79d097be58226547181cc97b",
+  "tree_sha": "0339b8c63e02539c9cf4e9997df0ba2b9b100474",
+  "all_evidence_blob_ids_equal": 280,
+  "critical_report_bytes_checked": [
+    {
+      "path": "experiments/incremental/results/revision-chain-qualified/README.md",
+      "bytes": 17905,
+      "git_blob_sha": "f40568826e3d23a808406086a2f84cecfb968de2",
+      "decoded_sha256": "fa3b924ab6cb744b20c1c1ef47d461faabbde2e40539b9cd3e3fdf77bc04630c"
+    },
+    {
+      "path": "experiments/incremental/results/revision-chain-qualified/SHA256SUMS",
+      "bytes": 35456,
+      "git_blob_sha": "a635c08d516d252f78cba767b746403f3877f4de",
+      "decoded_sha256": "9f1a5c2a033313a0b7e009323e1d01fcda49d81a6eb2cd646e32dfd3fbd50518"
+    },
+    {
+      "path": "experiments/incremental/results/revision-chain-qualified/qualification.json",
+      "bytes": 5300,
+      "git_blob_sha": "6c345bd5c024238b0b7f4a106e657504be963cb0",
+      "decoded_sha256": "53b0b236c4de37648e8e82b2eaedf127c61d25d83a6190a9e2242cd140750f2f"
+    },
+    {
+      "path": "experiments/incremental/results/revision-chain-qualified/packaging/manifest.json",
+      "bytes": 4310,
+      "git_blob_sha": "a82147a9f836e52e6dd6f246fc03d17e132c3d24",
+      "decoded_sha256": "a0f34c93c54bdce8942f8e168439efb7d141619c94277ed1b78b1226d05ea53f"
+    },
+    {
+      "path": "experiments/incremental/results/revision-chain-qualified/independent-review/actual-ci/ci-review.json",
+      "bytes": 2640541,
+      "git_blob_sha": "9151bd56a270a35759e5d0c7132b6960585df481",
+      "decoded_sha256": "cff9223a884541908eef3f96208ebd7443a79375e32077f7dd7801f1c32cd8dc"
+    },
+    {
+      "path": "experiments/incremental/results/revision-chain-qualified/fresh-kernels/summary.json",
+      "bytes": 2952464,
+      "git_blob_sha": "b34699bcf1b06eeef1562e5f8bf63b9c7c578207",
+      "decoded_sha256": "2d30bd9fc4e8032c4b577f7a9e1241190e8f21e58d3d007630a25c05e0ab91a1"
+    }
+  ],
+  "archive_scope": "Every part Git blob identity matches the local committed object; critical report bytes are independently decoded and SHA256 checked. Archive parts were not downloaded a second time through GitHub.",
+  "qualified_runtime": "d1b22447d23a928ae536cbe838a47fc9682a4b39"
+}
