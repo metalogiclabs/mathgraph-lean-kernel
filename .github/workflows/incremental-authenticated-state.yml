@@ -1,0 +1,910 @@
+name: Authenticated state identity and lifecycle qualification
+on:
+  push:
+    branches: [research/incremental-authenticated-state-20261022]
+    paths:
+      - Cargo.toml
+      - Cargo.lock
+      - src/**
+      - experiments/incremental/**
+      - '!experiments/incremental/results/**'
+      - .github/workflows/incremental-*.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+defaults:
+  run:
+    shell: bash
+concurrency:
+  group: incremental-authenticated-state-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  qualification:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+      - name: Verify pipe failures remain fatal
+        run: |
+          set +e
+          (false | tee "$RUNNER_TEMP/receipt-pipeline-negative.log")
+          task_pipeline_status=$?
+          set -e
+          test "$task_pipeline_status" -ne 0
+      - name: Build pinned tools and exercise parser authority and JSON comparison contracts
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$HOME/.elan/bin:$PATH"
+          mkdir -p artifacts
+          bash experiments/incremental/setup.sh 2>&1 | tee artifacts/setup.log
+          cargo +1.95.0 test --release --locked 2>&1 | tee artifacts/rust-tests.log
+          python3 experiments/incremental/test_predicate.py 2>&1 | tee artifacts/predicate-tests.log
+          python3 experiments/incremental/test_native_identity.py 2>&1 | tee artifacts/native-identity-tests.log
+          python3 experiments/incremental/test_native_adapter.py --checker target/release/check-selected 2>&1 | tee artifacts/native-adapter-tests.log
+          python3 experiments/incremental/test_source_delta_authority.py 2>&1 | tee artifacts/source-authority-tests.log
+          python3 experiments/incremental/test_sparse_index_wire.py 2>&1 | tee artifacts/sparse-wire-tests.log
+          python3 experiments/incremental/test_sparse_acceptance.py 2>&1 | tee artifacts/sparse-acceptance-tests.log
+          python3 experiments/incremental/test_delta_reuse.py 2>&1 | tee artifacts/delta-reuse-tests.log
+          python3 experiments/incremental/test_index_json_equality.py 2>&1 | tee artifacts/index-json-equality-tests.log
+          python3 experiments/incremental/test_state_representation.py 2>&1 | tee artifacts/state-representation-tests.log
+          python3 experiments/incremental/test_authenticated_state_benchmark.py 2>&1 | tee artifacts/state-benchmark-contract-tests.log
+          python3 experiments/incremental/test_state_replay.py 2>&1 | tee artifacts/state-independent-reader-tests.log
+          python3 experiments/incremental/benchmark_retained_admission.py --self-test 2>&1 | tee artifacts/receipt-harness-tests.log
+          python3 -m py_compile experiments/incremental/benchmark_retained_admission.py experiments/incremental/producer_delta.py experiments/incremental/revision_chain.py experiments/incremental/benchmark_revision_chain.py experiments/incremental/authenticated_state.py experiments/incremental/benchmark_authenticated_state.py experiments/incremental/test_authenticated_state.py experiments/incremental/test_state_controls.py experiments/incremental/replay_authenticated_state.py
+          # Cargo's executable tests can replace top-level binaries. Freeze only ordinary rebuilt bins.
+          cargo +1.95.0 build --release --locked --bins 2>&1 | tee artifacts/release-rebuild.log
+      - name: Preserve separately compiled original checker executables
+        env:
+          BASELINE_REF: 9ac04033b51703fb135ec3c28621d44b183944fe
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$PATH"
+          baseline_worktree="$RUNNER_TEMP/receipt-original-baseline"
+          baseline_target="$RUNNER_TEMP/receipt-original-baseline-target"
+          mkdir -p artifacts/native-baseline-bin
+          git worktree add --detach "$baseline_worktree" "$BASELINE_REF"
+          git -C "$baseline_worktree" rev-parse HEAD > artifacts/native-baseline-bin/source-ref.txt
+          test "$(cat artifacts/native-baseline-bin/source-ref.txt)" = "$BASELINE_REF"
+          cargo +1.95.0 build --release --locked --manifest-path "$baseline_worktree/Cargo.toml" \
+            --target-dir "$baseline_target" --bin check-selected --bin sokonanoda \
+            2>&1 | tee artifacts/native-baseline-bin/build.log
+          cp "$baseline_target/release/check-selected" artifacts/native-baseline-bin/check-selected
+          cp "$baseline_target/release/sokonanoda" artifacts/native-baseline-bin/sokonanoda
+      - name: Build exact original and expanded source-owned Lean exports
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.cargo/bin:$HOME/.elan/bin:$PATH"
+          bash experiments/incremental/build_delta_producer.sh artifacts/delta-build 2>&1 | tee artifacts/producer-build.log
+          python3 experiments/incremental/build_workloads.py --out artifacts/workloads 2>&1 | tee artifacts/workload-build.log
+          python3 experiments/incremental/build_delta_workloads.py --workloads artifacts/workloads \
+            --out artifacts/expanded --producer artifacts/delta-build/delta-producer 2>&1 | tee artifacts/expanded-build.log
+          python3 experiments/incremental/test_delta_producer.py --binary artifacts/delta-build/delta-producer \
+            --workload artifacts/workloads/baseline/source --output artifacts/producer-test 2>&1 | tee artifacts/producer-tests.log
+      - name: Exercise real predecessor-aware Lean revisions and legacy producer compatibility
+        run: |
+          set -euo pipefail
+          python3 experiments/incremental/test_revision_producer.py \
+            --binary artifacts/delta-build/delta-producer --workload artifacts/workloads/baseline/source \
+            --output artifacts/revision-producer-original 2>&1 | tee artifacts/revision-producer-original.log
+          python3 experiments/incremental/test_revision_producer.py \
+            --binary artifacts/delta-build/delta-producer --workload artifacts/expanded/baseline/source \
+            --profile std-hashmap-expanded-v1 --output artifacts/revision-producer-expanded \
+            2>&1 | tee artifacts/revision-producer-expanded.log
+      - name: Exercise chain lifecycle contracts and authenticated recovery controls
+        run: |
+          set -euo pipefail
+          python3 experiments/incremental/benchmark_revision_chain.py --self-test \
+            2>&1 | tee artifacts/revision-harness-tests.log
+          python3 experiments/incremental/test_revision_chain.py \
+            --workloads artifacts/workloads --producer artifacts/delta-build/delta-producer \
+            --binaries target/release --output artifacts/revision-chain-tests-original \
+            2>&1 | tee artifacts/revision-chain-tests-original.log
+          python3 experiments/incremental/test_revision_chain.py \
+            --workloads artifacts/expanded --producer artifacts/delta-build/delta-producer \
+            --binaries target/release --output artifacts/revision-chain-tests-expanded \
+            2>&1 | tee artifacts/revision-chain-tests-expanded.log
+          python3 experiments/incremental/test_revision_chain_controls.py \
+            --workloads artifacts/workloads --producer artifacts/delta-build/delta-producer \
+            --binaries target/release --output artifacts/revision-chain-controls-original \
+            2>&1 | tee artifacts/revision-chain-controls-original.log
+          python3 experiments/incremental/test_revision_chain_controls.py \
+            --workloads artifacts/expanded --producer artifacts/delta-build/delta-producer \
+            --binaries target/release --output artifacts/revision-chain-controls-expanded \
+            2>&1 | tee artifacts/revision-chain-controls-expanded.log
+      - name: Qualify authenticated state representation parity and cold recovery
+        run: |
+          set -euo pipefail
+          python3 experiments/incremental/test_authenticated_state.py \
+            --workloads artifacts/workloads --producer artifacts/delta-build/delta-producer \
+            --binaries target/release --output artifacts/state-parity-original \
+            2>&1 | tee artifacts/state-parity-original.log
+          python3 experiments/incremental/test_authenticated_state.py \
+            --workloads artifacts/expanded --producer artifacts/delta-build/delta-producer \
+            --binaries target/release --output artifacts/state-parity-expanded \
+            2>&1 | tee artifacts/state-parity-expanded.log
+          python3 experiments/incremental/test_state_controls.py \
+            --workloads artifacts/workloads --producer artifacts/delta-build/delta-producer \
+            --binaries target/release --output artifacts/state-controls-original \
+            2>&1 | tee artifacts/state-controls-original.log
+          python3 experiments/incremental/test_state_controls.py \
+            --workloads artifacts/expanded --producer artifacts/delta-build/delta-producer \
+            --binaries target/release --output artifacts/state-controls-expanded \
+            2>&1 | tee artifacts/state-controls-expanded.log
+      - name: Freeze exact source and every measured executable after build and tests
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git diff --exit-code
+          git ls-files -z Cargo.toml Cargo.lock src experiments/incremental .github/workflows/incremental-receipt-comparison.yml .github/workflows/incremental-revision-chain.yml .github/workflows/incremental-authenticated-state.yml \
+            | xargs -0 sha256sum > artifacts/source-before.sha256
+          python3 - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          paths=[Path('target/release')/n for n in ('check-selected','check-selected-retained-session','export-index','index-session','sokonanoda')]
+          paths += [Path('artifacts/delta-build/delta-producer')]
+          paths += [Path('artifacts/native-baseline-bin')/n for n in ('check-selected','sokonanoda')]
+          for manifest in ('artifacts/workloads/manifest.json','artifacts/expanded/manifest.json'):
+              tools=json.loads(Path(manifest).read_bytes())['tools']
+              paths.extend(Path(t['path']) for t in tools.values() if t['exists'])
+          records=[]
+          for p in sorted(set(paths)):
+              assert p.is_file(),p
+              records.append(dict(path=str(p),sha256=hashlib.sha256(p.read_bytes()).hexdigest(),bytes=p.stat().st_size))
+          Path('artifacts/binaries-before.json').write_text(json.dumps(records,indent=2)+'\n')
+          Path('artifacts/binaries-before.sha256').write_text(''.join(r['sha256']+'  '+r['path']+'\n' for r in records))
+          PY
+      - name: Preserve original 197 correctness gates
+        run: |
+          set -euo pipefail
+          python3 experiments/incremental/qualify.py --workloads artifacts/workloads --out artifacts/original-qualification \
+            --checker target/release/check-selected --full-checker target/release/sokonanoda \
+            --identity-backend native --indexer target/release/export-index \
+            --authority-dir "$RUNNER_TEMP/receipt-original-authority" --repetitions 3 --optional-kernels \
+            2>&1 | tee artifacts/original-qualification.log
+      - name: Preserve native 335 identity and adapter gates
+        run: |
+          set -euo pipefail
+          python3 experiments/incremental/qualify_native.py --workloads artifacts/workloads --out artifacts/native-qualification \
+            --checker target/release/check-selected --full-checker target/release/sokonanoda --indexer target/release/export-index \
+            --authority-dir "$RUNNER_TEMP/receipt-native-authority" --original-qualification artifacts/original-qualification \
+            2>&1 | tee artifacts/native-qualification.log
+      - name: Preserve independent 719 replay and full-kernel gates
+        run: |
+          set -euo pipefail
+          python3 experiments/incremental/replay_native.py --qualification artifacts/original-qualification \
+            --workloads artifacts/workloads --authority-key "$RUNNER_TEMP/receipt-original-authority/issuer.key" \
+            --checker target/release/sokonanoda --indexer target/release/export-index \
+            --reference experiments/incremental/results/local-qualified.json --out artifacts/native-independent-replay \
+            2>&1 | tee artifacts/native-independent-replay.log
+      - name: Preserve original-binary five-pair 251 correctness gates
+        run: |
+          set -euo pipefail
+          python3 experiments/incremental/benchmark_native.py --workloads artifacts/workloads --out artifacts/native-benchmark \
+            --baseline-bin artifacts/native-baseline-bin --baseline-ref 9ac04033b51703fb135ec3c28621d44b183944fe --repetitions 5 \
+            2>&1 | tee artifacts/native-benchmark.log
+      - name: Requalify default shared comparison with actual retained kernel and all protected controls
+        run: |
+          set -euo pipefail
+          python3 experiments/incremental/engine.py --init-key "$RUNNER_TEMP/receipt-protected.key"
+          python3 experiments/incremental/benchmark_retained_admission.py --mode protected \
+            --original-workloads artifacts/workloads --expanded-workloads artifacts/expanded \
+            --producer artifacts/delta-build/delta-producer --checker target/release/check-selected \
+            --retained-checker target/release/check-selected-retained-session \
+            --indexer target/release/export-index --index-session target/release/index-session --full-checker target/release/sokonanoda \
+            --authority-key "$RUNNER_TEMP/receipt-protected.key" --out artifacts/receipt-protected --repetitions 5 \
+            2>&1 | tee artifacts/receipt-protected.log
+      - name: Preserve retained parser shadow and malformed or overwritten admitted-row controls
+        run: |
+          set -euo pipefail
+          python3 experiments/incremental/engine.py --init-key "$RUNNER_TEMP/receipt-shadow.key"
+          python3 experiments/incremental/benchmark_retained_kernel_parser.py \
+            --original-workloads artifacts/workloads --expanded-workloads artifacts/expanded \
+            --producer artifacts/delta-build/delta-producer --selected-checker target/release/check-selected \
+            --retained-checker target/release/check-selected-retained-session \
+            --indexer target/release/export-index --index-session target/release/index-session --full-checker target/release/sokonanoda \
+            --authority-key "$RUNNER_TEMP/receipt-shadow.key" --out artifacts/retained-parser-shadow --repetitions 5 \
+            2>&1 | tee artifacts/retained-parser-shadow.log
+      - name: Compare canonical and shared JSON receipt equality on the same retained checker
+        run: |
+          set -euo pipefail
+          python3 experiments/incremental/engine.py --init-key "$RUNNER_TEMP/receipt-comparison.key"
+          python3 experiments/incremental/benchmark_retained_admission.py --mode receipt-compare \
+            --original-workloads artifacts/workloads --expanded-workloads artifacts/expanded \
+            --producer artifacts/delta-build/delta-producer --checker target/release/check-selected \
+            --retained-checker target/release/check-selected-retained-session \
+            --indexer target/release/export-index --index-session target/release/index-session --full-checker target/release/sokonanoda \
+            --authority-key "$RUNNER_TEMP/receipt-comparison.key" --out artifacts/receipt-comparison --repetitions 5 \
+            2>&1 | tee artifacts/receipt-comparison.log
+      - name: Measure five complete three-arm authenticated state lifecycles
+        run: |
+          set -euo pipefail
+          python3 experiments/incremental/engine.py --init-key "$RUNNER_TEMP/authenticated-state.key"
+          python3 experiments/incremental/benchmark_authenticated_state.py \
+            --original-workloads artifacts/workloads --expanded-workloads artifacts/expanded \
+            --producer artifacts/delta-build/delta-producer --checker target/release/check-selected \
+            --retained-checker target/release/check-selected-retained-session \
+            --indexer target/release/export-index --index-session target/release/index-session \
+            --full-checker target/release/sokonanoda --authority-key "$RUNNER_TEMP/authenticated-state.key" \
+            --out artifacts/authenticated-state --repetitions 5 --cycles 10 \
+            2>&1 | tee artifacts/authenticated-state.log
+      - name: Verify final source and executable hashes
+        if: always()
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git diff --exit-code
+          test -s artifacts/source-before.sha256
+          test -s artifacts/binaries-before.sha256
+          sha256sum -c artifacts/source-before.sha256 2>&1 | tee artifacts/source-verified.log
+          sha256sum -c artifacts/binaries-before.sha256 2>&1 | tee artifacts/binaries-verified.log
+          python3 - <<'PY'
+          import hashlib
+          from pathlib import Path
+          for kind in ('source','binaries'):
+              before=Path('artifacts')/(kind+'-before.sha256')
+              output=[]
+              for line in before.read_text().splitlines():
+                  _,name=line.split('  ',1)
+                  output.append(hashlib.sha256(Path(name).read_bytes()).hexdigest()+'  '+name+'\n')
+              after=Path('artifacts')/(kind+'-after.sha256')
+              after.write_text(''.join(output))
+              assert before.read_bytes()==after.read_bytes(),kind+' drift'
+          PY
+      - name: Publish only complete exact-source correctness and contextual economics
+        if: always()
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import gzip,hashlib,json,os,subprocess,sys
+          from pathlib import Path
+          root=Path('artifacts');sha=os.environ['GITHUB_SHA'];failures=[];observations={'source_sha':sha,'reports':{}}
+          def read(path):return json.loads(Path(path).read_bytes())
+          def check(value,message):
+              if not value:raise ValueError(message)
+          def digest(path):return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+          def inspect(label,fn):
+              try:observations['reports'][label]=fn()
+              except Exception as e:failures.append(label+': '+str(e))
+          def legacy(folder,flag,minimum,source=False):
+              path=root/folder/'summary.json';r=read(path);g=r.get('gates',[])
+              check(len(g)>=minimum and all(x.get('passed') is True for x in g) and r.get(flag) is True,'missing/failed required gates')
+              if source:check(r.get('source_git_commit')==sha,'wrong source')
+              if folder=='native-independent-replay':
+                  check(r['qualification_summary_sha256']==digest(root/'original-qualification/summary.json'),'replay of foreign qualification')
+                  check(r['replay_source_sha256']==digest('experiments/incremental/replay_native.py'),'wrong independent replay source')
+              return dict(summary_sha256=digest(path),gates=len(g),all_gates_passed=True,economic_status=r.get('economic_status'))
+          inspect('original-197',lambda:legacy('original-qualification','qualification_passed',197,True))
+          inspect('native-335',lambda:legacy('native-qualification','qualification_passed',335,True))
+          inspect('independent-719',lambda:legacy('native-independent-replay','passed',719))
+          inspect('old-binary-251',lambda:legacy('native-benchmark','correctness_passed',251,True))
+          def stability():
+              for kind in ('source','binaries'):
+                  before=root/(kind+'-before.sha256');after=root/(kind+'-after.sha256')
+                  check(before.is_file() and after.is_file() and before.read_bytes()==after.read_bytes(),'missing final '+kind+' verification')
+                  for line in before.read_text().splitlines():
+                      expected,path=line.split('  ',1);check(digest(path)==expected,'current hash mismatch: '+path)
+              return dict(source_manifest_sha256=digest(root/'source-before.sha256'),binary_manifest_sha256=digest(root/'binaries-before.sha256'),stable=True)
+          inspect('source-and-binaries',stability)
+          def protected():
+              path=root/'receipt-protected/protected-summary.json';r=read(path)
+              check(r.get('qualified') is True and r.get('source_sha')==sha,'incomplete/wrong-source protected report')
+              counts={}
+              for profile,minimum in [('original',246),('expanded',229)]:
+                  p=r['profiles'][profile]
+                  check(p['qualification_status']=='PASS' and p['required_gates']>=minimum and not p['failed_gates'],'protected gates '+profile)
+                  check(p['source_sha']==sha and p['signed_kernel_backend']=='sha-pinned-retained-parser-v1','protected policy/source')
+                  q=read(root/'receipt-protected'/profile/'protected-matrix/retained_selected/summary.json')
+                  check(q['run_completed'] and q['correctness_passed'] and q['source_git_commit']==sha,'incomplete protected raw report')
+                  required=[g for g in q['gates'] if g['required']]
+                  check(len(required)==p['required_gates'] and len(required)>=minimum and all(g['passed'] is True for g in required),'raw protected gate mismatch/failure')
+                  kernel_controls={'signed-invalid-proof','signed-invalid-axiom','unused-invalid-node-zero-selection-parser','unused-invalid-node-dag-only-zero-selection-parser'}
+                  refusals={'forged-attestation':'issuer authentication failed','authenticated-attestation-version-drift':'wrong authority domain',
+                      'authenticated-baseline-environment-drift':'transition environment/version/base mismatch','authenticated-base-export-drift':'transition environment/version/base mismatch',
+                      'authenticated-producer-version-drift':'transition environment/version/base mismatch','unannounced-source-change':'source modifications outside the reported patch',
+                      'false-announced-name':'expected_changed_names differs from complete local comparison','outside-announced-region':'source modifications outside the reported patch',
+                      'import-environment-drift':'source modifications outside the reported patch','foreign-issuer-authority':'evidence issuer authentication failed',
+                      'corrupt-baseline-receipt':'evidence content address mismatch','corrupt-baseline-export':'baseline storage corruption',
+                      'corrupt-genesis':'delta storage corruption: genesis','corrupt-accepted-delta-receipt':'delta storage corruption: records',
+                      'corrupt-persisted-delta-bytes':'delta storage corruption: deltas','corrupt-persisted-transition':'delta storage corruption: transitions',
+                      'corrupt-persisted-representation':'delta storage corruption: representations'}
+                  check(set(q['controls'])==kernel_controls|set(refusals),'missing mandatory 21 protected controls')
+                  for name,control in q['controls'].items():
+                      check('execution_error' not in control,'control execution failed: '+name)
+                      if name in kernel_controls:
+                          result=control['result'];check(result['status']=='REJECTED' and result['checker_result']['code']==1 and not result['evidence_id'],'expected actual selected rejection: '+name)
+                          oracles=control['independent_kernel_rejections']
+                          check(set(oracles)=={'rust','leanchecker','leanchecker-paranoid'} and all(x['returncode']==1 and not x['timed_out'] for x in oracles.values()),'missing full rejection oracles: '+name)
+                      else:
+                          cause=str(control.get('observed_refusal',control.get('exception_refusal',control.get('result',{}).get('reason',''))))
+                          check(refusals[name] in cause,'incorrect refusal cause: '+name)
+                  check(q['samples'] and all('error' not in s for s in q['samples']),'missing protected actual samples')
+                  for sample in q['samples']:
+                      result=read(sample['result_path'])
+                      check(result['producer_provenance']['receipt_index_comparison']=='shared_json','default comparison policy drift')
+                  counts[profile]=p['required_gates']
+              return dict(summary_sha256=digest(path),required_gates=counts)
+          inspect('protected-shared-default',protected)
+          def shadow():
+              path=root/'retained-parser-shadow/summary.json';r=read(path)
+              check(r['source_sha']==sha and r['complete'] and r['repetitions']==5 and r['profile_count']==2,'incomplete/wrong-source shadow')
+              for profile in ('original','expanded'):
+                  for variant in ('early-definition','unrelated-definition'):
+                      c=r['profiles'][profile][variant]
+                      check(c['complete'] and len(c['samples'])==5,'missing shadow samples')
+                      check({s['repetition'] for s in c['samples']}==set(range(5)),'shadow repetition set')
+                      for s in c['samples']:
+                          check(s['trials']['fresh']['checked']==s['trials']['retained']['checked'],'shadow obligations differ')
+                          if s['repetition']==0:
+                              check(set(s['full_oracles'])=={'full-rust','cxx','paranoid-cxx'} and all(x['returncode']==0 for x in s['full_oracles'].values()),'shadow independent oracle failure')
+                  for name in ('malformed-unused-node','overwrite-admitted-expression'):
+                      n=r['negative_controls'][profile+'-'+name];check(n['passed'] and n['checked']==[],'changed-row negative control failed')
+              return dict(summary_sha256=digest(path),negative_controls=4,complete=True)
+          inspect('retained-parser-shadow',shadow)
+          def comparison():
+              path=root/'receipt-comparison/summary.json';r=read(path);modes=('canonical_json','shared_json')
+              check(r['schema']=='mathgraph.retained-receipt-index-comparison.v1' and r['source_sha']==sha,'wrong comparison schema/source')
+              check(r['completed'] is True and r['qualified'] is True and r['correctness_passed'] is True,'incomplete comparison')
+              check(r['arms']==list(modes) and set(r['profiles'])=={'original','expanded'},'wrong comparison arms/profiles')
+              for source,h in r['source_sha256'].items():check(digest(source)==h,'measured source drift')
+              actual={'producer':'artifacts/delta-build/delta-producer','checker':'target/release/check-selected','retained_checker':'target/release/check-selected-retained-session','indexer':'target/release/export-index','index_session':'target/release/index-session','full_checker':'target/release/sokonanoda'}
+              for binary,h in r['binary_sha256'].items():check(digest(actual[binary])==h,'measured binary drift')
+              economic={}
+              for profile in ('original','expanded'):
+                  controls=r['profiles'][profile]['cross_mode_controls']
+                  check(len(controls)==2 and {(c['source_mode'],c['target_mode']) for c in controls}=={modes,modes[::-1]},'missing bidirectional comparison authority controls')
+                  for c in controls:
+                      check(c['passed'] and c['observed_refusal']==c['expected_refusal']=='source-owner genesis provenance mismatch','incorrect cross-mode refusal cause')
+                      check(bool(c['accepted_records_before']) and c['accepted_records_before']==c['accepted_records_after'],'cross-mode control persisted acceptance')
+                  cold=r['profiles'][profile]['cold_restart']
+                  check(set(cold)==set(modes) and all(cold[m]['passed'] for m in modes),'missing both cold authenticated replays')
+                  for mode in modes:
+                      a=cold[mode]['arm'];check(a['signed_comparison_policy']==mode,'cold policy drift')
+                      check(a['receipt_audit']['issuer_hmac_valid'] and a['direct_rust']['returncode']==0,'cold receipt/kernel failure')
+                      check(digest(a['result_path'])==a['result_sha256'] and read(a['result_path'])['status']=='VERIFIED','cold raw result missing/nonverified')
+                      check(digest(a['receipt_path'])==a['receipt_sha256'],'cold raw accepted record missing')
+                      rawq=read(root/'receipt-comparison'/profile/'comparison'/mode/'summary.json')
+                      required=[g for g in rawq['gates'] if g['required']]
+                      check(rawq['source_git_commit']==sha and rawq['run_completed'] and rawq['correctness_passed'] and bool(required) and all(g['passed'] is True for g in required),'incomplete/raw comparison source/gates')
+                      check(len(rawq['samples'])==11 and all('error' not in sample for sample in rawq['samples']),'missing actual comparison/cold samples')
+                  economic[profile]={}
+                  for variant in ('early-definition','unrelated-definition'):
+                      c=r['profiles'][profile][variant]
+                      check(c['complete'] and len(c['pairs'])==5,'missing five pairs')
+                      check({p['repetition'] for p in c['pairs']}==set(range(5)),'comparison repetition set')
+                      for metric in ('warm_economics','warm_cpu_economics','selected_kernel_economics','persistence_economics','setup_plus_one_apply_component_sum_economics'):
+                          e=c[metric];check(e['paired_count']==5 and e['status'] in ('SPEEDUP','NO_SPEEDUP'),'incomplete/unknown economics '+metric)
+                          check(e['candidate_arm']=='shared_json' and e['control_arm']=='canonical_json' and 'fresh full Rust' not in e['scope'],'wrong receipt comparator scope '+metric)
+                      for mode in modes:
+                          e=c['direct_full_rust_economics'][mode]
+                          check(e['paired_count']==5 and e['status'] in ('SPEEDUP','NO_SPEEDUP') and e['candidate_arm']==mode and e['control_arm']=='same_snapshot_fresh_full_rust','wrong/missing same-input direct comparator')
+                      for pair in c['pairs']:
+                          check(set(pair['arms'])==set(modes),'missing pair arm')
+                          a,b=[pair['arms'][m] for m in modes]
+                          for key in ('checked','reused','export_sha256','decisions_sha256','policy_tool_sha256'):check(a[key]==b[key],'paired witness mismatch: '+key)
+                          expected=list(modes if (pair['repetition']+(variant=='unrelated-definition'))%2==0 else modes[::-1])
+                          check(pair['order']==expected,'arm order not alternating')
+                          for mode in modes:
+                              a=pair['arms'][mode];raw=read(a['result_path'])
+                              check(digest(a['result_path'])==a['result_sha256'] and raw['status']=='VERIFIED','raw result missing/nonverified')
+                              check(digest(a['receipt_path'])==a['receipt_sha256']==raw['evidence_id'],'raw signed record missing')
+                              check(a['signed_comparison_policy']==mode and raw['producer_provenance']['receipt_index_comparison']==mode,'comparison policy drift')
+                              check(a['kernel_report']['code']==0 and a['kernel_report']['checked']==a['checked'],'actual retained kernel count failure')
+                              check(a['receipt_audit']['issuer_hmac_valid'] and a['receipt_audit']['all_content_addresses_valid'],'receipt audit failed')
+                              check(a['direct_rust']['returncode']==0 and not a['direct_rust']['timed_out'],'same-input direct Rust failure')
+                              check(a['snapshot']['sha256']==a['export_sha256'] and a['snapshot']['seals']==a['snapshot']['required_seals']==15,'unsealed/wrong actual comparator snapshot')
+                              check(all(name in a['phases'] for name in ('timings','memory','counts','representation','producer_report','typed_update')),'lost full phase evidence')
+                              check(a['phases']['timings']==raw['timings'] and a['phases']['memory']==raw['memory'],'phase evidence differs from actual raw result')
+                              if pair['repetition']==0:
+                                  check(a['cpp_oracles']=={'leanchecker':0,'leanchecker-paranoid':0},'full C++/paranoid oracle failure')
+                                  witnesses=a['representative_witness'];check(bool(witnesses),'missing representative full witnesses')
+                                  roles={w['role']:w for w in witnesses}
+                                  check({'baseline_record','baseline_export','accepted_record','result','representation','delta','transition','direct_rust_config','fresh_native_index_config','fresh_native_index_stdout'}<=set(roles),'missing portable replay input/configuration witness')
+                                  for witness in witnesses:check(digest(witness['path'])==witness['sha256'],'representative witness corrupt')
+                                  for role in ('direct_rust_config','fresh_native_index_config'):
+                                      check(read(roles[role]['path'])['export_file_path']==a['snapshot']['path'],'archived oracle targeted different snapshot')
+                                  check(roles['baseline_export']['uncompressed_sha256']==read(roles['baseline_record']['path'])['payload']['export_sha256'],'baseline export not bound to baseline acceptance')
+                      economic[profile][variant]={k:c[k] for k in ('warm_economics','warm_cpu_economics','persistence_economics','setup_plus_one_apply_component_sum_economics','direct_full_rust_economics')}
+              phases=read(root/'receipt-comparison/compact-phases.json')
+              check(phases['completed'] and phases['source_sha']==sha and phases['profiles']==r['profiles'],'compact phases incomplete/different')
+              return dict(summary_sha256=digest(path),pairs=20,actual_arms=40,cold_replays=4,economics=economic)
+          inspect('receipt-comparison',comparison)
+          def revision_producer():
+              reports={}
+              labels=['early','cumulative','restore-early','restore-all','unchanged','revisit-early']
+              for profile,policy in [('original','original-v1'),('expanded','std-hashmap-expanded-v1')]:
+                  path=root/('revision-producer-'+profile)/'report.json';r=read(path)
+                  check(r.get('status')=='passed' and r.get('profile')==policy,'producer profile failed: '+profile)
+                  check(len(r.get('runs',[]))==2,'missing producer cold replay: '+profile)
+                  first,second=r['runs']
+                  for run in r['runs']:
+                      rows=run['observations']
+                      check(run['ready']['revision']==0 and len(rows)==6,'producer revision coverage: '+profile)
+                      check([x['label'] for x in rows]==labels,'producer source sequence: '+profile)
+                      check([x['result']['revision'] for x in rows]==list(range(1,7)),'producer predecessor revisions: '+profile)
+                      check(all(x['result']['status']=='delta' for x in rows),'producer incomplete transition: '+profile)
+                      check(rows[4]['delta_bytes']==0 and rows[5]['result']['stats']['new_exprs']==0,'producer exporter-history/noop guard: '+profile)
+                  check(first['baseline_sha256']==second['baseline_sha256'],'producer baseline replay differs: '+profile)
+                  check([x['delta_sha256'] for x in first['observations']]==[x['delta_sha256'] for x in second['observations']],'producer DAG-history replay differs: '+profile)
+                  reports[profile]=dict(summary_sha256=digest(path),revisions=6,cold_replayed=6)
+              return reports
+          inspect('predecessor-aware-producer',revision_producer)
+          def revision_smoke():
+              reports={}
+              for profile in ('original','expanded'):
+                  path=root/('revision-chain-tests-'+profile)/'summary.json';r=read(path)
+                  check(r.get('passed') is True and len(r.get('results',[]))==4,'incomplete chain acceptance/recovery smoke: '+profile)
+                  prior=None
+                  for revision,result in enumerate(r['results'],1):
+                      chain=result['revision_chain']
+                      check(result.get('status')=='VERIFIED' and bool(result.get('evidence_id')),'smoke did not accept: '+profile)
+                      check(chain['revision']==revision and bool(chain['source_capture_id']),'smoke skipped source revision/capture: '+profile)
+                      if prior:
+                          check(chain['parent_head']==prior['revision_chain']['head_id'] and chain['parent_evidence']==prior['evidence_id'],'smoke predecessor mismatch: '+profile)
+                      prior=result
+                  check(r.get('cold',{}).get('replayed_revisions')==4,'missing actual cold chain replay: '+profile)
+                  reports[profile]=dict(summary_sha256=digest(path),accepted_revisions=4,cold_replayed_revisions=4)
+              return reports
+          inspect('revision-chain-acceptance-recovery-smoke',revision_smoke)
+          def revision_controls():
+              sys.path.insert(0,str(Path('experiments/incremental').resolve()))
+              from test_revision_chain_controls import REQUIRED_CONTROLS
+              from qualify_delta import audit_partition,canonical
+              expected=set(REQUIRED_CONTROLS)
+              check(len(REQUIRED_CONTROLS)==len(expected)==32,'frozen control matrix must contain exactly 32 distinct controls')
+              reports={}
+              for profile in ('original','expanded'):
+                  path=root/('revision-chain-controls-'+profile)/'summary.json';r=read(path)
+                  check(r.get('passed') is True and r.get('source_sha')==sha,'incomplete/wrong-source chain controls: '+profile)
+                  check(r.get('schema')=='mathgraph.revision-chain-controls.v1','wrong chain controls schema: '+profile)
+                  check(r.get('profile')==('original-v1' if profile=='original' else 'std-hashmap-expanded-v1'),'wrong controls workload profile: '+profile)
+                  controls=r.get('controls');required=r.get('required_controls')
+                  check(type(controls) is list and len(controls)==32,'missing actual chain controls: '+profile)
+                  check(all(type(c) is dict and c.get('passed') is True for c in controls),'chain control failed: '+profile)
+                  names=[c['name'] for c in controls]
+                  check(len(names)==len(set(names)),'duplicate actual chain control: '+profile)
+                  check(type(required) is list and len(required)==32 and len(set(required))==32,'missing/duplicate required chain controls: '+profile)
+                  check(set(required)==set(names)==expected,'actual controls differ from frozen required matrix: '+profile)
+                  byname={c['name']:c for c in controls}
+                  for name in ('signed-invalid-definition-proof','unused-malformed-dag-zero-selected'):
+                      c=byname[name];result=c['result'];oracles=c['independent_kernel_rejections']
+                      check(c['accepted_records_unchanged'] and c['poisoned'],'invalid source persisted acceptance or survived: '+name)
+                      check(result['status']=='REJECTED' and result['checker_result']['code']==1 and not result['evidence_id'],'missing actual selected rejection: '+name)
+                      check(set(oracles)=={'rust','leanchecker','leanchecker-paranoid'} and all(o['returncode']==1 and not o['timed_out'] for o in oracles.values()),'missing independent full-kernel rejection: '+name)
+                      check(len(c['exact_negative_export_sha256'])==64,'missing exact rejected export identity: '+name)
+                      negative=root/('revision-chain-controls-'+profile)/'negative-inputs'/(name+'.ndjson.gz')
+                      observed=hashlib.sha256()
+                      with gzip.open(negative,'rb') as stream:
+                          for chunk in iter(lambda:stream.read(1<<20),b''):observed.update(chunk)
+                      check(observed.hexdigest()==c['exact_negative_export_sha256']==result['export_sha256'],'wrong actual negative witness: '+name)
+                      for oracle in oracles.values():
+                          for output in ('stdout','stderr'):
+                              check(digest(oracle[output+'_path'])==oracle[output+'_sha256'],'missing/changed actual full-kernel rejection output: '+name)
+                      if name=='unused-malformed-dag-zero-selected':check(result['counts']['scheduled']==0,'unused malformed node was not zero-selected')
+                  persistence=byname['failed-persistence-does-not-promote-head']
+                  failed=persistence['result']
+                  check(failed['status']=='UNKNOWN' and failed['evidence_id'] is None and persistence['poisoned'] is True,'persistence failure did not poison/refuse acceptance: '+profile)
+                  check(persistence['expected_head_unchanged'] is True and persistence['subsequent_in_place_update_refused'] is True,'persistence failure promoted or reused a poisoned head: '+profile)
+                  restoration=byname['cold-recovery-after-rejections-and-corruption-then-dependency-restoration']
+                  check(restoration['replayed_revisions']==1 and restoration['restored_semantic_index'] is True and restoration['retained_unused_dag_bytes_allow_different_export_sha'] is True,'missing actual cold dependency restoration: '+profile)
+                  transitions=byname['real-dependency-edge-fallback-refresh-and-restore']['transitions']
+                  check(len(transitions)==4,'missing actual topology changes and restorations: '+profile)
+                  parent=read(root/('revision-chain-controls-'+profile)/'fresh-restored/index.json')
+                  for index,(transition,retained) in enumerate(zip(transitions,(False,True,False,True))):
+                      result=transition['result'];native=result['native_kernel_report']
+                      folder=root/('revision-chain-controls-'+profile)/'edge-transitions'/str(index)
+                      fresh=read(folder/'fresh-index/index.json');process=read(folder/'fresh-index/process.json')
+                      check(process['returncode']==0 and not process['timed_out'],'topology fresh native index failed: '+profile)
+                      check(digest(process['stdout_path'])==process['stdout_sha256'] and canonical(read(process['stdout_path']))==canonical(fresh),'topology actual full-index bytes differ: '+profile)
+                      partition=audit_partition(result,parent,fresh)
+                      check(canonical(partition)==canonical(transition['partition']),'topology selected partition differs from full native indexes: '+profile)
+                      check(result['status']=='VERIFIED' and bool(result['evidence_id']) and result['checker_result']['code']==0,'topology source revision did not verify: '+profile)
+                      check(result['typed_update']['retained_graph_used'] is retained,'topology fallback/refresh pattern differs: '+profile)
+                      check(native['status']=='checked' and native['code']==0 and native['kernel']=='sokonanoda_real_selected_declaration_check' and native['checked']==partition['actual_kernel_checked']==len(partition['checked_indices']) and native['total_declarations']==fresh['count'],'topology actual retained-kernel obligations differ: '+profile)
+                      oracle=transition['fresh_rust']
+                      check(oracle['returncode']==0 and not oracle['timed_out'],'topology actual full Rust rejected or failed: '+profile)
+                      for output in ('stdout','stderr'):
+                          check(digest(oracle[output+'_path'])==oracle[output+'_sha256'],'topology actual full Rust output changed: '+profile)
+                      parent=fresh
+                  check(canonical(parent)==canonical(read(root/('revision-chain-controls-'+profile)/'fresh-restored/index.json')),'topology restoration did not recover initial semantic index: '+profile)
+                  reports[profile]=dict(summary_sha256=digest(path),required_controls=required,all_controls_passed=True)
+              return reports
+          inspect('revision-chain-adversarial-controls',revision_controls)
+          def authenticated_state():
+              path=root/'authenticated-state/summary.json';r=read(path)
+              tools=read(root/'workloads/manifest.json')['tools']
+              command=[sys.executable,'experiments/incremental/replay_authenticated_state.py',
+                       '--benchmark',str(root/'authenticated-state'),
+                       '--controls',str(root/'state-controls-original'),
+                       '--controls',str(root/'state-controls-expanded'),
+                       '--repo',str(Path.cwd()),'--source',sha,
+                       '--rust','target/release/sokonanoda','--indexer','target/release/export-index',
+                       '--cpp',tools['leanchecker']['path'],
+                       '--paranoid',tools['leanchecker-paranoid']['path'],
+                       '--out',str(root/'authenticated-state-independent')]
+              review=subprocess.run(command,capture_output=True,text=True)
+              (root/'authenticated-state-summary-review.stdout').write_text(review.stdout)
+              (root/'authenticated-state-summary-review.stderr').write_text(review.stderr)
+              check(review.returncode==0,'independent authenticated-state replay failed: '+review.stderr[-2000:])
+              replay=read(root/'authenticated-state-independent/summary.json')
+              check(replay.get('schema')=='mathgraph.authenticated-state-independent-replay.v1' and replay.get('source_sha')==sha,'wrong independent authenticated-state replay schema/source')
+              check(replay.get('completed') is True and replay.get('passed') is True,'incomplete independent authenticated-state replay')
+              check(r.get('source_sha')==sha,'wrong authenticated-state source')
+              check(r.get('completed') is True and r.get('correctness_passed') is True and r.get('qualified') is True and r.get('source_tracked_clean') is True,'incomplete authenticated-state qualification')
+              check(r.get('repetitions')==5 and r.get('cycles')==10,'requires five complete 40-change trials')
+              check(set(r.get('profiles',{}))=={'original','expanded'},'missing state workload profile')
+              return dict(summary_sha256=digest(path),strict_verifier_returncode=review.returncode,
+                          independent_replay_sha256=digest(root/'authenticated-state-independent/summary.json'),report=r)
+          inspect('authenticated-state-lifecycle',authenticated_state)
+          def state_parity():
+              reports={}
+              for profile in ('original','expanded'):
+                  path=root/('state-parity-'+profile)/'summary.json';r=read(path)
+                  check(r.get('passed') is True and r.get('source_sha')==sha,'incomplete/wrong-source state parity: '+profile)
+                  steps=r.get('steps',[])
+                  check(len(steps)==4 and r.get('cold',{}).get('replayed_revisions')==4,'missing four changes/cold state replay: '+profile)
+                  check(r.get('unchanged',{}).get('scheduled')==0,'unchanged state did not reuse every obligation: '+profile)
+                  for step in steps:
+                      check(len(step.get('state_id',''))==64 and len(step.get('export_sha256',''))==64 and step['state_id']!=step['export_sha256'],'confused state/export identity: '+profile)
+                      check(step.get('fresh_rust_returncode')==0,'fresh state materialization rejected: '+profile)
+                      audit=step.get('receipt_audit',{})
+                      check(audit.get('issuer_hmac_valid') is True and audit.get('all_content_addresses_valid') is True,'state receipt audit missing: '+profile)
+                      check(step['counts']['rechecked']==step['counts']['scheduled'],'state actual checking count differs: '+profile)
+                  reports[profile]=dict(summary_sha256=digest(path),changed_revisions=4,cold_replayed_revisions=4)
+              return reports
+          inspect('authenticated-state-representation-parity',state_parity)
+          def state_controls():
+              sys.path.insert(0,str(Path('experiments/incremental').resolve()))
+              from test_state_controls import REQUIRED_CONTROLS
+              expected=set(REQUIRED_CONTROLS)
+              check(bool(expected) and len(expected)==len(REQUIRED_CONTROLS),'empty/duplicate required state controls')
+              reports={}
+              for profile in ('original','expanded'):
+                  path=root/('state-controls-'+profile)/'summary.json';r=read(path)
+                  check(r.get('passed') is True and r.get('source_sha')==sha,'incomplete/wrong-source state controls: '+profile)
+                  check(r.get('schema')=='mathgraph.authenticated-state-controls.v1','wrong state control schema: '+profile)
+                  check(r.get('profile')==('original-v1' if profile=='original' else 'std-hashmap-expanded-v1'),'wrong state control workload: '+profile)
+                  controls=r.get('controls',[]);names=[c.get('name') for c in controls]
+                  check(len(names)==len(set(names))==len(expected) and set(names)==expected,'missing/duplicate actual state controls: '+profile)
+                  check(set(r.get('required_controls',[]))==expected,'required state matrix differs: '+profile)
+                  check(all(c.get('passed') is True for c in controls),'state control failed: '+profile)
+                  negatives=[]
+                  for c in controls:
+                      if 'independent_kernel_rejections' not in c:continue
+                      oracles=c['independent_kernel_rejections'];identity=c['attempt_identity']
+                      check(set(oracles)=={'rust','leanchecker','leanchecker-paranoid'} and all(o['returncode']==1 and not o['timed_out'] for o in oracles.values()),'state negative missing actual independent rejection: '+c['name'])
+                      check(identity.get('state_id') is None and identity.get('scope')=='unaccepted_attempt_for_independent_oracle_only','state negative input incorrectly warranted: '+c['name'])
+                      check(len(identity.get('parent_state_id',''))==64 and len(identity.get('delta_sha256',''))==64,'state negative lacks exact attempted parent/delta: '+c['name'])
+                      check(len(c.get('exact_negative_export_sha256',''))==64,'state negative lacks exact full input hash: '+c['name'])
+                      saved=c['exact_negative_export'];observed=hashlib.sha256();size=0
+                      with gzip.open(saved['path'],'rb') as stream:
+                          for chunk in iter(lambda:stream.read(1<<20),b''):observed.update(chunk);size+=len(chunk)
+                      check(observed.hexdigest()==saved['export_sha256']==c['exact_negative_export_sha256'],'state negative full input bytes differ: '+c['name'])
+                      check(size==saved['export_bytes']==identity['export_bytes'],'state negative full input length differs: '+c['name'])
+                      delta=c['actual_delta']
+                      check(digest(delta['path'])==delta['sha256']==identity['delta_sha256'],'state negative attempted delta differs: '+c['name'])
+                      check(delta['parent_state_id']==identity['parent_state_id'],'state negative attempted parent differs: '+c['name'])
+                      for oracle in oracles.values():
+                          for output in ('stdout','stderr'):
+                              check(digest(oracle[output+'_path'])==oracle[output+'_sha256'],'state negative oracle output changed: '+c['name'])
+                      negatives.append(c['name'])
+                  check(len(negatives)>=2,'missing actual proof/parser negative state oracles: '+profile)
+                  reports[profile]=dict(summary_sha256=digest(path),required_controls=sorted(expected),independently_rejected=negatives)
+              return reports
+          inspect('authenticated-state-adversarial-controls',state_controls)
+          observations.update(failures=failures,correctness_passed=not failures)
+          (root/'ci-observations.json').write_text(json.dumps(observations,indent=2)+'\n')
+          for name,result in observations['reports'].items():print(name+': '+json.dumps(result,separators=(',',':')))
+          if failures:raise SystemExit('; '.join(failures))
+          PY
+          cat artifacts/receipt-comparison/summary.md >> "$GITHUB_STEP_SUMMARY"
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          report=json.loads(Path('artifacts/authenticated-state/summary.json').read_bytes())
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as output:
+              output.write('\n## Authenticated state: complete forty-update lifecycles\n\n')
+              output.write('| Profile | State median | Direct Rust median | Reduction | Economic status |\n| --- | ---: | ---: | ---: | --- |\n')
+              for profile,value in report['profiles'].items():
+                  e=value['economics']['state_vs_direct_wall_seconds']
+                  output.write('| {} | {:.6f}s | {:.6f}s | {:.4f}% | {} |\n'.format(profile,e['apply_median_wall_seconds'],e['direct_median_wall_seconds'],e['reduction_percent'],e['status']))
+              output.write('\nCorrectness qualification and speedup qualification are separate. See exact measured arrays and independent replay in the evidence.\n')
+          PY
+      - name: Preserve compact copies of completed chain control reports
+        if: always()
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import gzip,hashlib,json,shutil
+          from pathlib import Path
+          root=Path('artifacts');records=[]
+          for name in ('revision-chain-tests-original','revision-chain-tests-expanded',
+                       'revision-chain-controls-original','revision-chain-controls-expanded'):
+              source=root/name/'summary.json'
+              if not source.is_file():continue
+              target=source.with_suffix('.json.gz')
+              with source.open('rb') as src,target.open('wb') as raw:
+                  with gzip.GzipFile(filename='',fileobj=raw,mode='wb',mtime=0) as dst:
+                      shutil.copyfileobj(src,dst)
+              def digest(path):
+                  h=hashlib.sha256()
+                  with path.open('rb') as stream:
+                      for chunk in iter(lambda:stream.read(1<<20),b''):h.update(chunk)
+                  return h.hexdigest()
+              records.append(dict(path=str(target),sha256=digest(target),bytes=target.stat().st_size,
+                                  uncompressed_path=str(source),uncompressed_sha256=digest(source),
+                                  uncompressed_bytes=source.stat().st_size))
+          (root/'revision-control-archive.json').write_text(json.dumps(records,indent=2)+'\n')
+          PY
+      - name: Package independently downloadable evidence with exact per-file and archive hashes
+        if: always()
+        run: |
+          set -euo pipefail
+          python3 - <<'PYARCHIVE'
+          import hashlib,json,lzma,os,subprocess
+          from pathlib import Path
+          root=Path('artifacts');out=Path('artifact-packages');out.mkdir(exist_ok=False)
+          source=os.environ['GITHUB_SHA'];limit=400*1024*1024
+          files=sorted(p for p in root.rglob('*') if p.is_file())
+          def digest(path):
+              h=hashlib.sha256()
+              with path.open('rb') as stream:
+                  for chunk in iter(lambda:stream.read(1<<20),b''):h.update(chunk)
+              return h.hexdigest()
+          entries=[dict(path=str(p),sha256=digest(p),bytes=p.stat().st_size) for p in files]
+          manifest=dict(schema='mathgraph.authenticated-state-artifact-packages.v1',source_sha=source,
+                        github_run_id=os.environ['GITHUB_RUN_ID'],github_run_attempt=os.environ['GITHUB_RUN_ATTEMPT'],
+                        all_files=entries,archives={})
+          # New state evidence remains standalone: all primary records, indexes,
+          # deltas, source captures and real oracle outputs are in compact too.
+          compact_dirs=('authenticated-state','authenticated-state-independent','state-parity-original','state-parity-expanded',
+                        'state-controls-original','state-controls-expanded')
+          old_reports=('original-qualification/summary.json','native-qualification/summary.json',
+                       'native-independent-replay/summary.json','native-benchmark/summary.json',
+                       'receipt-protected/protected-summary.json','retained-parser-shadow/summary.json',
+                       'receipt-comparison/summary.json','receipt-comparison/summary.md',
+                       'revision-producer-original/report.json','revision-producer-expanded/report.json',
+                       'revision-chain-tests-original/summary.json.gz','revision-chain-tests-expanded/summary.json.gz',
+                       'revision-chain-controls-original/summary.json.gz','revision-chain-controls-expanded/summary.json.gz',
+                       'revision-control-archive.json')
+          compact=[p for p in files if (len(p.parts)>1 and p.parts[1] in compact_dirs)
+                   or p.parent==root or p.relative_to(root).as_posix() in old_reports]
+          if not files:raise ValueError('no artifacts produced')
+          # Stream tar through XZ directly into bounded pieces. Never create a
+          # second giant archive that silently exhausts runner storage.
+          for label,selected,maximum in [('compact',compact,4),('full',files,16)]:
+              listing=out/(label+'-files.list0')
+              listing.write_bytes(b''.join(os.fsencode(str(p))+b'\0' for p in selected))
+              command=['tar','--dereference','--sort=name','--mtime=@0','--owner=0','--group=0','--numeric-owner',
+                       '--null','--verbatim-files-from','--files-from',str(listing),'-cf','-']
+              process=subprocess.Popen(command,stdout=subprocess.PIPE)
+              compressor=lzma.LZMACompressor(format=lzma.FORMAT_XZ,preset=6)
+              archive_hash=hashlib.sha256();archive_bytes=0;parts=[];handle=None;part_hash=None;part_bytes=0
+              def emit(raw):
+                  global handle,part_hash,part_bytes,archive_bytes
+                  archive_hash.update(raw);archive_bytes+=len(raw)
+                  while raw:
+                      if handle is None:
+                          if len(parts)>=maximum:raise ValueError(label+' package exceeds bounded part count')
+                          path=out/(label+'.tar.xz.part'+str(len(parts)).zfill(2))
+                          handle=path.open('wb');part_hash=hashlib.sha256();part_bytes=0
+                          parts.append(dict(path=str(path)))
+                      chunk,raw=raw[:limit-part_bytes],raw[limit-part_bytes:]
+                      handle.write(chunk);part_hash.update(chunk);part_bytes+=len(chunk)
+                      if part_bytes==limit:finish_part()
+              def finish_part():
+                  global handle
+                  if handle is None:return
+                  handle.flush();os.fsync(handle.fileno());handle.close()
+                  parts[-1].update(sha256=part_hash.hexdigest(),bytes=part_bytes);handle=None
+              try:
+                  for chunk in iter(lambda:process.stdout.read(1<<20),b''):emit(compressor.compress(chunk))
+                  emit(compressor.flush());finish_part()
+              except BaseException:
+                  process.kill();process.wait();raise
+              if process.wait()!=0:raise ValueError('tar packaging failed: '+label)
+              manifest['archives'][label]=dict(format='tar.xz',sha256=archive_hash.hexdigest(),
+                  bytes=archive_bytes,ordered_parts=parts,files=[str(p) for p in selected])
+              print(label+': '+str(archive_bytes)+' bytes in '+str(len(parts))+' bounded pieces')
+          (out/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
+          (out/'REPLAY.txt').write_text(
+              'Source: '+source+'\n'
+              'Download manifest plus every ordered compact part. Each provider ZIP contains one part.\n'
+              'Verify each part bytes/SHA256, concatenate in ordered_parts order, verify archive bytes/SHA256.\n'
+              'Extract tar.xz to an empty directory. Verify every extracted file against all_files.\n'
+              'The compact package contains all new authenticated state evidence; full parts preserve every raw CI file.\n'
+              'Checkout exact source, install pinned tools with experiments/incremental/setup.sh. From the extracted root run the exact-source reader:\n'
+              'python3 /runtime/experiments/incremental/replay_authenticated_state.py --benchmark artifacts/authenticated-state --controls artifacts/state-controls-original --controls artifacts/state-controls-expanded --repo /runtime --source '+source+' --rust /runtime/target/release/sokonanoda --indexer /runtime/target/release/export-index --cpp /pinned/lean-4.35.0/bin/leanchecker --paranoid /pinned/lean-4.35.0/bin/leanchecker-paranoid --out /fresh/replay-output\n'
+              'Historical HMAC verification is a private-issuer CI boundary; public replay checks authenticated object addresses, witness bindings and actual independent kernels.\n')
+          PYARCHIVE
+      - name: Archive evidence package index and replay instructions
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: authenticated-state-index-${{ github.sha }}
+          path: |
+            artifact-packages/manifest.json
+            artifact-packages/REPLAY.txt
+          if-no-files-found: error
+          retention-days: 30
+      - name: Archive compact evidence part 00
+        if: always() && hashFiles('artifact-packages/compact.tar.xz.part00') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: authenticated-state-compact-00-${{ github.sha }}
+          path: artifact-packages/compact.tar.xz.part00
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 30
+      - name: Archive compact evidence part 01
+        if: always() && hashFiles('artifact-packages/compact.tar.xz.part01') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: authenticated-state-compact-01-${{ github.sha }}
+          path: artifact-packages/compact.tar.xz.part01
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 30
+      - name: Archive compact evidence part 02
+        if: always() && hashFiles('artifact-packages/compact.tar.xz.part02') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: authenticated-state-compact-02-${{ github.sha }}
+          path: artifact-packages/compact.tar.xz.part02
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 30
+      - name: Archive compact evidence part 03
+        if: always() && hashFiles('artifact-packages/compact.tar.xz.part03') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: authenticated-state-compact-03-${{ github.sha }}
+          path: artifact-packages/compact.tar.xz.part03
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 30
+      - name: Archive full evidence part 00
+        if: always() && hashFiles('artifact-packages/full.tar.xz.part00') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: authenticated-state-full-00-${{ github.sha }}
+          path: artifact-packages/full.tar.xz.part00
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 30
+      - name: Archive full evidence part 01
+        if: always() && hashFiles('artifact-packages/full.tar.xz.part01') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: authenticated-state-full-01-${{ github.sha }}
+          path: artifact-packages/full.tar.xz.part01
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 30
+      - name: Archive full evidence part 02
+        if: always() && hashFiles('artifact-packages/full.tar.xz.part02') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: authenticated-state-full-02-${{ github.sha }}
+          path: artifact-packages/full.tar.xz.part02
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 30
+      - name: Archive full evidence part 03
+        if: always() && hashFiles('artifact-packages/full.tar.xz.part03') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: authenticated-state-full-03-${{ github.sha }}
+          path: artifact-packages/full.tar.xz.part03
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 30
+      - name: Archive full evidence part 04
+        if: always() && hashFiles('artifact-packages/full.tar.xz.part04') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: authenticated-state-full-04-${{ github.sha }}
+          path: artifact-packages/full.tar.xz.part04
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 30
+      - name: Archive full evidence part 05
+        if: always() && hashFiles('artifact-packages/full.tar.xz.part05') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: authenticated-state-full-05-${{ github.sha }}
+          path: artifact-packages/full.tar.xz.part05
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 30
+      - name: Archive full evidence part 06
+        if: always() && hashFiles('artifact-packages/full.tar.xz.part06') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: authenticated-state-full-06-${{ github.sha }}
+          path: artifact-packages/full.tar.xz.part06
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 30
+      - name: Archive full evidence part 07
+        if: always() && hashFiles('artifact-packages/full.tar.xz.part07') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: authenticated-state-full-07-${{ github.sha }}
+          path: artifact-packages/full.tar.xz.part07
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 30
+      - name: Archive full evidence part 08
+        if: always() && hashFiles('artifact-packages/full.tar.xz.part08') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: authenticated-state-full-08-${{ github.sha }}
+          path: artifact-packages/full.tar.xz.part08
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 30
+      - name: Archive full evidence part 09
+        if: always() && hashFiles('artifact-packages/full.tar.xz.part09') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: authenticated-state-full-09-${{ github.sha }}
+          path: artifact-packages/full.tar.xz.part09
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 30
+      - name: Archive full evidence part 10
+        if: always() && hashFiles('artifact-packages/full.tar.xz.part10') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: authenticated-state-full-10-${{ github.sha }}
+          path: artifact-packages/full.tar.xz.part10
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 30
+      - name: Archive full evidence part 11
+        if: always() && hashFiles('artifact-packages/full.tar.xz.part11') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: authenticated-state-full-11-${{ github.sha }}
+          path: artifact-packages/full.tar.xz.part11
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 30
+      - name: Archive full evidence part 12
+        if: always() && hashFiles('artifact-packages/full.tar.xz.part12') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: authenticated-state-full-12-${{ github.sha }}
+          path: artifact-packages/full.tar.xz.part12
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 30
+      - name: Archive full evidence part 13
+        if: always() && hashFiles('artifact-packages/full.tar.xz.part13') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: authenticated-state-full-13-${{ github.sha }}
+          path: artifact-packages/full.tar.xz.part13
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 30
+      - name: Archive full evidence part 14
+        if: always() && hashFiles('artifact-packages/full.tar.xz.part14') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: authenticated-state-full-14-${{ github.sha }}
+          path: artifact-packages/full.tar.xz.part14
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 30
+      - name: Archive full evidence part 15
+        if: always() && hashFiles('artifact-packages/full.tar.xz.part15') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: authenticated-state-full-15-${{ github.sha }}
+          path: artifact-packages/full.tar.xz.part15
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 30

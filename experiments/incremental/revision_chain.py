@@ -20,6 +20,9 @@ CAPTURE = 'mathgraph.lean-complete-source-capture.v1'
 
 
 class RevisionChainSession(DeltaSession):
+    chain_schema = CHAIN
+    chain_subject = 'export_sha256'
+
     def __init__(self, *args, **kwargs):
         for field in ('sparse_index_wire', 'sparse_receipt', 'frozen_baseline', 'revision_chain'):
             if field in kwargs and kwargs[field] is not True:
@@ -54,6 +57,7 @@ class RevisionChainSession(DeltaSession):
             self.genesis_head = state['genesis_id']
             self.head_id = self.genesis_head
             self.started = True
+            self._initialize_chain_representation()
             entries = self._history(expected_head) if expected_head is not None else []
             for wanted_head, entry in entries:
                 capture_raw = self._object('source-captures', entry['source_capture_id'], '.json')
@@ -69,17 +73,17 @@ class RevisionChainSession(DeltaSession):
                 # Reconstruct producer exporter history, never issue a delta
                 # directly from an unauthenticated changed-name hint.
                 transaction = self.prepare(source_dir, capture['patch'], capture['claimed_names'])
-                payload = authenticate(transaction['attestation'], self.key, TRANSITION)
+                payload = authenticate(transaction['attestation'], self.key, self.transition_schema)
                 if payload['delta_sha256'] != entry['delta_sha256']:
                     raise ValueError('cold producer delta history mismatch')
                 # Authenticate *all* old objects before replay can persist them;
                 # immutable_write must never silently repair authority records.
                 stored = self._audit_entry(entry)
-                representation = json.loads(self._object('representations', stored['delta_representation'], '.json'),
+                representation = json.loads(self._object('representations', self._accepted_representation_id(stored), '.json'),
                                             object_pairs_hook=engine.strict_object)
                 original = json.loads(self._object('transitions', representation['transition_id'], '.json'),
                                       object_pairs_hook=engine.strict_object)
-                original_payload = authenticate(original, self.key, TRANSITION)
+                original_payload = authenticate(original, self.key, self.transition_schema)
                 # Timing samples and private output paths are observational and
                 # nondeterministic. Keep the exact historical envelope after
                 # reproducing its authenticated semantic inputs and delta bytes.
@@ -112,9 +116,9 @@ class RevisionChainSession(DeltaSession):
                 raise ValueError('cyclic or oversized accepted history')
             seen.add(head)
             raw = self._object('chain', head, '.json')
-            entry = authenticate(json.loads(raw, object_pairs_hook=engine.strict_object), self.key, CHAIN)
+            entry = authenticate(json.loads(raw, object_pairs_hook=engine.strict_object), self.key, self.chain_schema)
             required = {'schema','previous_head','previous_evidence','evidence_id','revision',
-                        'source_capture_id','source_root','export_sha256','delta_sha256','policy_sha256'}
+                        'source_capture_id','source_root',self.chain_subject,'delta_sha256','policy_sha256'}
             if set(entry) != required or type(entry['revision']) is not int or entry['revision'] < 1:
                 raise ValueError('unsupported accepted chain entry')
             if entry['policy_sha256'] != engine.digest(self.delta_provenance):
@@ -171,16 +175,19 @@ class RevisionChainSession(DeltaSession):
             raise ValueError('accepted receipt predecessor/provenance mismatch')
         return record
 
+    def _accepted_representation_id(self, record):
+        return record['delta_representation']
+
     def _audit_entry(self, entry, parent=None, parent_id=None, source_root=None):
         parent = self.old if parent is None else parent
         parent_id = self.base_id if parent_id is None else parent_id
         source_root = self.source_root if source_root is None else source_root
         record = self._accepted(entry['evidence_id'], parent, parent_id)
-        representation = json.loads(self._object('representations', record['delta_representation'], '.json'),
+        representation = json.loads(self._object('representations', self._accepted_representation_id(record), '.json'),
                                     object_pairs_hook=engine.strict_object)
         delta = self._object('deltas', representation['delta_sha256'], '.ndjson')
         transition = authenticate(json.loads(self._object('transitions', representation['transition_id'], '.json'),
-                                             object_pairs_hook=engine.strict_object), self.key, TRANSITION)
+                                             object_pairs_hook=engine.strict_object), self.key, self.transition_schema)
         if (record['export_sha256'] != entry['export_sha256'] or
                 representation.get('schema') != 'mathgraph.lean-delta-representation.v1' or
                 representation['base_evidence_id'] != parent_id or
@@ -195,6 +202,23 @@ class RevisionChainSession(DeltaSession):
             raise ValueError('persisted accepted transition linkage mismatch')
         return record
 
+    def _initialize_chain_representation(self):
+        pass
+
+    def _prepare_chain_promotion(self, result):
+        # Capture uses the already sealed bytes that the fresh oracle also
+        # receives. Layout was derived while writing those exact bytes,
+        # rather than JSON-parsing the full export again.
+        admitted_bytes = Path(self.snapshot_path).read_bytes()
+        if len(admitted_bytes) != result['representation']['export_bytes']:
+            raise ValueError('sealed successor snapshot length mismatch')
+        return admitted_bytes, self._materialized_layout
+
+    def _promote_chain_representation(self, prepared, result):
+        admitted_bytes, layout = prepared
+        self.frozen_baseline_bytes, self.frozen_baseline_sha256 = admitted_bytes, result['export_sha256']
+        self.layout = layout
+
     def validate_apply(self, transaction):
         tick, cpu = time.perf_counter(), self.cpu_time()
         try:
@@ -206,7 +230,7 @@ class RevisionChainSession(DeltaSession):
             if capture['patch'] is not None:
                 capture['patch'] = list(capture['patch'])
             self._validate_capture(capture)
-            payload = authenticate(transaction['attestation'], self.key, TRANSITION)
+            payload = authenticate(transaction['attestation'], self.key, self.transition_schema)
             if (engine.digest(capture['sources']) != payload['source_root'] or
                     sorted(capture['claimed_names']) != payload['changed_names']):
                 raise ValueError('source capture differs from authenticated transition')
@@ -217,19 +241,14 @@ class RevisionChainSession(DeltaSession):
                 return result
             persist_tick, persist_cpu = time.perf_counter(), self.cpu_time()
             record = self._accepted(result['evidence_id'], parent, parent_id)
-            if record['export_sha256'] != result['export_sha256']:
+            if record[self.chain_subject] != result[self.chain_subject]:
                 raise ValueError('live receipt export mismatch')
-            # Capture uses the already sealed bytes that the fresh oracle also
-            # receives. Layout was derived while writing those exact bytes,
-            # rather than JSON-parsing the full export again.
-            admitted_bytes = Path(self.snapshot_path).read_bytes()
-            if len(admitted_bytes) != result['representation']['export_bytes']:
-                raise ValueError('sealed successor snapshot length mismatch')
+            prepared_representation = self._prepare_chain_promotion(result)
             capture_id = self._put('source-captures', engine.encoded(capture), '.json')
-            entry = dict(schema=CHAIN, previous_head=parent_head, previous_evidence=parent_id,
+            entry = dict(schema=self.chain_schema, previous_head=parent_head, previous_evidence=parent_id,
                          evidence_id=result['evidence_id'], revision=self.revision+1,
                          source_capture_id=capture_id, source_root=payload['source_root'],
-                         export_sha256=result['export_sha256'], delta_sha256=payload['delta_sha256'],
+                         **{self.chain_subject: result[self.chain_subject]}, delta_sha256=payload['delta_sha256'],
                          policy_sha256=engine.digest(self.delta_provenance))
             head = self._put('chain', engine.encoded(seal(entry, self.key)), '.json')
             # Promote only after genuine selected acceptance and all durable
@@ -239,8 +258,7 @@ class RevisionChainSession(DeltaSession):
             self.last_accepted_record = record
             self.old, self.base_id = record, result['evidence_id']
             self.baseline_sources, self.source_root = dict(capture['sources']), payload['source_root']
-            self.frozen_baseline_bytes, self.frozen_baseline_sha256 = admitted_bytes, result['export_sha256']
-            self.layout = self._materialized_layout
+            self._promote_chain_representation(prepared_representation, result)
             self.head_id, self.revision = head, self.revision+1
             self.used, self.pending = False, False
             result['revision_chain'] = dict(head_id=head, revision=self.revision,
@@ -268,7 +286,7 @@ class RevisionChainSession(DeltaSession):
         if not _same_index_json(record['index'], index):
             raise ValueError('accepted predecessor index differs from independent index')
         entry = authenticate(json.loads(self._object('chain', self.head_id, '.json'),
-                                        object_pairs_hook=engine.strict_object), self.key, CHAIN)
+                                        object_pairs_hook=engine.strict_object), self.key, self.chain_schema)
         if (entry['evidence_id'] != self.base_id or entry['revision'] != self.revision or
                 entry['previous_evidence'] != self.last_parent_evidence_id or
                 entry['policy_sha256'] != engine.digest(self.delta_provenance)):

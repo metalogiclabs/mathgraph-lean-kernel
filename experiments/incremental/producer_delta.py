@@ -267,6 +267,9 @@ class DeltaSession:
     proof state stays immutable in that process; restart reconstructs it and
     requires the exact pinned baseline export and authenticated prior evidence.
     """
+    transition_schema = TRANSITION
+    result_schema = engine.SCHEMA
+
     def __init__(self, root, workloads, producer, checker, indexer, index_session,
                  authority_key, index_mode='retained', sparse_index_wire=False,
                  sparse_receipt=False, frozen_baseline=False, retained_checker=None,
@@ -565,6 +568,9 @@ class DeltaSession:
             offset += len(line)
         return dict(names=names, dags=dags, declarations=declarations)
 
+    def _transition_reference(self):
+        return dict(base_export_sha256=self.old['export_sha256'])
+
     def prepare(self, source_dir, patch, claimed_names):
         start, cpu = time.perf_counter(), self.cpu_time()
         sources = sources_at(source_dir)
@@ -586,8 +592,8 @@ class DeltaSession:
         if self.revision_chain and report.get('revision') != self.revision + 1:
             raise ValueError('producer predecessor revision mismatch')
         delta = delta_path.read_bytes()
-        payload = dict(schema=TRANSITION, base_evidence_id=self.base_id,
-            base_export_sha256=self.old['export_sha256'], baseline_source_root=self.source_root,
+        payload = dict(schema=self.transition_schema, base_evidence_id=self.base_id,
+            **self._transition_reference(), baseline_source_root=self.source_root,
             source_root=engine.digest(sources), delta_sha256=sha(delta),
             changed_names=sorted(claimed_names), provenance=self.delta_provenance,
             producer_report=report)
@@ -666,22 +672,7 @@ class DeltaSession:
         self._materialized_layout = dict(names=names, dags=next_dags, declarations=next_declarations)
         return digest.hexdigest(), count
 
-    def validate_apply(self, transaction):
-        if self.used:
-            raise ValueError('one baseline-anchored transaction per session')
-        self.used = True
-        start, cpu = time.perf_counter(), self.cpu_time()
-        payload = authenticate(transaction['attestation'], self.key, TRANSITION)
-        if (payload['base_evidence_id'] != self.base_id or
-            payload['base_export_sha256'] != self.old['export_sha256'] or
-            payload['baseline_source_root'] != self.source_root or
-            payload['provenance'] != self.delta_provenance):
-            raise ValueError('transition environment/version/base mismatch')
-        delta = transaction['delta_bytes']
-        if type(delta) is not bytes or sha(delta) != payload['delta_sha256']:
-            raise ValueError('changed-byte integrity failed')
-        phase_cpu, memory = {}, dict(producer=transaction.get('memory_after_producer'))
-        tick, phase_start = time.perf_counter(), self.cpu_time()
+    def _validated_update_baseline(self):
         if self.frozen_baseline_mode:
             baseline = self.frozen_baseline_bytes
             if (type(baseline) is not bytes or
@@ -693,6 +684,79 @@ class DeltaSession:
             # bytes actually checked; cold restart must still refuse the disk.
         else:
             baseline = self._baseline_bytes()
+        return baseline
+
+    def _selected_config(self):
+        config = self.temp / 'selected-config.json'
+        config.write_bytes(engine.encoded(dict(self.old['provenance']['configuration'],
+                                              export_file_path=self.snapshot_path)))
+        return config
+
+    def _result_identity(self, status, export_hash):
+        return dict(export_sha256=export_hash)
+
+    def _representation_report(self, delta, export_bytes):
+        return dict(delta_bytes=len(delta), export_bytes=export_bytes,
+                    full_export_disk_bytes_written=0, immutable_memfd=True)
+
+    def _persist_verified_acceptance(self, transaction, delta, payload, index, update,
+                                     selected, decisions, export_hash):
+        # Invoked only after the genuine checker has accepted every selected
+        # obligation. The default receipt domains and payloads are unchanged.
+        status = 'VERIFIED'
+        delta_id = self._put('deltas', delta, '.ndjson')
+        attestation_id = self._put('transitions', engine.encoded(transaction['attestation']), '.json')
+        representation = dict(schema=REPRESENTATION, base_evidence_id=self.base_id,
+            delta_sha256=delta_id, transition_id=attestation_id, export_sha256=export_hash)
+        representation_id = self._put('representations', engine.encoded(representation), '.json')
+        if self.sparse_receipt and update.get('index_wire') == 'baseline_patch_v1':
+            # A typed delta over authenticated baseline, not a self-issued
+            # acceptance. The same actual selected kernel ran above.
+            accepted = dict(schema=SPARSE_ACCEPTANCE, status=status,
+                export_sha256=export_hash, previous_evidence=self.base_id,
+                index_patch=update['index_patch'], obligation_count=index['count'],
+                checked_indices=selected, producer_provenance=self.delta_provenance,
+                delta_representation=representation_id)
+            candidate = engine.encoded(seal(accepted, self.key))
+            restored = authenticate_sparse_acceptance(
+                candidate, sha(candidate), self.key, self.old)
+            same_index = (_same_index_json(restored['index'], index)
+                if self.receipt_index_comparison == 'shared_json' else
+                engine.encoded(restored['index']) == engine.encoded(index))
+            if not same_index:
+                raise ValueError('signed sparse receipt does not reconstruct live typed index')
+        else:
+            accepted = dict(schema=engine.SCHEMA, status=status, export_sha256=export_hash,
+                index=index, provenance=self.old['provenance'], previous_evidence=self.base_id,
+                checked_indices=selected,
+                reused_indices=[d['index'] for d in decisions if d['status']=='VERIFIED_REUSED'],
+                producer_provenance=self.delta_provenance,
+                delta_representation=representation_id)
+            candidate = engine.encoded(seal(accepted, self.key))
+        receipt_id = self._put('records', candidate, '.json')
+        for decision in decisions:
+            if decision['status'] == 'VERIFIED_NEW':
+                decision['evidence_id'] = receipt_id
+        return receipt_id
+
+    def validate_apply(self, transaction):
+        if self.used:
+            raise ValueError('one baseline-anchored transaction per session')
+        self.used = True
+        start, cpu = time.perf_counter(), self.cpu_time()
+        payload = authenticate(transaction['attestation'], self.key, self.transition_schema)
+        if (payload['base_evidence_id'] != self.base_id or
+            any(name not in payload or payload[name] != value
+                for name, value in self._transition_reference().items()) or
+            payload['baseline_source_root'] != self.source_root or
+            payload['provenance'] != self.delta_provenance):
+            raise ValueError('transition environment/version/base mismatch')
+        delta = transaction['delta_bytes']
+        if type(delta) is not bytes or sha(delta) != payload['delta_sha256']:
+            raise ValueError('changed-byte integrity failed')
+        phase_cpu, memory = {}, dict(producer=transaction.get('memory_after_producer'))
+        tick, phase_start = time.perf_counter(), self.cpu_time()
+        baseline = self._validated_update_baseline()
         validation = time.perf_counter()-tick
         phase_cpu['baseline_validation_cpu_seconds'] = self.cpu_time()-phase_start
         memory['validation'] = self.memory_observation()
@@ -723,9 +787,7 @@ class DeltaSession:
         phase_cpu['materialization_and_hash_cpu_seconds'] = self.cpu_time()-phase_start
         memory['materialization'] = self.memory_observation()
         selected, decisions = engine.reuse_decisions(self.old, index, self.old['provenance'], self.base_id)
-        config = self.temp / 'selected-config.json'
-        config.write_bytes(engine.encoded(dict(self.old['provenance']['configuration'],
-                                              export_file_path=self.snapshot_path)))
+        config = self._selected_config()
         indices = self.temp / 'indices.json'
         indices.write_bytes(engine.encoded(selected))
         tick, phase_start = time.perf_counter(), self.cpu_time()
@@ -763,6 +825,8 @@ class DeltaSession:
             else:
                 raise ValueError('unexpected native retained Rust checker response')
         else:
+            if config is None:
+                raise ValueError('fresh selected checker requires a complete export configuration')
             checked = subprocess.run([str(self.tools['checker']), str(config), str(indices)],
                                      capture_output=True, timeout=120)
         checking = time.perf_counter()-tick
@@ -781,44 +845,13 @@ class DeltaSession:
         tick, phase_start = time.perf_counter(), self.cpu_time()
         receipt_id = None
         if status == 'VERIFIED':
-            delta_id = self._put('deltas', delta, '.ndjson')
-            attestation_id = self._put('transitions', engine.encoded(transaction['attestation']), '.json')
-            representation = dict(schema=REPRESENTATION, base_evidence_id=self.base_id,
-                delta_sha256=delta_id, transition_id=attestation_id, export_sha256=export_hash)
-            representation_id = self._put('representations', engine.encoded(representation), '.json')
-            if self.sparse_receipt and update.get('index_wire') == 'baseline_patch_v1':
-                # A typed delta over authenticated baseline, not a self-issued
-                # acceptance. The same actual selected kernel ran above.
-                accepted = dict(schema=SPARSE_ACCEPTANCE, status=status,
-                    export_sha256=export_hash, previous_evidence=self.base_id,
-                    index_patch=update['index_patch'], obligation_count=index['count'],
-                    checked_indices=selected, producer_provenance=self.delta_provenance,
-                    delta_representation=representation_id)
-                candidate = engine.encoded(seal(accepted, self.key))
-                restored = authenticate_sparse_acceptance(
-                    candidate, sha(candidate), self.key, self.old)
-                same_index = (_same_index_json(restored['index'], index)
-                    if self.receipt_index_comparison == 'shared_json' else
-                    engine.encoded(restored['index']) == engine.encoded(index))
-                if not same_index:
-                    raise ValueError('signed sparse receipt does not reconstruct live typed index')
-            else:
-                accepted = dict(schema=engine.SCHEMA, status=status, export_sha256=export_hash,
-                    index=index, provenance=self.old['provenance'], previous_evidence=self.base_id,
-                    checked_indices=selected,
-                    reused_indices=[d['index'] for d in decisions if d['status']=='VERIFIED_REUSED'],
-                    producer_provenance=self.delta_provenance,
-                    delta_representation=representation_id)
-                candidate = engine.encoded(seal(accepted, self.key))
-            receipt_id = self._put('records', candidate, '.json')
-            for decision in decisions:
-                if decision['status'] == 'VERIFIED_NEW':
-                    decision['evidence_id'] = receipt_id
+            receipt_id = self._persist_verified_acceptance(
+                transaction, delta, payload, index, update, selected, decisions, export_hash)
         persistence = time.perf_counter()-tick
         phase_cpu['persistence_cpu_seconds'] = self.cpu_time()-phase_start
         memory['persistence'] = self.memory_observation()
-        result = dict(schema=engine.SCHEMA, status=status, evidence_id=receipt_id,
-            export_sha256=export_hash, previous_evidence=self.base_id, decisions=decisions,
+        result = dict(schema=self.result_schema, status=status, evidence_id=receipt_id,
+            **self._result_identity(status, export_hash), previous_evidence=self.base_id, decisions=decisions,
             counts=dict(total=index['count'], scheduled=len(selected), rechecked=actual,
                         reused=index['count']-len(selected), invalidated=len(selected)),
             checker_result=dict(code=checked.returncode, stdout=checked.stdout.decode(errors='replace'),
@@ -826,8 +859,7 @@ class DeltaSession:
             provenance=self.old['provenance'], producer_provenance=self.delta_provenance,
             producer_report=transaction['producer_report'], typed_update={k:v for k,v in update.items() if k!='index'},
             native_kernel_report=native_kernel_report,
-            representation=dict(delta_bytes=len(delta), export_bytes=export_bytes,
-                                full_export_disk_bytes_written=0, immutable_memfd=True),
+            representation=self._representation_report(delta, export_bytes),
             timings=dict(producer_seconds=transaction.get('prepare_wall_seconds',0),
                 baseline_validation_seconds=validation,
                 baseline_authority='source-owned-frozen-bytes-v1' if self.frozen_baseline_mode else 'rehashed-durable-bytes-v1',
@@ -874,7 +906,7 @@ class DeltaSession:
         delta = self._object('deltas', representation['delta_sha256'], '.ndjson')
         attestation = json.loads(self._object('transitions', representation['transition_id'], '.json'),
                                  object_pairs_hook=engine.strict_object)
-        payload = authenticate(attestation, self.key, TRANSITION)
+        payload = authenticate(attestation, self.key, self.transition_schema)
         result = self.validate_apply(dict(attestation=attestation, delta_bytes=delta,
                                          producer_report=payload['producer_report']))
         if (result['status'] != 'VERIFIED' or result['export_sha256'] != record['export_sha256'] or
