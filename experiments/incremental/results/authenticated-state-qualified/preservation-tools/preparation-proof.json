@@ -1,0 +1,32 @@
+{
+  "completed_fixture_test_count": 13,
+  "files": {
+    "README.txt": {
+      "sha256": "977729f579c5e5d91e5d15695ae0f4c1b2d194f40a6724d7dbc5ad4c773baac2",
+      "size": 6373
+    },
+    "archive_reader_output.py": {
+      "sha256": "dc68ee1d803a9e82a0ecb117ab77b356bf010a8884a14301bfa936aa00810d01",
+      "size": 22860
+    },
+    "test_reader_preservation.py": {
+      "sha256": "dd7bbf768071f0e300c108e54b3663f1251a2acd8624b06d6e38e6ab4909881b",
+      "size": 10780
+    },
+    "verify_reader_archive.py": {
+      "sha256": "81af08aa48e225f41a30fdb1b46eecfd451e49cd115f22c3ac40025458af4b37",
+      "size": 22733
+    }
+  },
+  "fixture_command": "python3 -B test_reader_preservation.py",
+  "free_bytes_at_record": 3831926784,
+  "independent_writer_code_review": "passed; no blocking issue",
+  "observed_test_seconds": 0.689,
+  "post_review_guard_check": "roundtrip/independentverification/explicit fixture removal passed after adding dangling-proof-symlink refusal",
+  "recorded_utc": "2026-10-22T06:48:19Z",
+  "schema": "mathgraph.reader-output-preservation-preparation.v1",
+  "scope": "Preparation outside Git only; no actual reader archival or deletion performed",
+  "source_root": "/workspace/kernel-audit/authenticated-state/actual-independent-replay",
+  "status": "passed",
+  "subsequent_completed_archive_status": "Actual bundle subsequently created and independently verified; originals retained. See ../actual-independent-replay-preserved/retention-status.json."
+}

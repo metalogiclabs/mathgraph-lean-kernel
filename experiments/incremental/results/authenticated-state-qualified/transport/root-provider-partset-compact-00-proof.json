@@ -1,0 +1,36 @@
+{
+  "schema": "mathgraph.root-provider-partset-reconstruction.v1",
+  "passed": true,
+  "scope": "Exact provider ZIP byte preservation only; no new verification timing claim",
+  "source_sha": "cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5",
+  "run_id": 39709067518,
+  "artifact_id": 12406026073,
+  "provider_bytes": 419430556,
+  "provider_sha256": "f9c28e9f243344e3c6d897c52f62593b389b3e7121a0128b9ce565c3b38e277e",
+  "parts_manifest_sha256": "a0a6b0498e0a952b62fdd1d79dd2f2977640a10bc02a4c949f0b13f1f86b41f8",
+  "unchanged_reader_sha256": "d8fcf72c03c0e09e5d3c8634c9a0313905fcdbeabab9434fefd55e963236e1da",
+  "command": [
+    "python3",
+    "/workspace/kernel-audit/authenticated-state/evidence-packaging/reconstruct_archive.py",
+    "--manifest",
+    "/workspace/kernel-audit/authenticated-state/ci-cec9941/permanent-provider-parts/compact-00/manifest.json",
+    "--output",
+    "/workspace/kernel-audit/authenticated-state/ci-cec9941/root-exclusive-reconstructed-compact-00.zip"
+  ],
+  "reader_report": {
+    "concatenated_xz_bytes": 419423236,
+    "concatenated_xz_sha256": "3f52e826af97c4654fdb6a006fe7b32fdb780697edd1920a7234502d9dabc38e",
+    "original_bytes": 419430556,
+    "original_sha256": "f9c28e9f243344e3c6d897c52f62593b389b3e7121a0128b9ce565c3b38e277e",
+    "output_path": "/workspace/kernel-audit/authenticated-state/ci-cec9941/root-exclusive-reconstructed-compact-00.zip",
+    "parts_verified": 9,
+    "passed": true,
+    "written_output_sha256_verified": true,
+    "zip_crc_checked": true,
+    "zip_members": 1
+  },
+  "root_full_written_sha256_and_crc_rechecked": true,
+  "original_provider_retained_unchanged": true,
+  "own_exclusive_validation_duplicate_removed": true,
+  "completed_utc": "2026-10-22T06:52:16Z"
+}

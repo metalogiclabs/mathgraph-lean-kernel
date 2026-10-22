@@ -1,0 +1,54 @@
+{
+  "scope": "Post-provider-download source/run provenance readback",
+  "passed": true,
+  "head_sha": "cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5",
+  "git_status_porcelain": "",
+  "run_id": 39709067518,
+  "run_status": "completed",
+  "run_conclusion": "success",
+  "run_metadata_sha256": "152e81ffc25f7f08889adb823a84fc347eed7e8f61ee3ca9bd986da2b9376382",
+  "artifacts_metadata_sha256": "4c16f75f792b3a2fd714d3e7f8a068de3a3bd555ee5858f18eb62cca5522fd56",
+  "provider_proofs": [
+    {
+      "scope": "Exact new CI index transport; no logical/economic verdict.",
+      "artifact_id": 12405617778,
+      "source": "cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5",
+      "run_id": 39709067518,
+      "bytes": 941044,
+      "sha256": "56887168f53147d2dd115d073d26f99e64bbdfa829cebe41fd249990f69a3e08",
+      "zip_crc_passed": true,
+      "local_path": "/workspace/kernel-audit/authenticated-state/ci-cec9941/downloads/authenticated-state-index-cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5.zip",
+      "method": "GitHub connector FileService download_url streamed with urllib, inherited proxy/CA, no Sediment tool"
+    },
+    {
+      "scope": "Actual provider ZIP transport integrity only, not logical/economic qualification.",
+      "artifact_id": 12406026073,
+      "source": "cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5",
+      "run_id": 39709067518,
+      "bytes": 419430556,
+      "sha256": "f9c28e9f243344e3c6d897c52f62593b389b3e7121a0128b9ce565c3b38e277e",
+      "zip_crc_passed": true,
+      "zip_members": [
+        "compact.tar.xz.part00"
+      ],
+      "local_path": "/workspace/kernel-audit/authenticated-state/ci-cec9941/downloads/authenticated-state-compact-00-cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5.zip",
+      "download_wall_seconds": 42.56354467899655,
+      "download_method": "GitHub connector FileService download_url ->urllib; inheritedproxy/CA; noSediment"
+    },
+    {
+      "scope": "Actual provider ZIP transport integrity only, not logical/economic qualification.",
+      "artifact_id": 12406205607,
+      "source": "cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5",
+      "run_id": 39709067518,
+      "bytes": 316730440,
+      "sha256": "a52bf07300b0a1bfb1799523c1b21727fb6fcd5eb4e7025877e3f3d3c3a973b9",
+      "zip_crc_passed": true,
+      "zip_members": [
+        "compact.tar.xz.part01"
+      ],
+      "local_path": "/workspace/kernel-audit/authenticated-state/ci-cec9941/downloads/authenticated-state-compact-01-cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5.zip",
+      "download_wall_seconds": 36.40269665999949,
+      "download_method": "GitHub connector FileService download_url ->urllib; inheritedproxy/CA; noSediment"
+    }
+  ]
+}

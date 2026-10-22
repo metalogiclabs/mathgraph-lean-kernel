@@ -1,0 +1,32 @@
+[
+  {
+    "name": "benchmark-smoke-v1",
+    "scope": "Precommit local smoke context only; never relabeled exact-source CI qualification",
+    "source_sha": "b1931f8479a2bcd78af85ba79e60958963f89d96",
+    "qualified": false,
+    "economic_status": null,
+    "completed": false,
+    "source_and_binary_stable": null,
+    "original_bytes": 46747251,
+    "original_sha256": "24429ff71a45253ff733b86852fa7b02ddf0e9c08ef450756abb28174dc97a36",
+    "gzip_name": "benchmark-smoke-v1-summary.json.gz",
+    "gzip_bytes": 5408792,
+    "gzip_sha256": "81f4559c749b4f296c155ac91121669d512b60f87960b9307970d4117a149514",
+    "decoded_sha256_rechecked": true
+  },
+  {
+    "name": "benchmark-stable-original-v3",
+    "scope": "Precommit local smoke context only; never relabeled exact-source CI qualification",
+    "source_sha": "b1931f8479a2bcd78af85ba79e60958963f89d96",
+    "qualified": false,
+    "economic_status": "SMOKE_OR_INCOMPLETE",
+    "completed": true,
+    "source_and_binary_stable": true,
+    "original_bytes": 7626144,
+    "original_sha256": "c48c302f28944640fa530b0f207c8519388736c1accc687a3f42dd6c23d52776",
+    "gzip_name": "benchmark-stable-original-v3-summary.json.gz",
+    "gzip_bytes": 1075150,
+    "gzip_sha256": "8f424c953a2716616730b5f394372f41a928f2a770ece6a64fdf6e855e43908f",
+    "decoded_sha256_rechecked": true
+  }
+]

@@ -1,0 +1,9 @@
+{
+  "scope": "Root audit launch failure before qualified reader execution; diagnostic account, not original stderr bytes",
+  "observed_error": "FileNotFoundError: [Errno 2] No such file or directory: '/usr/bin/time'",
+  "tool_process_exit_code": 1,
+  "qualified_reader_started": false,
+  "qualified_reader_or_runtime_modified": false,
+  "repair": "Replace only external resource wrapper with Python stdlib resource.getrusage; rerun the unchanged exact-source reader",
+  "recorded_utc": "2026-10-22T06:33:32Z"
+}

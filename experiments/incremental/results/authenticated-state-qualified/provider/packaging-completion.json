@@ -1,0 +1,51 @@
+{
+  "scope": "Lossless evidence storage only; not runtime checking/performance evidence.",
+  "passed": true,
+  "source": "cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5",
+  "run_id": 39709067518,
+  "sequential_command_exit_code": 0,
+  "provider_parts": [
+    {
+      "artifact_id": 12406026073,
+      "original_zip": "/workspace/kernel-audit/authenticated-state/ci-cec9941/downloads/authenticated-state-compact-00-cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5.zip",
+      "original_zip_bytes": 419430556,
+      "original_zip_sha256": "f9c28e9f243344e3c6d897c52f62593b389b3e7121a0128b9ce565c3b38e277e",
+      "manifest_path": "/workspace/kernel-audit/authenticated-state/ci-cec9941/permanent-provider-parts/compact-00/manifest.json",
+      "manifest_sha256": "a0a6b0498e0a952b62fdd1d79dd2f2977640a10bc02a4c949f0b13f1f86b41f8",
+      "part_count": 9,
+      "wrapper": {
+        "bytes": 419423236,
+        "check": "CRC64",
+        "format": "XZ",
+        "materialized_separately": false,
+        "name": "archive.zip.xz",
+        "sha256": "3f52e826af97c4654fdb6a006fe7b32fdb780697edd1920a7234502d9dabc38e"
+      },
+      "all_final_verification_flags_passed": true,
+      "packaging_wall_seconds": 215.42411094699492
+    },
+    {
+      "artifact_id": 12406205607,
+      "original_zip": "/workspace/kernel-audit/authenticated-state/ci-cec9941/downloads/authenticated-state-compact-01-cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5.zip",
+      "original_zip_bytes": 316730440,
+      "original_zip_sha256": "a52bf07300b0a1bfb1799523c1b21727fb6fcd5eb4e7025877e3f3d3c3a973b9",
+      "manifest_path": "/workspace/kernel-audit/authenticated-state/ci-cec9941/permanent-provider-parts/compact-01/manifest.json",
+      "manifest_sha256": "28bc1263d7122536adba9e164de261b27e411066aabc244ee065414d43c59c73",
+      "part_count": 7,
+      "wrapper": {
+        "bytes": 316705244,
+        "check": "CRC64",
+        "format": "XZ",
+        "materialized_separately": false,
+        "name": "archive.zip.xz",
+        "sha256": "cf22411a6c84780a354c133ebcc8b8beb0ee84387c53d662f7688f7619a17b7b"
+      },
+      "all_final_verification_flags_passed": true,
+      "packaging_wall_seconds": 163.46166594199894
+    }
+  ],
+  "input_zip_deletions": [],
+  "source_still_clean": true,
+  "free_bytes_after_packaging": 3086733312,
+  "total_git_part_bytes": 736128480
+}

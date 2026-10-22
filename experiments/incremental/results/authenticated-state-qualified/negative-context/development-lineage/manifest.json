@@ -1,0 +1,72 @@
+{
+  "schema": "mathgraph.authenticated-state.development-lineage.v1",
+  "runtime_source": "cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5",
+  "ci_run": 39709067518,
+  "qualification_pending": true,
+  "scope": "Historical local development logs; uncommitted development variants and smoke timings are not promoted as exact-source qualification.",
+  "failures": [
+    {
+      "path": "feature-red.log",
+      "sha256": "4f50dc52d889904c42c4ff282a667e4b2275250ab1e6a5502c08693f838a567e",
+      "bytes": 480,
+      "classification": "development_failure_not_qualification",
+      "cause": "Expected preimplementation feature test refusal"
+    },
+    {
+      "path": "representation-red.log",
+      "sha256": "be821a680c8165941683b7468be8851248d755cc2e2164e3fadc6ff0853919ae",
+      "bytes": 3933,
+      "classification": "development_failure_not_qualification",
+      "cause": "Expected preimplementation representation test refusal"
+    },
+    {
+      "path": "real-original-v1.log",
+      "sha256": "eefca7cfd99c09401b9eb2092249432b8285ef86cbc0cc065349bb20f4a0d015",
+      "bytes": 744,
+      "classification": "development_failure_not_qualification",
+      "cause": "Cold replay assumed the legacy receipt representation field; fixed with a virtual representation lookup"
+    },
+    {
+      "path": "benchmark-contract-red.log",
+      "sha256": "23eee92a37c706d781a07a209b047c7b74fa691f6f8655a091b5142dcda67623",
+      "bytes": 1423,
+      "classification": "development_failure_not_qualification",
+      "cause": "Measurement contract admitted bool/int conflation; fixed with typed checks"
+    },
+    {
+      "path": "state-controls-original-v1.log",
+      "sha256": "49df5e6254073e9002787658476e0291999a89a7f089507f6c266876e3586700",
+      "bytes": 622,
+      "classification": "development_failure_not_qualification",
+      "cause": "Issuer-injected unused row was incorrectly used as regenerable source history in the harness; actual cold refusal preserved"
+    },
+    {
+      "path": "state-controls-original-v2.log",
+      "sha256": "18000818145a8293b49d7f6375ed1718ac7d27a1e82c7b38f8634b0fb0390e28",
+      "bytes": 648,
+      "classification": "development_failure_not_qualification",
+      "cause": "Harness omitted authenticated intermediate cold-replay heads when checking corruption refusal"
+    },
+    {
+      "path": "state-controls-original-v3.log",
+      "sha256": "3ab62da12658235bc0156c5e939e3b5f4a8336e1ee78c320d1af9c1d871bde3d",
+      "bytes": 723,
+      "classification": "development_failure_not_qualification",
+      "cause": "Harness invoked the genesis-anchored history validator on an already-promoted session"
+    },
+    {
+      "path": "benchmark-smoke-v1.log",
+      "sha256": "54cfacc0999332e490385527ed523f2ed43f5182013ed453d2664e0873f6d21e",
+      "bytes": 2122,
+      "classification": "development_failure_not_qualification",
+      "cause": "Deliberate in-flight source changes detected after real witnesses and three arms; benchmark refused qualification"
+    },
+    {
+      "path": "main-reader-stable-original-v2.log",
+      "sha256": "500dafaf45624a749bb4275868f0bb64575ea5d30f1472dbfba6a87a43a879c5",
+      "bytes": 814,
+      "classification": "development_failure_not_qualification",
+      "cause": "Reader incorrectly used a SHA256 CAS validator on a Git SHA1 source identifier; separate validators now tested"
+    }
+  ]
+}

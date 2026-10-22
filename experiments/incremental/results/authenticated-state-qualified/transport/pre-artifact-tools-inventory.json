@@ -1,0 +1,66 @@
+{
+  "ci_result_pending": true,
+  "files": {
+    "analysis-tools/analyze_state.py": {
+      "bytes": 30086,
+      "sha256": "2adb6f67f2c399beeb03c956ffc1f28c33f8c1355a3c23308e30cdb018866100"
+    },
+    "analysis-tools/test_analyze_state.py": {
+      "bytes": 10677,
+      "sha256": "ed44be4fc8cf5111defc29247aca7df13f58eb844967bd0b2dfed0ca00e23925"
+    },
+    "artifact-transport/reconstruct_packages.py": {
+      "bytes": 13636,
+      "sha256": "684461187e2146f5892b60701889d7ad555bdf6106d3873fb95c8af919b9e940"
+    },
+    "artifact-transport/test_reconstruct_packages.py": {
+      "bytes": 7699,
+      "sha256": "070f03ee6088f229e717889b97423a2728d074428623d2d1f39fce2ea71ee1d2"
+    },
+    "evidence-packaging/package_provider_zip.py": {
+      "bytes": 8010,
+      "sha256": "97099965630a0694b7c0fe24f6bbf08eaad1b38bc6f443f4fbc19ac5c1706c64"
+    },
+    "evidence-packaging/reconstruct_archive.py": {
+      "bytes": 5499,
+      "sha256": "d8fcf72c03c0e09e5d3c8634c9a0313905fcdbeabab9434fefd55e963236e1da"
+    },
+    "evidence-packaging/test_package_provider_zip.py": {
+      "bytes": 4731,
+      "sha256": "f164003d4277686c053c5e2743d2a4f84e509c30387af9a50c235456c89c7ba0"
+    },
+    "evidence-packaging/test_reconstruct_archive.py": {
+      "bytes": 3795,
+      "sha256": "6048dbf5a06e169f6d955102580bf13d23ab5eb8f4619cd87e98b540f084770d"
+    },
+    "final-boundary-review/REVIEW.md": {
+      "bytes": 3035,
+      "sha256": "99f329a251a511dd5e4678eac4106f5222fa5abb19720884dc391ab0e36ebb59"
+    },
+    "final-boundary-review/review-proof.json": {
+      "bytes": 3176,
+      "sha256": "e7fea8fddaac3a96d5056f60cf5667b2d834e70d3d6936e1e45ba1121a2c128e"
+    },
+    "final-report-preparation/extraction-checklist.json": {
+      "bytes": 7655,
+      "sha256": "0c395dc586c0b3cf6a0b6b39dcc014266d2f315a8ba71cb6147d102b25ac47f1"
+    },
+    "independent-build/build-proof.json": {
+      "bytes": 6452,
+      "sha256": "bf21ffb560d4e98ee48220c4df6e93cb0958ce0f96eb52e157c5efc449353125"
+    },
+    "independent-build/build.py": {
+      "bytes": 1761,
+      "sha256": "0d44c678edd979db759fc6f5eadcec5740c51cdf4500ece7148aeab2a6f7e785"
+    },
+    "independent-build/cpp-pins-proof.json": {
+      "bytes": 570,
+      "sha256": "10e9345b591fea963a1fc71d789c2d827ad9dfd0bf1b42d82fb513a8c3a691e7"
+    }
+  },
+  "observed_utc": "2026-10-22T03:51:58.334188+00:00",
+  "run_id": 39709067518,
+  "schema": "mathgraph.authenticated-state-independent-tools-pre-artifact.v1",
+  "scope": "Helper identities committed to a local record before actual CI artifact acquisition; no qualification or economic result is certified by this file.",
+  "source_sha": "cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5"
+}

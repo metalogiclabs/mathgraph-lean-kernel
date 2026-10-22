@@ -1,0 +1,33 @@
+{
+  "scope": "Independent actual CI artifact replay; resource observations are replay cost, not benchmark observations",
+  "source_sha": "cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5",
+  "run_id": 39709067518,
+  "command": [
+    "python3",
+    "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/replay_authenticated_state.py",
+    "--benchmark",
+    "/workspace/kernel-audit/authenticated-state/ci-cec9941/extracted-compact/artifacts/authenticated-state",
+    "--controls",
+    "/workspace/kernel-audit/authenticated-state/ci-cec9941/extracted-compact/artifacts/state-controls-original",
+    "--controls",
+    "/workspace/kernel-audit/authenticated-state/ci-cec9941/extracted-compact/artifacts/state-controls-expanded",
+    "--repo",
+    "/workspace/mathgraph-lean-kernel-lifecycle",
+    "--source",
+    "cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5",
+    "--rust",
+    "/workspace/kernel-audit/authenticated-state/independent-build/target/release/sokonanoda",
+    "--indexer",
+    "/workspace/kernel-audit/authenticated-state/independent-build/target/release/export-index",
+    "--cpp",
+    "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker",
+    "--paranoid",
+    "/home/agent/.elan/toolchains/leanprover--lean4---v4.35.0/bin/leanchecker-paranoid",
+    "--out",
+    "/workspace/kernel-audit/authenticated-state/actual-independent-replay"
+  ],
+  "started_utc": "2026-10-22T06:30:47Z",
+  "input_summary_sha256": "49995dee47cc470604db8f35bfbeea704c5b55614b97274a7b1856514499f25d",
+  "reader_sha256": "84318fe0d9b957f579c861a08dddb734e58189c546fa108d8e3f427fbd9211ff",
+  "completed": false
+}

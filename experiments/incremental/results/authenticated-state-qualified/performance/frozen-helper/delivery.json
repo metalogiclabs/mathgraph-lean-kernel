@@ -1,0 +1,30 @@
+{
+  "schema": "mathgraph.independent-state-cost-helper-delivery.v1",
+  "status": "READY_FOR_ACTUAL_CI_CONTEXTUAL_ANALYSIS",
+  "source_sha_expected": "cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5",
+  "ci_run_expected": 39709067518,
+  "files_sha256": {
+    "analyze_state.py": "2adb6f67f2c399beeb03c956ffc1f28c33f8c1355a3c23308e30cdb018866100",
+    "test_analyze_state.py": "ed44be4fc8cf5111defc29247aca7df13f58eb844967bd0b2dfed0ca00e23925",
+    "README.md": "2a8e80842abb4c9e9c8350d83408299a8c8b423db7aab27b5cbadd83a17d9496"
+  },
+  "tests": {
+    "passed": 13,
+    "green_log": "tests-final-freeze-green.log"
+  },
+  "actual_ci_analyzed": false,
+  "development_smoke": {
+    "status": "CONTEXTUAL_SMOKE_ONLY",
+    "summary_sha256": "c48c302f28944640fa530b0f207c8519388736c1accc687a3f42dd6c23d52776",
+    "reported_source": "b1931f8479a2bcd78af85ba79e60958963f89d96",
+    "output": "smoke-frozen-final"
+  },
+  "product_source_modified": false,
+  "independent_review": {
+    "reviewer": "/root/state_benchmark",
+    "arithmetic_schema_scopes_match": true,
+    "found_and_repaired": "ZIP constructor/path fingerprint race; real atomic replacement RED then held-fd identity guard GREEN",
+    "final_repair_review_pending": true
+  },
+  "scope": "Stdlib arithmetic only, no semantic or HMAC certificate; no performance promotion from smoke."
+}

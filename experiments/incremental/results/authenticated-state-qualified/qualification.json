@@ -1,0 +1,39 @@
+{
+  "schema": "mathgraph.authenticated-state-qualified-checkpoint.v1",
+  "status": "WARRANTED_BOUNDED_WARM_SPEEDUP",
+  "runtime_source": "cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5",
+  "prior_checkpoint": "b1931f8479a2bcd78af85ba79e60958963f89d96",
+  "ci_run": 39709067518,
+  "ci_conclusion": "success",
+  "qualified_workloads": [
+    3436,
+    11653
+  ],
+  "paired_repetitions": 5,
+  "updates_per_lifecycle": 40,
+  "fresh_local_replay": {
+    "passed": true,
+    "completed": true,
+    "primary_transition_count": 800,
+    "declaration_witnesses_checked": 7242720,
+    "fresh_kernel_processes": 108,
+    "control_count": 100,
+    "archive_objects_validated": 190,
+    "historical_hmac_reauthenticated": false
+  },
+  "root_replay_summary_sha256": "7a83a91d5d498741b9d81db4226a0c5cf6c048d4ce658a2056b98ad5e9ab5175",
+  "arithmetic_review": "performance/REVIEW.md",
+  "correctness_inventory": "correctness/review.json",
+  "all_28_series_recomputed": true,
+  "compact_files_locally_verified": 8346,
+  "compact_member_bytes": 3528974155,
+  "full_provider_parts_downloaded_locally": false,
+  "asymptotically_change_proportional_total_verification": false,
+  "new_trusted_executable_bridge": "Authenticated construction serializer/receipt domains; not a full-export SHA or whole-pipeline proof",
+  "trust_principal_kernel_and_applicability_unchanged": true,
+  "historical_expected_head_latestness_assumption_retained": true,
+  "remaining_economic_residual": "Profile and qualify sparse applicability/receipt validation within persistence and consumer gap while preserving existing decisions",
+  "stronger_logical_residual": "Independently warranted complex reuse outside verified prefix; equal-cone local experiment refused",
+  "local_exploratory_probe_ci_qualified": false,
+  "created_utc": "2026-10-22T06:58:13Z"
+}

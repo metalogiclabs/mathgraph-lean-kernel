@@ -1,0 +1,51 @@
+{
+  "archive": {
+    "format": "tar.xz",
+    "sha256": "5ca0ec48114df4e033339f642a7db0c6eac808557e9c462ce160f6523b7d1124",
+    "size": 2072480,
+    "xz_check": "CRC64"
+  },
+  "counts": {
+    "directories": 443,
+    "members": 990,
+    "regular_data_members": 547
+  },
+  "files": {
+    "archive-proof.json": {
+      "sha256": "173f18c18464d20f3835f838a887121c67dfa6f3e224fcbaa4160ebe51b832ae",
+      "size": 687
+    },
+    "independent-proof.json": {
+      "sha256": "0a1d83b9208f2f4b920ea17e184e9864be5eb98fa8ba8ca1e3a223f1323b4c0a",
+      "size": 1905
+    },
+    "manifest.json": {
+      "sha256": "cf3d794ffeaa91ef83ff4da593c00c4a25db49360f7d298efb72324baf2d4370",
+      "size": 342863
+    }
+  },
+  "free_bytes_observed": 3501535232,
+  "independent_verification": "passed",
+  "logical_file_bytes": 1000126396,
+  "original_tree_removed": false,
+  "original_tree_retained": true,
+  "parts": [
+    {
+      "name": "reader-output.tar.xz.part000",
+      "sha256": "5ca0ec48114df4e033339f642a7db0c6eac808557e9c462ce160f6523b7d1124",
+      "size": 2072480
+    }
+  ],
+  "recorded_utc": "2026-10-22T06:50:04Z",
+  "removal_command_executed": false,
+  "retention_instruction": "Root directed RETAIN all actual-independent-replay originals; no removal needed.",
+  "schema": "mathgraph.reader-output-preservation-status.v1",
+  "scope": "Lossless evidence packaging only; no runtime speedup claim. No Git/runtime/source edits.",
+  "source_directories": 443,
+  "source_files": 547,
+  "source_root": "/workspace/kernel-audit/authenticated-state/actual-independent-replay",
+  "status": "passed",
+  "summary_sha256": "7a83a91d5d498741b9d81db4226a0c5cf6c048d4ce658a2056b98ad5e9ab5175",
+  "unique_file_bytes": 1000126396,
+  "writer_verification": "passed"
+}

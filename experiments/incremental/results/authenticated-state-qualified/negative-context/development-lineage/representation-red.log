@@ -1,0 +1,53 @@
+FFFFFF
+======================================================================
+FAIL: test_changed_only_composition_preserves_complete_exact_export_and_parent (__main__.RepresentationTests.test_changed_only_composition_preserves_complete_exact_export_and_parent)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/test_state_representation.py", line 26, in setUp
+    self.assertIsNotNone(state,'authenticated state representation is missing')
+AssertionError: unexpectedly None : authenticated state representation is missing
+
+======================================================================
+FAIL: test_noop_and_new_name_layer_do_not_change_unchanged_declaration_bytes (__main__.RepresentationTests.test_noop_and_new_name_layer_do_not_change_unchanged_declaration_bytes)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/test_state_representation.py", line 26, in setUp
+    self.assertIsNotNone(state,'authenticated state representation is missing')
+AssertionError: unexpectedly None : authenticated state representation is missing
+
+======================================================================
+FAIL: test_unsupported_or_ambiguous_delta_refuses_without_mutating_parent (__main__.RepresentationTests.test_unsupported_or_ambiguous_delta_refuses_without_mutating_parent)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/test_state_representation.py", line 26, in setUp
+    self.assertIsNotNone(state,'authenticated state representation is missing')
+AssertionError: unexpectedly None : authenticated state representation is missing
+
+======================================================================
+FAIL: test_state_and_full_export_acceptance_domains_are_not_interchangeable (__main__.StateAuthorityTests.test_state_and_full_export_acceptance_domains_are_not_interchangeable)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/test_state_representation.py", line 73, in setUp
+    self.assertIsNotNone(state,'authenticated state acceptance is missing')
+AssertionError: unexpectedly None : authenticated state acceptance is missing
+
+======================================================================
+FAIL: test_state_receipt_reestablishes_existing_predicate_without_file_sha (__main__.StateAuthorityTests.test_state_receipt_reestablishes_existing_predicate_without_file_sha)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/test_state_representation.py", line 73, in setUp
+    self.assertIsNotNone(state,'authenticated state acceptance is missing')
+AssertionError: unexpectedly None : authenticated state acceptance is missing
+
+======================================================================
+FAIL: test_wrong_parent_forgery_and_invalid_applicability_fail_closed (__main__.StateAuthorityTests.test_wrong_parent_forgery_and_invalid_applicability_fail_closed)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/test_state_representation.py", line 73, in setUp
+    self.assertIsNotNone(state,'authenticated state acceptance is missing')
+AssertionError: unexpectedly None : authenticated state acceptance is missing
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.001s
+
+FAILED (failures=6)

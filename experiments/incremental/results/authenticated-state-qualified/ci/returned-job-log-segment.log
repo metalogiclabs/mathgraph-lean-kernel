@@ -1,0 +1,721 @@
+﻿2026-10-22T04:12:28.0676262Z authenticated-state-representation-parity: {"original":{"summary_sha256":"b251f1a2fc4d4b057de31c96d6d62bfa97c087e73607e203c576e6b9582fcdc5","changed_revisions":4,"cold_replayed_revisions":4},"expanded":{"summary_sha256":"b98e558235936a6ccbbd7af53380f68a1382db40f657d9ebfb99288590ae1fbd","changed_revisions":4,"cold_replayed_revisions":4}}
+2026-10-22T04:12:28.0693717Z authenticated-state-adversarial-controls: {"original":{"summary_sha256":"3de3164d34c8111ad645e99133ae3d0b49cdacd4e933ea281b5ceff94fe708c1","required_controls":["authenticated-environment-drift","authenticated-metadata-drift","authenticated-version-drift","authenticated-wrong-evidence-parent","authenticated-wrong-state-parent","axiom-kind-assumption-change","changed-delta-without-authority","changed-unused-admitted-dag","cold-recovery-and-dependency-restoration","cold-start-requires-external-expected-head","corrupt-baseline-export","corrupt-baseline-receipt","corrupt-chain-head","corrupt-current-receipt","corrupt-delta","corrupt-genesis","corrupt-genesis-state","corrupt-source-capture","corrupt-state-representation","corrupt-transition","deleted-latest-head-no-prefix-fallback","dropped-authenticated-replacement","duplicate-authenticated-replacement","early-edit-full-index-partition-and-kernel-parity","failed-persistence-does-not-promote-state","failed-receipt-persistence-does-not-promote-state","false-change-name-hint","foreign-issuer","foreign-transition-domain","forged-hmac","full-export-receipt-rejected-by-state-domain","invalid-source-proof","issuer-injected-unused-dag-history-refuses-cold-replay","real-dependency-edge-fallback-refresh-and-restore","receipt-policy-version-mismatch","reordered-delta-without-authority","returned-source-capture-does-not-alias-accepted-state","signed-invalid-definition-proof","source-capture-names-substitution","source-capture-patch-substitution","source-outside-reported-region","state-receipt-rejected-by-full-export-domain","state-receipt-rejected-by-sparse-export-domain","toolchain-source-outside-policy","unchanged-zero-selected-real-parser-no-full-export","unterminated-authenticated-delta","unused-malformed-dag-zero-selected","unused-valid-dag-zero-selected-real-parser","verified-baseline-independent-oracles","wrong-external-expected-head"],"independently_rejected":["unused-malformed-dag-zero-selected","signed-invalid-definition-proof"]},"expanded":{"summary_sha256":"533b7b5fcc447fcbc2a0c2151f13490d0b57ab499eb68a24b4b28d64a2da48c1","required_controls":["authenticated-environment-drift","authenticated-metadata-drift","authenticated-version-drift","authenticated-wrong-evidence-parent","authenticated-wrong-state-parent","axiom-kind-assumption-change","changed-delta-without-authority","changed-unused-admitted-dag","cold-recovery-and-dependency-restoration","cold-start-requires-external-expected-head","corrupt-baseline-export","corrupt-baseline-receipt","corrupt-chain-head","corrupt-current-receipt","corrupt-delta","corrupt-genesis","corrupt-genesis-state","corrupt-source-capture","corrupt-state-representation","corrupt-transition","deleted-latest-head-no-prefix-fallback","dropped-authenticated-replacement","duplicate-authenticated-replacement","early-edit-full-index-partition-and-kernel-parity","failed-persistence-does-not-promote-state","failed-receipt-persistence-does-not-promote-state","false-change-name-hint","foreign-issuer","foreign-transition-domain","forged-hmac","full-export-receipt-rejected-by-state-domain","invalid-source-proof","issuer-injected-unused-dag-history-refuses-cold-replay","real-dependency-edge-fallback-refresh-and-restore","receipt-policy-version-mismatch","reordered-delta-without-authority","returned-source-capture-does-not-alias-accepted-state","signed-invalid-definition-proof","source-capture-names-substitution","source-capture-patch-substitution","source-outside-reported-region","state-receipt-rejected-by-full-export-domain","state-receipt-rejected-by-sparse-export-domain","toolchain-source-outside-policy","unchanged-zero-selected-real-parser-no-full-export","unterminated-authenticated-delta","unused-malformed-dag-zero-selected","unused-valid-dag-zero-selected-real-parser","verified-baseline-independent-oracles","wrong-external-expected-head"],"independently_rejected":["unused-malformed-dag-zero-selected","signed-invalid-definition-proof"]}}
+2026-10-22T04:12:28.0758163Z ##[group]Run set -euo pipefail
+2026-10-22T04:12:28.0758530Z [36;1mset -euo pipefail[0m
+2026-10-22T04:12:28.0758779Z [36;1mpython3 - <<'PY'[0m
+2026-10-22T04:12:28.0759042Z [36;1mimport gzip,hashlib,json,shutil[0m
+2026-10-22T04:12:28.0759348Z [36;1mfrom pathlib import Path[0m
+2026-10-22T04:12:28.0759632Z [36;1mroot=Path('artifacts');records=[][0m
+2026-10-22T04:12:28.0760083Z [36;1mfor name in ('revision-chain-tests-original','revision-chain-tests-expanded',[0m
+2026-10-22T04:12:28.0760691Z [36;1m             'revision-chain-controls-original','revision-chain-controls-expanded'):[0m
+2026-10-22T04:12:28.0761157Z [36;1m    source=root/name/'summary.json'[0m
+2026-10-22T04:12:28.0761474Z [36;1m    if not source.is_file():continue[0m
+2026-10-22T04:12:28.0762034Z [36;1m    target=source.with_suffix('.json.gz')[0m
+2026-10-22T04:12:28.0762413Z [36;1m    with source.open('rb') as src,target.open('wb') as raw:[0m
+2026-10-22T04:12:28.0762907Z [36;1m        with gzip.GzipFile(filename='',fileobj=raw,mode='wb',mtime=0) as dst:[0m
+2026-10-22T04:12:28.0763337Z [36;1m            shutil.copyfileobj(src,dst)[0m
+2026-10-22T04:12:28.0763639Z [36;1m    def digest(path):[0m
+2026-10-22T04:12:28.0763894Z [36;1m        h=hashlib.sha256()[0m
+2026-10-22T04:12:28.0764173Z [36;1m        with path.open('rb') as stream:[0m
+2026-10-22T04:12:28.0764559Z [36;1m            for chunk in iter(lambda:stream.read(1<<20),b''):h.update(chunk)[0m
+2026-10-22T04:12:28.0764943Z [36;1m        return h.hexdigest()[0m
+2026-10-22T04:12:28.0765395Z [36;1m    records.append(dict(path=str(target),sha256=digest(target),bytes=target.stat().st_size,[0m
+2026-10-22T04:12:28.0765986Z [36;1m                        uncompressed_path=str(source),uncompressed_sha256=digest(source),[0m
+2026-10-22T04:12:28.0766464Z [36;1m                        uncompressed_bytes=source.stat().st_size))[0m
+2026-10-22T04:12:28.0766985Z [36;1m(root/'revision-control-archive.json').write_text(json.dumps(records,indent=2)+'\n')[0m
+2026-10-22T04:12:28.0767427Z [36;1mPY[0m
+2026-10-22T04:12:28.0829374Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-10-22T04:12:28.0829723Z ##[endgroup]
+2026-10-22T04:12:35.2447960Z ##[group]Run set -euo pipefail
+2026-10-22T04:12:35.2448736Z [36;1mset -euo pipefail[0m
+2026-10-22T04:12:35.2449187Z [36;1mpython3 - <<'PYARCHIVE'[0m
+2026-10-22T04:12:35.2449718Z [36;1mimport hashlib,json,lzma,os,subprocess[0m
+2026-10-22T04:12:35.2450292Z [36;1mfrom pathlib import Path[0m
+2026-10-22T04:12:35.2451025Z [36;1mroot=Path('artifacts');out=Path('artifact-packages');out.mkdir(exist_ok=False)[0m
+2026-10-22T04:12:35.2452176Z [36;1msource=os.environ['GITHUB_SHA'];limit=400*1024*1024[0m
+2026-10-22T04:12:35.2452916Z [36;1mfiles=sorted(p for p in root.rglob('*') if p.is_file())[0m
+2026-10-22T04:12:35.2453576Z [36;1mdef digest(path):[0m
+2026-10-22T04:12:35.2454037Z [36;1m    h=hashlib.sha256()[0m
+2026-10-22T04:12:35.2454545Z [36;1m    with path.open('rb') as stream:[0m
+2026-10-22T04:12:35.2455249Z [36;1m        for chunk in iter(lambda:stream.read(1<<20),b''):h.update(chunk)[0m
+2026-10-22T04:12:35.2455940Z [36;1m    return h.hexdigest()[0m
+2026-10-22T04:12:35.2456720Z [36;1mentries=[dict(path=str(p),sha256=digest(p),bytes=p.stat().st_size) for p in files][0m
+2026-10-22T04:12:35.2457926Z [36;1mmanifest=dict(schema='mathgraph.authenticated-state-artifact-packages.v1',source_sha=source,[0m
+2026-10-22T04:12:35.2459331Z [36;1m              github_run_id=os.environ['GITHUB_RUN_ID'],github_run_attempt=os.environ['GITHUB_RUN_ATTEMPT'],[0m
+2026-10-22T04:12:35.2460275Z [36;1m              all_files=entries,archives={})[0m
+2026-10-22T04:12:35.2461038Z [36;1m# New state evidence remains standalone: all primary records, indexes,[0m
+2026-10-22T04:12:35.2462541Z [36;1m# deltas, source captures and real oracle outputs are in compact too.[0m
+2026-10-22T04:12:35.2463841Z [36;1mcompact_dirs=('authenticated-state','authenticated-state-independent','state-parity-original','state-parity-expanded',[0m
+2026-10-22T04:12:35.2465120Z [36;1m              'state-controls-original','state-controls-expanded')[0m
+2026-10-22T04:12:35.2466165Z [36;1mold_reports=('original-qualification/summary.json','native-qualification/summary.json',[0m
+2026-10-22T04:12:35.2467337Z [36;1m             'native-independent-replay/summary.json','native-benchmark/summary.json',[0m
+2026-10-22T04:12:35.2468533Z [36;1m             'receipt-protected/protected-summary.json','retained-parser-shadow/summary.json',[0m
+2026-10-22T04:12:35.2469669Z [36;1m             'receipt-comparison/summary.json','receipt-comparison/summary.md',[0m
+2026-10-22T04:12:35.2470813Z [36;1m             'revision-producer-original/report.json','revision-producer-expanded/report.json',[0m
+2026-10-22T04:12:35.2472457Z [36;1m             'revision-chain-tests-original/summary.json.gz','revision-chain-tests-expanded/summary.json.gz',[0m
+2026-10-22T04:12:35.2473963Z [36;1m             'revision-chain-controls-original/summary.json.gz','revision-chain-controls-expanded/summary.json.gz',[0m
+2026-10-22T04:12:35.2475057Z [36;1m             'revision-control-archive.json')[0m
+2026-10-22T04:12:35.2475894Z [36;1mcompact=[p for p in files if (len(p.parts)>1 and p.parts[1] in compact_dirs)[0m
+2026-10-22T04:12:35.2476855Z [36;1m         or p.parent==root or p.relative_to(root).as_posix() in old_reports][0m
+2026-10-22T04:12:35.2477703Z [36;1mif not files:raise ValueError('no artifacts produced')[0m
+2026-10-22T04:12:35.2478578Z [36;1m# Stream tar through XZ directly into bounded pieces. Never create a[0m
+2026-10-22T04:12:35.2479581Z [36;1m# second giant archive that silently exhausts runner storage.[0m
+2026-10-22T04:12:35.2480467Z [36;1mfor label,selected,maximum in [('compact',compact,4),('full',files,16)]:[0m
+2026-10-22T04:12:35.2481267Z [36;1m    listing=out/(label+'-files.list0')[0m
+2026-10-22T04:12:35.2482326Z [36;1m    listing.write_bytes(b''.join(os.fsencode(str(p))+b'\0' for p in selected))[0m
+2026-10-22T04:12:35.2483425Z [36;1m    command=['tar','--dereference','--sort=name','--mtime=@0','--owner=0','--group=0','--numeric-owner',[0m
+2026-10-22T04:12:35.2484826Z [36;1m             '--null','--verbatim-files-from','--files-from',str(listing),'-cf','-'][0m
+2026-10-22T04:12:35.2485776Z [36;1m    process=subprocess.Popen(command,stdout=subprocess.PIPE)[0m
+2026-10-22T04:12:35.2486666Z [36;1m    compressor=lzma.LZMACompressor(format=lzma.FORMAT_XZ,preset=6)[0m
+2026-10-22T04:12:35.2487750Z [36;1m    archive_hash=hashlib.sha256();archive_bytes=0;parts=[];handle=None;part_hash=None;part_bytes=0[0m
+2026-10-22T04:12:35.2488646Z [36;1m    def emit(raw):[0m
+2026-10-22T04:12:35.2489234Z [36;1m        global handle,part_hash,part_bytes,archive_bytes[0m
+2026-10-22T04:12:35.2490002Z [36;1m        archive_hash.update(raw);archive_bytes+=len(raw)[0m
+2026-10-22T04:12:35.2490643Z [36;1m        while raw:[0m
+2026-10-22T04:12:35.2491288Z [36;1m            if handle is None:[0m
+2026-10-22T04:12:35.2492394Z [36;1m                if len(parts)>=maximum:raise ValueError(label+' package exceeds bounded part count')[0m
+2026-10-22T04:12:35.2493490Z [36;1m                path=out/(label+'.tar.xz.part'+str(len(parts)).zfill(2))[0m
+2026-10-22T04:12:35.2494387Z [36;1m                handle=path.open('wb');part_hash=hashlib.sha256();part_bytes=0[0m
+2026-10-22T04:12:35.2495183Z [36;1m                parts.append(dict(path=str(path)))[0m
+2026-10-22T04:12:35.2495954Z [36;1m            chunk,raw=raw[:limit-part_bytes],raw[limit-part_bytes:][0m
+2026-10-22T04:12:35.2496845Z [36;1m            handle.write(chunk);part_hash.update(chunk);part_bytes+=len(chunk)[0m
+2026-10-22T04:12:35.2497669Z [36;1m            if part_bytes==limit:finish_part()[0m
+2026-10-22T04:12:35.2498240Z [36;1m    def finish_part():[0m
+2026-10-22T04:12:35.2498987Z [36;1m        global handle[0m
+2026-10-22T04:12:35.2499465Z [36;1m        if handle is None:return[0m
+2026-10-22T04:12:35.2500130Z [36;1m        handle.flush();os.fsync(handle.fileno());handle.close()[0m
+2026-10-22T04:12:35.2501061Z [36;1m        parts[-1].update(sha256=part_hash.hexdigest(),bytes=part_bytes);handle=None[0m
+2026-10-22T04:12:35.2502144Z [36;1m    try:[0m
+2026-10-22T04:12:35.2502927Z [36;1m        for chunk in iter(lambda:process.stdout.read(1<<20),b''):emit(compressor.compress(chunk))[0m
+2026-10-22T04:12:35.2503882Z [36;1m        emit(compressor.flush());finish_part()[0m
+2026-10-22T04:12:35.2504467Z [36;1m    except BaseException:[0m
+2026-10-22T04:12:35.2505009Z [36;1m        process.kill();process.wait();raise[0m
+2026-10-22T04:12:35.2505782Z [36;1m    if process.wait()!=0:raise ValueError('tar packaging failed: '+label)[0m
+2026-10-22T04:12:35.2506804Z [36;1m    manifest['archives'][label]=dict(format='tar.xz',sha256=archive_hash.hexdigest(),[0m
+2026-10-22T04:12:35.2507878Z [36;1m        bytes=archive_bytes,ordered_parts=parts,files=[str(p) for p in selected])[0m
+2026-10-22T04:12:35.2508934Z [36;1m    print(label+': '+str(archive_bytes)+' bytes in '+str(len(parts))+' bounded pieces')[0m
+2026-10-22T04:12:35.2509915Z [36;1m(out/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')[0m
+2026-10-22T04:12:35.2510648Z [36;1m(out/'REPLAY.txt').write_text([0m
+2026-10-22T04:12:35.2511145Z [36;1m    'Source: '+source+'\n'[0m
+2026-10-22T04:12:35.2512185Z [36;1m    'Download manifest plus every ordered compact part. Each provider ZIP contains one part.\n'[0m
+2026-10-22T04:12:35.2513439Z [36;1m    'Verify each part bytes/SHA256, concatenate in ordered_parts order, verify archive bytes/SHA256.\n'[0m
+2026-10-22T04:12:35.2514659Z [36;1m    'Extract tar.xz to an empty directory. Verify every extracted file against all_files.\n'[0m
+2026-10-22T04:12:35.2515966Z [36;1m    'The compact package contains all new authenticated state evidence; full parts preserve every raw CI file.\n'[0m
+2026-10-22T04:12:35.2517649Z [36;1m    'Checkout exact source, install pinned tools with experiments/incremental/setup.sh. From the extracted root run the exact-source reader:\n'[0m
+2026-10-22T04:12:35.2522120Z [36;1m    'python3 /runtime/experiments/incremental/replay_authenticated_state.py --benchmark artifacts/authenticated-state --controls artifacts/state-controls-original --controls artifacts/state-controls-expanded --repo /runtime --source '+source+' --rust /runtime/target/release/sokonanoda --indexer /runtime/target/release/export-index --cpp /pinned/lean-4.35.0/bin/leanchecker --paranoid /pinned/lean-4.35.0/bin/leanchecker-paranoid --out /fresh/replay-output\n'[0m
+2026-10-22T04:12:35.2526277Z [36;1m    'Historical HMAC verification is a private-issuer CI boundary; public replay checks authenticated object addresses, witness bindings and actual independent kernels.\n')[0m
+2026-10-22T04:12:35.2527645Z [36;1mPYARCHIVE[0m
+2026-10-22T04:12:35.2594927Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-10-22T04:12:35.2595304Z ##[endgroup]
+2026-10-22T06:12:13.5667501Z compact: 736160684 bytes in 2 bounded pieces
+2026-10-22T06:12:13.5668037Z full: 2424419868 bytes in 6 bounded pieces
+2026-10-22T06:12:13.6051154Z ##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+2026-10-22T06:12:13.6051912Z with:
+2026-10-22T06:12:13.6052290Z   name: authenticated-state-index-cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5
+2026-10-22T06:12:13.6052835Z   path: artifact-packages/manifest.json
+artifact-packages/REPLAY.txt
+
+2026-10-22T06:12:13.6053222Z   if-no-files-found: error
+2026-10-22T06:12:13.6053460Z   retention-days: 30
+2026-10-22T06:12:13.6053679Z   compression-level: 6
+2026-10-22T06:12:13.6053899Z   overwrite: false
+2026-10-22T06:12:13.6054117Z   include-hidden-files: false
+2026-10-22T06:12:13.6054365Z ##[endgroup]
+2026-10-22T06:12:13.9657225Z (node:15917) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-10-22T06:12:13.9658335Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-10-22T06:12:13.9736458Z Multiple search paths detected. Calculating the least common ancestor of all paths
+2026-10-22T06:12:13.9740544Z The least common ancestor is /home/runner/work/mathgraph-lean-kernel/mathgraph-lean-kernel/artifact-packages. This will be the root directory of the artifact
+2026-10-22T06:12:13.9742477Z With the provided path, there will be 2 files uploaded
+2026-10-22T06:12:13.9746214Z Artifact name is valid!
+2026-10-22T06:12:13.9747246Z Root directory input is valid!
+2026-10-22T06:12:14.2759180Z Beginning upload of artifact content to blob storage
+2026-10-22T06:12:14.3938666Z (node:15917) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-10-22T06:12:14.7192056Z Uploaded bytes 941044
+2026-10-22T06:12:14.7592269Z Finished uploading artifact content to blob storage!
+2026-10-22T06:12:14.7593534Z SHA256 digest of uploaded artifact zip is 56887168f53147d2dd115d073d26f99e64bbdfa829cebe41fd249990f69a3e08
+2026-10-22T06:12:14.7595317Z Finalizing artifact upload
+2026-10-22T06:12:15.1972291Z Artifact authenticated-state-index-cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5.zip successfully finalized. Artifact ID 12405617778
+2026-10-22T06:12:15.1975450Z Artifact authenticated-state-index-cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5 has been successfully uploaded! Final size is 941044 bytes. Artifact ID is 12405617778
+2026-10-22T06:12:15.1978961Z Artifact download URL: [URL redacted]
+2026-10-22T06:12:16.2211242Z ##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+2026-10-22T06:12:16.2211957Z with:
+2026-10-22T06:12:16.2212357Z   name: authenticated-state-compact-00-cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5
+2026-10-22T06:12:16.2212884Z   path: artifact-packages/compact.tar.xz.part00
+2026-10-22T06:12:16.2213212Z   compression-level: 0
+2026-10-22T06:12:16.2213463Z   if-no-files-found: error
+2026-10-22T06:12:16.2213706Z   retention-days: 30
+2026-10-22T06:12:16.2213927Z   overwrite: false
+2026-10-22T06:12:16.2214165Z   include-hidden-files: false
+2026-10-22T06:12:16.2214411Z ##[endgroup]
+2026-10-22T06:12:16.3890229Z (node:15942) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-10-22T06:12:16.3891292Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-10-22T06:12:16.3937428Z With the provided path, there will be 1 file uploaded
+2026-10-22T06:12:16.3944686Z Artifact name is valid!
+2026-10-22T06:12:16.3953181Z Root directory input is valid!
+2026-10-22T06:12:16.6399577Z Beginning upload of artifact content to blob storage
+2026-10-22T06:12:16.6891164Z (node:15942) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-10-22T06:12:17.1391295Z Uploaded bytes 8388608
+2026-10-22T06:12:17.2053150Z Uploaded bytes 16777216
+2026-10-22T06:12:17.2332410Z Uploaded bytes 25165824
+2026-10-22T06:12:17.3038436Z Uploaded bytes 33554432
+2026-10-22T06:12:17.3323187Z Uploaded bytes 41943040
+2026-10-22T06:12:17.3869932Z Uploaded bytes 50331648
+2026-10-22T06:12:17.4226305Z Uploaded bytes 58720256
+2026-10-22T06:12:17.4945131Z Uploaded bytes 67108864
+2026-10-22T06:12:17.5149543Z Uploaded bytes 75497472
+2026-10-22T06:12:17.5731973Z Uploaded bytes 83886080
+2026-10-22T06:12:17.5850980Z Uploaded bytes 92274688
+2026-10-22T06:12:17.6883365Z Uploaded bytes 100663296
+2026-10-22T06:12:17.7334409Z Uploaded bytes 109051904
+2026-10-22T06:12:17.7503461Z Uploaded bytes 117440512
+2026-10-22T06:12:17.7982778Z Uploaded bytes 125829120
+2026-10-22T06:12:17.8741246Z Uploaded bytes 134217728
+2026-10-22T06:12:17.9053161Z Uploaded bytes 142606336
+2026-10-22T06:12:17.9760093Z Uploaded bytes 150994944
+2026-10-22T06:12:18.0077454Z Uploaded bytes 159383552
+2026-10-22T06:12:18.0641898Z Uploaded bytes 167772160
+2026-10-22T06:12:18.1072858Z Uploaded bytes 176160768
+2026-10-22T06:12:18.1362955Z Uploaded bytes 184549376
+2026-10-22T06:12:18.1486109Z Uploaded bytes 192937984
+2026-10-22T06:12:18.2301935Z Uploaded bytes 201326592
+2026-10-22T06:12:18.2651909Z Uploaded bytes 209715200
+2026-10-22T06:12:18.2942742Z Uploaded bytes 218103808
+2026-10-22T06:12:18.3897909Z Uploaded bytes 226492416
+2026-10-22T06:12:18.4042596Z Uploaded bytes 234881024
+2026-10-22T06:12:18.4592508Z Uploaded bytes 243269632
+2026-10-22T06:12:18.4869768Z Uploaded bytes 251658240
+2026-10-22T06:12:18.5388290Z Uploaded bytes 260046848
+2026-10-22T06:12:18.5789728Z Uploaded bytes 268435456
+2026-10-22T06:12:18.6048926Z Uploaded bytes 276824064
+2026-10-22T06:12:18.6461329Z Uploaded bytes 285212672
+2026-10-22T06:12:18.6814419Z Uploaded bytes 293601280
+2026-10-22T06:12:18.7532932Z Uploaded bytes 301989888
+2026-10-22T06:12:18.8280960Z Uploaded bytes 310378496
+2026-10-22T06:12:18.8412560Z Uploaded bytes 318767104
+2026-10-22T06:12:18.8486212Z Uploaded bytes 327155712
+2026-10-22T06:12:18.9325303Z Uploaded bytes 335544320
+2026-10-22T06:12:18.9739862Z Uploaded bytes 343932928
+2026-10-22T06:12:18.9923173Z Uploaded bytes 352321536
+2026-10-22T06:12:19.0545550Z Uploaded bytes 360710144
+2026-10-22T06:12:19.1087778Z Uploaded bytes 369098752
+2026-10-22T06:12:19.1439352Z Uploaded bytes 377487360
+2026-10-22T06:12:19.1705923Z Uploaded bytes 385875968
+2026-10-22T06:12:19.1926249Z Uploaded bytes 394264576
+2026-10-22T06:12:19.2780075Z Uploaded bytes 402653184
+2026-10-22T06:12:19.2960517Z Uploaded bytes 411041792
+2026-10-22T06:12:19.2963299Z Uploaded bytes 419430400
+2026-10-22T06:12:19.3586288Z Uploaded bytes 419430556
+2026-10-22T06:12:19.3998272Z Finished uploading artifact content to blob storage!
+2026-10-22T06:12:19.4001747Z SHA256 digest of uploaded artifact zip is f9c28e9f243344e3c6d897c52f62593b389b3e7121a0128b9ce565c3b38e277e
+2026-10-22T06:12:19.4004089Z Finalizing artifact upload
+2026-10-22T06:12:19.8235059Z Artifact authenticated-state-compact-00-cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5.zip successfully finalized. Artifact ID 12406026073
+2026-10-22T06:12:19.8237343Z Artifact authenticated-state-compact-00-cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5 has been successfully uploaded! Final size is 419430556 bytes. Artifact ID is 12406026073
+2026-10-22T06:12:19.8244846Z Artifact download URL: [URL redacted]
+2026-10-22T06:12:20.6535904Z ##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+2026-10-22T06:12:20.6536348Z with:
+2026-10-22T06:12:20.6536740Z   name: authenticated-state-compact-01-cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5
+2026-10-22T06:12:20.6537253Z   path: artifact-packages/compact.tar.xz.part01
+2026-10-22T06:12:20.6537582Z   compression-level: 0
+2026-10-22T06:12:20.6537841Z   if-no-files-found: error
+2026-10-22T06:12:20.6538106Z   retention-days: 30
+2026-10-22T06:12:20.6538338Z   overwrite: false
+2026-10-22T06:12:20.6538563Z   include-hidden-files: false
+2026-10-22T06:12:20.6538816Z ##[endgroup]
+2026-10-22T06:12:20.8247192Z (node:15969) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-10-22T06:12:20.8248897Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-10-22T06:12:20.8300692Z With the provided path, there will be 1 file uploaded
+2026-10-22T06:12:20.8307526Z Artifact name is valid!
+2026-10-22T06:12:20.8308559Z Root directory input is valid!
+2026-10-22T06:12:21.0986376Z Beginning upload of artifact content to blob storage
+2026-10-22T06:12:21.1529732Z (node:15969) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-10-22T06:12:21.5847911Z Uploaded bytes 8388608
+2026-10-22T06:12:21.6367667Z Uploaded bytes 16777216
+2026-10-22T06:12:21.6572729Z Uploaded bytes 25165824
+2026-10-22T06:12:21.7729974Z Uploaded bytes 33554432
+2026-10-22T06:12:21.7878101Z Uploaded bytes 41943040
+2026-10-22T06:12:21.8069010Z Uploaded bytes 50331648
+2026-10-22T06:12:21.8402625Z Uploaded bytes 58720256
+2026-10-22T06:12:21.9642088Z Uploaded bytes 67108864
+2026-10-22T06:12:21.9792832Z Uploaded bytes 75497472
+2026-10-22T06:12:22.0142739Z Uploaded bytes 83886080
+2026-10-22T06:12:22.0429000Z Uploaded bytes 92274688
+2026-10-22T06:12:22.1212930Z Uploaded bytes 100663296
+2026-10-22T06:12:22.1500523Z Uploaded bytes 109051904
+2026-10-22T06:12:22.2280705Z Uploaded bytes 117440512
+2026-10-22T06:12:22.2363342Z Uploaded bytes 125829120
+2026-10-22T06:12:22.2980880Z Uploaded bytes 134217728
+2026-10-22T06:12:22.3143034Z Uploaded bytes 142606336
+2026-10-22T06:12:22.3898907Z Uploaded bytes 150994944
+2026-10-22T06:12:22.4009184Z Uploaded bytes 159383552
+2026-10-22T06:12:22.4881128Z Uploaded bytes 167772160
+2026-10-22T06:12:22.4942956Z Uploaded bytes 176160768
+2026-10-22T06:12:22.5992541Z Uploaded bytes 184549376
+2026-10-22T06:12:22.6424042Z Uploaded bytes 192937984
+2026-10-22T06:12:22.6549057Z Uploaded bytes 201326592
+2026-10-22T06:12:22.6922719Z Uploaded bytes 209715200
+2026-10-22T06:12:22.7443176Z Uploaded bytes 218103808
+2026-10-22T06:12:22.8365285Z Uploaded bytes 226492416
+2026-10-22T06:12:22.8453167Z Uploaded bytes 234881024
+2026-10-22T06:12:22.8756733Z Uploaded bytes 243269632
+2026-10-22T06:12:22.9510856Z Uploaded bytes 251658240
+2026-10-22T06:12:23.0444493Z Uploaded bytes 260046848
+2026-10-22T06:12:23.0519433Z Uploaded bytes 268435456
+2026-10-22T06:12:23.0580598Z Uploaded bytes 276824064
+2026-10-22T06:12:23.1569200Z Uploaded bytes 285212672
+2026-10-22T06:12:23.2081917Z Uploaded bytes 293601280
+2026-10-22T06:12:23.2212613Z Uploaded bytes 301989888
+2026-10-22T06:12:23.3005899Z Uploaded bytes 310378496
+2026-10-22T06:12:23.4627874Z Uploaded bytes 316730440
+2026-10-22T06:12:23.5058344Z Finished uploading artifact content to blob storage!
+2026-10-22T06:12:23.5062401Z SHA256 digest of uploaded artifact zip is a52bf07300b0a1bfb1799523c1b21727fb6fcd5eb4e7025877e3f3d3c3a973b9
+2026-10-22T06:12:23.5065417Z Finalizing artifact upload
+2026-10-22T06:12:23.9448999Z Artifact authenticated-state-compact-01-cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5.zip successfully finalized. Artifact ID 12406205607
+2026-10-22T06:12:23.9452747Z Artifact authenticated-state-compact-01-cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5 has been successfully uploaded! Final size is 316730440 bytes. Artifact ID is 12406205607
+2026-10-22T06:12:23.9459945Z Artifact download URL: [URL redacted]
+2026-10-22T06:12:25.0759158Z ##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+2026-10-22T06:12:25.0759607Z with:
+2026-10-22T06:12:25.0759995Z   name: authenticated-state-full-00-cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5
+2026-10-22T06:12:25.0760556Z   path: artifact-packages/full.tar.xz.part00
+2026-10-22T06:12:25.0760898Z   compression-level: 0
+2026-10-22T06:12:25.0761149Z   if-no-files-found: error
+2026-10-22T06:12:25.0761423Z   retention-days: 30
+2026-10-22T06:12:25.0761923Z   overwrite: false
+2026-10-22T06:12:25.0762174Z   include-hidden-files: false
+2026-10-22T06:12:25.0762438Z ##[endgroup]
+2026-10-22T06:12:25.2443433Z (node:16017) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-10-22T06:12:25.2444330Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-10-22T06:12:25.2492161Z With the provided path, there will be 1 file uploaded
+2026-10-22T06:12:25.2508041Z Artifact name is valid!
+2026-10-22T06:12:25.2513522Z Root directory input is valid!
+2026-10-22T06:12:25.5113542Z Beginning upload of artifact content to blob storage
+2026-10-22T06:12:25.5640197Z (node:16017) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-10-22T06:12:26.0314540Z Uploaded bytes 8388608
+2026-10-22T06:12:26.0441676Z Uploaded bytes 16777216
+2026-10-22T06:12:26.1896665Z Uploaded bytes 25165824
+2026-10-22T06:12:26.1993767Z Uploaded bytes 33554432
+2026-10-22T06:12:26.2276222Z Uploaded bytes 41943040
+2026-10-22T06:12:26.2402614Z Uploaded bytes 50331648
+2026-10-22T06:12:26.3951931Z Uploaded bytes 58720256
+2026-10-22T06:12:26.4102552Z Uploaded bytes 67108864
+2026-10-22T06:12:26.4129282Z Uploaded bytes 75497472
+2026-10-22T06:12:26.4231006Z Uploaded bytes 83886080
+2026-10-22T06:12:26.5601812Z Uploaded bytes 92274688
+2026-10-22T06:12:26.6263454Z Uploaded bytes 100663296
+2026-10-22T06:12:26.6432874Z Uploaded bytes 109051904
+2026-10-22T06:12:26.6544238Z Uploaded bytes 117440512
+2026-10-22T06:12:26.7438343Z Uploaded bytes 125829120
+2026-10-22T06:12:26.7832786Z Uploaded bytes 134217728
+2026-10-22T06:12:26.8601971Z Uploaded bytes 142606336
+2026-10-22T06:12:26.8712824Z Uploaded bytes 150994944
+2026-10-22T06:12:26.9062679Z Uploaded bytes 159383552
+2026-10-22T06:12:26.9289682Z Uploaded bytes 167772160
+2026-10-22T06:12:27.0539494Z Uploaded bytes 176160768
+2026-10-22T06:12:27.0622708Z Uploaded bytes 184549376
+2026-10-22T06:12:27.0899326Z Uploaded bytes 192937984
+2026-10-22T06:12:27.1012448Z Uploaded bytes 201326592
+2026-10-22T06:12:27.2432001Z Uploaded bytes 209715200
+2026-10-22T06:12:27.2572652Z Uploaded bytes 218103808
+2026-10-22T06:12:27.2620521Z Uploaded bytes 226492416
+2026-10-22T06:12:27.2978739Z Uploaded bytes 234881024
+2026-10-22T06:12:27.3945427Z Uploaded bytes 243269632
+2026-10-22T06:12:27.4305223Z Uploaded bytes 251658240
+2026-10-22T06:12:27.4882936Z Uploaded bytes 260046848
+2026-10-22T06:12:27.4964506Z Uploaded bytes 268435456
+2026-10-22T06:12:27.5953296Z Uploaded bytes 276824064
+2026-10-22T06:12:27.6100345Z Uploaded bytes 285212672
+2026-10-22T06:12:27.6452530Z Uploaded bytes 293601280
+2026-10-22T06:12:27.6919917Z Uploaded bytes 301989888
+2026-10-22T06:12:27.7580435Z Uploaded bytes 310378496
+2026-10-22T06:12:27.7769983Z Uploaded bytes 318767104
+2026-10-22T06:12:27.8223132Z Uploaded bytes 327155712
+2026-10-22T06:12:27.8776162Z Uploaded bytes 335544320
+2026-10-22T06:12:27.9408772Z Uploaded bytes 343932928
+2026-10-22T06:12:27.9672306Z Uploaded bytes 352321536
+2026-10-22T06:12:27.9846914Z Uploaded bytes 360710144
+2026-10-22T06:12:28.0738974Z Uploaded bytes 369098752
+2026-10-22T06:12:28.1228993Z Uploaded bytes 377487360
+2026-10-22T06:12:28.1423989Z Uploaded bytes 385875968
+2026-10-22T06:12:28.2050314Z Uploaded bytes 394264576
+2026-10-22T06:12:28.2238071Z Uploaded bytes 402653184
+2026-10-22T06:12:28.3051038Z Uploaded bytes 411041792
+2026-10-22T06:12:28.3128547Z Uploaded bytes 419430400
+2026-10-22T06:12:28.3480240Z Uploaded bytes 419430550
+2026-10-22T06:12:28.3906198Z Finished uploading artifact content to blob storage!
+2026-10-22T06:12:28.3910161Z SHA256 digest of uploaded artifact zip is e2811f6866a1e3ffe3297f91bd84d9ff0a5ef3873222dc0183937c85e8f6692e
+2026-10-22T06:12:28.3912459Z Finalizing artifact upload
+2026-10-22T06:12:28.8370848Z Artifact authenticated-state-full-00-cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5.zip successfully finalized. Artifact ID 12405433330
+2026-10-22T06:12:28.8372729Z Artifact authenticated-state-full-00-cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5 has been successfully uploaded! Final size is 419430550 bytes. Artifact ID is 12405433330
+2026-10-22T06:12:28.8380326Z Artifact download URL: [URL redacted]
+2026-10-22T06:12:29.8679623Z ##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+2026-10-22T06:12:29.8680085Z with:
+2026-10-22T06:12:29.8680476Z   name: authenticated-state-full-01-cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5
+2026-10-22T06:12:29.8681002Z   path: artifact-packages/full.tar.xz.part01
+2026-10-22T06:12:29.8681342Z   compression-level: 0
+2026-10-22T06:12:29.8681951Z   if-no-files-found: error
+2026-10-22T06:12:29.8682472Z   retention-days: 30
+2026-10-22T06:12:29.8682724Z   overwrite: false
+2026-10-22T06:12:29.8682974Z   include-hidden-files: false
+2026-10-22T06:12:29.8683246Z ##[endgroup]
+2026-10-22T06:12:30.0394988Z (node:16042) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-10-22T06:12:30.0396362Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-10-22T06:12:30.0443529Z With the provided path, there will be 1 file uploaded
+2026-10-22T06:12:30.0473277Z Artifact name is valid!
+2026-10-22T06:12:30.0474121Z Root directory input is valid!
+2026-10-22T06:12:30.2922499Z Beginning upload of artifact content to blob storage
+2026-10-22T06:12:30.3413274Z (node:16042) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-10-22T06:12:30.7779358Z Uploaded bytes 8388608
+2026-10-22T06:12:30.8177360Z Uploaded bytes 16777216
+2026-10-22T06:12:30.9249203Z Uploaded bytes 25165824
+2026-10-22T06:12:30.9437511Z Uploaded bytes 33554432
+2026-10-22T06:12:30.9660182Z Uploaded bytes 41943040
+2026-10-22T06:12:31.0127224Z Uploaded bytes 50331648
+2026-10-22T06:12:31.1055113Z Uploaded bytes 58720256
+2026-10-22T06:12:31.1399039Z Uploaded bytes 67108864
+2026-10-22T06:12:31.1591295Z Uploaded bytes 75497472
+2026-10-22T06:12:31.1684437Z Uploaded bytes 83886080
+2026-10-22T06:12:31.3082808Z Uploaded bytes 92274688
+2026-10-22T06:12:31.3381308Z Uploaded bytes 100663296
+2026-10-22T06:12:31.3492582Z Uploaded bytes 109051904
+2026-10-22T06:12:31.3851509Z Uploaded bytes 117440512
+2026-10-22T06:12:31.5340731Z Uploaded bytes 125829120
+2026-10-22T06:12:31.5552850Z Uploaded bytes 134217728
+2026-10-22T06:12:31.5670172Z Uploaded bytes 142606336
+2026-10-22T06:12:31.6273139Z Uploaded bytes 150994944
+2026-10-22T06:12:31.7262757Z Uploaded bytes 159383552
+2026-10-22T06:12:31.7761751Z Uploaded bytes 167772160
+2026-10-22T06:12:31.7841166Z Uploaded bytes 176160768
+2026-10-22T06:12:31.7917596Z Uploaded bytes 184549376
+2026-10-22T06:12:31.9162987Z Uploaded bytes 192937984
+2026-10-22T06:12:31.9492721Z Uploaded bytes 201326592
+2026-10-22T06:12:31.9560355Z Uploaded bytes 209715200
+2026-10-22T06:12:31.9683615Z Uploaded bytes 218103808
+2026-10-22T06:12:32.0582497Z Uploaded bytes 226492416
+2026-10-22T06:12:32.0980377Z Uploaded bytes 234881024
+2026-10-22T06:12:32.1172710Z Uploaded bytes 243269632
+2026-10-22T06:12:32.1916776Z Uploaded bytes 251658240
+2026-10-22T06:12:32.2421808Z Uploaded bytes 260046848
+2026-10-22T06:12:32.2723694Z Uploaded bytes 268435456
+2026-10-22T06:12:32.3522028Z Uploaded bytes 276824064
+2026-10-22T06:12:32.3963909Z Uploaded bytes 285212672
+2026-10-22T06:12:32.4042307Z Uploaded bytes 293601280
+2026-10-22T06:12:32.4135001Z Uploaded bytes 301989888
+2026-10-22T06:12:32.5107331Z Uploaded bytes 310378496
+2026-10-22T06:12:32.5835669Z Uploaded bytes 318767104
+2026-10-22T06:12:32.5915024Z Uploaded bytes 327155712
+2026-10-22T06:12:32.5986297Z Uploaded bytes 335544320
+2026-10-22T06:12:32.6984617Z Uploaded bytes 343932928
+2026-10-22T06:12:32.7565494Z Uploaded bytes 352321536
+2026-10-22T06:12:32.7643465Z Uploaded bytes 360710144
+2026-10-22T06:12:32.7719869Z Uploaded bytes 369098752
+2026-10-22T06:12:32.8732865Z Uploaded bytes 377487360
+2026-10-22T06:12:32.9255021Z Uploaded bytes 385875968
+2026-10-22T06:12:32.9486512Z Uploaded bytes 394264576
+2026-10-22T06:12:32.9761325Z Uploaded bytes 402653184
+2026-10-22T06:12:33.0564600Z Uploaded bytes 411041792
+2026-10-22T06:12:33.1029208Z Uploaded bytes 419430400
+2026-10-22T06:12:33.1382366Z Uploaded bytes 419430550
+2026-10-22T06:12:33.1806855Z Finished uploading artifact content to blob storage!
+2026-10-22T06:12:33.1810262Z SHA256 digest of uploaded artifact zip is 8a8d0f5a8bb12dd392cb9d229e204812f426a8a3152ea4268819c83d6981ff9d
+2026-10-22T06:12:33.1813053Z Finalizing artifact upload
+2026-10-22T06:12:33.6497345Z Artifact authenticated-state-full-01-cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5.zip successfully finalized. Artifact ID 12405478242
+2026-10-22T06:12:33.6499125Z Artifact authenticated-state-full-01-cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5 has been successfully uploaded! Final size is 419430550 bytes. Artifact ID is 12405478242
+2026-10-22T06:12:33.6507605Z Artifact download URL: [URL redacted]
+2026-10-22T06:12:34.6581244Z ##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+2026-10-22T06:12:34.6582343Z with:
+2026-10-22T06:12:34.6583026Z   name: authenticated-state-full-02-cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5
+2026-10-22T06:12:34.6583920Z   path: artifact-packages/full.tar.xz.part02
+2026-10-22T06:12:34.6584514Z   compression-level: 0
+2026-10-22T06:12:34.6584998Z   if-no-files-found: error
+2026-10-22T06:12:34.6585487Z   retention-days: 30
+2026-10-22T06:12:34.6585924Z   overwrite: false
+2026-10-22T06:12:34.6586357Z   include-hidden-files: false
+2026-10-22T06:12:34.6586842Z ##[endgroup]
+2026-10-22T06:12:34.8288918Z (node:16066) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-10-22T06:12:34.8290230Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-10-22T06:12:34.8336667Z With the provided path, there will be 1 file uploaded
+2026-10-22T06:12:34.8344090Z Artifact name is valid!
+2026-10-22T06:12:34.8345054Z Root directory input is valid!
+2026-10-22T06:12:35.0999502Z Beginning upload of artifact content to blob storage
+2026-10-22T06:12:35.1515644Z (node:16066) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-10-22T06:12:35.6043033Z Uploaded bytes 8388608
+2026-10-22T06:12:35.6388817Z Uploaded bytes 16777216
+2026-10-22T06:12:35.6490743Z Uploaded bytes 25165824
+2026-10-22T06:12:35.7752148Z Uploaded bytes 33554432
+2026-10-22T06:12:35.8412917Z Uploaded bytes 41943040
+2026-10-22T06:12:35.8503933Z Uploaded bytes 50331648
+2026-10-22T06:12:35.8758669Z Uploaded bytes 58720256
+2026-10-22T06:12:35.9682320Z Uploaded bytes 67108864
+2026-10-22T06:12:36.0081532Z Uploaded bytes 75497472
+2026-10-22T06:12:36.0178180Z Uploaded bytes 83886080
+2026-10-22T06:12:36.0562705Z Uploaded bytes 92274688
+2026-10-22T06:12:36.2032812Z Uploaded bytes 100663296
+2026-10-22T06:12:36.2423985Z Uploaded bytes 109051904
+2026-10-22T06:12:36.2557947Z Uploaded bytes 117440512
+2026-10-22T06:12:36.3355844Z Uploaded bytes 125829120
+2026-10-22T06:12:36.3783328Z Uploaded bytes 134217728
+2026-10-22T06:12:36.4188260Z Uploaded bytes 142606336
+2026-10-22T06:12:36.4342632Z Uploaded bytes 150994944
+2026-10-22T06:12:36.4892743Z Uploaded bytes 159383552
+2026-10-22T06:12:36.5791044Z Uploaded bytes 167772160
+2026-10-22T06:12:36.5872402Z Uploaded bytes 176160768
+2026-10-22T06:12:36.6101681Z Uploaded bytes 184549376
+2026-10-22T06:12:36.6547705Z Uploaded bytes 192937984
+2026-10-22T06:12:36.7314017Z Uploaded bytes 201326592
+2026-10-22T06:12:36.8010245Z Uploaded bytes 209715200
+2026-10-22T06:12:36.8345148Z Uploaded bytes 218103808
+2026-10-22T06:12:36.8435992Z Uploaded bytes 226492416
+2026-10-22T06:12:36.8712271Z Uploaded bytes 234881024
+2026-10-22T06:12:36.9742062Z Uploaded bytes 243269632
+2026-10-22T06:12:37.0081233Z Uploaded bytes 251658240
+2026-10-22T06:12:37.0160918Z Uploaded bytes 260046848
+2026-10-22T06:12:37.0732628Z Uploaded bytes 268435456
+2026-10-22T06:12:37.1912351Z Uploaded bytes 276824064
+2026-10-22T06:12:37.2028410Z Uploaded bytes 285212672
+2026-10-22T06:12:37.2319017Z Uploaded bytes 293601280
+2026-10-22T06:12:37.2745333Z Uploaded bytes 301989888
+2026-10-22T06:12:37.3938067Z Uploaded bytes 310378496
+2026-10-22T06:12:37.4129578Z Uploaded bytes 318767104
+2026-10-22T06:12:37.4520123Z Uploaded bytes 327155712
+2026-10-22T06:12:37.6117436Z Uploaded bytes 335544320
+2026-10-22T06:12:37.6272698Z Uploaded bytes 343932928
+2026-10-22T06:12:37.6751391Z Uploaded bytes 352321536
+2026-10-22T06:12:37.6882755Z Uploaded bytes 360710144
+2026-10-22T06:12:37.7647570Z Uploaded bytes 369098752
+2026-10-22T06:12:37.7933186Z Uploaded bytes 377487360
+2026-10-22T06:12:37.8639448Z Uploaded bytes 385875968
+2026-10-22T06:12:37.9350438Z Uploaded bytes 394264576
+2026-10-22T06:12:37.9353024Z Uploaded bytes 402653184
+2026-10-22T06:12:37.9601572Z Uploaded bytes 411041792
+2026-10-22T06:12:38.0583905Z Uploaded bytes 419430400
+2026-10-22T06:12:38.0935232Z Uploaded bytes 419430550
+2026-10-22T06:12:38.1350333Z Finished uploading artifact content to blob storage!
+2026-10-22T06:12:38.1353530Z SHA256 digest of uploaded artifact zip is 968155ad24fb88ea2fb3eee9eddd17b5a55d2ef3bee54724c923759ca73f70df
+2026-10-22T06:12:38.1356018Z Finalizing artifact upload
+2026-10-22T06:12:38.5608988Z Artifact authenticated-state-full-02-cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5.zip successfully finalized. Artifact ID 12405423388
+2026-10-22T06:12:38.5610858Z Artifact authenticated-state-full-02-cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5 has been successfully uploaded! Final size is 419430550 bytes. Artifact ID is 12405423388
+2026-10-22T06:12:38.5618786Z Artifact download URL: [URL redacted]
+2026-10-22T06:12:39.5705397Z ##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+2026-10-22T06:12:39.5706304Z with:
+2026-10-22T06:12:39.5707073Z   name: authenticated-state-full-03-cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5
+2026-10-22T06:12:39.5708104Z   path: artifact-packages/full.tar.xz.part03
+2026-10-22T06:12:39.5708766Z   compression-level: 0
+2026-10-22T06:12:39.5709326Z   if-no-files-found: error
+2026-10-22T06:12:39.5709909Z   retention-days: 30
+2026-10-22T06:12:39.5710412Z   overwrite: false
+2026-10-22T06:12:39.5710917Z   include-hidden-files: false
+2026-10-22T06:12:39.5711473Z ##[endgroup]
+2026-10-22T06:12:39.7395148Z (node:16090) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-10-22T06:12:39.7396473Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-10-22T06:12:39.7441467Z With the provided path, there will be 1 file uploaded
+2026-10-22T06:12:39.7461066Z Artifact name is valid!
+2026-10-22T06:12:39.7462822Z Root directory input is valid!
+2026-10-22T06:12:40.0290137Z Beginning upload of artifact content to blob storage
+2026-10-22T06:12:40.0787944Z (node:16090) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-10-22T06:12:40.5487572Z Uploaded bytes 8388608
+2026-10-22T06:12:40.5606008Z Uploaded bytes 16777216
+2026-10-22T06:12:40.5697355Z Uploaded bytes 25165824
+2026-10-22T06:12:40.6272715Z Uploaded bytes 33554432
+2026-10-22T06:12:40.7300058Z Uploaded bytes 41943040
+2026-10-22T06:12:40.7652503Z Uploaded bytes 50331648
+2026-10-22T06:12:40.7812576Z Uploaded bytes 58720256
+2026-10-22T06:12:40.8476050Z Uploaded bytes 67108864
+2026-10-22T06:12:40.8968836Z Uploaded bytes 75497472
+2026-10-22T06:12:40.9219917Z Uploaded bytes 83886080
+2026-10-22T06:12:40.9302143Z Uploaded bytes 92274688
+2026-10-22T06:12:41.0256103Z Uploaded bytes 100663296
+2026-10-22T06:12:41.0635325Z Uploaded bytes 109051904
+2026-10-22T06:12:41.1182155Z Uploaded bytes 117440512
+2026-10-22T06:12:41.1265487Z Uploaded bytes 125829120
+2026-10-22T06:12:41.1794863Z Uploaded bytes 134217728
+2026-10-22T06:12:41.2160351Z Uploaded bytes 142606336
+2026-10-22T06:12:41.2914401Z Uploaded bytes 150994944
+2026-10-22T06:12:41.3082727Z Uploaded bytes 159383552
+2026-10-22T06:12:41.3956082Z Uploaded bytes 167772160
+2026-10-22T06:12:41.4092492Z Uploaded bytes 176160768
+2026-10-22T06:12:41.4471345Z Uploaded bytes 184549376
+2026-10-22T06:12:41.4779177Z Uploaded bytes 192937984
+2026-10-22T06:12:41.5695575Z Uploaded bytes 201326592
+2026-10-22T06:12:41.5785247Z Uploaded bytes 209715200
+2026-10-22T06:12:41.6782645Z Uploaded bytes 218103808
+2026-10-22T06:12:41.7192969Z Uploaded bytes 226492416
+2026-10-22T06:12:41.7332789Z Uploaded bytes 234881024
+2026-10-22T06:12:41.7608968Z Uploaded bytes 243269632
+2026-10-22T06:12:41.8399444Z Uploaded bytes 251658240
+2026-10-22T06:12:41.9130615Z Uploaded bytes 260046848
+2026-10-22T06:12:41.9208233Z Uploaded bytes 268435456
+2026-10-22T06:12:41.9319513Z Uploaded bytes 276824064
+2026-10-22T06:12:42.0342500Z Uploaded bytes 285212672
+2026-10-22T06:12:42.1137422Z Uploaded bytes 293601280
+2026-10-22T06:12:42.1220057Z Uploaded bytes 301989888
+2026-10-22T06:12:42.1294910Z Uploaded bytes 310378496
+2026-10-22T06:12:42.2577198Z Uploaded bytes 318767104
+2026-10-22T06:12:42.2659699Z Uploaded bytes 327155712
+2026-10-22T06:12:42.2737587Z Uploaded bytes 335544320
+2026-10-22T06:12:42.3256407Z Uploaded bytes 343932928
+2026-10-22T06:12:42.4119000Z Uploaded bytes 352321536
+2026-10-22T06:12:42.4241373Z Uploaded bytes 360710144
+2026-10-22T06:12:42.4538890Z Uploaded bytes 369098752
+2026-10-22T06:12:42.5023485Z Uploaded bytes 377487360
+2026-10-22T06:12:42.5929110Z Uploaded bytes 385875968
+2026-10-22T06:12:42.5956655Z Uploaded bytes 394264576
+2026-10-22T06:12:42.6191559Z Uploaded bytes 402653184
+2026-10-22T06:12:42.6722001Z Uploaded bytes 411041792
+2026-10-22T06:12:42.7897101Z Uploaded bytes 419430400
+2026-10-22T06:12:42.8219444Z Uploaded bytes 419430550
+2026-10-22T06:12:42.8601480Z Finished uploading artifact content to blob storage!
+2026-10-22T06:12:42.8605737Z SHA256 digest of uploaded artifact zip is 1f704aeee53b965d1079c7420e87e3713726a112299fe4fac546db352c1a2696
+2026-10-22T06:12:42.8608166Z Finalizing artifact upload
+2026-10-22T06:12:43.2903508Z Artifact authenticated-state-full-03-cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5.zip successfully finalized. Artifact ID 12405478278
+2026-10-22T06:12:43.2906357Z Artifact authenticated-state-full-03-cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5 has been successfully uploaded! Final size is 419430550 bytes. Artifact ID is 12405478278
+2026-10-22T06:12:43.2914467Z Artifact download URL: [URL redacted]
+2026-10-22T06:12:44.3173276Z ##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+2026-10-22T06:12:44.3174152Z with:
+2026-10-22T06:12:44.3174867Z   name: authenticated-state-full-04-cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5
+2026-10-22T06:12:44.3175830Z   path: artifact-packages/full.tar.xz.part04
+2026-10-22T06:12:44.3176453Z   compression-level: 0
+2026-10-22T06:12:44.3176943Z   if-no-files-found: error
+2026-10-22T06:12:44.3177444Z   retention-days: 30
+2026-10-22T06:12:44.3177898Z   overwrite: false
+2026-10-22T06:12:44.3178365Z   include-hidden-files: false
+2026-10-22T06:12:44.3178878Z ##[endgroup]
+2026-10-22T06:12:44.4893403Z (node:16114) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-10-22T06:12:44.4894320Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-10-22T06:12:44.4941365Z With the provided path, there will be 1 file uploaded
+2026-10-22T06:12:44.4948022Z Artifact name is valid!
+2026-10-22T06:12:44.4962026Z Root directory input is valid!
+2026-10-22T06:12:44.7488693Z Beginning upload of artifact content to blob storage
+2026-10-22T06:12:44.8009586Z (node:16114) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-10-22T06:12:45.2345500Z Uploaded bytes 8388608
+2026-10-22T06:12:45.2655104Z Uploaded bytes 16777216
+2026-10-22T06:12:45.3252845Z Uploaded bytes 25165824
+2026-10-22T06:12:45.3592304Z Uploaded bytes 33554432
+2026-10-22T06:12:45.4254383Z Uploaded bytes 41943040
+2026-10-22T06:12:45.4419159Z Uploaded bytes 50331648
+2026-10-22T06:12:45.4812294Z Uploaded bytes 58720256
+2026-10-22T06:12:45.5163109Z Uploaded bytes 67108864
+2026-10-22T06:12:45.6609221Z Uploaded bytes 75497472
+2026-10-22T06:12:45.6774371Z Uploaded bytes 83886080
+2026-10-22T06:12:45.6877962Z Uploaded bytes 92274688
+2026-10-22T06:12:45.7092048Z Uploaded bytes 100663296
+2026-10-22T06:12:45.8092794Z Uploaded bytes 109051904
+2026-10-22T06:12:45.8722792Z Uploaded bytes 117440512
+2026-10-22T06:12:45.8839345Z Uploaded bytes 125829120
+2026-10-22T06:12:45.9345838Z Uploaded bytes 134217728
+2026-10-22T06:12:45.9468534Z Uploaded bytes 142606336
+2026-10-22T06:12:46.0743841Z Uploaded bytes 150994944
+2026-10-22T06:12:46.0886859Z Uploaded bytes 159383552
+2026-10-22T06:12:46.1329747Z Uploaded bytes 167772160
+2026-10-22T06:12:46.1442679Z Uploaded bytes 176160768
+2026-10-22T06:12:46.2406436Z Uploaded bytes 184549376
+2026-10-22T06:12:46.2739717Z Uploaded bytes 192937984
+2026-10-22T06:12:46.3191941Z Uploaded bytes 201326592
+2026-10-22T06:12:46.3409490Z Uploaded bytes 209715200
+2026-10-22T06:12:46.3720206Z Uploaded bytes 218103808
+2026-10-22T06:12:46.4786709Z Uploaded bytes 226492416
+2026-10-22T06:12:46.4924349Z Uploaded bytes 234881024
+2026-10-22T06:12:46.5425519Z Uploaded bytes 243269632
+2026-10-22T06:12:46.6052813Z Uploaded bytes 251658240
+2026-10-22T06:12:46.6665237Z Uploaded bytes 260046848
+2026-10-22T06:12:46.6812665Z Uploaded bytes 268435456
+2026-10-22T06:12:46.7381133Z Uploaded bytes 276824064
+2026-10-22T06:12:46.7631359Z Uploaded bytes 285212672
+2026-10-22T06:12:46.8747776Z Uploaded bytes 293601280
+2026-10-22T06:12:46.8956904Z Uploaded bytes 301989888
+2026-10-22T06:12:46.9241850Z Uploaded bytes 310378496
+2026-10-22T06:12:46.9367173Z Uploaded bytes 318767104
+2026-10-22T06:12:47.0380081Z Uploaded bytes 327155712
+2026-10-22T06:12:47.0920684Z Uploaded bytes 335544320
+2026-10-22T06:12:47.1493202Z Uploaded bytes 343932928
+2026-10-22T06:12:47.1723153Z Uploaded bytes 352321536
+2026-10-22T06:12:47.1995552Z Uploaded bytes 360710144
+2026-10-22T06:12:47.2536763Z Uploaded bytes 369098752
+2026-10-22T06:12:47.3613016Z Uploaded bytes 377487360
+2026-10-22T06:12:47.4061134Z Uploaded bytes 385875968
+2026-10-22T06:12:47.4087994Z Uploaded bytes 394264576
+2026-10-22T06:12:47.4667652Z Uploaded bytes 402653184
+2026-10-22T06:12:47.5158677Z Uploaded bytes 411041792
+2026-10-22T06:12:47.5629939Z Uploaded bytes 419430400
+2026-10-22T06:12:47.5948307Z Uploaded bytes 419430550
+2026-10-22T06:12:47.6367912Z Finished uploading artifact content to blob storage!
+2026-10-22T06:12:47.6371359Z SHA256 digest of uploaded artifact zip is 3e6a1ff176193cac281601356bc451a064845294f62f4f404225602bedc6735c
+2026-10-22T06:12:47.6374871Z Finalizing artifact upload
+2026-10-22T06:12:48.0527871Z Artifact authenticated-state-full-04-cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5.zip successfully finalized. Artifact ID 12405871506
+2026-10-22T06:12:48.0529422Z Artifact authenticated-state-full-04-cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5 has been successfully uploaded! Final size is 419430550 bytes. Artifact ID is 12405871506
+2026-10-22T06:12:48.0537619Z Artifact download URL: [URL redacted]
+2026-10-22T06:12:48.9049086Z ##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+2026-10-22T06:12:48.9049983Z with:
+2026-10-22T06:12:48.9050747Z   name: authenticated-state-full-05-cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5
+2026-10-22T06:12:48.9053540Z   path: artifact-packages/full.tar.xz.part05
+2026-10-22T06:12:48.9054244Z   compression-level: 0
+2026-10-22T06:12:48.9054775Z   if-no-files-found: error
+2026-10-22T06:12:48.9055323Z   retention-days: 30
+2026-10-22T06:12:48.9055786Z   overwrite: false
+2026-10-22T06:12:48.9056268Z   include-hidden-files: false
+2026-10-22T06:12:48.9056786Z ##[endgroup]
+2026-10-22T06:12:49.0877849Z (node:16138) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-10-22T06:12:49.0878658Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-10-22T06:12:49.0927778Z With the provided path, there will be 1 file uploaded
+2026-10-22T06:12:49.0935209Z Artifact name is valid!
+2026-10-22T06:12:49.0936420Z Root directory input is valid!
+2026-10-22T06:12:49.3462127Z Beginning upload of artifact content to blob storage
+2026-10-22T06:12:49.4005148Z (node:16138) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-10-22T06:12:49.8818110Z Uploaded bytes 8388608
+2026-10-22T06:12:49.8973782Z Uploaded bytes 16777216
+2026-10-22T06:12:49.9523503Z Uploaded bytes 25165824
+2026-10-22T06:12:50.0517463Z Uploaded bytes 33554432
+2026-10-22T06:12:50.0612472Z Uploaded bytes 41943040
+2026-10-22T06:12:50.1123367Z Uploaded bytes 50331648
+2026-10-22T06:12:50.1274763Z Uploaded bytes 58720256
+2026-10-22T06:12:50.3042673Z Uploaded bytes 67108864
+2026-10-22T06:12:50.3178120Z Uploaded bytes 75497472
+2026-10-22T06:12:50.3595527Z Uploaded bytes 83886080
+2026-10-22T06:12:50.3802308Z Uploaded bytes 92274688
+2026-10-22T06:12:50.4662940Z Uploaded bytes 100663296
+2026-10-22T06:12:50.5027823Z Uploaded bytes 109051904
+2026-10-22T06:12:50.5721903Z Uploaded bytes 117440512
+2026-10-22T06:12:50.6068277Z Uploaded bytes 125829120
+2026-10-22T06:12:50.6494657Z Uploaded bytes 134217728
+2026-10-22T06:12:50.6815616Z Uploaded bytes 142606336
+2026-10-22T06:12:50.7808751Z Uploaded bytes 150994944
+2026-10-22T06:12:50.7917449Z Uploaded bytes 159383552
+2026-10-22T06:12:50.8472857Z Uploaded bytes 167772160
+2026-10-22T06:12:50.9085556Z Uploaded bytes 176160768
+2026-10-22T06:12:50.9334378Z Uploaded bytes 184549376
+2026-10-22T06:12:51.0283265Z Uploaded bytes 192937984
+2026-10-22T06:12:51.0483446Z Uploaded bytes 201326592
+2026-10-22T06:12:51.0607054Z Uploaded bytes 209715200
+2026-10-22T06:12:51.1491394Z Uploaded bytes 218103808
+2026-10-22T06:12:51.1855436Z Uploaded bytes 226492416
+2026-10-22T06:12:51.1964550Z Uploaded bytes 234881024
+2026-10-22T06:12:51.2410813Z Uploaded bytes 243269632
+2026-10-22T06:12:51.3237715Z Uploaded bytes 251658240
+2026-10-22T06:12:51.3524647Z Uploaded bytes 260046848
+2026-10-22T06:12:51.3916058Z Uploaded bytes 268435456
+2026-10-22T06:12:51.4295468Z Uploaded bytes 276824064
+2026-10-22T06:12:51.4717561Z Uploaded bytes 285212672
+2026-10-22T06:12:51.5295366Z Uploaded bytes 293601280
+2026-10-22T06:12:51.5510158Z Uploaded bytes 301989888
+2026-10-22T06:12:51.5941026Z Uploaded bytes 310378496
+2026-10-22T06:12:51.6480051Z Uploaded bytes 318767104
+2026-10-22T06:12:51.7576913Z Uploaded bytes 327155712
+2026-10-22T06:12:51.7932958Z Uploaded bytes 327268018
+2026-10-22T06:12:51.8330161Z Finished uploading artifact content to blob storage!
+2026-10-22T06:12:51.8333994Z SHA256 digest of uploaded artifact zip is 04180d4d088b2fb9625be343d33412c3f98dc62bedf57126d6cee0f1562910dd
+2026-10-22T06:12:51.8336209Z Finalizing artifact upload
+2026-10-22T06:12:52.2551527Z Artifact authenticated-state-full-05-cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5.zip successfully finalized. Artifact ID 12405622926
+2026-10-22T06:12:52.2554119Z Artifact authenticated-state-full-05-cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5 has been successfully uploaded! Final size is 327268018 bytes. Artifact ID is 12405622926
+2026-10-22T06:12:52.2561894Z Artifact download URL: [URL redacted]
+2026-10-22T06:12:52.8519615Z Post job cleanup.
+2026-10-22T06:12:52.9409259Z [command]/usr/bin/git version
+2026-10-22T06:12:52.9455363Z git version 2.55.0
+2026-10-22T06:12:52.9507005Z Temporarily overriding HOME='/home/runner/work/_temp/a08b6cb8-97a1-467d-98e2-551e2e6e5cd5' before making global git config changes
+2026-10-22T06:12:52.9508939Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-22T06:12:52.9516065Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/mathgraph-lean-kernel/mathgraph-lean-kernel
+2026-10-22T06:12:52.9569634Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-22T06:12:52.9621367Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-22T06:12:52.9930071Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-22T06:12:52.9965551Z http.[URL redacted]
+2026-10-22T06:12:52.9984006Z [command]/usr/bin/git config --local --unset-all http.[URL redacted]
+2026-10-22T06:12:53.0026182Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.[URL redacted]' || :"
+2026-10-22T06:12:53.0493856Z Cleaning up orphan processes
+2026-10-22T06:12:53.0788775Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683, actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02. For more information see: [URL redacted]

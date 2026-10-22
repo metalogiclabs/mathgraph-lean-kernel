@@ -1,0 +1,15 @@
+{
+  "schema": "mathgraph.reader-output-archive-execution.v1",
+  "command": [
+    "python3",
+    "-B",
+    "/workspace/kernel-audit/authenticated-state/reader-output-preservation/archive_reader_output.py",
+    "archive",
+    "--destination",
+    "/workspace/kernel-audit/authenticated-state/actual-independent-replay-preserved"
+  ],
+  "returncode": 0,
+  "wall_seconds": 30.233037758996943,
+  "scope": "Lossless evidence packaging only; no runtime speedup claim. Original reader output is retained.",
+  "free_bytes": 3717320704
+}

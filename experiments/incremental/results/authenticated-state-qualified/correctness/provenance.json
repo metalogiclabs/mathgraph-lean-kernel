@@ -1,0 +1,58 @@
+{
+  "ci_run": 39709067518,
+  "classification": "ACTUAL_CI_SUMMARY_INVENTORY_ONLY",
+  "fresh_inventory_assertions": 328,
+  "metadata_extraction_commands": [
+    [
+      "jq",
+      "--stream",
+      "-c",
+      "select(length==2 and ((.[0]|length)<=2 or (.[0][0]==\"reports\" and (.[0]|length)<=4 and .[0][2]!=\"report\")))",
+      "/workspace/kernel-audit/authenticated-state/ci-cec9941/extracted-compact/artifacts/ci-observations.json"
+    ],
+    [
+      "jq",
+      "--stream",
+      "-c",
+      "select(length==2 and (.[0]|length)==1 and (.[0][0]==\"schema\" or .[0][0]==\"source_sha\" or .[0][0]==\"source_tracked_clean\" or .[0][0]==\"source_and_binary_stable\" or .[0][0]==\"completed\" or .[0][0]==\"correctness_passed\" or .[0][0]==\"qualified\" or .[0][0]==\"qualification_status\" or .[0][0]==\"repetitions\" or .[0][0]==\"cycles\"))",
+      "/workspace/kernel-audit/authenticated-state/ci-cec9941/extracted-compact/artifacts/authenticated-state/summary.json"
+    ]
+  ],
+  "native_completion_proof_sha256": "0a9c95e9be777bb05dae7bcd801b7358ded963121a8fbd42b9b21b89ecff3080",
+  "no_economic_arithmetic": true,
+  "no_kernel_replay": true,
+  "no_project_imports": true,
+  "no_source_git_or_ci_writes": true,
+  "outputs": {
+    "authenticated-state-flags.stream.jsonl": {
+      "bytes": 360,
+      "sha256": "a16b99db9e1dd830f4fb517edf267148d975970a05029ac5f38fc2ce15474340"
+    },
+    "ci-observations-metadata.stream.jsonl": {
+      "bytes": 5291,
+      "sha256": "bcf64251ed08ca55c57f93cdc90f073b0c4e2de2f571bda4872e6df8380f3f16"
+    },
+    "review.json": {
+      "bytes": 197209,
+      "sha256": "9642faa8ab3536f72a1936097872e2609c005b986140abbf9c62236c7727cf1b"
+    },
+    "review.txt": {
+      "bytes": 6092,
+      "sha256": "3ddc8ed98a5acf612f20c79850e131df684eedb16a2ef68163733e54c3a740b7"
+    },
+    "review_inventory.py": {
+      "bytes": 27102,
+      "sha256": "98b6f46ef33ef57e3d48cbb6a2c3dbff2a050cfcd368d760f6ef5b4e4ecd0e82"
+    },
+    "summary-hashes.tsv": {
+      "bytes": 2747,
+      "sha256": "37b7daa3df87c8fcacdc11eb52ecda62098b0b5bb86198bae77861f4d52bec98"
+    }
+  },
+  "reviewer_command": [
+    "python",
+    "/workspace/kernel-audit/authenticated-state/ci-cec9941/actual-correctness-review/review_inventory.py"
+  ],
+  "source_sha": "cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5",
+  "transport_proof_sha256": "5f526db4549cafdf83c92964c6e1535e2cb1373cfaae561a609e2df976383f87"
+}

@@ -1,0 +1,23 @@
+{"profile": "original", "pair": 0, "revision": 1, "status": "VERIFIED", "checked": 413, "reused": 3023}
+{"profile": "original", "pair": 0, "revision": 2, "status": "VERIFIED", "checked": 1, "reused": 3435}
+{"profile": "original", "pair": 0, "revision": 3, "status": "VERIFIED", "checked": 413, "reused": 3023}
+{"profile": "original", "pair": 0, "revision": 4, "status": "VERIFIED", "checked": 1, "reused": 3435}
+{"profile": "original", "repetition": 0, "completed": true, "wall_seconds": {"state": 3.7636979759990936, "full_export": 3.7816207260002557, "direct": 1.294883630998811}}
+{"profile": "expanded", "pair": 0, "revision": 1, "status": "VERIFIED", "checked": 672, "reused": 10981}
+{"profile": "expanded", "pair": 0, "revision": 2, "status": "VERIFIED", "checked": 260, "reused": 11393}
+{"profile": "expanded", "pair": 0, "revision": 3, "status": "VERIFIED", "checked": 672, "reused": 10981}
+{"profile": "expanded", "pair": 0, "revision": 4, "status": "VERIFIED", "checked": 260, "reused": 11393}
+{"profile": "expanded", "repetition": 0, "completed": true, "wall_seconds": {"state": 13.653058396997949, "full_export": 14.054876817001059, "direct": 6.831565758002398}}
+Traceback (most recent call last):
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/benchmark_authenticated_state.py", line 468, in <module>
+    flush()
+            
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/benchmark_authenticated_state.py", line 465, in main
+    comparator_median_seconds_per_update=statistics.median(p[comparator] for p in series)/len(positions))
+
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/benchmark_authenticated_state.py", line 437, in run
+    step['receipt_audit']['delta_sha256']=representation['delta_sha256']
+                                                 ~~~~~~~^^^^^^^^^^^^^^^^~
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/benchmark_revision_chain.py", line 43, in require
+    raise ValueError(message)
+ValueError: measured source drift: experiments/incremental/benchmark_authenticated_state.py

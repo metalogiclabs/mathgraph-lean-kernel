@@ -1,0 +1,48 @@
+{
+  "schema": "mathgraph.authenticated-state-transport-replay.v1",
+  "passed": true,
+  "source_sha": "cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5",
+  "github_run_id": 39709067518,
+  "package": "compact",
+  "index_provider": {
+    "artifact_id": 12405617778,
+    "artifact_name": "authenticated-state-index-cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5",
+    "provider_zip_bytes": 941044,
+    "provider_zip_sha256": "56887168f53147d2dd115d073d26f99e64bbdfa829cebe41fd249990f69a3e08"
+  },
+  "index_manifest_sha256": "e43c4c37420910727647564bffcd844c1b271682759d481963edcc7e7cccbfc0",
+  "archive_bytes": 736160684,
+  "archive_sha256": "e02e8de94fbc38f5d9c249eadc93bd1c59aaa1f713a05e04da2e3ed3e1a01972",
+  "ordered_parts": [
+    {
+      "artifact_id": 12406026073,
+      "artifact_name": "authenticated-state-compact-00-cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5",
+      "provider_zip_bytes": 419430556,
+      "provider_zip_sha256": "f9c28e9f243344e3c6d897c52f62593b389b3e7121a0128b9ce565c3b38e277e",
+      "inner_part": {
+        "path": "artifact-packages/compact.tar.xz.part00",
+        "sha256": "77650fffe04fc9568b6998300c0ad191ba360eb5afe3c072ca2636441e4c1a4d",
+        "bytes": 419430400
+      }
+    },
+    {
+      "artifact_id": 12406205607,
+      "artifact_name": "authenticated-state-compact-01-cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5",
+      "provider_zip_bytes": 316730440,
+      "provider_zip_sha256": "a52bf07300b0a1bfb1799523c1b21727fb6fcd5eb4e7025877e3f3d3c3a973b9",
+      "inner_part": {
+        "path": "artifact-packages/compact.tar.xz.part01",
+        "sha256": "3eb103e330398b3986c40e4901d8e8d5491649331aeb49a0e35fb8877f0daf65",
+        "bytes": 316730284
+      }
+    }
+  ],
+  "files_verified": 8346,
+  "uncompressed_member_bytes": 3528974155,
+  "hardlinks_materialized_as_copies": [],
+  "trailing_zero_padding_bytes": 4096,
+  "output": "/workspace/kernel-audit/authenticated-state/ci-cec9941/extracted-compact",
+  "persisted_member_bytes_rechecked": true,
+  "persisted_provider_zip_bytes_rechecked": true,
+  "scope": "Transport integrity only; no historical HMAC reauthentication or kernel/economic verdict."
+}

@@ -1,0 +1,144 @@
+{
+  "actual_expanded_export_bytes": 64116066,
+  "actual_expanded_export_sha256": "2093ba3ac4919f0cfbce5769de7181185ddb8c429f4d3fcf36a4529805cb7897",
+  "actual_extra_withdrawal_reason": "complex_outside_verified_prefix",
+  "audit_source_sha256": "3fc04dbe18795b71960743eeca20f8bcf3cd3fa16a4e9a5efc11e348a0eba687",
+  "baseline_export_sha256": "91bfde11f02d7278e4fce3644276ff58e8a32601cfe843f790f8cad6868c0912",
+  "binary_pins": {
+    "/workspace/kernel-audit/authenticated-state/independent-build/target/release/export-index": {
+      "bytes": 1271360,
+      "sha256": "7540020eac763a1877c998faee206c04e763e49fa99f5b8309d1b0c5c0df55db"
+    },
+    "/workspace/kernel-audit/authenticated-state/independent-build/target/release/sokonanoda": {
+      "bytes": 1763616,
+      "sha256": "ae18515fd143a269bd73a8a2cba56e7a11521f71d964d7fa2a904850257d7889"
+    },
+    "/workspace/kernel-audit/revision-lifecycle/producer-build/delta-producer": {
+      "bytes": 231560000,
+      "sha256": "ea6957af4133beb15dd0b8bded7a1be8087d9660528aad6e6bf24ae2bf8ffc7b"
+    },
+    "/workspace/mathgraph-lean-kernel/target/release/check-selected": {
+      "bytes": 1793984,
+      "sha256": "a3a314598b2de61721b3ab1fc2d8774f044e198018c3714517d0db15aa48091d"
+    },
+    "/workspace/mathgraph-lean-kernel/target/release/check-selected-retained-session": {
+      "bytes": 1755056,
+      "sha256": "b620a1e167c53d0a070a749d73047f6596b83952bd20fb49e410a5902758f22f"
+    },
+    "/workspace/mathgraph-lean-kernel/target/release/export-index": {
+      "bytes": 1271360,
+      "sha256": "1e496a60df11c997f4fea85c6a72a6cc30a542745eb6e875f0c202c30e7b277a"
+    },
+    "/workspace/mathgraph-lean-kernel/target/release/index-session": {
+      "bytes": 1328808,
+      "sha256": "c82b13b5b0dd2203150b566b7d3fffe4ad4416e27f831ee161a8a87f02148d3d"
+    }
+  },
+  "bounded_source_owned_declarations": [
+    [
+      9,
+      "IncrementalWorkload.early",
+      "def"
+    ],
+    [
+      34,
+      "IncrementalWorkload.dependent",
+      "def"
+    ],
+    [
+      39,
+      "IncrementalWorkload.dependent_spec",
+      "thm"
+    ],
+    [
+      3432,
+      "IncrementalWorkload.unrelated",
+      "def"
+    ],
+    [
+      3433,
+      "IncrementalWorkload.leaf",
+      "thm"
+    ],
+    [
+      3434,
+      "IncrementalWorkload.typed",
+      "def"
+    ],
+    [
+      3435,
+      "IncrementalWorkload.typed_identity",
+      "thm"
+    ]
+  ],
+  "code": {
+    "actual_reason_line": 367,
+    "file": "experiments/incremental/engine.py",
+    "prefix_rule_line": 354,
+    "sha256": "216662587fafcb6880f4354e3794dcd766cb305d4c098e348dcf33326c513905",
+    "simple_local_rule_line": 355
+  },
+  "delta_sha256": "8b77c9ab3727cd8f81bcceb5ea847855d253d130edcd6cd42c3aa6135ff597b7",
+  "extra_kinds": {
+    "ctor": 119,
+    "itype": 70,
+    "rec": 70
+  },
+  "extra_unchanged_count": 259,
+  "hash_evidence": {
+    "inventory": "2604ee6e1c2f9dba9a24c685fea9a4ecddacca8f65da535b8b704b31e30be8ea",
+    "negative_audit_summary": "ef6680adf74b2cf12299a6cea8a4ee01cde2d64e24c121915749974c76600ef5",
+    "preflight_refusal": "f4e04dd088f6746441e6cc0da97b0bb9461c4cdb82c406bfb43d44ded9864202",
+    "stopped_attempt_summary": "c282bd3eca9ceeeda01ef4f672d9136e3dc817771454bfac0431eb5aa88989a0"
+  },
+  "invariant_observations": {
+    "all_dependency_edges_unchanged": true,
+    "changed_closure_names": [
+      "IncrementalWorkload.leaf"
+    ],
+    "changed_own_names": [
+      "IncrementalWorkload.leaf"
+    ],
+    "globals_unchanged": true,
+    "native_graph_used": true,
+    "native_recomputed_sccs": 1,
+    "schedule_unchanged": true
+  },
+  "limits": [
+    "LOCAL EXPLORATORY ONLY; no CI qualification, no five-pair scale result, no speedup or asymptotic claim.",
+    "No source, input tree, checker, producer, HMAC authority or reuse predicate changed.",
+    "CPU/memory observations retain original tick/cumulative-high-water limitations."
+  ],
+  "lineage": [
+    "Stale old native manifest refused before any session. Current stable B193 native manifest matches actual binaries; complete Rust/Cargo closure identical B193 to CEC.",
+    "Driver halted at first expanded update after actual selected check260 contradicted required1.",
+    "Separate negative audit reconstructed exact accepted bytes, full-indexed, replayed every decision/witness and freshly checked with independently rebuilt exact-CEC Rust.",
+    "Driver final closure flag had a local variable shadowing observation bug; original false field preserved and complete source hash mapping independently checked by audit."
+  ],
+  "native_source_closure_equal_from": "b1931f8479a2bcd78af85ba79e60958963f89d96",
+  "performance_promoted": false,
+  "probe_source_sha256": "5e4707b76e4a3a43d3a25932fa0ff48391d55f6d67dafcc9b5f70355fd9b6be1",
+  "qualified": false,
+  "residual": "Current prefix warrant withdraws259 later unchanged complex obligations. Extending independently justified complex reuse is a separate logical bridge, beyond speeding whole-index/applicability/output scans.",
+  "result": "Equal selected-cone precondition REFUSED; no paired scale measurement collected.",
+  "schema": "mathgraph.local-exploratory.equal-cone-refusal-portable.v1",
+  "source_closure_independently_unchanged": true,
+  "source_sha": "cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5",
+  "trust_scope": "Live adapter authenticated and signed the accepted input; ephemeral issuer key is deliberately not retained. This post-run audit verifies content-address/linkage/full-index/partition/fresh-kernel, and does not independently reassert HMAC authority.",
+  "workloads": {
+    "expanded11653": {
+      "actual_changed_updates": 1,
+      "count": 11653,
+      "fresh_rust_returncode": 0,
+      "full_index_returncode": 0,
+      "reused": 11393,
+      "selected": 260
+    },
+    "original3436": {
+      "actual_alternating_updates": 4,
+      "actual_fresh_rust_and_full_index_comparisons": 4,
+      "count": 3436,
+      "selected_each": 1
+    }
+  }
+}

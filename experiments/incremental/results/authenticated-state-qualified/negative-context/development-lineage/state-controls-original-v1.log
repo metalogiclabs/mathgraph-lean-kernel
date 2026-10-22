@@ -1,0 +1,9 @@
+Traceback (most recent call last):
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/test_state_controls.py", line 524, in <module>
+    run(parser.parse_args())
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/test_state_controls.py", line 295, in run
+    refusal('forged-hmac', lambda s: altered(s,
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/test_state_controls.py", line 246, in refusal
+    assert reason in observed, (name, observed)
+           ^^^^^^^^^^^^^^^^^^
+AssertionError: ('forged-hmac', 'cold producer delta history mismatch')

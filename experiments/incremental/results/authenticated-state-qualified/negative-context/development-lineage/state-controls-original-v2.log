@@ -1,0 +1,11 @@
+Traceback (most recent call last):
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/test_state_controls.py", line 553, in <module>
+    independent_kernel_acceptances=oracles(exported['path'],folder,0,all_kernels=False)))
+^^^^^^^^^^^^
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/test_state_controls.py", line 429, in run
+    'corrupt-current-receipt': receipt_path,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/test_state_controls.py", line 279, in refusal
+    result = action(live)
+       ^^^^^^^^^^^^^^^^^^^
+AssertionError

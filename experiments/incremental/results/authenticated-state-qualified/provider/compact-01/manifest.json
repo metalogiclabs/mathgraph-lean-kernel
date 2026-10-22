@@ -1,0 +1,115 @@
+{
+  "compression": {
+    "implementation": "Python stdlib lzma.LZMACompressor",
+    "preset": 3,
+    "streamed_directly_to_parts": true
+  },
+  "created_at_utc": "2026-10-22T06:53:36.576400+00:00",
+  "exclusive_zip_reconstruction_and_crc_verification": {
+    "concatenated_xz_bytes": 316705244,
+    "concatenated_xz_sha256": "cf22411a6c84780a354c133ebcc8b8beb0ee84387c53d662f7688f7619a17b7b",
+    "original_bytes": 316730440,
+    "original_sha256": "a52bf07300b0a1bfb1799523c1b21727fb6fcd5eb4e7025877e3f3d3c3a973b9",
+    "output_path": "/workspace/kernel-audit/authenticated-state/ci-cec9941/permanent-provider-parts/compact-01/exclusive-verified-original.zip",
+    "parts_verified": 7,
+    "passed": true,
+    "written_output_sha256_verified": true,
+    "zip_crc_checked": true,
+    "zip_members": 1
+  },
+  "input_zip_crc_checked": true,
+  "input_zip_members": 1,
+  "original": {
+    "bytes": 316730440,
+    "name": "authenticated-state-compact-01-cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5.zip",
+    "sha256": "a52bf07300b0a1bfb1799523c1b21727fb6fcd5eb4e7025877e3f3d3c3a973b9",
+    "source_path": "/workspace/kernel-audit/authenticated-state/ci-cec9941/downloads/authenticated-state-compact-01-cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5.zip"
+  },
+  "original_artifact_id": 12406205607,
+  "original_file_unchanged_after_all_verification": true,
+  "original_stat_before": {
+    "st_ctime_ns": 1792650058215843191,
+    "st_dev": 27,
+    "st_gid": 1000,
+    "st_ino": 551138,
+    "st_mode": 33152,
+    "st_mtime_ns": 1792650057991837148,
+    "st_nlink": 1,
+    "st_size": 316730440,
+    "st_uid": 1000
+  },
+  "part_bytes": 50331648,
+  "part_count": 7,
+  "parts": [
+    {
+      "bytes": 50331648,
+      "index": 0,
+      "name": "archive.zip.xz.part000",
+      "sha256": "3474729ddf7588f2f8ead62706e5c66443328a85114de9199b8bca4fadcb0936"
+    },
+    {
+      "bytes": 50331648,
+      "index": 1,
+      "name": "archive.zip.xz.part001",
+      "sha256": "30d2fd99ee8b6a667325889942a02974eb0f7dbcf21ab948dda04073119bff31"
+    },
+    {
+      "bytes": 50331648,
+      "index": 2,
+      "name": "archive.zip.xz.part002",
+      "sha256": "15a505ad36b3f75b0c642898c31293bd454c048178a096946e40d1bd4b56f911"
+    },
+    {
+      "bytes": 50331648,
+      "index": 3,
+      "name": "archive.zip.xz.part003",
+      "sha256": "b05c662cf8929ce17a5ea2d4c3ef1818761b744aab243cb2050c45b67912775c"
+    },
+    {
+      "bytes": 50331648,
+      "index": 4,
+      "name": "archive.zip.xz.part004",
+      "sha256": "ded914eda6d0e61487ff131c8bfeb7d37cf3738ae8334bc61ea65340cf7ac50b"
+    },
+    {
+      "bytes": 50331648,
+      "index": 5,
+      "name": "archive.zip.xz.part005",
+      "sha256": "2de04fd6230077b24bbd70d277348bfbd541d873d162c3ce5d58f702a4c00610"
+    },
+    {
+      "bytes": 14715356,
+      "index": 6,
+      "name": "archive.zip.xz.part006",
+      "sha256": "f2342ae52d77b4122b8a2772b673cb993c1aada119e47e5d9af7f0c3b676284e"
+    }
+  ],
+  "parts_concatenation_and_stream_decompression_verification": {
+    "concatenated_xz_bytes": 316705244,
+    "concatenated_xz_sha256": "cf22411a6c84780a354c133ebcc8b8beb0ee84387c53d662f7688f7619a17b7b",
+    "original_bytes": 316730440,
+    "original_sha256": "a52bf07300b0a1bfb1799523c1b21727fb6fcd5eb4e7025877e3f3d3c3a973b9",
+    "output_path": null,
+    "parts_verified": 7,
+    "passed": true,
+    "written_output_sha256_verified": false,
+    "zip_crc_checked": false,
+    "zip_members": null
+  },
+  "purpose": "Lossless exact provider ZIP evidence storage only; not runtime performance evidence.",
+  "qualification_run": 39709067518,
+  "qualified_source": "cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5",
+  "reconstructed_verification_duplicate_retained": false,
+  "schema": "mathgraph.lossless-xz-evidence-parts.v1",
+  "total_packaging_and_verification_wall_seconds": 163.46166594199894,
+  "transport_files_deleted": [],
+  "verification_duplicate_deleted_after_exact_readback": true,
+  "wrapper": {
+    "bytes": 316705244,
+    "check": "CRC64",
+    "format": "XZ",
+    "materialized_separately": false,
+    "name": "archive.zip.xz",
+    "sha256": "cf22411a6c84780a354c133ebcc8b8beb0ee84387c53d662f7688f7619a17b7b"
+  }
+}

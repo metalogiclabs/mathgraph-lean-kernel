@@ -1,0 +1,36 @@
+ACTUAL CI CORRECTNESS SUMMARY INVENTORY — CONSISTENT
+Source cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5; run39709067518.
+Transport proof 5f526db4549cafdf83c92964c6e1535e2cb1373cfaae561a609e2df976383f87 binds 8,346 compact members / 3,528,974,155 uncompressed bytes.
+This inventory freshly checks selected raw summary hashes, exact source, literal gate/control counts and stored result/domain fields. It does not rerun any kernel, reauthenticate private historical HMACs, or recompute economic arithmetic.
+
+Legacy raw gate records: original197/197; native335/335; independent719/719; old-binary251/251. All recorded passed flags are literally true. Native and independent reports bind the actual original-summary hash; the independent reader source hash matches frozen CEC.
+Independent legacy reader reports72 invocations and35 unique evidence-record paths. Original-binary251 uses separately compiled baseline source 9ac04033b51703fb135ec3c28621d44b183944fe; historical executable byte-match flags are false for check-selected and sokonanoda.
+Retained protected aggregator: original246 required gates, expanded229; PASS, no failed gates,21 samples/profile, backend sha-pinned-retained-parser-v1. Its detailed matrices are NOT in compact; individual raw protected records were not re-inspected here.
+
+New representation parity: four changed revisions/profile, four cold-replayed revisions/profile, unchanged scheduled/rechecked0. Actual selected counts in revision order: original413/1/413/1 of3436; expanded672/260/672/260 of11653. Each recorded state ID differs from its materialized-export SHA; runtime receipt HMAC/content-address audits and fresh-Rust returncode0 are recorded.
+New adversarial matrix:50 distinct required controls/profile,100 total, all passed; frozen source names match exactly. Per profile:3 controls with explicit VERIFIED results,7 UNKNOWN,2 REJECTED,38 without a result-status field. Absence of a status is not relabeled UNKNOWN.
+Explicit UNKNOWN names (each profile): source-outside-reported-region, false-change-name-hint, axiom-kind-assumption-change, invalid-source-proof, toolchain-source-outside-policy, failed-receipt-persistence-does-not-promote-state, failed-persistence-does-not-promote-state.
+Explicit REJECTED names (each profile): unused-malformed-dag-zero-selected, signed-invalid-definition-proof. Both have checker code1, no evidence ID, unaccepted-attempt state_id null, and recorded Rust/C++/paranoid returncode1 without timeout. The malformed admitted DAG case schedules0 obligations.
+Persistence UNKNOWN controls preserve expected head/state and refuse subsequent in-place reuse. They do not imply zero durable writes: historical orphan-receipt scope is separately recorded.
+Authority/domain refusals cover forged/foreign issuer HMACs, wrong parent/environment/version, modified prepared source capture, malformed/changed deltas, persisted-object corruption, missing/pinned heads, and full-export/sparse-export/state receipt-domain separation. Key-resigned parser fixtures possess issuer authority and are not asserted to be source-produced exports.
+
+Actual CI reader:108 recorded fresh kernel processes =96 positive and12 negative; backend totals Rust84,C++12,paranoid12. It reports800 primary retained-arm transitions,100 controls,190 archive objects and7,242,720 declaration witnesses (repeated witnesses across arms/revisions, not distinct theorems).
+Per profile:400 primary transitions,48 positive fresh kernels; original3436 obligations/1,649,280 declaration witnesses; expanded11653/5,593,440. Five pairs/profile each contain40 full-export and40 state transitions. The CI reader historical_hmac_reauthenticated flag is FALSE.
+CI reader boundary: Public historical issuer envelope domains and content addresses checked; original HMAC secret unavailable. Fresh full indexes and actual kernels independently establish exact-input identity and verdict agreement. Historical timing observations are recomputed arithmetically, not remeasured.
+
+Additional preserved correctness evidence: retained-parser shadow has4 passing unsigned parser-only negative controls; canonical/shared receipt comparison is completed/qualified/correctness_passed with20 pairs,40 arms,4 cold replays. Legacy chain smoke/control reports are byte-hash bound (raw gzip and exact decoded JSON digests both preserved), without rerunning their controls.
+
+Limits:
+- Summary inventory and hash/source/count bindings only. No local kernel replay, project import, new gate execution or economic arithmetic was performed.
+- Gate records overlap, include repeated invocations and protocol checks, and must not be summed as independent theorem counts.
+- Historical issuer HMACs were not reauthenticated by the public CI reader; its explicit false flag and boundary are retained. Runtime parity summaries separately record issuer-HMAC checks.
+- Key-resigned parser adversaries possess issuer authority; injected bytes are not asserted to be outputs of the source producer.
+- Cold latestness depends on a caller-supplied expected head; there is no external monotonic service or general rollback-freshness proof.
+- The bounded Lean theorem does not verify the NDJSON dependency extractor, source/export/parser/identity executable bridge, or production kernel locality.
+- Workloads are frozen original and expanded Lean/Std universes and scheduled source changes; no all-Lean, unrestricted edit, new axiom-policy, asymptotic or memory-peak conclusion follows.
+- An UNKNOWN update is a refusal to issue evidence, not a kernel proof of invalidity. Exception refusals without result status are kept separate from UNKNOWN and REJECTED.
+- Persistence failures prevent head/state promotion and in-place reuse; a genuine prior-kernel-acceptance orphan receipt may exist, as explicitly recorded by those controls.
+- Separately compiled historical source baselines do not imply historical executable byte identity.
+
+Exact raw/decoded hashes: summary-hashes.tsv. Detailed per-control statuses/refusals/domain fields and all raw legacy gate names: review.json.
+Fresh verification assertions: 328.

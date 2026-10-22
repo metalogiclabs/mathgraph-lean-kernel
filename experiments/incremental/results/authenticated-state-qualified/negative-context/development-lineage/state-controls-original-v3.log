@@ -1,0 +1,9 @@
+Traceback (most recent call last):
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/test_state_controls.py", line 571, in <module>
+    run(parser.parse_args())
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/test_state_controls.py", line 228, in run
+    accepted_history_heads.update(historical_head for historical_head,_ in live._history(head))
+                                                                           ^^^^^^^^^^^^^^^^^^^
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/revision_chain.py", line 133, in _history
+    raise ValueError('accepted predecessor linkage mismatch')
+ValueError: accepted predecessor linkage mismatch

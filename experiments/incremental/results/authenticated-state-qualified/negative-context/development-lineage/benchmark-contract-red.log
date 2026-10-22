@@ -1,0 +1,23 @@
+FF...
+======================================================================
+FAIL: test_boolean_measurements_cannot_masquerade_as_integer_counts (__main__.MeasurementContract.test_boolean_measurements_cannot_masquerade_as_integer_counts)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/test_authenticated_state_benchmark.py", line 43, in test_boolean_measurements_cannot_masquerade_as_integer_counts
+    with self.assertRaises(ValueError):self.compact()
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_boolean_zero_does_not_establish_observed_byte_count (__main__.MeasurementContract.test_boolean_zero_does_not_establish_observed_byte_count)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/test_authenticated_state_benchmark.py", line 47, in test_boolean_zero_does_not_establish_observed_byte_count
+    with self.assertRaises(ValueError):self.compact()
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.001s
+
+FAILED (failures=2)

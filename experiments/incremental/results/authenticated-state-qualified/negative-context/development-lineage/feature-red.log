@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/test_authenticated_state.py", line 112, in <module>
+    run(p.parse_args())
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/test_authenticated_state.py", line 30, in run
+    assert StateChainSession is not None, 'authenticated state mode is missing'
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: authenticated state mode is missing

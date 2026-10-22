@@ -1,0 +1,12 @@
+Traceback (most recent call last):
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/replay_authenticated_state.py", line 800, in <module>
+    if __name__=='__main__':main()
+                            ^^^^^^
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/replay_authenticated_state.py", line 797, in main
+    run(args)
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/replay_authenticated_state.py", line 742, in run
+    require(hexid(args.source),'exact source SHA required')
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/replay_authenticated_state.py", line 33, in require
+    if not condition:raise ValueError(reason)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: exact source SHA required

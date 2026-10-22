@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/test_authenticated_state.py", line 112, in <module>
+    run(p.parse_args())
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/test_authenticated_state.py", line 93, in run
+    restarted=cold.start(expected_head=head)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/revision_chain.py", line 82, in start
+    representation = json.loads(self._object('representations', stored['delta_representation'], '.json'),
+                                                                ~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+KeyError: 'delta_representation'

@@ -1,0 +1,46 @@
+{
+  "schema": "mathgraph.authenticated-state.read-only-boundary-review.v1",
+  "observed_at": "2026-10-22T03:13:46.020378+00:00",
+  "source": "cec99419a0bcd9df70ccb55bc9dc9ebbf3bfe5c5",
+  "clean_worktree": true,
+  "read_only_source_review": true,
+  "decisive_unsound_acceptance_findings": [],
+  "runtime_files_reviewed_sha256": {
+    "experiments/incremental/authenticated_state.py": "bbbfabb678faba4fcacf2ad417eb950d8a4930f61e2dd723d3c3111a9bdc4f70",
+    "experiments/incremental/producer_delta.py": "78839315afdd6d2918a79bfbe1822b71d52f909589f5bd31706654a9b49a5275",
+    "experiments/incremental/revision_chain.py": "9daa18b43128e2b52b41a6858a3216584d67398ed97cae79fd362c1b045cea67",
+    "experiments/incremental/engine.py": "216662587fafcb6880f4354e3794dcd766cb305d4c098e348dcf33326c513905",
+    "experiments/incremental/test_state_representation.py": "f71f82a74c2f753ba25d0f92d5b3d9539c3bc5acf5326c23756c9e17ef4008f5",
+    "experiments/incremental/test_state_controls.py": "14bdf89e6fae43967dfed66fbc364ea04e1fa90a0fdf352cb4ef7005209e7e19",
+    "experiments/incremental/test_authenticated_state.py": "64f60d821c5ca3c7d9584854928a91cdb654c33326379ab03fdb249323a41767",
+    "src/bin/check_selected_retained_session.rs": "b5d80c14f73441430cf80e49602469d8f4195a71940bc7da2ddd7975f8d432bf",
+    "src/parser.rs": "62d57a5809ea77f555ab03ceee9cb476cdeb8e495e50e878cfffbd814943999c"
+  },
+  "unit_command": [
+    "python3",
+    "-m",
+    "unittest",
+    "-v",
+    "test_state_representation"
+  ],
+  "unit_cwd": "experiments/incremental",
+  "unit_log": "representation-tests.log",
+  "unit_log_sha256": "9fa792b8413a3c8400ba529b4c4ef7a3d04724f76591603013f52882a40f551b",
+  "unit_tests_passed": 7,
+  "unit_scope": "serialization and authority fixtures; not actual kernel verdicts or CI qualification",
+  "pending_qualification": "Exact-source CI 39709067518 and external artifact replay remain pending at review time",
+  "conclusions": [
+    "State construction IDs and materialized NDJSON SHA256 remain distinct and domain separated.",
+    "Warm acceptance goes through actual retained Rust parse/check, including zero selected obligations.",
+    "Receipt issuance occurs only following actual selected acceptance; chain/head promotion follows persistence.",
+    "prepare clears old explicit export and staged candidate; rejected attempt export grants no accepted state identity.",
+    "Cold restart requires caller-supplied expected head and regenerates source-owned delta history, authenticates CAS/HMAC links and genuinely rechecks selected obligations."
+  ],
+  "limits": [
+    "Trusted issuer/process/secret key and native parser/indexer implementation remain assumptions.",
+    "Standalone acceptance helper requires an already authenticated parent; HMAC is not proof of semantic equivalence.",
+    "Private already admitted immutable warm bytes are not revoked by later disk corruption; cold replay fails closed.",
+    "Caller expected head supplies latestness; the cache provides no external monotonicity or revocation service.",
+    "No complete executable proof, no whole-pipeline asymptotic change-proportional guarantee, and no economic claim is made by this review."
+  ]
+}

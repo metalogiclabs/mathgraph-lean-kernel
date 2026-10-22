@@ -1,0 +1,18 @@
+{
+  "schema": "mathgraph.reader-output-independent-verification-execution.v1",
+  "command": [
+    "python3",
+    "-B",
+    "/workspace/kernel-audit/authenticated-state/reader-output-preservation/verify_reader_archive.py",
+    "--manifest",
+    "/workspace/kernel-audit/authenticated-state/actual-independent-replay-preserved/manifest.json",
+    "--source",
+    "/workspace/kernel-audit/authenticated-state/actual-independent-replay",
+    "--proof",
+    "/workspace/kernel-audit/authenticated-state/actual-independent-replay-preserved/independent-proof.json"
+  ],
+  "returncode": 0,
+  "wall_seconds": 4.4944186079956125,
+  "scope": "Independent full-byte preservation verification only; original reader output is retained.",
+  "free_bytes": 3647700992
+}
