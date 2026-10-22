@@ -1,0 +1,32 @@
+{
+  "status": "passed",
+  "commands": [
+    "python3 experiments/incremental/test_revision_producer.py --binary /workspace/kernel-audit/revision-lifecycle/producer-build/delta-producer --workload /workspace/kernel-audit/workloads-final/baseline/source --output /workspace/kernel-audit/revision-lifecycle/producer/green",
+    "python3 experiments/incremental/test_revision_producer.py --binary /workspace/kernel-audit/revision-lifecycle/producer-build/delta-producer --workload /workspace/kernel-audit/delta-expanded-workloads-first/baseline/source --profile std-hashmap-expanded-v1 --output /workspace/kernel-audit/revision-lifecycle/producer/green-expanded",
+    "python3 experiments/incremental/test_delta_producer.py (both profiles; see legacy.log and legacy-expanded.log)",
+    "git diff --check"
+  ],
+  "sources": [
+    {
+      "path": "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/DeltaProducer.lean",
+      "sha256": "2a9ea4ae5f481887c27325e899f58c9035251a19acf9a42a9f8f820bdc9d9975"
+    },
+    {
+      "path": "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/test_revision_producer.py",
+      "sha256": "6bb3f595e6cf39e3028222874b61a85b53cbdb7fd5aa908aaea7cba95f9dd6b1"
+    }
+  ],
+  "red": "red.log",
+  "green": [
+    "green.log",
+    "green-expanded.log",
+    "legacy.log",
+    "legacy-expanded.log"
+  ],
+  "binary": {
+    "path": "/workspace/kernel-audit/revision-lifecycle/producer-build/delta-producer",
+    "bytes": 231560000,
+    "sha256": "ea6957af4133beb15dd0b8bded7a1be8087d9660528aad6e6bf24ae2bf8ffc7b"
+  },
+  "initial_expanded_attempt": "ENOSPC creating duplicate full export; rerun passed after retaining hashes and deltas instead"
+}

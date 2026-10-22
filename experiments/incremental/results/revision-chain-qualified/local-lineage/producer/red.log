@@ -1,0 +1,12 @@
+Traceback (most recent call last):
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/test_revision_producer.py", line 165, in <module>
+    main()
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/test_revision_producer.py", line 160, in main
+    run(args.binary.resolve(), args.workload.resolve(), args.output.resolve(), args.profile)
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/test_revision_producer.py", line 95, in run
+    result, path = producer.delta(sources, expected, name)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/test_revision_producer.py", line 56, in delta
+    assert result["status"] == "delta", (label, result)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ('cumulative', {'error': 'expected_changed_names differs from complete local comparison', 'status': 'error'})

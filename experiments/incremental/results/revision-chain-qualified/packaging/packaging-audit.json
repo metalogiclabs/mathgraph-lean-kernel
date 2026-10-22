@@ -1,0 +1,140 @@
+{
+  "schema": "mathgraph.lossless-xz-evidence-packaging-audit.v1",
+  "utc": "2026-10-22T00:37:46.368102+00:00",
+  "purpose": "Evidence storage only; no runtime speedup claim",
+  "manifest": {
+    "name": "part-manifest.json",
+    "bytes": 4310,
+    "sha256": "a0f34c93c54bdce8942f8e168439efb7d141619c94277ed1b78b1226d05ea53f"
+  },
+  "wrapper": {
+    "bytes": 528312196,
+    "check": "CRC64",
+    "format": "XZ",
+    "name": "archive.zip.xz",
+    "sha256": "a78f2817c3f6f8c1eca9c50dc851baa2a9f5bf9d92329378114a2cca2df9fd13"
+  },
+  "original": {
+    "bytes": 1250298163,
+    "name": "revision-chain-summaries-d1b2244.zip",
+    "sha256": "878fbeeb4f6241084fd89ca20a2b9b8077c9071e2ada7e2e0b94d054e743d766",
+    "source_path": "/workspace/kernel-audit/revision-lifecycle/ci-d1b2244/revision-chain-summaries-d1b2244.zip"
+  },
+  "original_path_present_and_stat_unchanged": true,
+  "part_count": 11,
+  "part_total_bytes": 528312196,
+  "part_maximum_bytes": 50331648,
+  "last_part_bytes": 24995716,
+  "parts": [
+    {
+      "bytes": 50331648,
+      "index": 0,
+      "name": "archive.zip.xz.part000",
+      "sha256": "05152a2e9fa9f0b899afae65f4aebc0a1a0bbc1a175f4f2955fadb4e37ee5f10"
+    },
+    {
+      "bytes": 50331648,
+      "index": 1,
+      "name": "archive.zip.xz.part001",
+      "sha256": "3df89c0877b69eff712fe5c03b78926ebc85c6eb0b1259db2848a22da524e363"
+    },
+    {
+      "bytes": 50331648,
+      "index": 2,
+      "name": "archive.zip.xz.part002",
+      "sha256": "36c597d78984b074ff16514bfeebc7f73fa6c778aead5223a22027ccb02eede4"
+    },
+    {
+      "bytes": 50331648,
+      "index": 3,
+      "name": "archive.zip.xz.part003",
+      "sha256": "3ca708f28d9317949b8388c0061a7f4eb6b8574ec2bdbda67e7be9fb12a48e93"
+    },
+    {
+      "bytes": 50331648,
+      "index": 4,
+      "name": "archive.zip.xz.part004",
+      "sha256": "410865a4be6650242d51dd8e2361712bb0e000b5b121d32b4a9db580803ec59c"
+    },
+    {
+      "bytes": 50331648,
+      "index": 5,
+      "name": "archive.zip.xz.part005",
+      "sha256": "17604bd4a30baaa2b5e0dae5b9cef311af72d68f628defccd109d2c94a1853e9"
+    },
+    {
+      "bytes": 50331648,
+      "index": 6,
+      "name": "archive.zip.xz.part006",
+      "sha256": "ac533c4c8afa67156c746294625c08a4770da39fb5330b676753b56ae7042b87"
+    },
+    {
+      "bytes": 50331648,
+      "index": 7,
+      "name": "archive.zip.xz.part007",
+      "sha256": "2b18c99b39d2cd111ed3b849f9922fb7a515ead6380d4ef85ba727f19b679fc8"
+    },
+    {
+      "bytes": 50331648,
+      "index": 8,
+      "name": "archive.zip.xz.part008",
+      "sha256": "1163575066fa5c741c48ed514a98b831f14c1d5beb08beef528871691f4fb60e"
+    },
+    {
+      "bytes": 50331648,
+      "index": 9,
+      "name": "archive.zip.xz.part009",
+      "sha256": "48ca63726b0c1bc15901ed02e404ba7d94bb517f944496eba984b43df1ea9c9f"
+    },
+    {
+      "bytes": 24995716,
+      "index": 10,
+      "name": "archive.zip.xz.part010",
+      "sha256": "8693d59c3ea5028d6fc68fa2889c7e2ae54e597904c84d2ddb2a3048f2cc5e53"
+    }
+  ],
+  "all_parts_under_decimal_100MB_file_cap": true,
+  "helper": {
+    "name": "reconstruct_archive.py",
+    "sha256": "d8fcf72c03c0e09e5d3c8634c9a0313905fcdbeabab9434fefd55e963236e1da",
+    "bytes": 5499
+  },
+  "helper_tests": {
+    "source": "test_reconstruct_archive.py",
+    "source_sha256": "6048dbf5a06e169f6d955102580bf13d23ab5eb8f4619cd87e98b540f084770d",
+    "last_log": "reconstruction-helper-tests-portable.log",
+    "log_sha256": "f2ca5e354f1336f1e96c785c72cbb2fb1432820f4d41c8a8aefe9dc36e8aa450",
+    "passed": 4
+  },
+  "readme": {
+    "name": "README.md",
+    "sha256": "2fe511e19a12b6a7acb068a1a338625c181adabcac007c5e1bf45d4e0b00d99e"
+  },
+  "packaging_disk_bytes_wrapper_and_parts": 1056624392,
+  "direct_replay_additional_disk_bytes": 1250298163,
+  "committed_parts_payload_bytes": 528312196,
+  "transport_files_deleted": [],
+  "transport_files_retained": [
+    {
+      "name": "transport-part00.zip",
+      "bytes": 402653356
+    },
+    {
+      "name": "transport-part01.zip",
+      "bytes": 402653356
+    },
+    {
+      "name": "transport-part02.zip",
+      "bytes": 402653356
+    },
+    {
+      "name": "transport-part03.zip",
+      "bytes": 42338783
+    }
+  ],
+  "transport_manifest_zip_retained_bytes": 3242,
+  "compression_wall_seconds": 710.5435303850027,
+  "total_packaging_and_verification_wall_seconds": 738.2107007800005,
+  "free_bytes_at_audit": 2291740672,
+  "xz_listing": "name\t/workspace/kernel-audit/revision-lifecycle/evidence-packaging/archive.zip.xz\nfile\t1\t1\t528312196\t1250298163\t0.423\tCRC64\t0\ntotals\t1\t1\t528312196\t1250298163\t0.423\tCRC64\t0\t1\n"
+}

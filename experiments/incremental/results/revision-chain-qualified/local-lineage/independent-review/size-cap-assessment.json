@@ -1,0 +1,37 @@
+{
+  "status": "SCOPED_LARGE_SUMMARY_BOUNDS",
+  "measured_files": {
+    "local_lifecycle_smoke": {
+      "path": "/workspace/kernel-audit/revision-lifecycle/harness/smoke-continuous-final/summary.json",
+      "bytes": 41564427,
+      "sha256": "d4a141a599c12110dada5fb890170336168a275e46e64c205e2626f598889737"
+    },
+    "local_original32_controls": {
+      "path": "/workspace/kernel-audit/revision-lifecycle/controls-local-v2/summary.json",
+      "bytes": 37935599,
+      "sha256": "66f35b84e11d280ed791961dd8a315f31f9eba4d12cc1947e73e6302dc0726a4"
+    },
+    "actual_expanded_chain_test": {
+      "path": "/workspace/kernel-audit/revision-lifecycle/python-expanded-green/summary.json",
+      "bytes": 86348931,
+      "sha256": "78b96dae47d17fea34e3ebd705790f8ab1715fede68497bf270b836325724a9e"
+    }
+  },
+  "observed_shape_full5x40_forecast_bytes": 344399381,
+  "forecast_scope": "Independent additive exact-pretty-JSON schema projection using observed local field shapes; not a measured CI file size or performance projection.",
+  "scoped_lifecycle_limit_bytes": 536870912,
+  "scoped_exact_four_test_control_manifest_limit_bytes": 536870912,
+  "generic_json_log_limit_bytes": 67108864,
+  "largest_observed_positive_export_bytes": 64116161,
+  "positive_export_margin_below64mib_bytes": 2992703,
+  "positive_export_transport": "Already streamed; no positive-export bound was relaxed",
+  "reader_before": "size-cap-before.json",
+  "lifecycle_red": "size-cap-red.log",
+  "lifecycle_green": "size-cap-green.log",
+  "conservative_repeated_shape_bytes": 349636377,
+  "padded_schema_envelope_bytes": 425071406,
+  "padded_envelope_margin_bytes": 111799506,
+  "size_forecast_details": "size-bound-analysis.json",
+  "exact_chain_wrapper_evidence": "chain-wrapper-cap-assessment.json",
+  "all_tests_passed": 33
+}

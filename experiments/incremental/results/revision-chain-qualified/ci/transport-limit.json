@@ -1,0 +1,13 @@
+{
+  "schema": "mathgraph.artifact-transport-limits.v1",
+  "observed_at": "2026-10-22T00:16:00.494649+00:00",
+  "original_run": 39679768047,
+  "original_artifact": 12390854795,
+  "original_bytes": 1250298163,
+  "original_sha256": "878fbeeb4f6241084fd89ca20a2b9b8077c9071e2ada7e2e0b94d054e743d766",
+  "native_api_redirect": "API authentication succeeded; proxy CONNECT to GitHub signed blob destination returned403. No network policy bypass attempted. Signed URL not preserved publicly.",
+  "connector_download": "Rejected before download: artifact1250298163B exceeds536870912B cap.",
+  "remedy": "Separate manual CI transports exact original ZIP as<=384MiB parts. Original qualification and source are unchanged; reconstructed ZIP must match original provider bytes/SHA before review.",
+  "transport_run": 39698586368,
+  "transport_source": "3ec0191126fa0f544fadec05435c02ac2be0c8aa"
+}

@@ -1,0 +1,135 @@
+{
+  "schema": "mathgraph.qualified-accepted-predecessor-lifecycle.v1",
+  "status": "WARRANTED_BOUNDED",
+  "qualified_source": "d1b22447d23a928ae536cbe838a47fc9682a4b39",
+  "source_branch": "research/incremental-revision-lifecycle-20261022",
+  "ci_run": 39679768047,
+  "ci_job": 119498882697,
+  "ci_url": "https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/39679768047",
+  "performance": {
+    "original": {
+      "obligations": 3436,
+      "pairs": 5,
+      "successive_updates_per_pair": 40,
+      "fresh_rust_commands_per_pair": 41,
+      "wall": {
+        "incremental_median_seconds": 8.080982401000256,
+        "direct_fresh_rust_median_seconds": 11.371609591999913,
+        "candidate_over_direct": 0.710627843457213,
+        "speedup": 1.4072063305808398,
+        "percentage_reduction": 28.937215654278702,
+        "paired_wins": 5,
+        "paired_bootstrap_95_ratio": [
+          0.5998583173718267,
+          0.7117174426213444
+        ]
+      },
+      "cpu": {
+        "incremental_median_seconds": 8.078343000000018,
+        "direct_fresh_rust_median_seconds": 11.374423000000093
+      },
+      "scope": "Uninterrupted constructor/start, 40 source-produced authenticated accepted updates, persistence, and supported shutdown. Control: 41 fresh Rust processes on identical actual inputs, prepared before its timer."
+    },
+    "expanded": {
+      "obligations": 11653,
+      "pairs": 5,
+      "successive_updates_per_pair": 40,
+      "fresh_rust_commands_per_pair": 41,
+      "wall": {
+        "incremental_median_seconds": 33.506680147000225,
+        "direct_fresh_rust_median_seconds": 54.792482363999625,
+        "candidate_over_direct": 0.6115196592920776,
+        "speedup": 1.635270403502063,
+        "percentage_reduction": 38.84803407079224,
+        "paired_wins": 5,
+        "paired_bootstrap_95_ratio": [
+          0.5459226265459083,
+          0.6197197764443697
+        ]
+      },
+      "cpu": {
+        "incremental_median_seconds": 33.563868000000184,
+        "direct_fresh_rust_median_seconds": 54.792056999999886
+      },
+      "scope": "Uninterrupted constructor/start, 40 source-produced authenticated accepted updates, persistence, and supported shutdown. Control: 41 fresh Rust processes on identical actual inputs, prepared before its timer."
+    }
+  },
+  "independent_review": {
+    "paired_lifetimes": 10,
+    "accepted_revisions": 400,
+    "independently_checked_decisions": 3017800,
+    "signed_object_links_checked": 2440,
+    "compressed_archives_checked": 448,
+    "economics": {
+      "profiles": 2,
+      "pairs": 10,
+      "accepted_revisions": 400,
+      "economic_series": 88,
+      "bootstrap_resamples": 880000
+    }
+  },
+  "fresh_kernel_replay": {
+    "unique_inputs": 16,
+    "accepted_inputs": 12,
+    "rejected_inputs": 4,
+    "real_processes": 48,
+    "oracles": [
+      "Rust",
+      "normal C++",
+      "paranoid C++"
+    ],
+    "all_expected_verdicts_agree": true,
+    "binary_sha256": {
+      "rust": "367737d043d2719a2a341dcd569d9e5f3b9e9ee669f1581cd298290aacdced44",
+      "cpp": "12c38901cdbfab178f1bf6145dd30012e9a3b2c11ca695292a5884fa3cbaddb6",
+      "paranoid": "ca74d1e9a856149ed05acb600d8931a574dd9f465745beeaf93e3de7b7cbe274"
+    }
+  },
+  "controls": {
+    "chain_recovery_and_adversarial": 64,
+    "legacy_gate_families": [
+      197,
+      335,
+      719,
+      251
+    ],
+    "protected_gate_families": [
+      246,
+      229
+    ],
+    "reader_falsifiers": 5
+  },
+  "evidence": {
+    "compact_artifact_id": 12390854795,
+    "compact_original": {
+      "bytes": 1250298163,
+      "name": "revision-chain-summaries-d1b2244.zip",
+      "sha256": "878fbeeb4f6241084fd89ca20a2b9b8077c9071e2ada7e2e0b94d054e743d766",
+      "source_path": "/workspace/kernel-audit/revision-lifecycle/ci-d1b2244/revision-chain-summaries-d1b2244.zip"
+    },
+    "wrapper": {
+      "bytes": 528312196,
+      "check": "CRC64",
+      "format": "XZ",
+      "name": "archive.zip.xz",
+      "sha256": "a78f2817c3f6f8c1eca9c50dc851baa2a9f5bf9d92329378114a2cca2df9fd13"
+    },
+    "parts": 11,
+    "full_artifact_id": 12391188911,
+    "full_artifact_locally_downloaded": false,
+    "full_provider_sha256": "dbb4e7819ddfe1c07f4dd4fbeb98fa2005d6cfaab8b66d8b8dfe4ea54a1714d7",
+    "historical_hmac_reauthenticated_by_public_reader": false
+  },
+  "trust_boundary": {
+    "hmac_authority_key_model_unchanged": true,
+    "checker_rules_and_reuse_predicate_unchanged": true,
+    "additional_trusted_code": "Versioned accepted-predecessor state continuation, source capture and persisted parent-linked heads.",
+    "unproved_bridge": "Source/export/parser/typed declaration identity extraction and executable locality; finite differential qualification, not whole-pipeline formal proof.",
+    "cold_latestness": "Caller must retain expected accepted head; HMAC does not provide generic rollback protection."
+  },
+  "remaining_unknown": "Safely eliminate per-update O(total-export/index-size) materialization/hash/readback and copies/scans. Cold recovery is O(history); arbitrary developments and asymptotic change-proportional total cost are not qualified.",
+  "ros": {
+    "checkpoint": "https://app.notion.com/p/3fb3e523d7ab81c68c89c1442eb0bb05",
+    "sync_status": "Pending permanent evidence commit; readback proof will be committed separately."
+  }
+}

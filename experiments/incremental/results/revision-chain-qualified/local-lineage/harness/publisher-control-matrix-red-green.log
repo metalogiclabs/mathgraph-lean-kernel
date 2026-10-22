@@ -1,0 +1,9 @@
+{"status": "RED_OLD_PUBLISHER_ACCEPTED_MISSING_CONTROLS", "remaining_controls": 28, "removed_controls": ["cold-recovery-after-rejections-and-corruption-then-dependency-restoration", "failed-persistence-does-not-promote-head", "real-dependency-edge-fallback-refresh-and-restore", "returned-source-capture-does-not-alias-accepted-predecessor"], "accepted_profiles": ["expanded", "original"]}
+{"name": "missing-four-controls-selfdeclared-28", "status": "REJECTED", "reason": "missing actual chain controls: original"}
+{"name": "same-count-untrusted-substitution", "status": "REJECTED", "reason": "actual controls differ from frozen required matrix: original"}
+{"name": "persistence-did-not-poison", "status": "REJECTED", "reason": "persistence failure did not poison/refuse acceptance: original"}
+{"name": "restoration-did-not-restore", "status": "REJECTED", "reason": "missing actual cold dependency restoration: original"}
+{"name": "wrong-full-fallback-refresh-pattern", "status": "REJECTED", "reason": "topology fallback/refresh pattern differs: original"}
+{"name": "topology-claimed-partition-differs-from-full-index", "status": "REJECTED", "reason": "topology selected partition differs from full native indexes: original"}
+{"name": "topology-full-rust-timeout-is-not-acceptance", "status": "REJECTED", "reason": "topology actual full Rust rejected or failed: original"}
+{"status": "PASS_FROZEN_32_CONTROL_PUBLISHER_AND_FALSIFIERS", "falsifiers": 7, "workflow_sha256": "6c366ab2343aab775576d81821a6c8587b314974f8b604a0704a488334e97ccc"}

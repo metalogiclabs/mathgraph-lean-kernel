@@ -1,0 +1,81 @@
+{
+  "status": "PASS_FROZEN_32_CONTROL_PUBLISHER_AND_FALSIFIERS",
+  "falsifiers": [
+    {
+      "name": "missing-four-controls-selfdeclared-28",
+      "status": "REJECTED",
+      "reason": "missing actual chain controls: original"
+    },
+    {
+      "name": "same-count-untrusted-substitution",
+      "status": "REJECTED",
+      "reason": "actual controls differ from frozen required matrix: original"
+    },
+    {
+      "name": "persistence-did-not-poison",
+      "status": "REJECTED",
+      "reason": "persistence failure did not poison/refuse acceptance: original"
+    },
+    {
+      "name": "restoration-did-not-restore",
+      "status": "REJECTED",
+      "reason": "missing actual cold dependency restoration: original"
+    },
+    {
+      "name": "wrong-full-fallback-refresh-pattern",
+      "status": "REJECTED",
+      "reason": "topology fallback/refresh pattern differs: original"
+    },
+    {
+      "name": "topology-claimed-partition-differs-from-full-index",
+      "status": "REJECTED",
+      "reason": "topology selected partition differs from full native indexes: original"
+    },
+    {
+      "name": "topology-full-rust-timeout-is-not-acceptance",
+      "status": "REJECTED",
+      "reason": "topology actual full Rust rejected or failed: original"
+    }
+  ],
+  "control_names": [
+    "first-parent-full-index-and-partition-parity",
+    "returned-source-capture-does-not-alias-accepted-predecessor",
+    "forged-hmac",
+    "changed-delta-without-authority",
+    "source-capture-patch-substitution",
+    "source-capture-names-substitution",
+    "authenticated-wrong-parent",
+    "authenticated-environment-drift",
+    "authenticated-version-drift",
+    "source-outside-reported-region",
+    "false-change-name-hint",
+    "axiom-kind-assumption-change",
+    "invalid-source-proof",
+    "toolchain-source-outside-policy",
+    "unused-malformed-dag-zero-selected",
+    "signed-invalid-definition-proof",
+    "foreign-issuer",
+    "receipt-policy-version-mismatch",
+    "corrupt-chain-head",
+    "corrupt-source-capture",
+    "corrupt-current-receipt",
+    "corrupt-transition",
+    "corrupt-delta",
+    "corrupt-representation",
+    "corrupt-genesis",
+    "corrupt-baseline-receipt",
+    "corrupt-baseline-export",
+    "deleted-latest-head-no-prefix-fallback",
+    "cold-start-requires-external-expected-head",
+    "failed-persistence-does-not-promote-head",
+    "cold-recovery-after-rejections-and-corruption-then-dependency-restoration",
+    "real-dependency-edge-fallback-refresh-and-restore"
+  ],
+  "actual_control_count": 32,
+  "fixture_scope": "Execute old/new publisher ASTs against omission and semantic falsifiers.\n\nUses preserved real original-profile control bytes. The second profile label is\nadapted solely to exercise both publisher branches, not to claim expanded tests.\n",
+  "valid_fixture_profiles": [
+    "expanded",
+    "original"
+  ],
+  "workflow_sha256": "6c366ab2343aab775576d81821a6c8587b314974f8b604a0704a488334e97ccc"
+}

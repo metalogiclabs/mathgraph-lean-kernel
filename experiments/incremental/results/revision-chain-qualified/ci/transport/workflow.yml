@@ -1,0 +1,94 @@
+name: Qualified revision evidence byte transport
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+defaults:
+  run:
+    shell: bash
+jobs:
+  transport:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Download and authenticate the exact qualified archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir parts
+          gh api /repos/metalogiclabs/mathgraph-lean-kernel/actions/artifacts/12390854795 > original-artifact.json
+          gh api /repos/metalogiclabs/mathgraph-lean-kernel/actions/runs/39679768047 > original-run.json
+          gh api /repos/metalogiclabs/mathgraph-lean-kernel/actions/artifacts/12390854795/zip > qualified-evidence.zip
+          python3 - <<'PYTHON'
+          import hashlib,json,pathlib,zipfile
+          source='d1b22447d23a928ae536cbe838a47fc9682a4b39'
+          expected='878fbeeb4f6241084fd89ca20a2b9b8077c9071e2ada7e2e0b94d054e743d766'
+          archive=pathlib.Path('qualified-evidence.zip')
+          metadata=json.loads(pathlib.Path('original-artifact.json').read_text())
+          run=json.loads(pathlib.Path('original-run.json').read_text())
+          assert run['id']==39679768047 and run['head_sha']==source
+          assert run['status']=='completed' and run['conclusion']=='success'
+          assert metadata['id']==12390854795 and metadata['workflow_run']['head_sha']==source
+          assert metadata['workflow_run']['id']==39679768047
+          assert metadata['size_in_bytes']==1250298163
+          assert metadata['digest']=='sha256:'+expected
+          assert archive.stat().st_size==1250298163
+          digest=hashlib.file_digest(archive.open('rb'),'sha256').hexdigest()
+          assert digest==expected
+          with zipfile.ZipFile(archive) as z:
+              assert z.testzip() is None
+          pieces=[]
+          with archive.open('rb') as f:
+              for index in range(4):
+                  data=f.read(384*1024*1024)
+                  assert data
+                  name=f'qualified-evidence.zip.part{index:02d}'
+                  pathlib.Path('parts',name).write_bytes(data)
+                  pieces.append({'name':name,'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest()})
+              assert f.read(1)==b''
+          manifest={'schema':'qualified-artifact-byte-transport-v1','qualification_run':39679768047,
+                    'qualified_source':source,'original_artifact_id':12390854795,
+                    'original_archive_bytes':archive.stat().st_size,'original_archive_sha256':digest,
+                    'scope':'Lossless transport only; no qualification or performance rerun.', 'parts':pieces}
+          pathlib.Path('transport-manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
+          print(json.dumps(manifest,indent=2))
+          PYTHON
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: revision-chain-transport-part00-d1b2244
+          path: parts/qualified-evidence.zip.part00
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: revision-chain-transport-part01-d1b2244
+          path: parts/qualified-evidence.zip.part01
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: revision-chain-transport-part02-d1b2244
+          path: parts/qualified-evidence.zip.part02
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: revision-chain-transport-part03-d1b2244
+          path: parts/qualified-evidence.zip.part03
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: revision-chain-transport-manifest-d1b2244
+          path: |
+            transport-manifest.json
+            original-artifact.json
+            original-run.json
+          if-no-files-found: error
+          retention-days: 30

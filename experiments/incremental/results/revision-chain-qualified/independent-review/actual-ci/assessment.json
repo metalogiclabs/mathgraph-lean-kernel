@@ -1,0 +1,318 @@
+{
+  "status": "PASS_INDEPENDENT_EXACT_ARTIFACT_REVIEW_AND_FIVE_FALSIFIERS",
+  "qualified": true,
+  "expected_source": "d1b22447d23a928ae536cbe838a47fc9682a4b39",
+  "source_clean_after_review": true,
+  "artifact_zip": {
+    "path": "/workspace/kernel-audit/revision-lifecycle/ci-d1b2244/revision-chain-summaries-d1b2244.zip",
+    "bytes": 1250298163,
+    "sha256": "878fbeeb4f6241084fd89ca20a2b9b8077c9071e2ada7e2e0b94d054e743d766"
+  },
+  "files": {
+    "ci-review.json": {
+      "path": "/workspace/kernel-audit/revision-lifecycle/independent-review/actual-ci-39679768047/ci-review.json",
+      "bytes": 2640541,
+      "sha256": "cff9223a884541908eef3f96208ebd7443a79375e32077f7dd7801f1c32cd8dc"
+    },
+    "inputs.json": {
+      "path": "/workspace/kernel-audit/revision-lifecycle/independent-review/actual-ci-39679768047/inputs.json",
+      "bytes": 2633374,
+      "sha256": "4e3723574069a5cdb08fef74999cfe84ee195cc419ebffdde3d3e07768ef17d5"
+    },
+    "falsifiers.json": {
+      "path": "/workspace/kernel-audit/revision-lifecycle/independent-review/actual-ci-39679768047/falsifiers.json",
+      "bytes": 1193,
+      "sha256": "060f339d4d0677c892787693217a8f65c0222fcf80bede827f0c6cb2504b5bcd"
+    },
+    "reader.stdout": {
+      "path": "/workspace/kernel-audit/revision-lifecycle/independent-review/actual-ci-39679768047/reader.stdout",
+      "bytes": 6234,
+      "sha256": "6a884fe215911fed86835597c74f68e17cab5b1a0de4a4b1ff9019630dd5b0c6"
+    },
+    "reader.stderr": {
+      "path": "/workspace/kernel-audit/revision-lifecycle/independent-review/actual-ci-39679768047/reader.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "falsifiers.stdout": {
+      "path": "/workspace/kernel-audit/revision-lifecycle/independent-review/actual-ci-39679768047/falsifiers.stdout",
+      "bytes": 1039,
+      "sha256": "c62d0d0b006bf1495eaf3c0e000265a3569291a9499917473425070356362e47"
+    },
+    "falsifiers.stderr": {
+      "path": "/workspace/kernel-audit/revision-lifecycle/independent-review/actual-ci-39679768047/falsifiers.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "counts": {
+    "paired_lifetimes": 10,
+    "accepted_revisions": 400,
+    "independently_checked_decisions": 3017800,
+    "signed_object_links_checked": 2440,
+    "compressed_archives_checked": 448
+  },
+  "inputs": {
+    "unique_complete": 16,
+    "accepted": 12,
+    "rejected": 4,
+    "accepted_observations": 410
+  },
+  "controls": {
+    "original": {
+      "required_controls": 32,
+      "actual_controls": 32,
+      "exact_names": true,
+      "summary_sha256": "767872a274b8b2598115e5820baf109406a63448aa72d68cf82b478c3ecb901d",
+      "kernel_negative_inputs": 2,
+      "independently_replayed_topology_transitions": 4,
+      "independent_scc_and_decision_origin_checks": true,
+      "failed_persistence_did_not_promote": true,
+      "cold_semantic_restoration": true,
+      "first_topology_parent_scope": "identifier and all decision origins; prior step2 receipt absent from compact control artifact"
+    },
+    "expanded": {
+      "required_controls": 32,
+      "actual_controls": 32,
+      "exact_names": true,
+      "summary_sha256": "3d4e2a4917c3d2d081e3629899321850b5445abe8be9e34db8ff8bb357393ecc",
+      "kernel_negative_inputs": 2,
+      "independently_replayed_topology_transitions": 4,
+      "independent_scc_and_decision_origin_checks": true,
+      "failed_persistence_did_not_promote": true,
+      "cold_semantic_restoration": true,
+      "first_topology_parent_scope": "identifier and all decision origins; prior step2 receipt absent from compact control artifact"
+    }
+  },
+  "economics_recomputation": {
+    "profiles": 2,
+    "pairs": 10,
+    "accepted_revisions": 400,
+    "economic_series": 88,
+    "bootstrap_resamples": 880000
+  },
+  "validated_economic_statistics": {
+    "expanded": {
+      "continuous_cpu_economics": {
+        "accepted_revisions_per_pair": 40,
+        "apply_median_wall_seconds": "33.563868000000184",
+        "bootstrap_ratio_interval_95": [
+          "0.5425924414585089",
+          "0.6207221805491518"
+        ],
+        "bootstrap_repetitions": 10000,
+        "bootstrap_seed": 20261025,
+        "comparator": "Uninterrupted fresh full Rust commands at genesis and every identical accepted revision; exact input preparation is outside timing.",
+        "direct_median_wall_seconds": "54.792056999999886",
+        "measurement": "cpu_seconds",
+        "median_ratio": "0.6125681319100733",
+        "paired_count": 5,
+        "paired_sequences": 5,
+        "paired_wins": 5,
+        "passed": true,
+        "scope": "Uninterrupted constructor/start through all accepted applies and supported close; no intervening independent oracles or evidence packaging.",
+        "setup_in_timed_update": true,
+        "status": "SPEEDUP"
+      },
+      "continuous_economics": {
+        "accepted_revisions_per_pair": 40,
+        "apply_median_wall_seconds": "33.506680147000225",
+        "bootstrap_ratio_interval_95": [
+          "0.5459226265459083",
+          "0.6197197764443697"
+        ],
+        "bootstrap_repetitions": 10000,
+        "bootstrap_seed": 20261024,
+        "comparator": "Uninterrupted fresh full Rust commands at genesis and every identical accepted revision; exact input preparation is outside timing.",
+        "direct_median_wall_seconds": "54.792482363999625",
+        "measurement": "wall_seconds",
+        "median_ratio": "0.6115196592920776",
+        "paired_count": 5,
+        "paired_sequences": 5,
+        "paired_wins": 5,
+        "passed": true,
+        "scope": "Uninterrupted constructor/start through all accepted applies and supported close; no intervening independent oracles or evidence packaging.",
+        "setup_in_timed_update": true,
+        "status": "SPEEDUP"
+      },
+      "cpu_economics": {
+        "apply_median_wall_seconds": "30.966250999997555",
+        "bootstrap_ratio_interval_95": [
+          "0.5501309393885552",
+          "0.639069369098127"
+        ],
+        "bootstrap_repetitions": 10000,
+        "bootstrap_seed": 20261023,
+        "direct_median_wall_seconds": "53.26472100000013",
+        "measurement": "cpu_seconds",
+        "median_ratio": "0.5813651215782671",
+        "paired_count": 5,
+        "paired_wins": 5,
+        "passed": true,
+        "scope": "Adapter + completed-child resource CPU + live producer/index/kernel procfs CPU; SC_CLK_TCK granularity applies to live daemons. Separately summed observed API intervals; direct full Rust uses completed-child CPU per actual fresh command.",
+        "setup_in_timed_update": true,
+        "status": "SPEEDUP"
+      },
+      "economics": {
+        "accepted_revisions_per_pair": 40,
+        "apply_median_wall_seconds": "31.043096661999698",
+        "bootstrap_ratio_interval_95": [
+          "0.549192176593695",
+          "0.6399065330275535"
+        ],
+        "bootstrap_repetitions": 10000,
+        "bootstrap_seed": 20261022,
+        "claim_status": "OBSERVED_COMPONENT_SUMS",
+        "comparator": "Sum of actual fresh full Rust command wall durations at genesis and every exact sealed revision; process creation and exit included.",
+        "direct_median_wall_seconds": "53.281319673000326",
+        "median_ratio": "0.5826262722567365",
+        "paired_count": 5,
+        "paired_sequences": 5,
+        "paired_wins": 5,
+        "passed": true,
+        "scope": "Sum of measured constructor/start, all accepted apply APIs, supported shutdown. No projected amortization.",
+        "setup_in_timed_update": true,
+        "status": "SPEEDUP"
+      }
+    },
+    "original": {
+      "continuous_cpu_economics": {
+        "accepted_revisions_per_pair": 40,
+        "apply_median_wall_seconds": "8.078343000000018",
+        "bootstrap_ratio_interval_95": [
+          "0.6001656040643621",
+          "0.7118170824025243"
+        ],
+        "bootstrap_repetitions": 10000,
+        "bootstrap_seed": 20261025,
+        "comparator": "Uninterrupted fresh full Rust commands at genesis and every identical accepted revision; exact input preparation is outside timing.",
+        "direct_median_wall_seconds": "11.374423000000093",
+        "measurement": "cpu_seconds",
+        "median_ratio": "0.7102200261059354",
+        "paired_count": 5,
+        "paired_sequences": 5,
+        "paired_wins": 5,
+        "passed": true,
+        "scope": "Uninterrupted constructor/start through all accepted applies and supported close; no intervening independent oracles or evidence packaging.",
+        "setup_in_timed_update": true,
+        "status": "SPEEDUP"
+      },
+      "continuous_economics": {
+        "accepted_revisions_per_pair": 40,
+        "apply_median_wall_seconds": "8.080982401000256",
+        "bootstrap_ratio_interval_95": [
+          "0.5998583173718267",
+          "0.7117174426213444"
+        ],
+        "bootstrap_repetitions": 10000,
+        "bootstrap_seed": 20261024,
+        "comparator": "Uninterrupted fresh full Rust commands at genesis and every identical accepted revision; exact input preparation is outside timing.",
+        "direct_median_wall_seconds": "11.371609591999913",
+        "measurement": "wall_seconds",
+        "median_ratio": "0.710627843457213",
+        "paired_count": 5,
+        "paired_sequences": 5,
+        "paired_wins": 5,
+        "passed": true,
+        "scope": "Uninterrupted constructor/start through all accepted applies and supported close; no intervening independent oracles or evidence packaging.",
+        "setup_in_timed_update": true,
+        "status": "SPEEDUP"
+      },
+      "cpu_economics": {
+        "apply_median_wall_seconds": "8.23714499999998",
+        "bootstrap_ratio_interval_95": [
+          "0.6076692903127465",
+          "0.7215473254185943"
+        ],
+        "bootstrap_repetitions": 10000,
+        "bootstrap_seed": 20261023,
+        "direct_median_wall_seconds": "11.791318000000086",
+        "measurement": "cpu_seconds",
+        "median_ratio": "0.6985771225913778",
+        "paired_count": 5,
+        "paired_wins": 5,
+        "passed": true,
+        "scope": "Adapter + completed-child resource CPU + live producer/index/kernel procfs CPU; SC_CLK_TCK granularity applies to live daemons. Separately summed observed API intervals; direct full Rust uses completed-child CPU per actual fresh command.",
+        "setup_in_timed_update": true,
+        "status": "SPEEDUP"
+      },
+      "economics": {
+        "accepted_revisions_per_pair": 40,
+        "apply_median_wall_seconds": "8.250252304998867",
+        "bootstrap_ratio_interval_95": [
+          "0.6073514204710745",
+          "0.7313949114907906"
+        ],
+        "bootstrap_repetitions": 10000,
+        "bootstrap_seed": 20261022,
+        "claim_status": "OBSERVED_COMPONENT_SUMS",
+        "comparator": "Sum of actual fresh full Rust command wall durations at genesis and every exact sealed revision; process creation and exit included.",
+        "direct_median_wall_seconds": "11.803732247999505",
+        "median_ratio": "0.6989528508152256",
+        "paired_count": 5,
+        "paired_sequences": 5,
+        "paired_wins": 5,
+        "passed": true,
+        "scope": "Sum of measured constructor/start, all accepted apply APIs, supported shutdown. No projected amortization.",
+        "setup_in_timed_update": true,
+        "status": "SPEEDUP"
+      }
+    }
+  },
+  "economic_statistics_copy_source": {
+    "path": "/workspace/kernel-audit/revision-lifecycle/phase-analysis/actual-ci-d1b2244-20261022T0024Z/contextual-brief.json",
+    "sha256": "6d0a12fdbc6061cf01514c476fea9ca1277b9f054be55e869294a1c68afa201b",
+    "scope": "Statistics were separately extracted by phase analyst; the full reader independently recomputed and exactly compared all source-report statistics before PASS."
+  },
+  "falsifiers": {
+    "status": "PASS_DIRECTED_FAIL_CLOSED_FALSIFIERS",
+    "qualified": false,
+    "mutation_scope": "Temporary in-memory artifact views; no source or full-input file was changed/copied.",
+    "cases": [
+      {
+        "case": "fake-passed-zero-work",
+        "status": "REFUSED",
+        "reason": "ValueError: positive integer actual sequence counts required"
+      },
+      {
+        "case": "missing-complete-input-object",
+        "status": "REFUSED",
+        "reason": "ValueError: missing artifact object: revision-chain/witnesses/objects/206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882.gz"
+      },
+      {
+        "case": "changed-compressed-input-digest",
+        "status": "REFUSED",
+        "reason": "ValueError: compressed archive SHA/size mismatch: revision-chain/witnesses/objects/206d57043fac91e0394adb96a0dd51d2940cc03cda0d59e2feff27fd3e502882.gz"
+      },
+      {
+        "case": "raw-result-parent-substitution",
+        "status": "REFUSED",
+        "reason": "ValueError: raw accepted result/export/seals differs"
+      },
+      {
+        "case": "all-changed-input-descriptors-omitted",
+        "status": "REFUSED",
+        "reason": "ValueError: missing complete actual accepted input coverage"
+      }
+    ]
+  },
+  "reader_files_sha256": {
+    "reviewer.py": "dc76f329453aad69cd577ca0f8a7a53bc724184f5c5c2d8d223ea923529e53e9",
+    "artifacts.py": "4f72bc5df45cddedba327544d75129cc8533ed54fe405983cd42d7a6c288ac81",
+    "controls.py": "293c80b6e29bd0a3d6118ca7d1e1a1c2be74b909422b2ebc1ef8f987749906bf",
+    "reuse_rule.py": "cb60ace76bdbf25ded9a0e4cfb5884b4db870cb3210e13dedc6cec98dfa04c9e",
+    "economics.py": "911ca0ea4d656d747402a251d32ef158294d55a21986fe8a345f895fdbcbc90a"
+  },
+  "reader_files_changed": false,
+  "source_or_repo_changed": false,
+  "actual_reader_failures": [],
+  "fresh_kernels_rerun_here": false,
+  "historical_hmac_reauthenticated": false,
+  "issuer_hmac_scope": "Observed private-key CI audit flags; this public reviewer checks object addresses, domains, source/policy/parent links only.",
+  "input_fingerprint_scope": "Complete raw native/Python full-index witnesses and independent SCC/selection replay; declaration own-hash/export bridge remains the frozen tool witness.",
+  "control_topology_scope": "Prior step2 receipt is absent from compact control artifact; first topology parent is checked by identifier and all decision origins; subsequent links are exact.",
+  "prior_tests": {
+    "count": 33,
+    "status": "PASS in preserved frozen-reader logs; unchanged reader hashes checked before and after actual review; unit tests were not rerun in this actual-artifact turn"
+  }
+}

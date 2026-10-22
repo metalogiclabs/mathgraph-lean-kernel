@@ -1,0 +1,13 @@
+.........F.
+======================================================================
+FAIL: test_parser_rejects_changed_unused_malformed_node_with_zero_selected (__main__.SourceDeltaAuthorityTests.test_parser_rejects_changed_unused_malformed_node_with_zero_selected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/test_source_delta_authority.py", line 149, in test_parser_rejects_changed_unused_malformed_node_with_zero_selected
+    self.assertTrue(checker.is_file(), f'real checker missing: {checker}')
+AssertionError: False is not true : real checker missing: /workspace/mathgraph-lean-kernel-lifecycle/target/release/check-selected
+
+----------------------------------------------------------------------
+Ran 11 tests in 0.008s
+
+FAILED (failures=1)

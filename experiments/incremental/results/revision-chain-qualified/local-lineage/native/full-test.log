@@ -1,0 +1,134 @@
+   Compiling sokonanoda v0.5.0 (/workspace/mathgraph-lean-kernel-lifecycle)
+warning: constant `PROMOTED_CAPABILITY_IDS` is never used
+  --> src/flash.rs:11:18
+   |
+11 | pub(crate) const PROMOTED_CAPABILITY_IDS: &[&str] = &[
+   |                  ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `sokonanoda` (lib) generated 1 warning
+warning: `sokonanoda` (lib test) generated 1 warning (1 duplicate)
+    Finished `release` profile [optimized] target(s) in 2m 19s
+     Running unittests src/lib.rs (/workspace/mathgraph-lean-kernel/target/release/deps/sokonanoda-d21f655d17522168)
+
+running 66 tests
+test eval::qckn_eval_var_fast_tests::direct_var_dispatch_matches_only_variables ... ok
+test identity::session_tests::chained_identity_refuses_previous_revision_dag_overwrite_and_stays_poisoned ... ok
+test identity::session_tests::retained_added_names_require_full_builtin_identity_scan ... ok
+test identity::session_tests::chained_topology_fallback_refreshes_the_graph_before_an_unrelated_edit ... ok
+test identity::session_tests::chained_cumulative_edits_and_restore_keep_the_immediate_predecessor ... ok
+test identity::session_tests::session_empty_and_unused_dag_updates_preserve_index_but_require_downstream_parser ... ok
+test identity::session_tests::retained_graph_edge_changes_and_new_cycles_fall_back_to_full_index ... ok
+test identity::session_tests::session_refuses_duplicate_missing_new_metadata_complex_and_changed_kind ... ok
+test identity::session_tests::retained_fixed_topology_recloses_affected_sccs_and_matches_fresh_index ... ok
+test identity_support::tests::canonical_object_keys_follow_unicode_scalar_order ... ok
+test identity_support::tests::canonical_strings_match_python_ascii_encoding ... ok
+test identity_support::tests::duplicate_keys_are_rejected_at_every_depth ... ok
+test identity_support::tests::fingerprints_use_sha256_and_lowercase_hex ... ok
+test identity::session_tests::sparse_transport_patch_matches_full_index_and_refuses_topology_drift ... ok
+test identity_support::tests::uncertain_numeric_forms_are_explicitly_unsupported ... ok
+test parser::semver_tests::test_ng ... ok
+test identity::session_tests::session_replacement_matches_fresh_genuine_parser_and_preserves_dependency_schedule ... ok
+test parser::semver_tests::test_ok ... ok
+test parser::tests::chained_parser_parses_unused_malformed_rows_under_zero_selection_and_poisoning ... ok
+test parser::tests::chained_parser_cannot_overwrite_dag_nodes_from_a_previous_revision ... ok
+test parser::tests::chained_parser_poison_cannot_be_bypassed_through_the_legacy_consuming_api ... ok
+test parser::tests::ignore_binder_metadata_in_both_parser_paths ... ok
+test tc::selected_declaration_tests::rejects_invalid_selection_before_checking ... ok
+test parser::tests::reject_undefined_binder_type - should panic ... ok
+test tests::level::debug_test0 ... ok
+test tests::level::debug_test1 ... ok
+test tests::level::eq_many_test1 ... ok
+test tests::level::eq_test1 ... ok
+test tests::level::leq_test0 ... ok
+test tests::level::leq_test1 ... ok
+test tests::level::leq_test2 ... ok
+test parser::tests::chained_parser_checks_cumulative_edits_and_restores_in_retained_slots ... ok
+test tests::level::leq_test3 ... ok
+test tests::level::leq_test4 ... ok
+test tests::level::leq_test_imax_imax ... ok
+test tests::natlit::nat_add_eq ... ok
+test tests::natlit::nat_ble_eq ... ok
+test tests::natlit::nat_div_add_mod ... ok
+test tests::natlit::nat_div_eq ... ok
+test tests::level::leq_test7 ... ok
+test tests::level::leq_test6 ... ok
+test tests::level::leq_test5 ... ok
+test tests::natlit::nat_gcd_eq ... ok
+test tests::natlit::nat_land_eq ... ok
+test tests::natlit::nat_mod_eq ... ok
+test tests::natlit::nat_lor_eq ... ok
+test tests::natlit::nat_pow_eq ... ok
+test tests::natlit::nat_mul_eq ... ok
+test tests::natlit::nat_shl_eq ... ok
+test tests::natlit::nat_div_le_self ... ok
+test tests::natlit::nat_shr_eq ... ok
+test tests::natlit::nat_sub_eq ... ok
+test tests::natlit::nat_xor_eq ... ok
+test tests::util::check_empty ... ok
+test tests::natlit::nat_mod_eq_sub_mod ... ok
+test tests::util::check_level_index_out_of_order ... ok
+test tests::util::check_sparse_name_index ... ok
+test tests::util::check_k_reduce_depth_alias - should panic ... ok
+test tests::util::reject_is_prop_when_inferred_type_is_not_a_sort - should panic ... ok
+test tests::util::reject_missing_negative_fixture - should panic ... ok
+test tests::util::reject_nonuniform_inductive_occurrence_before_reduction - should panic ... ok
+test tests::util::check_proof_irrel_under_bvar ... ok
+test tests::util::check_proj_from_prop - should panic ... ok
+test tests::util::reject_rec_rule_with_forged_lambda_domains - should panic ... ok
+test tests::util::hash_test0 ... ok
+test tests::util::reject_unlisted_recursor - should panic ... ok
+
+test result: ok. 66 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running unittests src/bin/check_selected.rs (/workspace/mathgraph-lean-kernel/target/release/deps/check_selected-210d66d6744a80a1)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/bin/check_selected_retained_session.rs (/workspace/mathgraph-lean-kernel/target/release/deps/check_selected_retained_session-d1a53f7bf1555b60)
+
+running 2 tests
+test tests::sha_guard_refuses_uppercase_short_and_non_hex ... ok
+test tests::request_decoder_refuses_unknown_duplicate_and_missing_fields ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/bin/export_index.rs (/workspace/mathgraph-lean-kernel/target/release/deps/export_index-77b60fe80f64c30c)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/bin/index_session.rs (/workspace/mathgraph-lean-kernel/target/release/deps/index_session-166561006b5b343e)
+
+running 1 test
+test tests::request_decoder_refuses_duplicates_unknown_fields_and_controls ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (/workspace/mathgraph-lean-kernel/target/release/deps/sokonanoda-282c69efed026b6f)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/arena.rs (/workspace/mathgraph-lean-kernel/target/release/deps/arena-e8e62ae71aa3d1c4)
+
+running 1 test
+test arena_fast_tier ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests sokonanoda
+
+running 4 tests
+test src/inductive.rs - inductive::InductiveCheckState::nested_to_unspecialized_ty (line 282) ... ignored
+test src/inductive.rs - inductive::InductiveCheckState::nested_to_unspecialized_ty (line 287) ... ignored
+test src/inductive.rs - inductive::TypeChecker<'x,'t,'p>::mk_specialized_rec_to_unspecialized_map (line 1721) ... ignored
+test src/lib.rs - (line 2) ... ignored
+
+test result: ok. 0 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

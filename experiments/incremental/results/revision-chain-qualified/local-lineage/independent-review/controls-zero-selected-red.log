@@ -1,0 +1,17 @@
+test_exact_required_control_names_cannot_be_self_declared (__main__.ControlsContracts.test_exact_required_control_names_cannot_be_self_declared) ... ok
+test_profile_result_substitution_refuses (__main__.ControlsContracts.test_profile_result_substitution_refuses) ... ok
+test_wrong_source_duplicate_and_false_control_refuse (__main__.ControlsContracts.test_wrong_source_duplicate_and_false_control_refuse) ... ok
+test_zero_selected_negative_cannot_hide_checked_or_foreign_evidence (__main__.ControlsContracts.test_zero_selected_negative_cannot_hide_checked_or_foreign_evidence) ... FAIL
+
+======================================================================
+FAIL: test_zero_selected_negative_cannot_hide_checked_or_foreign_evidence (__main__.ControlsContracts.test_zero_selected_negative_cannot_hide_checked_or_foreign_evidence)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/kernel-audit/revision-lifecycle/independent-review/test_controls.py", line 45, in test_zero_selected_negative_cannot_hide_checked_or_foreign_evidence
+    self.assertTrue(callable(fn),'zero-selected negative must carry every parent witness')
+AssertionError: False is not true : zero-selected negative must carry every parent witness
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.001s
+
+FAILED (failures=1)

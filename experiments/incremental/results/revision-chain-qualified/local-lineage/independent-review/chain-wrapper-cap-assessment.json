@@ -1,0 +1,29 @@
+{
+  "helper_before_sha256": "c2364b13eaa9f07565def8aad4bf238c2d889345fe4d992b6ef00907e240d26f",
+  "actual_expanded": {
+    "path": "/workspace/kernel-audit/revision-lifecycle/python-expanded-green/summary.json",
+    "sha256": "78b96dae47d17fea34e3ebd705790f8ab1715fede68497bf270b836325724a9e",
+    "bytes": 86348931
+  },
+  "actual_original": {
+    "path": "/workspace/kernel-audit/revision-lifecycle/python-green-v2/summary.json",
+    "sha256": "a86ffdf810f7c8154ce4ec69cff5308e9a32c7d3092ca748e36a79edc6e95fb7",
+    "bytes": 18279663
+  },
+  "streamed_gzip_fixture": {
+    "path": "/workspace/kernel-audit/revision-lifecycle/independent-review/chain-wrapper-cap-fixture-actual-expanded.json.gz",
+    "sha256": "a2ca5a2d4b773231141892da7f842ed27420a40ef6f60c26879b84494f11a0eb",
+    "bytes": 12628718
+  },
+  "status": "PASS_ACTUAL_EXPANDED_CHAIN_WRAPPER_CAP",
+  "helper_after_sha256": "293c80b6e29bd0a3d6118ca7d1e1a1c2be74b909422b2ebc1ef8f987749906bf",
+  "decoded_cap_bytes": 536870912,
+  "scope": "Only the exact four source-frozen revision-chain-tests and revision-chain-controls compressed summary wrappers receive512MiB manifest allowance. Control summary decode512MiB and generic artifact/log caps unchanged.",
+  "red_log": "chain-wrapper-cap-red.log",
+  "green_log": "chain-wrapper-cap-green.log",
+  "tests": {
+    "cap_contracts": 5,
+    "existing_controls_contracts": 4
+  },
+  "supersedes": "controls-cap-assessment.json: prior chain-wrapper64MiB exception was contradicted by actual86,348,931-byte expanded cold probe."
+}

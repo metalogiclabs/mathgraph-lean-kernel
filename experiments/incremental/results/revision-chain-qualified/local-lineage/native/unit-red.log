@@ -1,0 +1,258 @@
+   Compiling sokonanoda v0.5.0 (/workspace/mathgraph-lean-kernel-lifecycle)
+error[E0599]: no method named `check_retained_simple_chained_delta` found for struct `parser::Parser<'a, R>` in the current scope
+    --> src/parser.rs:1790:33
+     |
+  40 | pub struct Parser<'a, R: BufRead> {
+     | --------------------------------- method `check_retained_simple_chained_delta` not found for this struct
+...
+1790 |             let result = parser.check_retained_simple_chained_delta(
+     |                          -------^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+help: there is a method `check_retained_simple_delta` with a similar name
+     |
+1790 -             let result = parser.check_retained_simple_chained_delta(
+1790 +             let result = parser.check_retained_simple_delta(
+     |
+
+error[E0599]: no method named `check_retained_simple_chained_delta` found for struct `parser::Parser<'a, R>` in the current scope
+    --> src/parser.rs:1801:29
+     |
+  40 | pub struct Parser<'a, R: BufRead> {
+     | --------------------------------- method `check_retained_simple_chained_delta` not found for this struct
+...
+1801 |         let result = parser.check_retained_simple_chained_delta(b"", &[], &[0,1]).unwrap();
+     |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+help: there is a method `check_retained_simple_delta` with a similar name
+     |
+1801 -         let result = parser.check_retained_simple_chained_delta(b"", &[], &[0,1]).unwrap();
+1801 +         let result = parser.check_retained_simple_delta(b"", &[], &[0,1]).unwrap();
+     |
+
+error[E0599]: no method named `check_retained_simple_chained_delta` found for struct `parser::Parser<'a, R>` in the current scope
+    --> src/parser.rs:1810:16
+     |
+  40 | pub struct Parser<'a, R: BufRead> {
+     | --------------------------------- method `check_retained_simple_chained_delta` not found for this struct
+...
+1810 |         parser.check_retained_simple_chained_delta(b"", &[], &[]).unwrap();
+     |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+help: there is a method `check_retained_simple_delta` with a similar name
+     |
+1810 -         parser.check_retained_simple_chained_delta(b"", &[], &[]).unwrap();
+1810 +         parser.check_retained_simple_delta(b"", &[], &[]).unwrap();
+     |
+
+error[E0599]: no method named `check_retained_simple_chained_delta` found for struct `parser::Parser<'a, R>` in the current scope
+    --> src/parser.rs:1812:20
+     |
+  40 | pub struct Parser<'a, R: BufRead> {
+     | --------------------------------- method `check_retained_simple_chained_delta` not found for this struct
+...
+1812 |             parser.check_retained_simple_chained_delta(
+     |             -------^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+help: there is a method `check_retained_simple_delta` with a similar name
+     |
+1812 -             parser.check_retained_simple_chained_delta(
+1812 +             parser.check_retained_simple_delta(
+     |
+
+error[E0599]: no method named `check_retained_simple_chained_delta` found for struct `parser::Parser<'a, R>` in the current scope
+    --> src/parser.rs:1816:24
+     |
+  40 | pub struct Parser<'a, R: BufRead> {
+     | --------------------------------- method `check_retained_simple_chained_delta` not found for this struct
+...
+1816 |         assert!(parser.check_retained_simple_chained_delta(b"", &[], &[]).is_err());
+     |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+help: there is a method `check_retained_simple_delta` with a similar name
+     |
+1816 -         assert!(parser.check_retained_simple_chained_delta(b"", &[], &[]).is_err());
+1816 +         assert!(parser.check_retained_simple_delta(b"", &[], &[]).is_err());
+     |
+
+error[E0599]: no method named `check_retained_simple_chained_delta` found for struct `parser::Parser<'a, R>` in the current scope
+    --> src/parser.rs:1824:16
+     |
+  40 | pub struct Parser<'a, R: BufRead> {
+     | --------------------------------- method `check_retained_simple_chained_delta` not found for this struct
+...
+1824 |         parser.check_retained_simple_chained_delta(b"{\"ie\":3,\"sort\":0}\n", &[], &[]).unwrap();
+     |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+help: there is a method `check_retained_simple_delta` with a similar name
+     |
+1824 -         parser.check_retained_simple_chained_delta(b"{\"ie\":3,\"sort\":0}\n", &[], &[]).unwrap();
+1824 +         parser.check_retained_simple_delta(b"{\"ie\":3,\"sort\":0}\n", &[], &[]).unwrap();
+     |
+
+error[E0599]: no method named `check_retained_simple_chained_delta` found for struct `parser::Parser<'a, R>` in the current scope
+    --> src/parser.rs:1826:20
+     |
+  40 | pub struct Parser<'a, R: BufRead> {
+     | --------------------------------- method `check_retained_simple_chained_delta` not found for this struct
+...
+1826 |             parser.check_retained_simple_chained_delta(b"{\"ie\":3,\"sort\":1}\n", &[], &[]).is_err()
+     |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+help: there is a method `check_retained_simple_delta` with a similar name
+     |
+1826 -             parser.check_retained_simple_chained_delta(b"{\"ie\":3,\"sort\":1}\n", &[], &[]).is_err()
+1826 +             parser.check_retained_simple_delta(b"{\"ie\":3,\"sort\":1}\n", &[], &[]).is_err()
+     |
+
+error[E0599]: no method named `check_retained_simple_chained_delta` found for struct `parser::Parser<'a, R>` in the current scope
+    --> src/parser.rs:1829:24
+     |
+  40 | pub struct Parser<'a, R: BufRead> {
+     | --------------------------------- method `check_retained_simple_chained_delta` not found for this struct
+...
+1829 |         assert!(parser.check_retained_simple_chained_delta(b"", &[], &[]).is_err());
+     |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+help: there is a method `check_retained_simple_delta` with a similar name
+     |
+1829 -         assert!(parser.check_retained_simple_chained_delta(b"", &[], &[]).is_err());
+1829 +         assert!(parser.check_retained_simple_delta(b"", &[], &[]).is_err());
+     |
+
+error[E0599]: no method named `apply_chained_delta` found for struct `identity::IdentityBuilder` in the current scope
+    --> src/identity.rs:1231:30
+     |
+ 131 | pub struct IdentityBuilder {
+     | -------------------------- method `apply_chained_delta` not found for this struct
+...
+1231 |         let first = identity.apply_chained_delta(
+     |                     ---------^^^^^^^^^^^^^^^^^^^
+     |
+help: there is a method `apply_delta` with a similar name
+     |
+1231 -         let first = identity.apply_chained_delta(
+1231 +         let first = identity.apply_delta(
+     |
+
+error[E0599]: no method named `apply_chained_delta` found for struct `identity::IdentityBuilder` in the current scope
+    --> src/identity.rs:1236:31
+     |
+ 131 | pub struct IdentityBuilder {
+     | -------------------------- method `apply_chained_delta` not found for this struct
+...
+1236 |         let second = identity.apply_chained_delta(&(change_c + "\n")).unwrap();
+     |                               ^^^^^^^^^^^^^^^^^^^
+     |
+help: there is a method `apply_delta` with a similar name
+     |
+1236 -         let second = identity.apply_chained_delta(&(change_c + "\n")).unwrap();
+1236 +         let second = identity.apply_delta(&(change_c + "\n")).unwrap();
+     |
+
+error[E0599]: no method named `apply_chained_delta` found for struct `identity::IdentityBuilder` in the current scope
+    --> src/identity.rs:1242:33
+     |
+ 131 | pub struct IdentityBuilder {
+     | -------------------------- method `apply_chained_delta` not found for this struct
+...
+1242 |         let restored = identity.apply_chained_delta(&(replacement(0) + "\n")).unwrap();
+     |                                 ^^^^^^^^^^^^^^^^^^^
+     |
+help: there is a method `apply_delta` with a similar name
+     |
+1242 -         let restored = identity.apply_chained_delta(&(replacement(0) + "\n")).unwrap();
+1242 +         let restored = identity.apply_delta(&(replacement(0) + "\n")).unwrap();
+     |
+
+error[E0599]: no method named `apply_chained_delta` found for struct `identity::IdentityBuilder` in the current scope
+    --> src/identity.rs:1249:29
+     |
+ 131 | pub struct IdentityBuilder {
+     | -------------------------- method `apply_chained_delta` not found for this struct
+...
+1249 |         let noop = identity.apply_chained_delta("").unwrap();
+     |                             ^^^^^^^^^^^^^^^^^^^
+     |
+help: there is a method `apply_delta` with a similar name
+     |
+1249 -         let noop = identity.apply_chained_delta("").unwrap();
+1249 +         let noop = identity.apply_delta("").unwrap();
+     |
+
+error[E0599]: no method named `apply_chained_delta` found for struct `identity::IdentityBuilder` in the current scope
+    --> src/identity.rs:1259:30
+     |
+ 131 | pub struct IdentityBuilder {
+     | -------------------------- method `apply_chained_delta` not found for this struct
+...
+1259 |         let first = identity.apply_chained_delta(&(cut_edge + "\n")).unwrap();
+     |                              ^^^^^^^^^^^^^^^^^^^
+     |
+help: there is a method `apply_delta` with a similar name
+     |
+1259 -         let first = identity.apply_chained_delta(&(cut_edge + "\n")).unwrap();
+1259 +         let first = identity.apply_delta(&(cut_edge + "\n")).unwrap();
+     |
+
+error[E0599]: no method named `apply_chained_delta` found for struct `identity::IdentityBuilder` in the current scope
+    --> src/identity.rs:1262:31
+     |
+ 131 | pub struct IdentityBuilder {
+     | -------------------------- method `apply_chained_delta` not found for this struct
+...
+1262 |         let second = identity.apply_chained_delta(
+     |                      ---------^^^^^^^^^^^^^^^^^^^
+     |
+help: there is a method `apply_delta` with a similar name
+     |
+1262 -         let second = identity.apply_chained_delta(
+1262 +         let second = identity.apply_delta(
+     |
+
+error[E0599]: no method named `apply_chained_delta` found for struct `identity::IdentityBuilder` in the current scope
+    --> src/identity.rs:1273:18
+     |
+ 131 | pub struct IdentityBuilder {
+     | -------------------------- method `apply_chained_delta` not found for this struct
+...
+1273 |         identity.apply_chained_delta("{\"ie\":2,\"sort\":0}\n").unwrap();
+     |                  ^^^^^^^^^^^^^^^^^^^
+     |
+help: there is a method `apply_delta` with a similar name
+     |
+1273 -         identity.apply_chained_delta("{\"ie\":2,\"sort\":0}\n").unwrap();
+1273 +         identity.apply_delta("{\"ie\":2,\"sort\":0}\n").unwrap();
+     |
+
+error[E0599]: no method named `apply_chained_delta` found for struct `identity::IdentityBuilder` in the current scope
+    --> src/identity.rs:1274:26
+     |
+ 131 | pub struct IdentityBuilder {
+     | -------------------------- method `apply_chained_delta` not found for this struct
+...
+1274 |         assert!(identity.apply_chained_delta("{\"ie\":2,\"sort\":0}\n").is_err());
+     |                          ^^^^^^^^^^^^^^^^^^^
+     |
+help: there is a method `apply_delta` with a similar name
+     |
+1274 -         assert!(identity.apply_chained_delta("{\"ie\":2,\"sort\":0}\n").is_err());
+1274 +         assert!(identity.apply_delta("{\"ie\":2,\"sort\":0}\n").is_err());
+     |
+
+error[E0599]: no method named `apply_chained_delta` found for struct `identity::IdentityBuilder` in the current scope
+    --> src/identity.rs:1275:26
+     |
+ 131 | pub struct IdentityBuilder {
+     | -------------------------- method `apply_chained_delta` not found for this struct
+...
+1275 |         assert!(identity.apply_chained_delta("").is_err());
+     |                          ^^^^^^^^^^^^^^^^^^^
+     |
+help: there is a method `apply_delta` with a similar name
+     |
+1275 -         assert!(identity.apply_chained_delta("").is_err());
+1275 +         assert!(identity.apply_delta("").is_err());
+     |
+
+For more information about this error, try `rustc --explain E0599`.
+error: could not compile `sokonanoda` (lib test) due to 17 previous errors

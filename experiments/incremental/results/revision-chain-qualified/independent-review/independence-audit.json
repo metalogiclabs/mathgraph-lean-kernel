@@ -1,0 +1,64 @@
+{
+  "status": "PASS_STANDARD_LIBRARY_AND_INDEPENDENT_LOCAL_HELPERS_ONLY",
+  "files": {
+    "reviewer.py": {
+      "sha256": "dc76f329453aad69cd577ca0f8a7a53bc724184f5c5c2d8d223ea923529e53e9",
+      "imports": [
+        "argparse",
+        "artifacts",
+        "controls",
+        "copy",
+        "economics",
+        "gzip",
+        "hashlib",
+        "json",
+        "pathlib",
+        "re",
+        "reuse_rule",
+        "subprocess",
+        "sys"
+      ]
+    },
+    "artifacts.py": {
+      "sha256": "4f72bc5df45cddedba327544d75129cc8533ed54fe405983cd42d7a6c288ac81",
+      "imports": [
+        "contextlib",
+        "gzip",
+        "hashlib",
+        "io",
+        "json",
+        "pathlib",
+        "stat",
+        "zipfile"
+      ]
+    },
+    "controls.py": {
+      "sha256": "293c80b6e29bd0a3d6118ca7d1e1a1c2be74b909422b2ebc1ef8f987749906bf",
+      "imports": [
+        "artifacts",
+        "ast",
+        "gzip",
+        "hashlib",
+        "re",
+        "reuse_rule",
+        "subprocess"
+      ]
+    },
+    "reuse_rule.py": {
+      "sha256": "cb60ace76bdbf25ded9a0e4cfb5884b4db870cb3210e13dedc6cec98dfa04c9e",
+      "imports": [
+        "hashlib",
+        "json"
+      ]
+    },
+    "economics.py": {
+      "sha256": "911ca0ea4d656d747402a251d32ef158294d55a21986fe8a345f895fdbcbc90a",
+      "imports": [
+        "json",
+        "math",
+        "random",
+        "statistics"
+      ]
+    }
+  }
+}

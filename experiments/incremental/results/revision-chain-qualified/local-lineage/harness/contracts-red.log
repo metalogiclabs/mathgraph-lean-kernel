@@ -1,0 +1,41 @@
+test_cumulative_sequence_restores_each_body_against_immediate_parent (__main__.self_test.<locals>.RevisionMeasurementContracts.test_cumulative_sequence_restores_each_body_against_immediate_parent) ... FAIL
+test_lifetime_uses_measured_intervals_and_charges_genesis_fresh_check (__main__.self_test.<locals>.RevisionMeasurementContracts.test_lifetime_uses_measured_intervals_and_charges_genesis_fresh_check) ... FAIL
+test_link_audit_refuses_skipped_revision_parent_or_missing_capture (__main__.self_test.<locals>.RevisionMeasurementContracts.test_link_audit_refuses_skipped_revision_parent_or_missing_capture) ... FAIL
+
+======================================================================
+FAIL: test_cumulative_sequence_restores_each_body_against_immediate_parent (__main__.self_test.<locals>.RevisionMeasurementContracts.test_cumulative_sequence_restores_each_body_against_immediate_parent)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/benchmark_revision_chain.py", line 31, in test_cumulative_sequence_restores_each_body_against_immediate_parent
+    plan = self.feature('revision_plan')(sources, 2)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/benchmark_revision_chain.py", line 24, in feature
+    self.assertTrue(callable(globals().get(name)), "missing revision benchmark capability: " + name)
+AssertionError: False is not true : missing revision benchmark capability: revision_plan
+
+======================================================================
+FAIL: test_lifetime_uses_measured_intervals_and_charges_genesis_fresh_check (__main__.self_test.<locals>.RevisionMeasurementContracts.test_lifetime_uses_measured_intervals_and_charges_genesis_fresh_check)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/benchmark_revision_chain.py", line 41, in test_lifetime_uses_measured_intervals_and_charges_genesis_fresh_check
+    measured = self.feature('lifecycle_components')(2.0, [0.2, 0.3], 0.1, 0.8, [0.9, 1.1])
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/benchmark_revision_chain.py", line 24, in feature
+    self.assertTrue(callable(globals().get(name)), "missing revision benchmark capability: " + name)
+AssertionError: False is not true : missing revision benchmark capability: lifecycle_components
+
+======================================================================
+FAIL: test_link_audit_refuses_skipped_revision_parent_or_missing_capture (__main__.self_test.<locals>.RevisionMeasurementContracts.test_link_audit_refuses_skipped_revision_parent_or_missing_capture)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/benchmark_revision_chain.py", line 55, in test_link_audit_refuses_skipped_revision_parent_or_missing_capture
+    audit = self.feature('validate_link')
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/benchmark_revision_chain.py", line 24, in feature
+    self.assertTrue(callable(globals().get(name)), "missing revision benchmark capability: " + name)
+AssertionError: False is not true : missing revision benchmark capability: validate_link
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.012s
+
+FAILED (failures=3)

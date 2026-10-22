@@ -1,0 +1,21 @@
+{
+  "method": "Called actual verify_summary with allow_smoke=True on a temporary minimal report; no source edits.",
+  "fixture": {
+    "schema": "mathgraph.authenticated-revision-chain-lifecycle.v1",
+    "source_sha": "6e70003228f85a1e5efdbfa2771c8f260c86222c",
+    "completed": true,
+    "correctness_passed": true,
+    "source_and_binary_stable": true,
+    "source_sha256": {},
+    "binary_sha256": "Only full_checker=/bin/true with its actual file digest",
+    "profiles": {},
+    "repetitions": 0,
+    "cycles": 0
+  },
+  "observed": {
+    "status": "PASS_SMOKE_EVIDENCE_UNQUALIFIED",
+    "paired_lifetimes": 0,
+    "accepted_revisions": 0,
+    "historical_hmac_reauthenticated": false
+  }
+}

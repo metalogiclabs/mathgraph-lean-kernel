@@ -1,0 +1,38 @@
+FFF
+======================================================================
+FAIL: test_actual_smoke_arithmetic_and_all_bootstraps (test_economics.EconomicEvidenceTests.test_actual_smoke_arithmetic_and_all_bootstraps)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/kernel-audit/revision-lifecycle/independent-review/test_economics.py", line 26, in test_actual_smoke_arithmetic_and_all_bootstraps
+    result = self.helper().validate_economics(self.fixture())
+             ^^^^^^^^^^^^^
+  File "/workspace/kernel-audit/revision-lifecycle/independent-review/test_economics.py", line 16, in helper
+    self.assertTrue(path.is_file(), 'missing independent arithmetic verifier')
+AssertionError: False is not true : missing independent arithmetic verifier
+
+======================================================================
+FAIL: test_known_constant_bootstrap_has_exact_bounds (test_economics.EconomicEvidenceTests.test_known_constant_bootstrap_has_exact_bounds)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/kernel-audit/revision-lifecycle/independent-review/test_economics.py", line 53, in test_known_constant_bootstrap_has_exact_bounds
+    result = self.helper().paired_statistics([0.5] * 5, [1.0] * 5, seed=20261024)
+             ^^^^^^^^^^^^^
+  File "/workspace/kernel-audit/revision-lifecycle/independent-review/test_economics.py", line 16, in helper
+    self.assertTrue(path.is_file(), 'missing independent arithmetic verifier')
+AssertionError: False is not true : missing independent arithmetic verifier
+
+======================================================================
+FAIL: test_real_summary_mutations_are_rejected (test_economics.EconomicEvidenceTests.test_real_summary_mutations_are_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/kernel-audit/revision-lifecycle/independent-review/test_economics.py", line 33, in test_real_summary_mutations_are_rejected
+    helper = self.helper()
+             ^^^^^^^^^^^^^
+  File "/workspace/kernel-audit/revision-lifecycle/independent-review/test_economics.py", line 16, in helper
+    self.assertTrue(path.is_file(), 'missing independent arithmetic verifier')
+AssertionError: False is not true : missing independent arithmetic verifier
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.001s
+
+FAILED (failures=3)

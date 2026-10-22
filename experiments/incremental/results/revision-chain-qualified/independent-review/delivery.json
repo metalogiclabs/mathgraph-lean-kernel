@@ -1,0 +1,55 @@
+{
+  "status": "READY_FOR_ACTUAL_CI_ARTIFACT",
+  "expected_source": "d1b22447d23a928ae536cbe838a47fc9682a4b39",
+  "cli": [
+    "python3",
+    "/workspace/kernel-audit/revision-lifecycle/independent-review/reviewer.py",
+    "--artifact",
+    "COMPACT.zip",
+    "--repo",
+    "/workspace/mathgraph-lean-kernel-lifecycle",
+    "--source",
+    "d1b22447d23a928ae536cbe838a47fc9682a4b39",
+    "--output",
+    "ci-review.json"
+  ],
+  "source_branch_edited": false,
+  "standard_library_only": true,
+  "tests_passed": 33,
+  "targeted_actual_fixture_falsifiers": 5,
+  "smoke": {
+    "status": "PASS_SMOKE_UNQUALIFIED",
+    "qualified": false,
+    "profiles": [
+      "original",
+      "expanded"
+    ],
+    "paired_lifetimes": 2,
+    "accepted_revisions": 8,
+    "independently_checked_decisions": 60356,
+    "compressed_archives_checked": 54,
+    "unique_complete_accepted_inputs": 10,
+    "controls_scope": "OMITTED_CONTROLS_SMOKE_UNQUALIFIED"
+  },
+  "historical_hmac_reauthenticated": false,
+  "fresh_kernels_rerun_here": false,
+  "actual_ci_zip_validation": "Pending actual CI artifact; no qualified CI result claimed",
+  "evidence": [
+    "tests-green.log",
+    "falsifiers.json",
+    "smoke-review.json",
+    "inputs.json",
+    "independence-audit.json",
+    "artifact-adversarial-red.log",
+    "artifact-adversarial-green.log"
+  ],
+  "reader_files_sha256": {
+    "reviewer.py": "dc76f329453aad69cd577ca0f8a7a53bc724184f5c5c2d8d223ea923529e53e9",
+    "artifacts.py": "4f72bc5df45cddedba327544d75129cc8533ed54fe405983cd42d7a6c288ac81",
+    "controls.py": "293c80b6e29bd0a3d6118ca7d1e1a1c2be74b909422b2ebc1ef8f987749906bf",
+    "reuse_rule.py": "cb60ace76bdbf25ded9a0e4cfb5884b4db870cb3210e13dedc6cec98dfa04c9e",
+    "economics.py": "911ca0ea4d656d747402a251d32ef158294d55a21986fe8a345f895fdbcbc90a"
+  },
+  "scoped_size_cap_repair": "size-cap-assessment.json",
+  "reader_refrozen_after_size_cap_repair": true
+}

@@ -1,0 +1,16 @@
+test_exact_required_control_names_cannot_be_self_declared (__main__.ControlsContracts.test_exact_required_control_names_cannot_be_self_declared) ... ok
+test_profile_result_substitution_refuses (__main__.ControlsContracts.test_profile_result_substitution_refuses) ... FAIL
+test_wrong_source_duplicate_and_false_control_refuse (__main__.ControlsContracts.test_wrong_source_duplicate_and_false_control_refuse) ... ok
+
+======================================================================
+FAIL: test_profile_result_substitution_refuses (__main__.ControlsContracts.test_profile_result_substitution_refuses)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/kernel-audit/revision-lifecycle/independent-review/test_controls.py", line 37, in test_profile_result_substitution_refuses
+    self.assertTrue(callable(fn),'result workload profile must be independently bound')
+AssertionError: False is not true : result workload profile must be independently bound
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.001s
+
+FAILED (failures=1)

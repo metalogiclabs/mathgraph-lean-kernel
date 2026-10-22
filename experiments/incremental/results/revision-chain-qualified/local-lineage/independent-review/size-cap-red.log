@@ -1,0 +1,62 @@
+test_compact_zip_large_lifecycle_summary_uses_scoped_limit (test_large_summary.LargeLifecycleSummaryTests.test_compact_zip_large_lifecycle_summary_uses_scoped_limit) ... FAIL
+test_generic_logs_keep_default64mib_bound (test_large_summary.LargeLifecycleSummaryTests.test_generic_logs_keep_default64mib_bound) ... ok
+test_valid_lifecycle_over64mib_is_read_by_explicit_role (test_large_summary.LargeLifecycleSummaryTests.test_valid_lifecycle_over64mib_is_read_by_explicit_role) ... FAIL
+
+======================================================================
+FAIL: test_compact_zip_large_lifecycle_summary_uses_scoped_limit (test_large_summary.LargeLifecycleSummaryTests.test_compact_zip_large_lifecycle_summary_uses_scoped_limit)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/kernel-audit/revision-lifecycle/independent-review/test_large_summary.py", line 31, in accepted
+    try:return Artifacts(path)
+               ^^^^^^^^^^^^^^^
+  File "/workspace/kernel-audit/revision-lifecycle/independent-review/artifacts.py", line 62, in __init__
+    candidates = [name for name in candidates if loads(self.read(name)).get('schema') == 'mathgraph.authenticated-revision-chain-lifecycle.v1']
+                                                       ^^^^^^^^^^^^^^^
+  File "/workspace/kernel-audit/revision-lifecycle/independent-review/artifacts.py", line 129, in read
+    require(len(raw) <= limit, 'JSON/log artifact exceeds reader bound')
+  File "/workspace/kernel-audit/revision-lifecycle/independent-review/artifacts.py", line 14, in require
+    raise ValueError(message)
+ValueError: JSON/log artifact exceeds reader bound
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/workspace/kernel-audit/revision-lifecycle/independent-review/test_large_summary.py", line 56, in test_compact_zip_large_lifecycle_summary_uses_scoped_limit
+    store=self.accepted(archive)
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/kernel-audit/revision-lifecycle/independent-review/test_large_summary.py", line 32, in accepted
+    except ValueError as error:self.fail('valid role-restricted >64MiB lifecycle summary was refused: '+str(error))
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: valid role-restricted >64MiB lifecycle summary was refused: JSON/log artifact exceeds reader bound
+
+======================================================================
+FAIL: test_valid_lifecycle_over64mib_is_read_by_explicit_role (test_large_summary.LargeLifecycleSummaryTests.test_valid_lifecycle_over64mib_is_read_by_explicit_role)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/kernel-audit/revision-lifecycle/independent-review/test_large_summary.py", line 31, in accepted
+    try:return Artifacts(path)
+               ^^^^^^^^^^^^^^^
+  File "/workspace/kernel-audit/revision-lifecycle/independent-review/artifacts.py", line 62, in __init__
+    candidates = [name for name in candidates if loads(self.read(name)).get('schema') == 'mathgraph.authenticated-revision-chain-lifecycle.v1']
+                                                       ^^^^^^^^^^^^^^^
+  File "/workspace/kernel-audit/revision-lifecycle/independent-review/artifacts.py", line 129, in read
+    require(len(raw) <= limit, 'JSON/log artifact exceeds reader bound')
+  File "/workspace/kernel-audit/revision-lifecycle/independent-review/artifacts.py", line 14, in require
+    raise ValueError(message)
+ValueError: JSON/log artifact exceeds reader bound
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/workspace/kernel-audit/revision-lifecycle/independent-review/test_large_summary.py", line 45, in test_valid_lifecycle_over64mib_is_read_by_explicit_role
+    store=self.accepted(root)
+          ^^^^^^^^^^^^^^^^^^^
+  File "/workspace/kernel-audit/revision-lifecycle/independent-review/test_large_summary.py", line 32, in accepted
+    except ValueError as error:self.fail('valid role-restricted >64MiB lifecycle summary was refused: '+str(error))
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: valid role-restricted >64MiB lifecycle summary was refused: JSON/log artifact exceeds reader bound
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.734s
+
+FAILED (failures=2)

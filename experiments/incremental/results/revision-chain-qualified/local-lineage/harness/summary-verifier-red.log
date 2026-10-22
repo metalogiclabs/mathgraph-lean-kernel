@@ -1,0 +1,20 @@
+test_cumulative_sequence_restores_each_body_against_immediate_parent (__main__.self_test.<locals>.RevisionMeasurementContracts.test_cumulative_sequence_restores_each_body_against_immediate_parent) ... ok
+test_lifetime_uses_measured_intervals_and_charges_genesis_fresh_check (__main__.self_test.<locals>.RevisionMeasurementContracts.test_lifetime_uses_measured_intervals_and_charges_genesis_fresh_check) ... ok
+test_link_audit_refuses_skipped_revision_parent_or_missing_capture (__main__.self_test.<locals>.RevisionMeasurementContracts.test_link_audit_refuses_skipped_revision_parent_or_missing_capture) ... ok
+test_summary_verifier_does_not_accept_empty_or_unqualified_claim (__main__.self_test.<locals>.RevisionMeasurementContracts.test_summary_verifier_does_not_accept_empty_or_unqualified_claim) ... FAIL
+
+======================================================================
+FAIL: test_summary_verifier_does_not_accept_empty_or_unqualified_claim (__main__.self_test.<locals>.RevisionMeasurementContracts.test_summary_verifier_does_not_accept_empty_or_unqualified_claim)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/benchmark_revision_chain.py", line 595, in test_summary_verifier_does_not_accept_empty_or_unqualified_claim
+    verify = self.feature('verify_summary')
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/benchmark_revision_chain.py", line 555, in feature
+    self.assertTrue(callable(globals().get(name)), "missing revision benchmark capability: " + name)
+AssertionError: False is not true : missing revision benchmark capability: verify_summary
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.001s
+
+FAILED (failures=1)

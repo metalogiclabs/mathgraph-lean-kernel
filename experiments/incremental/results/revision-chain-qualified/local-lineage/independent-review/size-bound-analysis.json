@@ -1,0 +1,380 @@
+{
+  "schema": "independent-review.size-bound-analysis.v1",
+  "analysis_kind": "Serialized JSON size forecast only; not a performance or qualification projection",
+  "measured_input": {
+    "path": "/workspace/kernel-audit/revision-lifecycle/harness/smoke-continuous-final/summary.json",
+    "actual_bytes": 41564427,
+    "reencoded_exact_bytes": 41564427,
+    "pairs_per_profile": 1,
+    "revisions_per_pair": 4,
+    "profiles": [
+      "original",
+      "expanded"
+    ]
+  },
+  "method": "Standard-library scalar JSON encoding plus exact additive indent=2 container/newline accounting. Projected shared objects are counted repeatedly without materializing encoded output or large files.",
+  "measured_sections": {
+    "original": {
+      "profile": {
+        "standalone_bytes": 6636690,
+        "nested_value_bytes": 7078426,
+        "newlines": 110434
+      },
+      "references": {
+        "standalone_bytes": 22616,
+        "nested_value_bytes": 24668,
+        "newlines": 342
+      },
+      "pair": {
+        "standalone_bytes": 6167201,
+        "nested_value_bytes": 7046529,
+        "newlines": 109916
+      },
+      "setup": {
+        "standalone_bytes": 5614946,
+        "nested_value_bytes": 6547046,
+        "newlines": 93210
+      },
+      "steps": [
+        {
+          "standalone_bytes": 62570,
+          "nested_value_bytes": 109802,
+          "newlines": 3936
+        },
+        {
+          "standalone_bytes": 61203,
+          "nested_value_bytes": 108111,
+          "newlines": 3909
+        },
+        {
+          "standalone_bytes": 62579,
+          "nested_value_bytes": 109811,
+          "newlines": 3936
+        },
+        {
+          "standalone_bytes": 61214,
+          "nested_value_bytes": 108122,
+          "newlines": 3909
+        }
+      ],
+      "continuous_candidate_steps": [
+        {
+          "standalone_bytes": 5541,
+          "nested_value_bytes": 7429,
+          "newlines": 118
+        },
+        {
+          "standalone_bytes": 5536,
+          "nested_value_bytes": 7424,
+          "newlines": 118
+        },
+        {
+          "standalone_bytes": 5540,
+          "nested_value_bytes": 7428,
+          "newlines": 118
+        },
+        {
+          "standalone_bytes": 5537,
+          "nested_value_bytes": 7425,
+          "newlines": 118
+        }
+      ],
+      "pair_fields": {
+        "repetition": {
+          "standalone_bytes": 1,
+          "nested_value_bytes": 1,
+          "newlines": 0
+        },
+        "completed": {
+          "standalone_bytes": 4,
+          "nested_value_bytes": 4,
+          "newlines": 0
+        },
+        "correctness_passed": {
+          "standalone_bytes": 4,
+          "nested_value_bytes": 4,
+          "newlines": 0
+        },
+        "accepted_revisions": {
+          "standalone_bytes": 1,
+          "nested_value_bytes": 1,
+          "newlines": 0
+        },
+        "steps": {
+          "standalone_bytes": 278964,
+          "nested_value_bytes": 435914,
+          "newlines": 15695
+        },
+        "order": {
+          "standalone_bytes": 97,
+          "nested_value_bytes": 97,
+          "newlines": 0
+        },
+        "timing_scope": {
+          "standalone_bytes": 100,
+          "nested_value_bytes": 100,
+          "newlines": 0
+        },
+        "setup": {
+          "standalone_bytes": 5614946,
+          "nested_value_bytes": 6547046,
+          "newlines": 93210
+        },
+        "genesis": {
+          "standalone_bytes": 2353,
+          "nested_value_bytes": 2703,
+          "newlines": 35
+        },
+        "final_head": {
+          "standalone_bytes": 66,
+          "nested_value_bytes": 66,
+          "newlines": 0
+        },
+        "final_evidence": {
+          "standalone_bytes": 66,
+          "nested_value_bytes": 66,
+          "newlines": 0
+        },
+        "final_export_sha256": {
+          "standalone_bytes": 66,
+          "nested_value_bytes": 66,
+          "newlines": 0
+        },
+        "final_memory": {
+          "standalone_bytes": 625,
+          "nested_value_bytes": 905,
+          "newlines": 28
+        },
+        "observed_constructor_through_close_wall_seconds": {
+          "standalone_bytes": 17,
+          "nested_value_bytes": 17,
+          "newlines": 0
+        },
+        "components": {
+          "standalone_bytes": 962,
+          "nested_value_bytes": 1172,
+          "newlines": 21
+        },
+        "cpu_components": {
+          "standalone_bytes": 781,
+          "nested_value_bytes": 971,
+          "newlines": 19
+        },
+        "cold_replay": {
+          "standalone_bytes": 4774,
+          "nested_value_bytes": 5874,
+          "newlines": 110
+        },
+        "compressed_session_files": {
+          "standalone_bytes": 1572,
+          "nested_value_bytes": 1782,
+          "newlines": 21
+        },
+        "continuous": {
+          "standalone_bytes": 41596,
+          "nested_value_bytes": 49166,
+          "newlines": 757
+        }
+      }
+    },
+    "expanded": {
+      "profile": {
+        "standalone_bytes": 32468575,
+        "nested_value_bytes": 34472711,
+        "newlines": 501034
+      },
+      "references": {
+        "standalone_bytes": 22691,
+        "nested_value_bytes": 24743,
+        "newlines": 342
+      },
+      "pair": {
+        "standalone_bytes": 30436626,
+        "nested_value_bytes": 34440754,
+        "newlines": 500516
+      },
+      "setup": {
+        "standalone_bytes": 26277251,
+        "nested_value_bytes": 30361951,
+        "newlines": 408470
+      },
+      "steps": [
+        {
+          "standalone_bytes": 162870,
+          "nested_value_bytes": 308706,
+          "newlines": 12153
+        },
+        {
+          "standalone_bytes": 161508,
+          "nested_value_bytes": 307020,
+          "newlines": 12126
+        },
+        {
+          "standalone_bytes": 162883,
+          "nested_value_bytes": 308719,
+          "newlines": 12153
+        },
+        {
+          "standalone_bytes": 161512,
+          "nested_value_bytes": 307024,
+          "newlines": 12126
+        }
+      ],
+      "continuous_candidate_steps": [
+        {
+          "standalone_bytes": 273883,
+          "nested_value_bytes": 360715,
+          "newlines": 5427
+        },
+        {
+          "standalone_bytes": 273880,
+          "nested_value_bytes": 360712,
+          "newlines": 5427
+        },
+        {
+          "standalone_bytes": 273879,
+          "nested_value_bytes": 360711,
+          "newlines": 5427
+        },
+        {
+          "standalone_bytes": 273879,
+          "nested_value_bytes": 360711,
+          "newlines": 5427
+        }
+      ],
+      "pair_fields": {
+        "repetition": {
+          "standalone_bytes": 1,
+          "nested_value_bytes": 1,
+          "newlines": 0
+        },
+        "completed": {
+          "standalone_bytes": 4,
+          "nested_value_bytes": 4,
+          "newlines": 0
+        },
+        "correctness_passed": {
+          "standalone_bytes": 4,
+          "nested_value_bytes": 4,
+          "newlines": 0
+        },
+        "accepted_revisions": {
+          "standalone_bytes": 1,
+          "nested_value_bytes": 1,
+          "newlines": 0
+        },
+        "steps": {
+          "standalone_bytes": 745907,
+          "nested_value_bytes": 1231537,
+          "newlines": 48563
+        },
+        "order": {
+          "standalone_bytes": 97,
+          "nested_value_bytes": 97,
+          "newlines": 0
+        },
+        "timing_scope": {
+          "standalone_bytes": 100,
+          "nested_value_bytes": 100,
+          "newlines": 0
+        },
+        "setup": {
+          "standalone_bytes": 26277251,
+          "nested_value_bytes": 30361951,
+          "newlines": 408470
+        },
+        "genesis": {
+          "standalone_bytes": 2367,
+          "nested_value_bytes": 2717,
+          "newlines": 35
+        },
+        "final_head": {
+          "standalone_bytes": 66,
+          "nested_value_bytes": 66,
+          "newlines": 0
+        },
+        "final_evidence": {
+          "standalone_bytes": 66,
+          "nested_value_bytes": 66,
+          "newlines": 0
+        },
+        "final_export_sha256": {
+          "standalone_bytes": 66,
+          "nested_value_bytes": 66,
+          "newlines": 0
+        },
+        "final_memory": {
+          "standalone_bytes": 632,
+          "nested_value_bytes": 912,
+          "newlines": 28
+        },
+        "observed_constructor_through_close_wall_seconds": {
+          "standalone_bytes": 17,
+          "nested_value_bytes": 17,
+          "newlines": 0
+        },
+        "components": {
+          "standalone_bytes": 959,
+          "nested_value_bytes": 1169,
+          "newlines": 21
+        },
+        "cpu_components": {
+          "standalone_bytes": 772,
+          "nested_value_bytes": 962,
+          "newlines": 19
+        },
+        "cold_replay": {
+          "standalone_bytes": 562633,
+          "nested_value_bytes": 669913,
+          "newlines": 10728
+        },
+        "compressed_session_files": {
+          "standalone_bytes": 1574,
+          "nested_value_bytes": 1784,
+          "newlines": 21
+        },
+        "continuous": {
+          "standalone_bytes": 1842703,
+          "nested_value_bytes": 2168813,
+          "newlines": 32611
+        }
+      }
+    }
+  },
+  "projection": {
+    "pairs_per_profile": 5,
+    "revisions_per_pair": 40,
+    "direct_commands_per_pair": 41,
+    "conservative_repeated_shape_bytes": 349636377,
+    "conservative_repeated_shape_mib": 333.4392328262329,
+    "numeric_width_padding_bytes": 50783035,
+    "path_width_padding_bytes": 7874778,
+    "additional_schema_reserve_bytes": 16777216,
+    "forecast_envelope_bytes": 425071406,
+    "forecast_envelope_mib": 405.37968254089355,
+    "reader_cap_bytes": 536870912,
+    "shape_margin_bytes": 187234535,
+    "envelope_margin_bytes": 111799506
+  },
+  "continuous_raw_summary_forecast": {
+    "original": {
+      "projected_40_step_raw_bytes": 328249,
+      "padded_envelope_bytes": 1494937,
+      "reader_cap_bytes": 67108864
+    },
+    "expanded": {
+      "projected_40_step_raw_bytes": 12936376,
+      "padded_envelope_bytes": 14103061,
+      "reader_cap_bytes": 67108864
+    }
+  },
+  "assumptions": [
+    "Frozen d1b schema, two observed profiles, five pairs and ten four-state cycles. Baseline decision populations and source/root universe remain fixed.",
+    "Conservative repeated-shape model keeps cold replay on every pair and repeats representative Python/C++ records on all revisions, although production only has these on pair0/revisions1..4. This deliberately overestimates those metadata sections.",
+    "Observed scalar timing values and descriptors are reused solely for size forecasting; no future runtime values or economic conclusions are predicted.",
+    "Envelope additionally budgets every integer at20 printed characters, every float at24 characters, and each observed absolute/witness path up to512 characters, then adds16MiB global metadata reserve and1MiB per raw continuous summary.",
+    "Revision/cycle labels remain observed single-digit lengths in the repeated shape; their at-most-two-digit expansion is covered by numeric padding. Extra archive records/path variants are covered by the metadata reserve.",
+    "This is a bounded frozen-schema forecast under stated width/record assumptions, not a universal bound on arbitrary or malicious JSON. No projected-size file was written."
+  ],
+  "conclusion": "Five-by-forty main summary substantially exceeds64MiB. Scoped512MiB is supported if the padded frozen-schema envelope is below that cap; per-pair raw continuous summaries remain below64MiB under the same assumptions."
+}

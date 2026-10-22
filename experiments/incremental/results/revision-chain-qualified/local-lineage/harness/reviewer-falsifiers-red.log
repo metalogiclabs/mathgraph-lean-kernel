@@ -1,0 +1,44 @@
+test_complete_export_coverage_is_required_for_each_actual_input (__main__.self_test.<locals>.RevisionMeasurementContracts.test_complete_export_coverage_is_required_for_each_actual_input) ... FAIL
+test_conflicting_repeated_archive_descriptor_is_refused (__main__.self_test.<locals>.RevisionMeasurementContracts.test_conflicting_repeated_archive_descriptor_is_refused) ... FAIL
+test_cpu_lifetime_uses_its_own_observed_cpu_components (__main__.self_test.<locals>.RevisionMeasurementContracts.test_cpu_lifetime_uses_its_own_observed_cpu_components) ... ok
+test_cumulative_sequence_restores_each_body_against_immediate_parent (__main__.self_test.<locals>.RevisionMeasurementContracts.test_cumulative_sequence_restores_each_body_against_immediate_parent) ... ok
+test_lifetime_uses_measured_intervals_and_charges_genesis_fresh_check (__main__.self_test.<locals>.RevisionMeasurementContracts.test_lifetime_uses_measured_intervals_and_charges_genesis_fresh_check) ... ok
+test_link_audit_refuses_skipped_revision_parent_or_missing_capture (__main__.self_test.<locals>.RevisionMeasurementContracts.test_link_audit_refuses_skipped_revision_parent_or_missing_capture) ... ok
+test_smoke_reader_refuses_zero_work_and_empty_identity_manifests (__main__.self_test.<locals>.RevisionMeasurementContracts.test_smoke_reader_refuses_zero_work_and_empty_identity_manifests) ... FAIL
+test_summary_verifier_does_not_accept_empty_or_unqualified_claim (__main__.self_test.<locals>.RevisionMeasurementContracts.test_summary_verifier_does_not_accept_empty_or_unqualified_claim) ... ok
+
+======================================================================
+FAIL: test_complete_export_coverage_is_required_for_each_actual_input (__main__.self_test.<locals>.RevisionMeasurementContracts.test_complete_export_coverage_is_required_for_each_actual_input)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/benchmark_revision_chain.py", line 934, in test_complete_export_coverage_is_required_for_each_actual_input
+    check = self.feature('validate_export_coverage')
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/benchmark_revision_chain.py", line 860, in feature
+    self.assertTrue(callable(globals().get(name)), "missing revision benchmark capability: " + name)
+AssertionError: False is not true : missing revision benchmark capability: validate_export_coverage
+
+======================================================================
+FAIL: test_conflicting_repeated_archive_descriptor_is_refused (__main__.self_test.<locals>.RevisionMeasurementContracts.test_conflicting_repeated_archive_descriptor_is_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/benchmark_revision_chain.py", line 927, in test_conflicting_repeated_archive_descriptor_is_refused
+    check = self.feature('archive_descriptor')
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/benchmark_revision_chain.py", line 860, in feature
+    self.assertTrue(callable(globals().get(name)), "missing revision benchmark capability: " + name)
+AssertionError: False is not true : missing revision benchmark capability: archive_descriptor
+
+======================================================================
+FAIL: test_smoke_reader_refuses_zero_work_and_empty_identity_manifests (__main__.self_test.<locals>.RevisionMeasurementContracts.test_smoke_reader_refuses_zero_work_and_empty_identity_manifests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/benchmark_revision_chain.py", line 923, in test_smoke_reader_refuses_zero_work_and_empty_identity_manifests
+    with self.assertRaises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.006s
+
+FAILED (failures=3)

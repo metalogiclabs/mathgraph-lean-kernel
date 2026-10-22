@@ -1,3 +1,17 @@
+# 22 October 2026 — Accepted-predecessor lifecycle qualified
+
+**WARRANTED_BOUNDED:** complete measured continuing-revision verification now beats direct fresh Rust, including initialization and supported shutdown. Five paired sequences of forty real Lean/Std early/unrelated edits and restorations yield **11.371610→8.080982 s (28.9372%, 1.40721×)** for 3,436 obligations and **54.792482→33.506680 s (38.8480%, 1.63527×)** for 11,653. Every pair wins; direct runs genesis plus the same forty actual sealed inputs, with its input preparation outside timing.
+
+Exact runtime [`d1b22447d23a928ae536cbe838a47fc9682a4b39`](https://github.com/metalogiclabs/mathgraph-lean-kernel/commit/d1b22447d23a928ae536cbe838a47fc9682a4b39), successful [CI 39679768047](https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/39679768047). [Committed qualification, raw artifact parts and independent replay](results/revision-chain-qualified/README.md) preserve the 1,250,298,163-byte original ZIP and exact digest after Actions expiry.
+
+Independent review passed 3,017,800 decisions, 2,440 object links, all 88 economic series and five reader falsifiers. All 48 separate fresh Rust/normal C++/paranoid C++ processes agree on 12 accepted and four rejected exact exports. All earlier gate families and 64 new chain/recovery/adversarial controls pass. Four hundred interleaved revisions and four hundred additional continuous receipt transitions are audited. The HMAC authority, applicability predicate and checker rules are preserved; versioned state continuation adds trusted implementation code. The executable source/export/identity bridge remains unproved.
+
+**Remaining UNKNOWN:** remove per-update full export materialization/hash/readback and index copies/scans without weakening authenticated source-to-export integrity. These remain O(total size); recovery remains O(history). The measured forty-update lifecycle wins do not establish asymptotically change-proportional total cost or arbitrary Lean/Mathlib support. Prior stronger warm-only evidence remains intact in the canonical Research OS checkpoint.
+
+Canonical [Research OS checkpoint](https://app.notion.com/p/3fb3e523d7ab81c68c89c1442eb0bb05): synchronization follows permanent evidence push; its readback proof will be committed separately. Earlier checkpoint and failures are preserved below.
+
+---
+
 # 16 October 2026 — Authenticated incremental independent Lean checking
 
 **WARRANTED_BOUNDED: authenticated incremental acceptance agreement and checking-work reduction on the pinned workload.** Local qualification passed **197/197 gates across ten variants, three repetitions**; independent review passed with stated assumptions; exact-source CI is **SUCCESS**. Edit-proportional total cost and economic superiority remain UNKNOWN.

@@ -1,0 +1,15 @@
+Traceback (most recent call last):
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/test_revision_chain.py", line 74, in <module>
+    run(p.parse_args())
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/test_revision_chain.py", line 40, in run
+    ready = live.start()
+            ^^^^^^^^^^^^
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/revision_chain.py", line 48, in start
+    report = super().start()
+             ^^^^^^^^^^^^^^^
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/producer_delta.py", line 459, in start
+    indexed = self.index.receive()
+              ^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/producer_delta.py", line 100, in receive
+    raise ValueError('producer/index refused: ' + str(result))
+ValueError: producer/index refused: {'error': 'unsupported or duplicated index-session flags', 'scope': 'identity_cache_witness_only_session_terminated', 'status': 'error'}

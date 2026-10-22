@@ -1,0 +1,25 @@
+{
+  "status": "PASS_SCOPED_CONTROL_REPORT_CAP",
+  "before_sha256": "304ca89d49a2f33b1b8b18952884c39537fcfcc1d0b4c50f38072029cf6c5346",
+  "after_sha256": "c2364b13eaa9f07565def8aad4bf238c2d889345fe4d992b6ef00907e240d26f",
+  "scope": "Only controls.py _report and exact two controls summary manifest entries use512MiB; chain probe wrappers and generic artifact/log caps remain64MiB.",
+  "observed_original_control_report_bytes": 37935599,
+  "original_declarations": 3436,
+  "expanded_declarations": 11653,
+  "proportional_expanded_bytes": 128656442.1266007,
+  "expanded_control_artifact_locally_available": false,
+  "control_report_cap_bytes": 536870912,
+  "fixture": {
+    "path": "/workspace/kernel-audit/revision-lifecycle/independent-review/controls-cap-fixture-65mib.json.gz",
+    "compressed_sha256": "7a77ad177812b8281c4deba2e9613a29db6b3f3330faab9a3151bcd03e9a1061",
+    "compressed_bytes": 66298,
+    "uncompressed_sha256": "7586b29e4c38d9719212e9fd790eaf673c83e94ca6da408d3339340f09c90082",
+    "uncompressed_bytes": 68157454
+  },
+  "red_log": "controls-cap-red.log",
+  "green_log": "controls-cap-green.log",
+  "tests": {
+    "scoped_cap_tests": 4,
+    "existing_controls_contract_tests": 4
+  }
+}

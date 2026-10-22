@@ -1,0 +1,23 @@
+FF
+======================================================================
+FAIL: test_index_revisions_patch_immediate_predecessor (__main__.ChainCli.test_index_revisions_patch_immediate_predecessor)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/kernel-audit/revision-lifecycle/native/test_chain_cli.py", line 23, in test_index_revisions_patch_immediate_predecessor
+    self.assertEqual(proc.returncode,0,proc.stdout+proc.stderr)
+AssertionError: 1 != 0 : {"error":"unsupported or duplicated index-session flags","scope":"identity_cache_witness_only_session_terminated","status":"error"}
+
+
+======================================================================
+FAIL: test_parser_revisions_run_real_selected_checker (__main__.ChainCli.test_parser_revisions_run_real_selected_checker)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/kernel-audit/revision-lifecycle/native/test_chain_cli.py", line 32, in test_parser_revisions_run_real_selected_checker
+    self.assertEqual(proc.returncode,0,proc.stdout+proc.stderr)
+AssertionError: 1 != 0 : {"code":1,"reason":"usage: check-selected-retained-session CONFIG AUTHENTICATED_BASE_SHA256","scope":"retained_parser_low_level_refusal_not_issuer_acceptance","status":"rejected"}
+
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.007s
+
+FAILED (failures=2)

@@ -1,0 +1,50 @@
+test_complex_outside_prefix_cannot_use_local_rule (__main__.IndependentRuleTests.test_complex_outside_prefix_cannot_use_local_rule) ... FAIL
+test_cycle_closure_and_unchanged_outside_cone (__main__.IndependentRuleTests.test_cycle_closure_and_unchanged_outside_cone) ... FAIL
+test_full_unchanged_prefix_and_zero_selected (__main__.IndependentRuleTests.test_full_unchanged_prefix_and_zero_selected) ... FAIL
+test_index_corruption_and_typed_aliases_refuse (__main__.IndependentRuleTests.test_index_corruption_and_typed_aliases_refuse) ... FAIL
+test_parent_witness_status_count_and_reason_substitution_refuse (__main__.IndependentRuleTests.test_parent_witness_status_count_and_reason_substitution_refuse) ... FAIL
+
+======================================================================
+FAIL: test_complex_outside_prefix_cannot_use_local_rule (__main__.IndependentRuleTests.test_complex_outside_prefix_cannot_use_local_rule)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/kernel-audit/revision-lifecycle/independent-review/test_reuse_rule.py", line 68, in setUp
+    self.assertIsNotNone(rule, 'independent reuse_rule.py must exist')
+AssertionError: unexpectedly None : independent reuse_rule.py must exist
+
+======================================================================
+FAIL: test_cycle_closure_and_unchanged_outside_cone (__main__.IndependentRuleTests.test_cycle_closure_and_unchanged_outside_cone)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/kernel-audit/revision-lifecycle/independent-review/test_reuse_rule.py", line 68, in setUp
+    self.assertIsNotNone(rule, 'independent reuse_rule.py must exist')
+AssertionError: unexpectedly None : independent reuse_rule.py must exist
+
+======================================================================
+FAIL: test_full_unchanged_prefix_and_zero_selected (__main__.IndependentRuleTests.test_full_unchanged_prefix_and_zero_selected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/kernel-audit/revision-lifecycle/independent-review/test_reuse_rule.py", line 68, in setUp
+    self.assertIsNotNone(rule, 'independent reuse_rule.py must exist')
+AssertionError: unexpectedly None : independent reuse_rule.py must exist
+
+======================================================================
+FAIL: test_index_corruption_and_typed_aliases_refuse (__main__.IndependentRuleTests.test_index_corruption_and_typed_aliases_refuse)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/kernel-audit/revision-lifecycle/independent-review/test_reuse_rule.py", line 68, in setUp
+    self.assertIsNotNone(rule, 'independent reuse_rule.py must exist')
+AssertionError: unexpectedly None : independent reuse_rule.py must exist
+
+======================================================================
+FAIL: test_parent_witness_status_count_and_reason_substitution_refuse (__main__.IndependentRuleTests.test_parent_witness_status_count_and_reason_substitution_refuse)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/kernel-audit/revision-lifecycle/independent-review/test_reuse_rule.py", line 68, in setUp
+    self.assertIsNotNone(rule, 'independent reuse_rule.py must exist')
+AssertionError: unexpectedly None : independent reuse_rule.py must exist
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.001s
+
+FAILED (failures=5)

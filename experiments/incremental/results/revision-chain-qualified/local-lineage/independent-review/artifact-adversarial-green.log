@@ -1,0 +1,15 @@
+test_duplicate_json_and_zip_traversal_refuse (test_artifacts.ArtifactTests.test_duplicate_json_and_zip_traversal_refuse) ... ok
+test_missing_and_contradictory_cached_descriptor_refuse (test_artifacts.ArtifactTests.test_missing_and_contradictory_cached_descriptor_refuse) ... ok
+test_zip_maps_historical_paths_without_extraction (test_artifacts.ArtifactTests.test_zip_maps_historical_paths_without_extraction) ... ok
+test_cached_directory_blob_cannot_change_silently (test_artifact_adversarial.ArtifactAdversarialTests.test_cached_directory_blob_cannot_change_silently) ... ok
+test_cached_directory_blob_cannot_disappear_silently (test_artifact_adversarial.ArtifactAdversarialTests.test_cached_directory_blob_cannot_disappear_silently) ... ok
+test_ci_recorded_paths_map_under_both_zip_layouts (test_artifact_adversarial.ArtifactAdversarialTests.test_ci_recorded_paths_map_under_both_zip_layouts) ... ok
+test_descriptors_refuse_type_aliases_corruption_and_cache_conflicts (test_artifact_adversarial.ArtifactAdversarialTests.test_descriptors_refuse_type_aliases_corruption_and_cache_conflicts) ... ok
+test_directory_symlink_escape_and_missing_object_are_rejected (test_artifact_adversarial.ArtifactAdversarialTests.test_directory_symlink_escape_and_missing_object_are_rejected) ... ok
+test_duplicate_zip_members_and_canonical_aliases_are_rejected (test_artifact_adversarial.ArtifactAdversarialTests.test_duplicate_zip_members_and_canonical_aliases_are_rejected) ... ok
+test_zip_symlink_and_member_traversal_are_rejected (test_artifact_adversarial.ArtifactAdversarialTests.test_zip_symlink_and_member_traversal_are_rejected) ... ok
+
+----------------------------------------------------------------------
+Ran 10 tests in 0.013s
+
+OK

@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/test_revision_chain.py", line 74, in <module>
+    run(p.parse_args())
+  File "/workspace/mathgraph-lean-kernel-lifecycle/experiments/incremental/test_revision_chain.py", line 51, in run
+    assert result['status'] == 'VERIFIED', result
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: {'status': 'UNKNOWN', 'evidence_id': None, 'reason': 'source modifications outside the reported patch', 'counts': None, 'decisions': [], 'action_authorization': 'NONE', 'timings': {'end_to_end_seconds': 0.0007555909996881383, 'end_to_end_cpu_seconds': 0.0007519999999998639}}

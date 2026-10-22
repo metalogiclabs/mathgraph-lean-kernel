@@ -1,0 +1,134 @@
+{
+  "compression": {
+    "command": [
+      "xz",
+      "-3",
+      "--lzma2=dict=128MiB",
+      "--threads=1",
+      "--stdout"
+    ],
+    "wall_seconds": 710.5435303850027,
+    "xz_version": "xz (XZ Utils) 5.8.1"
+  },
+  "created_at_utc": "2026-10-22T00:36:48.782187+00:00",
+  "free_bytes_at_completion": 3226177536,
+  "original": {
+    "bytes": 1250298163,
+    "name": "revision-chain-summaries-d1b2244.zip",
+    "sha256": "878fbeeb4f6241084fd89ca20a2b9b8077c9071e2ada7e2e0b94d054e743d766",
+    "source_path": "/workspace/kernel-audit/revision-lifecycle/ci-d1b2244/revision-chain-summaries-d1b2244.zip"
+  },
+  "original_artifact_id": 12390854795,
+  "original_file_unchanged_after_all_verification": true,
+  "original_stat_before": {
+    "st_ctime_ns": 1792628403173055772,
+    "st_dev": 27,
+    "st_gid": 1000,
+    "st_ino": 544219,
+    "st_mode": 33152,
+    "st_mtime_ns": 1792628400240974833,
+    "st_nlink": 1,
+    "st_size": 1250298163,
+    "st_uid": 1000
+  },
+  "part_bytes": 50331648,
+  "part_count": 11,
+  "parts": [
+    {
+      "bytes": 50331648,
+      "index": 0,
+      "name": "archive.zip.xz.part000",
+      "sha256": "05152a2e9fa9f0b899afae65f4aebc0a1a0bbc1a175f4f2955fadb4e37ee5f10"
+    },
+    {
+      "bytes": 50331648,
+      "index": 1,
+      "name": "archive.zip.xz.part001",
+      "sha256": "3df89c0877b69eff712fe5c03b78926ebc85c6eb0b1259db2848a22da524e363"
+    },
+    {
+      "bytes": 50331648,
+      "index": 2,
+      "name": "archive.zip.xz.part002",
+      "sha256": "36c597d78984b074ff16514bfeebc7f73fa6c778aead5223a22027ccb02eede4"
+    },
+    {
+      "bytes": 50331648,
+      "index": 3,
+      "name": "archive.zip.xz.part003",
+      "sha256": "3ca708f28d9317949b8388c0061a7f4eb6b8574ec2bdbda67e7be9fb12a48e93"
+    },
+    {
+      "bytes": 50331648,
+      "index": 4,
+      "name": "archive.zip.xz.part004",
+      "sha256": "410865a4be6650242d51dd8e2361712bb0e000b5b121d32b4a9db580803ec59c"
+    },
+    {
+      "bytes": 50331648,
+      "index": 5,
+      "name": "archive.zip.xz.part005",
+      "sha256": "17604bd4a30baaa2b5e0dae5b9cef311af72d68f628defccd109d2c94a1853e9"
+    },
+    {
+      "bytes": 50331648,
+      "index": 6,
+      "name": "archive.zip.xz.part006",
+      "sha256": "ac533c4c8afa67156c746294625c08a4770da39fb5330b676753b56ae7042b87"
+    },
+    {
+      "bytes": 50331648,
+      "index": 7,
+      "name": "archive.zip.xz.part007",
+      "sha256": "2b18c99b39d2cd111ed3b849f9922fb7a515ead6380d4ef85ba727f19b679fc8"
+    },
+    {
+      "bytes": 50331648,
+      "index": 8,
+      "name": "archive.zip.xz.part008",
+      "sha256": "1163575066fa5c741c48ed514a98b831f14c1d5beb08beef528871691f4fb60e"
+    },
+    {
+      "bytes": 50331648,
+      "index": 9,
+      "name": "archive.zip.xz.part009",
+      "sha256": "48ca63726b0c1bc15901ed02e404ba7d94bb517f944496eba984b43df1ea9c9f"
+    },
+    {
+      "bytes": 24995716,
+      "index": 10,
+      "name": "archive.zip.xz.part010",
+      "sha256": "8693d59c3ea5028d6fc68fa2889c7e2ae54e597904c84d2ddb2a3048f2cc5e53"
+    }
+  ],
+  "parts_concatenation_and_stream_decompression_verification": {
+    "concatenated_xz_bytes": 528312196,
+    "concatenated_xz_sha256": "a78f2817c3f6f8c1eca9c50dc851baa2a9f5bf9d92329378114a2cca2df9fd13",
+    "original_bytes": 1250298163,
+    "original_sha256": "878fbeeb4f6241084fd89ca20a2b9b8077c9071e2ada7e2e0b94d054e743d766",
+    "output_path": null,
+    "parts_verified": 11,
+    "passed": true,
+    "zip_crc_checked": false,
+    "zip_members": null
+  },
+  "purpose": "Lossless evidence packaging only; packaging timings are not runtime performance evidence.",
+  "qualification_run": 39679768047,
+  "qualified_source": "d1b22447d23a928ae536cbe838a47fc9682a4b39",
+  "reconstruction_proof": {
+    "bytes": 1897,
+    "path": "/workspace/kernel-audit/revision-lifecycle/ci-d1b2244/reconstruction-proof.json",
+    "sha256": "4b3f0471bc1ea28d41f236a9b66209d28e6939eb25813e8c783920a15e0273b4"
+  },
+  "schema": "mathgraph.lossless-xz-evidence-parts.v1",
+  "standalone_wrapper_stream_decompression_verified": true,
+  "total_packaging_and_verification_wall_seconds": 738.2107007800005,
+  "transport_files_deleted": [],
+  "wrapper": {
+    "bytes": 528312196,
+    "check": "CRC64",
+    "format": "XZ",
+    "name": "archive.zip.xz",
+    "sha256": "a78f2817c3f6f8c1eca9c50dc851baa2a9f5bf9d92329378114a2cca2df9fd13"
+  }
+}

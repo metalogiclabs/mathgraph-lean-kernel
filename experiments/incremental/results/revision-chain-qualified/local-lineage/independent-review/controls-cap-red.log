@@ -1,0 +1,35 @@
+test_chain_smoke_report_keeps_original64mib_cap (__main__.ControlCapTests.test_chain_smoke_report_keeps_original64mib_cap) ... ok
+test_control_descriptor_above512mib_refuses (__main__.ControlCapTests.test_control_descriptor_above512mib_refuses) ... ok
+test_control_report_decodes_valid_json_above_generic64mib (__main__.ControlCapTests.test_control_report_decodes_valid_json_above_generic64mib) ... ERROR
+test_manifest_accepts_large_control_reports (__main__.ControlCapTests.test_manifest_accepts_large_control_reports) ... ERROR
+
+======================================================================
+ERROR: test_control_report_decodes_valid_json_above_generic64mib (__main__.ControlCapTests.test_control_report_decodes_valid_json_above_generic64mib)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/kernel-audit/revision-lifecycle/independent-review/test_controls_cap.py", line 67, in test_control_report_decodes_valid_json_above_generic64mib
+    value=controls._report(store,'revision-chain-controls-original/summary.json.gz')
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/kernel-audit/revision-lifecycle/independent-review/controls.py", line 145, in _report
+    require(len(data)<=64*1024*1024, 'expanded controls report exceeds bounded JSON reader')
+  File "/workspace/kernel-audit/revision-lifecycle/independent-review/artifacts.py", line 14, in require
+    raise ValueError(message)
+ValueError: expanded controls report exceeds bounded JSON reader
+
+======================================================================
+ERROR: test_manifest_accepts_large_control_reports (__main__.ControlCapTests.test_manifest_accepts_large_control_reports)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/kernel-audit/revision-lifecycle/independent-review/test_controls_cap.py", line 70, in test_manifest_accepts_large_control_reports
+    observed=controls._manifest(Store())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/kernel-audit/revision-lifecycle/independent-review/controls.py", line 125, in _manifest
+    require(type(record) is dict and set(record)=={'path','sha256','bytes','uncompressed_path',
+  File "/workspace/kernel-audit/revision-lifecycle/independent-review/artifacts.py", line 14, in require
+    raise ValueError(message)
+ValueError: invalid compressed control report descriptor
+
+----------------------------------------------------------------------
+Ran 4 tests in 2.325s
+
+FAILED (errors=2)

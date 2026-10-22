@@ -1,0 +1,38 @@
+ACTUAL_ZIP_CONTEXTUAL_ANALYSIS_ONLY
+Contextual exact arithmetic only. Does not certify source correctness, HMACs, selected sets or overall economic qualification.
+Input SHA256: 878fbeeb4f6241084fd89ca20a2b9b8077c9071e2ada7e2e0b94d054e743d766
+Source: d1b22447d23a928ae536cbe838a47fc9682a4b39
+
+Sequence sums are calculated before medians. Promotion is nested in persistence. Signed gaps are retained.
+
+original: 5 sequences x 40 actual updates
+  Continuous update API sum median: 3.99397097199835120 s
+  materialization_and_hash_seconds: sequence-sum median 1.035638256003039716 s; pooled update share 26.014%
+  persistence_seconds: sequence-sum median 0.928768388994285487 s; pooled update share 23.754%
+  checking_seconds: sequence-sum median 0.7168643460054227114 s; pooled update share 18.468%
+  producer_seconds: sequence-sum median 0.629952817002049413 s; pooled update share 15.864%
+  identity_update_seconds: sequence-sum median 0.0813862410022920818 s; pooled update share 2.016%
+  baseline_validation_seconds: sequence-sum median 0.00521126000057847702 s; pooled update share 0.131%
+  Rep 0: continuous outer=8.40863741999965 s; start=3.860264931000529 s; constructor/close/recording residual=0.32138690000465445 s; checked/reused=8280/129160; materialized+hashed bytes=636892477
+  Rep 1: continuous outer=8.127803209999911 s; start=3.81457472800048 s; constructor/close/recording residual=0.31925751000107980 s; checked/reused=8280/129160; materialized+hashed bytes=636892477
+  Rep 2: continuous outer=7.958059530000355 s; start=3.715408557000046 s; constructor/close/recording residual=0.31728712300446206 s; checked/reused=8280/129160; materialized+hashed bytes=636892477
+  Rep 3: continuous outer=7.914385953000419 s; start=3.669709265000165 s; constructor/close/recording residual=0.31730211200192547 s; checked/reused=8280/129160; materialized+hashed bytes=636892477
+  Rep 4: continuous outer=8.080982401000256 s; start=3.753790549000769 s; constructor/close/recording residual=0.32519103700087725 s; checked/reused=8280/129160; materialized+hashed bytes=636892477
+  Consumer-gap sequence sums min/median/max: 0.48289113099963286157/0.52913810599966380777/0.54223550299957422369 s
+
+expanded: 5 sequences x 40 actual updates
+  Continuous update API sum median: 17.78802885600271107 s
+  persistence_seconds: sequence-sum median 7.38741088500046325 s; pooled update share 42.999%
+  materialization_and_hash_seconds: sequence-sum median 4.02827317599894745 s; pooled update share 22.724%
+  checking_seconds: sequence-sum median 2.305914924002536274 s; pooled update share 13.009%
+  producer_seconds: sequence-sum median 0.718832827002188418 s; pooled update share 4.051%
+  identity_update_seconds: sequence-sum median 0.3804398769989347814 s; pooled update share 2.127%
+  baseline_validation_seconds: sequence-sum median 0.00547454899970034602 s; pooled update share 0.031%
+  Rep 0: continuous outer=33.506680147000225 s; start=15.30674100000033 s; constructor/close/recording residual=0.41191029099718393 s; checked/reused=18640/447480; materialized+hashed bytes=2564646194
+  Rep 1: continuous outer=32.33810087300026 s; start=14.93506536699988 s; constructor/close/recording residual=0.40746414299792514 s; checked/reused=18640/447480; materialized+hashed bytes=2564646194
+  Rep 2: continuous outer=32.66686867899989 s; start=14.866832299000635 s; constructor/close/recording residual=0.40855437599748208 s; checked/reused=18640/447480; materialized+hashed bytes=2564646194
+  Rep 3: continuous outer=33.90943192099985 s; start=15.191420221000044 s; constructor/close/recording residual=0.41534261700598994 s; checked/reused=18640/447480; materialized+hashed bytes=2564646194
+  Rep 4: continuous outer=34.035106984001686 s; start=14.625126468999952 s; constructor/close/recording residual=0.41552193000279598 s; checked/reused=18640/447480; materialized+hashed bytes=2564646194
+  Consumer-gap sequence sums min/median/max: 2.23055398900396516364/2.57213704799869440765/3.14204323899321030043 s
+
+No phase-median addition, GC diagnosis, continuous memory claim, or asymptotic scaling conclusion is warranted.
