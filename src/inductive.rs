@@ -717,7 +717,9 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
     fn mk_unique_name(&mut self, n: NamePtr<'t>, st: &mut InductiveCheckState<'t>) -> NamePtr<'t> {
         for idx in st.next_ngen_idx..u64::MAX {
             let tester = self.ctx.append_index_after(n, idx);
-            if !self.env.get_old_declar(&tester).is_some() {
+            // Names introduced later in the export are reserved too: the
+            // temporary recursor must never be captured by a later declaration.
+            if tester.as_ref().decl_idx() == crate::name::NO_DECL {
                 st.next_ngen_idx = idx + 1;
                 return tester;
             }
@@ -2048,6 +2050,11 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
                     let old = original.rec_rules[i];
                     let new = restored.rec_rules[i];
                     assert_eq!(old.ctor_name, new.ctor_name);
+                    assert_eq!(
+                        old.ctor_telescope_size_wo_params,
+                        new.ctor_telescope_size_wo_params,
+                        "imported nested recursor rule has an incorrect constructor field count"
+                    );
                     self.assert_imported_expr_matches(old.val, new.val);
                 }
             }
