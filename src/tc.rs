@@ -6,7 +6,20 @@ use crate::value::E;
 
 use InferFlag::*;
 
+#[cfg(not(feature = "session-budget-64"))]
 const SESSION_BUDGET: usize = 16 * 1024 * 1024;
+
+#[cfg(feature = "session-budget-64")]
+const SESSION_BUDGET: usize = 64 * 1024 * 1024;
+
+#[cfg(test)]
+mod session_budget_contract_tests {
+    #[test]
+    fn session_budget_is_exactly_the_declared_feature_scope() {
+        let expected = if cfg!(feature = "session-budget-64") { 64 * 1024 * 1024 } else { 16 * 1024 * 1024 };
+        assert_eq!(super::SESSION_BUDGET, expected);
+    }
+}
 
 const CHUNK_SIZE: usize = 64;
 

@@ -1,0 +1,143 @@
+name: Graph-native nucleus V3 in-session cache budget A/B on full Mathlib
+
+on:
+  push:
+    branches:
+      - research/session-budget-v3-20261028
+    paths:
+      - '.github/workflows/session-budget-v3.yml'
+      - 'src/tc.rs'
+      - 'Cargo.toml'
+      - 'experiments/session_budget_v3_protocol_20261028.md'
+      - 'experiments/semantic_reuse_full_mathlib_config.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nucleus-session-budget-v3
+  cancel-in-progress: false
+
+jobs:
+  paired-session-budget:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 300
+    env:
+      CARGO_INCREMENTAL: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Both feature scopes pass native contracts and qualified existing library tests
+        run: |
+          set -euo pipefail
+          cargo test --locked --lib -- --skip reject_rec_rule_with_forged_lambda_domains --skip reject_unlisted_recursor
+          cargo test --locked --features session-budget-64 --lib -- --skip reject_rec_rule_with_forged_lambda_domains --skip reject_unlisted_recursor
+
+      - name: Build source-pinned complete Mathlib export
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/nucleus-arena
+          git -C /tmp/nucleus-arena checkout --detach b83254de5146ef34147ab82a48edbe1856b0edcc
+          cd /tmp/nucleus-arena
+          nix develop -c ./lka.py build-test mathlib
+          test -s _build/tests/mathlib.ndjson
+          test "$(stat -c %s _build/tests/mathlib.ndjson)" = '6184415052'
+          echo '22c5de83469408950005589a3bc5ef5157c65549b5a802f85d567c29151306a6  _build/tests/mathlib.ndjson' | sha256sum -c -
+
+      - name: Build same-revision 16 and 64 MiB plain release binaries
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/nucleus-budget-evidence
+          RUSTFLAGS='-C target-cpu=x86-64' cargo build --release --locked
+          cp target/release/sokonanoda /tmp/nucleus-budget-16
+          RUSTFLAGS='-C target-cpu=x86-64' cargo build --release --locked --features session-budget-64
+          cp target/release/sokonanoda /tmp/nucleus-budget-64
+          sha256sum /tmp/nucleus-budget-16 /tmp/nucleus-budget-64 > /tmp/nucleus-budget-evidence/binaries.sha256
+          git rev-parse HEAD > /tmp/nucleus-budget-evidence/checker_revision.txt
+          git -C /tmp/nucleus-arena rev-parse HEAD > /tmp/nucleus-budget-evidence/arena_revision.txt
+
+      - name: Frozen three alternating paired complete-Mathlib acceptance and timing runs
+        run: |
+          set -euo pipefail
+          export EVIDENCE_DIR=/tmp/nucleus-budget-evidence
+          export MATHLIB_INPUT=/tmp/nucleus-arena/_build/tests/mathlib.ndjson
+          run_arm() {
+            local arm="$1"
+            local pair="$2"
+            local binary
+            case "$arm" in
+              baseline) binary=/tmp/nucleus-budget-16 ;;
+              candidate) binary=/tmp/nucleus-budget-64 ;;
+              *) exit 99 ;;
+            esac
+            /usr/bin/time -f '%e wall_seconds, %U user_seconds, %M max_rss_kib' -o "$EVIDENCE_DIR/$arm-$pair.time" \
+              "$binary" experiments/semantic_reuse_full_mathlib_config.json \
+              < "$MATHLIB_INPUT" \
+              > "$EVIDENCE_DIR/$arm-$pair.stdout" 2> "$EVIDENCE_DIR/$arm-$pair.stderr"
+            test "$(cat "$EVIDENCE_DIR/$arm-$pair.stdout")" = 'Checked 718577 declarations with no errors'
+          }
+          run_arm baseline 1
+          run_arm candidate 1
+          run_arm candidate 2
+          run_arm baseline 2
+          run_arm baseline 3
+          run_arm candidate 3
+          diff -u "$EVIDENCE_DIR/baseline-1.stdout" "$EVIDENCE_DIR/candidate-3.stdout"
+
+          python3 - <<'PY'
+          import json
+          import math
+          import re
+          from pathlib import Path
+
+          root = Path('/tmp/nucleus-budget-evidence')
+          expected = 'Checked 718577 declarations with no errors\n'
+          pairs = []
+          for pair in (1, 2, 3):
+              item = {}
+              for arm in ('baseline', 'candidate'):
+                  assert (root / f'{arm}-{pair}.stdout').read_text() == expected
+                  line = (root / f'{arm}-{pair}.time').read_text().strip()
+                  m = re.fullmatch(r'([0-9.]+) wall_seconds, ([0-9.]+) user_seconds, (\d+) max_rss_kib', line)
+                  assert m is not None, f'invalid timing result for pair={pair}, arm={arm}: {line}'
+                  item[arm] = {'wall_seconds': float(m[1]), 'user_seconds': float(m[2]), 'max_rss_kib': int(m[3])}
+              item['candidate_to_baseline_user_cpu'] = item['candidate']['user_seconds'] / item['baseline']['user_seconds']
+              item['candidate_to_baseline_peak_rss'] = item['candidate']['max_rss_kib'] / max(1, item['baseline']['max_rss_kib'])
+              item['candidate_to_baseline_wall'] = item['candidate']['wall_seconds'] / item['baseline']['wall_seconds']
+              pairs.append(item)
+
+          ratios = [p['candidate_to_baseline_user_cpu'] for p in pairs]
+          rss = [p['candidate_to_baseline_peak_rss'] for p in pairs]
+          cpu_geomean = math.exp(sum(math.log(r) for r in ratios) / len(ratios))
+          screen_positive = all(r < 1 for r in ratios) and cpu_geomean <= 0.98 and all(r <= 1.10 for r in rss)
+          report = {
+              'qualification': 'CANDIDATE_CPU_TIME_SCREEN_ONLY',
+              'verification_boundary': 'full Mathlib six independent same-revision native checker acceptances and three same-host user CPU/wall/RSS pairs',
+              'arena_revision': (root / 'arena_revision.txt').read_text().strip(),
+              'checker_revision': (root / 'checker_revision.txt').read_text().strip(),
+              'input_sha256': '22c5de83469408950005589a3bc5ef5157c65549b5a802f85d567c29151306a6',
+              'native_complete_mathlib_parity': True,
+              'warranted_guest_ir_speedup': False,
+              'warranted_hardware_pmu_speedup': False,
+              'persisted_semantic_values_across_resets': False,
+              'base_budget_mib': 16,
+              'candidate_budget_mib': 64,
+              'pair_order': [['baseline', 'candidate'], ['candidate', 'baseline'], ['baseline', 'candidate']],
+              'pairs': pairs,
+              'geometric_mean_candidate_to_base_user_cpu': cpu_geomean,
+              'max_candidate_to_base_peak_rss': max(rss),
+              'predeclared_next_gate': 'INVESTIGATE_GUEST_IR' if screen_positive else 'REJECT_64_MIB_BUDGET_SCREEN',
+          }
+          (root / 'report.json').write_text(json.dumps(report, indent=2, sort_keys=True) + '\n')
+          print(json.dumps(report, indent=2, sort_keys=True))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: graph-native-nucleus-budget-v3-${{ github.sha }}
+          path: /tmp/nucleus-budget-evidence/
+          if-no-files-found: warn
