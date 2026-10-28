@@ -13,6 +13,7 @@ on:
       - 'src/reuse_probe.rs'
       - 'Cargo.toml'
       - 'tests/reuse_probe_*.rs'
+      - 'experiments/semantic_reuse_full_mathlib_config.json'
   workflow_dispatch:
 
 permissions:
@@ -65,11 +66,11 @@ jobs:
         run: |
           set -euo pipefail
           /usr/bin/time -f '%e wall_seconds, %U user_seconds, %M max_rss_kib' -o /tmp/nucleus-evidence/baseline.time \
-            /tmp/nucleus-baseline --stdin --nat-extension --string-extension --axiom-allow-all --threads 4 \
+            /tmp/nucleus-baseline experiments/semantic_reuse_full_mathlib_config.json \
             < /tmp/nucleus-arena/_build/tests/mathlib.ndjson \
             > /tmp/nucleus-evidence/baseline.stdout 2> /tmp/nucleus-evidence/baseline.stderr
           /usr/bin/time -f '%e wall_seconds, %U user_seconds, %M max_rss_kib' -o /tmp/nucleus-evidence/probe.time \
-            /tmp/nucleus-probe --stdin --nat-extension --string-extension --axiom-allow-all --threads 4 \
+            /tmp/nucleus-probe experiments/semantic_reuse_full_mathlib_config.json \
             < /tmp/nucleus-arena/_build/tests/mathlib.ndjson \
             > /tmp/nucleus-evidence/probe.stdout 2> /tmp/nucleus-evidence/probe.stderr
           diff -u /tmp/nucleus-evidence/baseline.stdout /tmp/nucleus-evidence/probe.stdout
