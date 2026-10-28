@@ -1,0 +1,77 @@
+{
+  "arena_revision": "b83254de5146ef34147ab82a48edbe1856b0edcc",
+  "base_budget_mib": 16,
+  "candidate_budget_mib": 64,
+  "checker_revision": "ac33246693b1e416199843e02212473d3c10c519",
+  "geometric_mean_candidate_to_base_user_cpu": 1.1225854322128748,
+  "input_sha256": "22c5de83469408950005589a3bc5ef5157c65549b5a802f85d567c29151306a6",
+  "max_candidate_to_base_peak_rss": 1.0202621704395234,
+  "native_complete_mathlib_parity": true,
+  "pair_order": [
+    [
+      "baseline",
+      "candidate"
+    ],
+    [
+      "candidate",
+      "baseline"
+    ],
+    [
+      "baseline",
+      "candidate"
+    ]
+  ],
+  "pairs": [
+    {
+      "baseline": {
+        "max_rss_kib": 7718176,
+        "user_seconds": 321.11,
+        "wall_seconds": 104.84
+      },
+      "candidate": {
+        "max_rss_kib": 7809456,
+        "user_seconds": 371.48,
+        "wall_seconds": 192.29
+      },
+      "candidate_to_baseline_peak_rss": 1.0118266284676587,
+      "candidate_to_baseline_user_cpu": 1.1568621344710535,
+      "candidate_to_baseline_wall": 1.834128195345288
+    },
+    {
+      "baseline": {
+        "max_rss_kib": 7807744,
+        "user_seconds": 333.69,
+        "wall_seconds": 103.95
+      },
+      "candidate": {
+        "max_rss_kib": 7943240,
+        "user_seconds": 368.27,
+        "wall_seconds": 117.0
+      },
+      "candidate_to_baseline_peak_rss": 1.0173540525918883,
+      "candidate_to_baseline_user_cpu": 1.1036291168449759,
+      "candidate_to_baseline_wall": 1.1255411255411256
+    },
+    {
+      "baseline": {
+        "max_rss_kib": 7794624,
+        "user_seconds": 328.69,
+        "wall_seconds": 90.66
+      },
+      "candidate": {
+        "max_rss_kib": 7952560,
+        "user_seconds": 364.2,
+        "wall_seconds": 99.22
+      },
+      "candidate_to_baseline_peak_rss": 1.0202621704395234,
+      "candidate_to_baseline_user_cpu": 1.1080349265265144,
+      "candidate_to_baseline_wall": 1.0944187072578866
+    }
+  ],
+  "persisted_semantic_values_across_resets": false,
+  "predeclared_next_gate": "REJECT_64_MIB_BUDGET_SCREEN",
+  "qualification": "CANDIDATE_CPU_TIME_SCREEN_ONLY",
+  "verification_boundary": "full Mathlib six independent same-revision native checker acceptances and three same-host user CPU/wall/RSS pairs",
+  "warranted_guest_ir_speedup": false,
+  "warranted_hardware_pmu_speedup": false
+}
