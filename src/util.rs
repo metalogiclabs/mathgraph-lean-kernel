@@ -1049,6 +1049,9 @@ pub struct TcCache<'a, 't> {
     pub(crate) probe_depth: u32,
     pub(crate) probe_budget: u32,
     pub(crate) probe_exhausted: bool,
+    // Suppress recursive structure eta only while checking that both
+    // operands really have convertible types.
+    pub(crate) struct_eta_type_guard: bool,
     pub(crate) closed_eval_cache: FxHashMap<ExprPtr<'t>, V<'a>>,
     pub(crate) whnf_store: FxHashMap<u64, (u128, ExprPtr<'t>)>,
     pub(crate) whnf_store_filter: Box<[u64; 1024]>,
@@ -1101,6 +1104,7 @@ impl<'a, 't> TcCache<'a, 't> {
             probe_depth: 0,
             probe_budget: 0,
             probe_exhausted: false,
+            struct_eta_type_guard: false,
             closed_eval_cache: session_small_fx_hash_map(),
             whnf_store: new_fx_hash_map(),
             whnf_store_filter: Box::new([0u64; 1024]),
@@ -1188,6 +1192,7 @@ impl<'a, 't> TcCache<'a, 't> {
         self.probe_depth = 0;
         self.probe_budget = 0;
         self.probe_exhausted = false;
+        self.struct_eta_type_guard = false;
         shrink_map(&mut self.unfold_const_cache);
         shrink_map(&mut self.rec_rule_cache);
         shrink_map(&mut self.const_head_type_cache);
