@@ -1,0 +1,89 @@
+name: Flash guarded eta large corpora qualification
+on:
+  push:
+    branches: [flash-arena-eta-guard-experiment-20261029]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  large:
+    name: large / ${{ matrix.test }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        include:
+          - {test: "cedar", sha256: "d20e36184c9ed1cdf12697681164af45d5b73aea3986461223822552576d5cb7", timeout_seconds: 940}
+          - {test: "con-leche", sha256: "b9ad1d958705760c6eb1c5cf3974ec0a4a3eb9dd765ff0648782fa49dee94a7f", timeout_seconds: 720}
+          - {test: "cslib", sha256: "bc5c88e028d02a3c0789de6efb9cd96e8506d1e96b3d26672d28ae3bb33d0b30", timeout_seconds: 1800}
+          - {test: "init", sha256: "620502ac9e63ba4a2dea9d46386c2f6aebc49faf8848ea3aaa18a77a09491a6a", timeout_seconds: 500}
+          - {test: "navier-stokes-euler", sha256: "632943fca6795d48bc13e703aabfaef39931f9445f1275d2150a44f4de7b55e6", timeout_seconds: 2400}
+          - {test: "reachability", sha256: "31d06d90f2cd6037bb03f98c771304b0530132be514ea1c63b31f3c975fda065", timeout_seconds: 910}
+          - {test: "std", sha256: "289ed65a367abdc7388a855d2acf59cc1f401f5e06295acbb8a420682d9f00bd", timeout_seconds: 590}
+    env:
+      TEST_NAME: ${{ matrix.test }}
+      EXPECTED_SHA256: ${{ matrix.sha256 }}
+      TEST_TIMEOUT: ${{ matrix.timeout_seconds }}
+      SOURCE_BASE: 115fed33ad03fc78e8df16db3c71b2eae6e7deff
+      ARENA_SHA: 112b2ed3ef66f022235684c969ccb1046cf1600b
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Pin source and build same native checker
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git cat-file -e "$SOURCE_BASE^{commit}"
+          git diff --exit-code "$SOURCE_BASE" HEAD -- src Cargo.toml Cargo.lock
+          rustup toolchain install 1.99.1 --profile minimal
+          RUSTFLAGS='-C target-cpu=x86-64-v3' cargo +1.99.1 build --release --locked
+          mkdir -p /tmp/flash-large-evidence
+          sha256sum target/release/sokonanoda > /tmp/flash-large-evidence/binary.sha256
+          printf 'source_commit=%s\nsource_base=%s\narena=%s\ncase=%s\n' "$GITHUB_SHA" "$SOURCE_BASE" "$ARENA_SHA" "$TEST_NAME" > /tmp/flash-large-evidence/provenance.txt
+      - name: Recreate pinned official large input and check digest
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone --quiet https://github.com/leanprover/lean-kernel-arena.git /tmp/arena
+          git -C /tmp/arena checkout --quiet "$ARENA_SHA"
+          (
+            cd /tmp/arena
+            nix develop -c ./lka.py build-test "$TEST_NAME"
+          )
+          f="/tmp/arena/_build/tests/$TEST_NAME.ndjson"
+          test -s "$f"
+          printf '%s  %s\n' "$EXPECTED_SHA256" "$f" | sha256sum -c -
+          sha256sum "$f" > /tmp/flash-large-evidence/input.sha256
+          wc -c "$f" | tee /tmp/flash-large-evidence/input.size
+          df -h /tmp | tee /tmp/flash-large-evidence/disk-before.txt
+      - name: Exact expected ACCEPT verdict and resource evidence
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p /tmp/flash-large-evidence
+          printf '%s\n' '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2,"print_success_message":false}' > /tmp/flash-large-evidence/config.json
+          f="/tmp/arena/_build/tests/$TEST_NAME.ndjson"
+          rc=0
+          /usr/bin/time -f 'elapsed=%e user=%U system=%S max_rss_kb=%M' -o /tmp/flash-large-evidence/resource.txt \
+            timeout --kill-after=10s "$TEST_TIMEOUT" target/release/sokonanoda /tmp/flash-large-evidence/config.json \
+            < "$f" > /tmp/flash-large-evidence/stdout.txt 2> /tmp/flash-large-evidence/stderr.txt || rc=$?
+          printf 'test=%s\nexpected=accept\nexit=%s\n' "$TEST_NAME" "$rc" | tee /tmp/flash-large-evidence/verdict.txt
+          cat /tmp/flash-large-evidence/resource.txt
+          df -h /tmp | tee /tmp/flash-large-evidence/disk-after.txt
+          if [ "$rc" -ne 0 ]; then
+            tail -n 100 /tmp/flash-large-evidence/stderr.txt
+            exit 1
+          fi
+          echo "ACCEPTED_PINNED_LARGE_EXPORT: $TEST_NAME"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: large-${{ matrix.test }}-evidence
+          path: /tmp/flash-large-evidence/
+          if-no-files-found: warn

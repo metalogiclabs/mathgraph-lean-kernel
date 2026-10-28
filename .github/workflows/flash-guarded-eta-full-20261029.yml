@@ -1,0 +1,225 @@
+name: Flash guarded eta full qualification
+
+on:
+  push:
+    branches: [flash-arena-eta-guard-experiment-20261029]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flash-guarded-eta-full-20261029
+  cancel-in-progress: true
+
+env:
+  ARENA_SHA: 112b2ed3ef66f022235684c969ccb1046cf1600b
+  BASE_SHA: 78c7502bac8a5ba000057b3f083bc0595ac65750
+
+jobs:
+  prescribed:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Build checker and native controls
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rustup toolchain install 1.99.1 --profile minimal
+          cargo +1.99.1 test --release --locked -- --skip reject_rec_rule_with_forged_lambda_domains --skip reject_unlisted_recursor
+          RUSTFLAGS='-C target-cpu=x86-64-v3' cargo +1.99.1 build --release --locked
+          sha256sum target/release/sokonanoda | tee /tmp/flash-binary.sha256
+          printf '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2,"print_success_message":false}\n' > /tmp/flash-config.json
+      - name: Recreate the October 28 pinned Arena fixtures
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena.git /tmp/arena
+          git -C /tmp/arena checkout -q "$ARENA_SHA"
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test --skip-ci
+      - name: Exact soundness and prescribed verdict gate
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p /tmp/flash-evidence
+          python3 - <<'PY'
+          import hashlib,json,subprocess,sys
+          from pathlib import Path
+          root=Path("/tmp/arena/_build/tests")
+          sha={
+           "bugs/closure-level-subst":"ba61ad635f4a1e8929b3ada25df22a8ab854f908d5fac44f9e7bf5f2d91ae3a0",
+           "bugs/nested-name-capture":"9d38f6480b12a9061ac54dec8ea27477414a39c65301dfb7ee5cedaa8d3cffad",
+           "bugs/nested-rec-rule-nfields":"8874ecde1a57edbc52428cb7ea7c8834f74e623a164b0c0f69e78613effc0c56",
+           "bugs/pi-closure-context":"730013454f261b1c20e3ee4600821e325715929a6ddca36779f6ce9e5f506520",
+           "bugs/unit-rec-rule":"cb6d127a5f0daa9fa2047c338e809d1ffb9cc3d8454956c30eede38091a4a969",
+          }
+          observed=set()
+          errors=[]
+          counts={"accept":0,"reject":0}
+          bin=Path.cwd()/"target/release/sokonanoda"
+          evidence=Path("/tmp/flash-evidence/verdicts.tsv")
+          with evidence.open("w") as out:
+           out.write("test\texpected\texit\tclassification\tsha256\n")
+           for stats_path in sorted(root.rglob("*.stats.json")):
+            stats=json.loads(stats_path.read_text())
+            expected=stats.get("outcome")
+            if expected not in ("accept","reject"):continue
+            name=stats["name"]
+            if name=="perf/magma-list-pair-n21":continue
+            ndjson=stats_path.with_name(stats_path.name.replace(".stats.json",".ndjson"))
+            if not ndjson.exists():
+             errors.append("missing input "+name)
+             continue
+            digest=hashlib.file_digest(ndjson.open("rb"),"sha256").hexdigest()
+            if name in sha:
+             observed.add(name)
+             if digest!=sha[name]:
+              errors.append("HASH_MISMATCH "+name)
+              continue
+            timeout=min(int(stats.get("timeout",240)),600)
+            try:
+             with ndjson.open("rb") as inp:
+              res=subprocess.run([str(bin),"/tmp/flash-config.json"],stdin=inp,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,timeout=timeout)
+             rc=res.returncode
+             ok=(expected=="accept" and rc==0) or (expected=="reject" and rc>0)
+             classification="PASS" if ok else "FAIL"
+            except subprocess.TimeoutExpired:
+             rc=124
+             classification="TIMEOUT"
+            if classification!="PASS":
+             errors.append(name+" "+classification+" "+str(rc))
+            else:
+             counts[expected]+=1
+            out.write(f"{name}\t{expected}\t{rc}\t{classification}\t{digest}\n")
+            print(name,expected,rc,classification,flush=True)
+          if observed!=set(sha):
+           errors.append("Missing exact adversarial cases: "+repr(set(sha)-observed))
+          if sum(counts.values())<190:
+           errors.append("Incomplete portable coverage: "+repr(counts))
+          summary={"source":"candidate","arena_sha":"112b2ed3ef66f022235684c969ccb1046cf1600b","correct":counts,"wrong_or_missing":errors,"excluded_heavy":"perf/magma-list-pair-n21"}
+          Path("/tmp/flash-evidence/summary.json").write_text(json.dumps(summary,indent=2))
+          print(json.dumps(summary,indent=2))
+          if errors:sys.exit(1)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: guarded-eta-prescribed-20261029
+          path: |
+            /tmp/flash-binary.sha256
+            /tmp/flash-evidence/
+          if-no-files-found: warn
+
+  magma:
+    needs: prescribed
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Build pinned candidate and stress fixture
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rustup toolchain install 1.99.1 --profile minimal
+          RUSTFLAGS='-C target-cpu=x86-64-v3' cargo +1.99.1 build --release --locked
+          git clone -q https://github.com/leanprover/lean-kernel-arena.git /tmp/arena
+          git -C /tmp/arena checkout -q "$ARENA_SHA"
+          (cd /tmp/arena && nix develop -c ./lka.py build-test perf/magma-list-pair-n21)
+          printf '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2,"print_success_message":false}\n' > /tmp/flash-config.json
+      - name: Two-worker bounded memory and verdict replay
+        shell: bash
+        run: |
+          set -uxo pipefail
+          mkdir -p /tmp/flash-evidence
+          f=/tmp/arena/_build/tests/perf/magma-list-pair-n21.ndjson
+          printf 'b8279fa9189a203c6c11b04702c27c0f99a650b37f2b0165dd260b1d14e9ef84  %s\n' "$f" | sha256sum -c -
+          /usr/bin/time -f 'elapsed=%e user=%U system=%S max_rss_kb=%M' -o /tmp/flash-evidence/magma-time.txt \
+            timeout --kill-after=10s 260s target/release/sokonanoda /tmp/flash-config.json \
+            < "$f" > /tmp/flash-evidence/magma.stdout 2> /tmp/flash-evidence/magma.stderr
+          rc=$?
+          printf 'checker_exit=%s\n' "$rc" | tee /tmp/flash-evidence/magma-status.txt
+          if [ "$rc" -eq 0 ]; then echo "MAGMA_ACCEPT"; else echo "MAGMA_NOT_YET_ACCEPTED"; fi
+          exit "$rc"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: guarded-eta-magma-20261029
+          path: /tmp/flash-evidence/
+          if-no-files-found: warn
+
+  mathlib:
+    needs: prescribed
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Build source-pinned original Mathlib and PGO training input
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rustup toolchain install 1.99.1 --profile minimal
+          git clone -q https://github.com/leanprover/lean-kernel-arena.git /tmp/arena
+          git -C /tmp/arena checkout -q "$ARENA_SHA"
+          (cd /tmp/arena && nix develop -c ./lka.py build-test init-prelude mathlib)
+          printf '22c5de83469408950005589a3bc5ef5157c65549b5a802f85d567c29151306a6  %s\n' /tmp/arena/_build/tests/mathlib.ndjson | sha256sum -c -
+          git worktree add --detach /tmp/baseline "$BASE_SHA"
+          git worktree add --detach /tmp/candidate "$GITHUB_SHA"
+          printf '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2,"print_success_message":false}\n' > /tmp/flash-config.json
+      - name: Identically trained official-style PGO builds
+        shell: bash
+        run: |
+          set -euxo pipefail
+          # Use llvm-profdata built against the same LLVM as rustc 1.99.1.
+          # The GitHub Ubuntu image does not provide an unversioned executable.
+          rustup component add llvm-tools-preview --toolchain 1.99.1
+          RUST_HOST="$(rustc +1.99.1 -vV | sed -n 's/^host: //p')"
+          RUST_SYSROOT="$(rustc +1.99.1 --print sysroot)"
+          PROFDATA="$RUST_SYSROOT/lib/rustlib/$RUST_HOST/bin/llvm-profdata"
+          test -x "$PROFDATA"
+          "$PROFDATA" --version
+          df -h /tmp
+          for arm in baseline candidate; do
+            (
+              cd "/tmp/$arm"
+              mkdir -p pgo
+              RUSTFLAGS="-C target-cpu=native -Cprofile-generate=$PWD/pgo" cargo +1.99.1 build --release --locked
+              target/release/sokonanoda /tmp/flash-config.json < /tmp/arena/_build/tests/init-prelude.ndjson > /dev/null
+              "$PROFDATA" merge -o "$PWD/pgo/merged.profdata" "$PWD/pgo"
+              RUSTFLAGS="-C target-cpu=native -Cprofile-use=$PWD/pgo/merged.profdata" cargo +1.99.1 build --release --locked
+              test -s target/release/sokonanoda
+            )
+          done
+          df -h /tmp
+      - name: Paired full Mathlib verdict and time
+        shell: bash
+        run: |
+          set -uxo pipefail
+          mkdir -p /tmp/flash-evidence
+          printf 'arm,rep,exit,time_file\n' > /tmp/flash-evidence/mathlib-summary.csv
+          for rep in 1 2; do
+            if [ "$rep" -eq 1 ]; then arms="candidate baseline"; else arms="baseline candidate"; fi
+            for arm in $arms; do
+              /usr/bin/time -f 'elapsed=%e user=%U system=%S max_rss_kb=%M' -o "/tmp/flash-evidence/$arm-$rep.time" \
+                timeout --kill-after=10s 5680s "/tmp/$arm/target/release/sokonanoda" /tmp/flash-config.json \
+                < /tmp/arena/_build/tests/mathlib.ndjson \
+                > "/tmp/flash-evidence/$arm-$rep.stdout" 2> "/tmp/flash-evidence/$arm-$rep.stderr"
+              rc=$?
+              printf '%s,%s,%s,%s\n' "$arm" "$rep" "$rc" "$arm-$rep.time" >> /tmp/flash-evidence/mathlib-summary.csv
+            done
+          done
+          sha256sum /tmp/baseline/target/release/sokonanoda /tmp/candidate/target/release/sokonanoda > /tmp/flash-evidence/binaries.sha256
+          cat /tmp/flash-evidence/mathlib-summary.csv
+          awk -F, 'NR>1 && $3 != 0 { bad=1 } END { exit bad }' /tmp/flash-evidence/mathlib-summary.csv
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: guarded-eta-mathlib-20261029
+          path: /tmp/flash-evidence/
+          if-no-files-found: warn
