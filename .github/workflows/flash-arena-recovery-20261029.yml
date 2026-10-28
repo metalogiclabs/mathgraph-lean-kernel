@@ -176,16 +176,27 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
+          # Use llvm-profdata built against the same LLVM as rustc 1.99.1.
+          # The GitHub Ubuntu image does not provide an unversioned executable.
+          rustup component add llvm-tools-preview --toolchain 1.99.1
+          RUST_HOST="$(rustc +1.99.1 -vV | sed -n 's/^host: //p')"
+          RUST_SYSROOT="$(rustc +1.99.1 --print sysroot)"
+          PROFDATA="$RUST_SYSROOT/lib/rustlib/$RUST_HOST/bin/llvm-profdata"
+          test -x "$PROFDATA"
+          "$PROFDATA" --version
+          df -h /tmp
           for arm in baseline candidate; do
             (
               cd "/tmp/$arm"
               mkdir -p pgo
               RUSTFLAGS="-C target-cpu=native -Cprofile-generate=$PWD/pgo" cargo +1.99.1 build --release --locked
               target/release/sokonanoda /tmp/flash-config.json < /tmp/arena/_build/tests/init-prelude.ndjson > /dev/null
-              llvm-profdata merge -o "$PWD/pgo/merged.profdata" "$PWD/pgo"
+              "$PROFDATA" merge -o "$PWD/pgo/merged.profdata" "$PWD/pgo"
               RUSTFLAGS="-C target-cpu=native -Cprofile-use=$PWD/pgo/merged.profdata" cargo +1.99.1 build --release --locked
+              test -s target/release/sokonanoda
             )
           done
+          df -h /tmp
       - name: Paired full Mathlib verdict and time
         shell: bash
         run: |
