@@ -41,6 +41,7 @@ memmap2 = "0.9.11"
 [features]
 top-byte-ignore = []
 reuse-probe = []
+reuse-scope-probe = ["reuse-probe"]
 
 [[bin]]
 name = "sokonanoda"

@@ -1,0 +1,179 @@
+name: Graph-native nucleus V2 source-context triage on full Mathlib
+
+on:
+  push:
+    branches:
+      - research/semantic-reuse-scope-v2-20261028
+    paths:
+      - '.github/workflows/semantic-reuse-scope-v2.yml'
+      - 'src/eval.rs'
+      - 'src/util.rs'
+      - 'src/env.rs'
+      - 'src/main.rs'
+      - 'src/lib.rs'
+      - 'src/reuse_scope.rs'
+      - 'src/reuse_probe.rs'
+      - 'Cargo.toml'
+      - 'tests/reuse_scope_*.rs'
+      - 'tests/reuse_probe_*.rs'
+      - 'experiments/semantic_reuse_scope_v2_protocol_20261028.md'
+      - 'experiments/semantic_reuse_full_mathlib_config.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: semantic-reuse-scope-v2
+  cancel-in-progress: false
+
+jobs:
+  source-context-triage:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 300
+    env:
+      CARGO_INCREMENTAL: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Run V1 and V2 contract and real export tests
+        env:
+          CARGO_TARGET_DIR: /tmp/nucleus-scope-test-target
+        run: |
+          set -euo pipefail
+          # Keep the feature-specific CLI binary separate from ordinary builds.
+          cargo build --locked --features reuse-scope-probe
+          cargo test --locked --features reuse-scope-probe --test reuse_scope_contract --test reuse_scope_cli --test reuse_probe_contract --test reuse_probe_cli
+          cargo test --locked --features reuse-scope-probe --lib -- --skip reject_rec_rule_with_forged_lambda_domains --skip reject_unlisted_recursor
+
+      - name: Build source-pinned complete Mathlib export
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/nucleus-arena
+          git -C /tmp/nucleus-arena checkout --detach b83254de5146ef34147ab82a48edbe1856b0edcc
+          cd /tmp/nucleus-arena
+          nix develop -c ./lka.py build-test mathlib
+          test -s _build/tests/mathlib.ndjson
+          test "$(stat -c %s _build/tests/mathlib.ndjson)" = '6184415052'
+          echo '22c5de83469408950005589a3bc5ef5157c65549b5a802f85d567c29151306a6  _build/tests/mathlib.ndjson' | sha256sum -c -
+
+      - name: Build matched ordinary and V2 diagnostic binaries
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/nucleus-scope-evidence
+          RUSTFLAGS='-C target-cpu=x86-64' cargo build --release --locked
+          cp target/release/sokonanoda /tmp/nucleus-baseline
+          RUSTFLAGS='-C target-cpu=x86-64' cargo build --release --locked --features reuse-scope-probe
+          cp target/release/sokonanoda /tmp/nucleus-scope-probe
+          sha256sum /tmp/nucleus-baseline /tmp/nucleus-scope-probe > /tmp/nucleus-scope-evidence/binaries.sha256
+          git rev-parse HEAD > /tmp/nucleus-scope-evidence/checker_revision.txt
+          git -C /tmp/nucleus-arena rev-parse HEAD > /tmp/nucleus-scope-evidence/arena_revision.txt
+
+      - name: Check ordinary acceptance parity and freeze source-scope readout
+        run: |
+          set -euo pipefail
+          /usr/bin/time -f '%e wall_seconds, %U user_seconds, %M max_rss_kib' -o /tmp/nucleus-scope-evidence/baseline.time \
+            /tmp/nucleus-baseline experiments/semantic_reuse_full_mathlib_config.json \
+            < /tmp/nucleus-arena/_build/tests/mathlib.ndjson \
+            > /tmp/nucleus-scope-evidence/baseline.stdout 2> /tmp/nucleus-scope-evidence/baseline.stderr
+          /usr/bin/time -f '%e wall_seconds, %U user_seconds, %M max_rss_kib' -o /tmp/nucleus-scope-evidence/scope.time \
+            /tmp/nucleus-scope-probe experiments/semantic_reuse_full_mathlib_config.json \
+            < /tmp/nucleus-arena/_build/tests/mathlib.ndjson \
+            > /tmp/nucleus-scope-evidence/scope.stdout 2> /tmp/nucleus-scope-evidence/scope.stderr
+          diff -u /tmp/nucleus-scope-evidence/baseline.stdout /tmp/nucleus-scope-evidence/scope.stdout
+          python3 - <<'PY'
+          import json
+          import re
+          from pathlib import Path
+
+          root = Path('/tmp/nucleus-scope-evidence')
+          expected = 'Checked 718577 declarations with no errors\n'
+          assert (root / 'baseline.stdout').read_text() == expected, 'native complete-Mathlib acceptance differs from pinned V1'
+
+          lines = (root / 'scope.stderr').read_text().splitlines()
+          def one_json(prefix):
+              records = [line.removeprefix(prefix) for line in lines if line.startswith(prefix)]
+              assert len(records) == 1, f'expected exactly one {prefix} report, got {len(records)}'
+              return json.loads(records[0])
+
+          identity = one_json('MG_REUSE_PROBE=')
+          scope = one_json('MG_REUSE_SCOPE=')
+          assert identity['qualification'] == 'CANDIDATE_IDENTITY_ONLY'
+          assert scope['qualification'] == 'CANDIDATE_CONTEXT_DIAGNOSTIC_ONLY'
+          assert identity['speedup_measured'] is False
+          assert scope['speedup_measured'] is False
+          assert scope['sound_persistent_reuse_implemented'] is False
+          assert scope['source_support_limit_nodes'] == 8192
+          assert identity['sample_denominator'] == 256
+
+          i, s = identity['counts'], scope['counts']
+          identity_misses = i['first'] + i['same_generation'] + i['across_generation_candidate'] + i['excluded']
+          assert sum(s.values()) == identity_misses, 'scope classification did not cover all sampled cache misses'
+          assert s['first'] == i['first']
+          assert s['same_generation'] == i['same_generation']
+          assert s['excluded'] == i['excluded']
+          assert s['unmatched_source_identity'] == 0
+          cross_classes = ['strict_same_cutoff', 'advanced_visible_direct_support', 'advanced_blocked_direct_support',
+                           'advanced_unknown_support', 'regressed_prefix', 'temporary_context']
+          assert sum(s[k] for k in cross_classes) == i['across_generation_candidate']
+          assert sum(scope['recurrent_by_head'].values()) == i['across_generation_candidate']
+          assert sum(scope['recurrent_elapsed_ns_by_head'].values()) == sum(
+              scope['sampled_inclusive_elapsed_ns'][k] for k in cross_classes)
+
+          def timing(name):
+              raw = (root / f'{name}.time').read_text().strip()
+              hit = re.fullmatch(r'([0-9.]+) wall_seconds, ([0-9.]+) user_seconds, (\d+) max_rss_kib', raw)
+              assert hit is not None, f'invalid /usr/bin/time output: {raw}'
+              return {'wall_seconds': float(hit[1]), 'user_seconds': float(hit[2]), 'max_rss_kib': int(hit[3])}
+
+          baseline = timing('baseline')
+          instrumented = timing('scope')
+          rss_ratio = instrumented['max_rss_kib'] / max(1, baseline['max_rss_kib'])
+          candidates = i['across_generation_candidate']
+          advanced = s['advanced_visible_direct_support']
+          strict = s['strict_same_cutoff']
+          advanced_fraction = advanced / candidates if candidates else 0.0
+          strict_fraction = strict / candidates if candidates else 0.0
+          if rss_ratio > 1.15:
+              decision = 'INSTRUMENTATION_TOO_INTRUSIVE_FOR_PROMOTION'
+          elif advanced >= 1000 and advanced_fraction >= 0.20:
+              decision = 'INVESTIGATE_TRANSITIVE_PREFIX_PROOF_AND_COST_WEIGHTED_SLICE'
+          elif strict >= 1000 and strict_fraction >= 0.05:
+              decision = 'INVESTIGATE_STRICT_CONTEXT_ONLY'
+          else:
+              decision = 'REJECT_SAMPLED_EXACT_IDENTITY_ROUTE_AND_TEST_CHECK_AGAINST'
+
+          report = {
+              'qualification': 'CANDIDATE_CONTEXT_DIAGNOSTIC_ONLY',
+              'verification_boundary': 'native complete-Mathlib acceptance parity + sampled direct-source-scope and inclusive-time census, not semantic reuse or a speedup',
+              'mathlib_sha256': '22c5de83469408950005589a3bc5ef5157c65549b5a802f85d567c29151306a6',
+              'arena_revision': (root / 'arena_revision.txt').read_text().strip(),
+              'checker_revision': (root / 'checker_revision.txt').read_text().strip(),
+              'same_stdout': True,
+              'both_exited_successfully': True,
+              'warranted_persistent_reuse': False,
+              'measured_speedup': False,
+              'identity_census': identity,
+              'scope_census': scope,
+              'timing_observations': {'baseline': baseline, 'instrumented': instrumented, 'instrumented_to_baseline_peak_rss': rss_ratio},
+              'predeclared_next_phase_gate': {
+                  'advanced_visible_count': advanced,
+                  'advanced_visible_fraction_of_cross_reset_candidates': advanced_fraction,
+                  'strict_same_cutoff_count': strict,
+                  'strict_same_cutoff_fraction_of_cross_reset_candidates': strict_fraction,
+                  'max_acceptable_instrumented_rss_ratio': 1.15,
+                  'decision': decision,
+              },
+          }
+          (root / 'report.json').write_text(json.dumps(report, indent=2, sort_keys=True) + '\n')
+          print(json.dumps(report, indent=2, sort_keys=True))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: graph-native-nucleus-v2-full-mathlib-${{ github.sha }}
+          path: /tmp/nucleus-scope-evidence/
+          if-no-files-found: warn

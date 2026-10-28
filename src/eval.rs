@@ -625,13 +625,33 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 }
                 return v;
             }
-            #[cfg(feature = "reuse-probe")]
+            #[cfg(all(feature = "reuse-probe", not(feature = "reuse-scope-probe")))]
             if let Some(identity) = sampled_source_identity {
                 // Epoch zero means only this immutable source export in this process.
                 // The census does not read or reuse cached proof-checker values.
                 self.tc_cache.reuse_probe.observe_miss(0, identity, true, true);
             }
+            #[cfg(feature = "reuse-scope-probe")]
+            let scope_timing = sampled_source_identity.map(|identity| {
+                let miss = self.tc_cache.reuse_probe.observe_miss(0, identity, true, true);
+                let head = crate::reuse_scope::HeadKind::of_expr(e.as_ref());
+                let class = self.tc_cache.reuse_scope.observe(
+                    0,
+                    identity,
+                    miss,
+                    self.env.diagnostic_source_cutoff(),
+                    self.env.has_temp_ext(),
+                    head,
+                    || crate::reuse_scope::direct_source_support(e, 8192),
+                );
+                (class, head, std::time::Instant::now())
+            });
             let v = self.eval_no_cache(depth, env, e);
+            #[cfg(feature = "reuse-scope-probe")]
+            if let Some((class, head, started)) = scope_timing {
+                let elapsed_ns = u64::try_from(started.elapsed().as_nanos()).unwrap_or(u64::MAX);
+                self.tc_cache.reuse_scope.record_inclusive_elapsed_ns(class, head, elapsed_ns);
+            }
             self.tc_cache.closed_eval_cache.insert(e, v);
             return v;
         }

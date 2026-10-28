@@ -19,6 +19,8 @@ pub mod quot;
 pub mod quote;
 pub mod relevance;
 pub mod reuse_probe;
+#[cfg(feature = "reuse-scope-probe")]
+pub mod reuse_scope;
 pub mod tc;
 #[cfg(test)]
 mod tests;

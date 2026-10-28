@@ -1051,6 +1051,8 @@ pub struct TcCache<'a, 't> {
     pub(crate) closed_eval_cache: FxHashMap<ExprPtr<'t>, V<'a>>,
     #[cfg(feature = "reuse-probe")]
     pub(crate) reuse_probe: crate::reuse_probe::ReuseProbe,
+    #[cfg(feature = "reuse-scope-probe")]
+    pub(crate) reuse_scope: crate::reuse_scope::ScopeProbe,
     pub(crate) whnf_store: FxHashMap<u64, (u128, ExprPtr<'t>)>,
     pub(crate) whnf_store_filter: Box<[u64; 1024]>,
     pub(crate) whnf_head_filter: Box<[u64; 1024]>,
@@ -1105,6 +1107,8 @@ impl<'a, 't> TcCache<'a, 't> {
             closed_eval_cache: session_small_fx_hash_map(),
             #[cfg(feature = "reuse-probe")]
             reuse_probe: Default::default(),
+            #[cfg(feature = "reuse-scope-probe")]
+            reuse_scope: Default::default(),
             whnf_store: new_fx_hash_map(),
             whnf_store_filter: Box::new([0u64; 1024]),
             whnf_head_filter: Box::new([0u64; 1024]),
