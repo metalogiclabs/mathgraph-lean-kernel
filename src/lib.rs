@@ -18,6 +18,7 @@ pub mod parser;
 pub mod quot;
 pub mod quote;
 pub mod relevance;
+pub mod reuse_probe;
 pub mod tc;
 #[cfg(test)]
 mod tests;

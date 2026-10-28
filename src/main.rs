@@ -48,6 +48,8 @@ fn use_config(config_path: &Path) -> Result<Option<String>, Box<dyn Error>> {
     }
     // Check the environment
     export_file.check_all_declars();
+    #[cfg(feature = "reuse-probe")]
+    eprintln!("MG_REUSE_PROBE={}", sokonanoda::reuse_probe::global_report());
     if export_file.config.print_success_message {
         if skipped_axioms.is_empty() {
             Ok(Some(format!("Checked {} declarations with no errors", export_file.declars.len())))

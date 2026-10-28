@@ -611,8 +611,25 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
             }
         }
         if e.num_loose_bvars() == 0 && env.lsub().is_none() {
+            #[cfg(feature = "reuse-probe")]
+            let sampled_source_identity = if e.is_local() {
+                None
+            } else {
+                let identity = e.as_ref() as *const _ as usize as u64;
+                crate::reuse_probe::ReuseProbe::in_sample(identity).then_some(identity)
+            };
             if let Some(v) = self.tc_cache.closed_eval_cache.get(&e) {
+                #[cfg(feature = "reuse-probe")]
+                if sampled_source_identity.is_some() {
+                    self.tc_cache.reuse_probe.sampled_cache_hit();
+                }
                 return v;
+            }
+            #[cfg(feature = "reuse-probe")]
+            if let Some(identity) = sampled_source_identity {
+                // Epoch zero means only this immutable source export in this process.
+                // The census does not read or reuse cached proof-checker values.
+                self.tc_cache.reuse_probe.observe_miss(0, identity, true, true);
             }
             let v = self.eval_no_cache(depth, env, e);
             self.tc_cache.closed_eval_cache.insert(e, v);

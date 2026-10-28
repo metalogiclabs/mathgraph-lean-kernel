@@ -1,0 +1,121 @@
+name: Graph-native nucleus exact-identity preflight on full Mathlib
+
+on:
+  push:
+    branches:
+      - research/semantic-reuse-ceiling-v1-20261028
+    paths:
+      - '.github/workflows/semantic-reuse-ceiling-v1.yml'
+      - 'src/eval.rs'
+      - 'src/util.rs'
+      - 'src/main.rs'
+      - 'src/lib.rs'
+      - 'src/reuse_probe.rs'
+      - 'Cargo.toml'
+      - 'tests/reuse_probe_*.rs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: semantic-reuse-ceiling-v1
+  cancel-in-progress: false
+
+jobs:
+  exact-identity-census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 300
+    env:
+      CARGO_INCREMENTAL: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Compile and run feature-gated contract tests
+        run: |
+          set -euo pipefail
+          cargo test --locked --features reuse-probe --test reuse_probe_contract --test reuse_probe_cli
+
+      - name: Build source-pinned complete Mathlib export
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/nucleus-arena
+          git -C /tmp/nucleus-arena checkout --detach b83254de5146ef34147ab82a48edbe1856b0edcc
+          cd /tmp/nucleus-arena
+          nix develop -c ./lka.py build-test mathlib
+          test -s _build/tests/mathlib.ndjson
+          test "$(stat -c %s _build/tests/mathlib.ndjson)" = '6184415052'
+          echo '22c5de83469408950005589a3bc5ef5157c65549b5a802f85d567c29151306a6  _build/tests/mathlib.ndjson' | sha256sum -c -
+
+      - name: Build same-revision uninstrumented and instrumented binaries
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/nucleus-evidence
+          RUSTFLAGS='-C target-cpu=x86-64' cargo build --release --locked
+          cp target/release/sokonanoda /tmp/nucleus-baseline
+          RUSTFLAGS='-C target-cpu=x86-64' cargo build --release --locked --features reuse-probe
+          cp target/release/sokonanoda /tmp/nucleus-probe
+          sha256sum /tmp/nucleus-baseline /tmp/nucleus-probe > /tmp/nucleus-evidence/binaries.sha256
+          git rev-parse HEAD > /tmp/nucleus-evidence/checker_revision.txt
+          git -C /tmp/nucleus-arena rev-parse HEAD > /tmp/nucleus-evidence/arena_revision.txt
+
+      - name: Confirm ordinary acceptance and collect read-only census
+        run: |
+          set -euo pipefail
+          /usr/bin/time -f '%e wall_seconds, %U user_seconds, %M max_rss_kib' -o /tmp/nucleus-evidence/baseline.time \
+            /tmp/nucleus-baseline --stdin --nat-extension --string-extension --axiom-allow-all --threads 4 \
+            < /tmp/nucleus-arena/_build/tests/mathlib.ndjson \
+            > /tmp/nucleus-evidence/baseline.stdout 2> /tmp/nucleus-evidence/baseline.stderr
+          /usr/bin/time -f '%e wall_seconds, %U user_seconds, %M max_rss_kib' -o /tmp/nucleus-evidence/probe.time \
+            /tmp/nucleus-probe --stdin --nat-extension --string-extension --axiom-allow-all --threads 4 \
+            < /tmp/nucleus-arena/_build/tests/mathlib.ndjson \
+            > /tmp/nucleus-evidence/probe.stdout 2> /tmp/nucleus-evidence/probe.stderr
+          diff -u /tmp/nucleus-evidence/baseline.stdout /tmp/nucleus-evidence/probe.stdout
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path('/tmp/nucleus-evidence')
+          reports = [line.removeprefix('MG_REUSE_PROBE=') for line in (root / 'probe.stderr').read_text().splitlines() if line.startswith('MG_REUSE_PROBE=')]
+          assert len(reports) == 1, f'expected exactly one census, got {len(reports)}'
+          observed = json.loads(reports[0])
+          assert observed['qualification'] == 'CANDIDATE_IDENTITY_ONLY'
+          assert observed['speedup_measured'] is False
+          assert observed['sample_denominator'] == 256
+          counts = observed['counts']
+          misses = counts['first'] + counts['same_generation'] + counts['across_generation_candidate']
+          candidate_fraction = (counts['across_generation_candidate'] / misses) if misses else None
+          # Predeclared gate, not a performance or semantic-warrant claim.
+          worth_scoping = counts['across_generation_candidate'] >= 1000 and candidate_fraction is not None and candidate_fraction >= 0.05
+          result = {
+              'qualification': 'CANDIDATE_IDENTITY_ONLY',
+              'verification_boundary': 'full-Mathlib source-pinned acceptance parity and sampled exact-identity census only',
+              'mathlib_sha256': '22c5de83469408950005589a3bc5ef5157c65549b5a802f85d567c29151306a6',
+              'arena_revision': (root / 'arena_revision.txt').read_text().strip(),
+              'checker_revision': (root / 'checker_revision.txt').read_text().strip(),
+              'same_stdout': True,
+              'both_exited_successfully': True,
+              'sampled_closed_eval_misses': misses,
+              'sampled_cross_reset_candidates': counts['across_generation_candidate'],
+              'cross_reset_candidate_fraction_of_sampled_misses': candidate_fraction,
+              'predeclared_next_phase_gate': {
+                  'minimum_sampled_candidates': 1000,
+                  'minimum_candidate_fraction': 0.05,
+                  'result': 'INVESTIGATE_TYPED_SCOPE' if worth_scoping else 'REJECT_EXACT_IDENTITY_ROUTE',
+              },
+              'measured_speedup': False,
+              'warranted_semantic_reuse': False,
+              'census': observed,
+          }
+          (root / 'report.json').write_text(json.dumps(result, indent=2, sort_keys=True) + '\n')
+          print(json.dumps(result, indent=2, sort_keys=True))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: graph-native-nucleus-full-mathlib-${{ github.sha }}
+          path: /tmp/nucleus-evidence/
+          if-no-files-found: warn
