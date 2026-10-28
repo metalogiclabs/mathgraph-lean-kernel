@@ -1,7 +1,7 @@
-name: Flash Arena rapid soundness smoke
+name: Flash guarded-eta correctness experiment
 on:
   push:
-    branches: [flash-arena-recovery-20261029-ci-v1]
+    branches: [flash-arena-eta-guard-experiment-20261029]
   workflow_dispatch:
 permissions:
   contents: read
@@ -69,4 +69,55 @@ jobs:
         with:
           name: flash-arena-rapid-smoke
           path: /tmp/flash-smoke/
+          if-no-files-found: warn
+
+  valid:
+    needs: smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 70
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {test: "init", sha256: "620502ac9e63ba4a2dea9d46386c2f6aebc49faf8848ea3aaa18a77a09491a6a", timeout_seconds: 500}
+          - {test: "std", sha256: "289ed65a367abdc7388a855d2acf59cc1f401f5e06295acbb8a420682d9f00bd", timeout_seconds: 590}
+          - {test: "perf/magma-list-pair-n21", sha256: "b8279fa9189a203c6c11b04702c27c0f99a650b37f2b0165dd260b1d14e9ef84", timeout_seconds: 260}
+    env:
+      TEST_NAME: ${{ matrix.test }}
+      TEST_SHA: ${{ matrix.sha256 }}
+      TEST_TIMEOUT: ${{ matrix.timeout_seconds }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Build experiment checker
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rustup toolchain install 1.99.1 --profile minimal
+          RUSTFLAGS='-C target-cpu=x86-64-v3' cargo +1.99.1 build --release --locked
+          mkdir -p /tmp/eta-evidence
+          sha256sum target/release/sokonanoda > /tmp/eta-evidence/binary.sha256
+      - name: Recreate, hash check, and replay valid export
+        shell: bash
+        run: |
+          set -uo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena.git /tmp/arena || exit 1
+          git -C /tmp/arena checkout -q 112b2ed3ef66f022235684c969ccb1046cf1600b || exit 1
+          (cd /tmp/arena && nix develop -c ./lka.py build-test "$TEST_NAME") || exit 1
+          f="/tmp/arena/_build/tests/$TEST_NAME.ndjson"
+          printf '%s  %s\n' "$TEST_SHA" "$f" | sha256sum -c - || exit 1
+          printf '%s\n' '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2,"print_success_message":false}' > /tmp/eta-evidence/config.json
+          rc=0
+          /usr/bin/time -f 'elapsed=%e user=%U system=%S max_rss_kb=%M' -o /tmp/eta-evidence/time.txt \
+            timeout --kill-after=10s "$TEST_TIMEOUT" target/release/sokonanoda /tmp/eta-evidence/config.json \
+            < "$f" > /tmp/eta-evidence/stdout.txt 2> /tmp/eta-evidence/stderr.txt || rc=$?
+          printf 'case=%s\nchecker_exit=%s\nsha256=%s\nsource_sha=%s\n' "$TEST_NAME" "$rc" "$TEST_SHA" "$GITHUB_SHA" | tee /tmp/eta-evidence/verdict.txt
+          cat /tmp/eta-evidence/time.txt
+          if [ "$rc" -ne 0 ]; then tail -80 /tmp/eta-evidence/stderr.txt; exit 1; fi
+          echo "VALID_EXPORT_ACCEPTED: $TEST_NAME"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eta-experiment-${{ strategy.job-index }}
+          path: /tmp/eta-evidence/
           if-no-files-found: warn
