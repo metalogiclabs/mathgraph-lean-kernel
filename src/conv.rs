@@ -585,7 +585,10 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         };
         // Eta and unit-like equality are valid only at a common type.
         // Comparing either operand's type alone can identify unrelated values.
-        if !self.conv_types_at(depth, xt, yt) {
+        // This comparison is deliberately non-eta and non-unfolding.
+        // Recursive full conversion here can revisit try_struct_eta forever
+        // on malformed terms; a conservative guard preserves soundness.
+        if !self.unify::<false>(depth, xt, yt) {
             return false;
         }
         for ty in [xt, yt] {
