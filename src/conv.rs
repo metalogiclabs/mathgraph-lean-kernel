@@ -100,7 +100,11 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
     #[inline]
     fn unify_general<const RIGID: bool>(&mut self, depth: u32, x: V<'t>, y: V<'t>) -> bool {
         let cacheable = is_cacheable(x) || is_cacheable(y);
-        let neg_eligible = !matches!(x, Value::Lam { .. }) && !matches!(y, Value::Lam { .. });
+        // A guarded type comparison deliberately suppresses eta. Its
+        // negative results must not contaminate unrestricted defeq caching.
+        let neg_eligible = !self.tc_cache.struct_eta_type_guard
+            && !matches!(x, Value::Lam { .. })
+            && !matches!(y, Value::Lam { .. });
         if cacheable {
             let xa = x as *const Value<'t> as usize;
             let ya = y as *const Value<'t> as usize;
@@ -580,15 +584,20 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
     }
 
     fn try_struct_eta(&mut self, depth: u32, x: V<'t>, y: V<'t>) -> bool {
+        if self.tc_cache.struct_eta_type_guard {
+            return false;
+        }
         let (Some(xt), Some(yt)) = (self.value_type_opt(depth, x), self.value_type_opt(depth, y)) else {
             return false;
         };
-        // Eta and unit-like equality are valid only at a common type.
-        // Comparing either operand's type alone can identify unrelated values.
-        // This comparison is deliberately non-eta and non-unfolding.
-        // Recursive full conversion here can revisit try_struct_eta forever
-        // on malformed terms; a conservative guard preserves soundness.
-        if !self.unify::<false>(depth, xt, yt) {
+        // Structure eta is valid only when both operands have convertible
+        // types. Use full delta/beta conversion to handle legitimate aliases
+        // in large libraries, but suppress re-entrant eta during this check.
+        // False results produced in the guarded pass are not negative-cached.
+        self.tc_cache.struct_eta_type_guard = true;
+        let compatible_types = self.unify::<true>(depth, xt, yt);
+        self.tc_cache.struct_eta_type_guard = false;
+        if !compatible_types {
             return false;
         }
         for ty in [xt, yt] {
