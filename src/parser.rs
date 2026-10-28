@@ -836,6 +836,7 @@ impl<'a, R: BufRead> Parser<'a, R> {
             name_cache,
             config: self.config,
             mutual_block_sizes: self.mutual_block_sizes,
+            reserved_nested_prefix_hashes: std::sync::OnceLock::new(),
         };
         Ok((export_file, self.skipped))
     }
