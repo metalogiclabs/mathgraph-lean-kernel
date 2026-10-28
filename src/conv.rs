@@ -62,7 +62,13 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 return true;
             }
             match (a, b) {
-                (Env::Nil { .. }, Env::Nil { .. }) => return true,
+                (Env::Nil { lsub: la, .. }, Env::Nil { lsub: lb, .. }) => {
+                    return match (la, lb) {
+                        (None, None) => true,
+                        (Some(a), Some(b)) => std::ptr::eq(*a, *b),
+                        _ => false,
+                    };
+                },
                 (
                     Env::Cons { v: va, parent: pa, hash: ha, .. },
                     Env::Cons { v: vb, parent: pb, hash: hb, .. },
@@ -201,6 +207,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
             (Value::Pi { domain: dx, body: bx, .. }, Value::Pi { domain: dy, body: by, .. }) => {
                 if bx.body == by.body
                     && std::ptr::eq(*dx, *dy)
+                    && bx.ctx.map(|c| c as *const _) == by.ctx.map(|c| c as *const _)
                     && Self::envs_ptr_equal(bx.env, by.env)
                 {
                     return true;
@@ -220,6 +227,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 let dy = self.lam_domain(depth, t2);
                 if bx.body == by.body
                     && std::ptr::eq(dx, dy)
+                    && bx.ctx.map(|c| c as *const _) == by.ctx.map(|c| c as *const _)
                     && Self::envs_ptr_equal(bx.env, by.env)
                 {
                     return true;
@@ -572,9 +580,15 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
     }
 
     fn try_struct_eta(&mut self, depth: u32, x: V<'t>, y: V<'t>) -> bool {
-        let xt = self.value_type_opt(depth, x);
-        let yt = self.value_type_opt(depth, y);
-        for ty in [xt, yt].into_iter().flatten() {
+        let (Some(xt), Some(yt)) = (self.value_type_opt(depth, x), self.value_type_opt(depth, y)) else {
+            return false;
+        };
+        // Eta and unit-like equality are valid only at a common type.
+        // Comparing either operand's type alone can identify unrelated values.
+        if !self.conv_types_at(depth, xt, yt) {
+            return false;
+        }
+        for ty in [xt, yt] {
             let ty_f = self.force_all(depth, ty);
             if let Value::Rigid { head: RigidHead::Inductive(ind_name, _), .. } = ty_f {
                 let ind_name = *ind_name;
