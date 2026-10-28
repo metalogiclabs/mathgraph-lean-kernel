@@ -715,11 +715,37 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
     }
 
     fn mk_unique_name(&mut self, n: NamePtr<'t>, st: &mut InductiveCheckState<'t>) -> NamePtr<'t> {
+        // Reserve *all prefixes* of names already present in the complete
+        // export, including future declarations such as _nested.Cov_1.rec.
+        // The one-time index avoids scanning all of Mathlib for each nested
+        // inductive, and a hash collision only causes a skipped fresh name.
+        let nested_root = self.ctx.str1("_nested").get_hash();
+        let reserved = self.ctx.export_file.reserved_nested_prefix_hashes.get_or_init(|| {
+            let mut out: FxHashSet<u64> = FxHashSet::default();
+            for name in self.ctx.export_file.declars.keys().copied() {
+                let mut cursor = name;
+                let mut prefixes = Vec::new();
+                loop {
+                    match cursor.as_ref().kind {
+                        crate::name::Name::Str(parent, ..) | crate::name::Name::Num(parent, ..) => {
+                            prefixes.push(cursor.get_hash());
+                            if parent.get_hash() == nested_root {
+                                out.extend(prefixes);
+                                break;
+                            }
+                            cursor = parent;
+                        }
+                        crate::name::Name::Anon => break,
+                    }
+                }
+            }
+            out
+        });
         for idx in st.next_ngen_idx..u64::MAX {
             let tester = self.ctx.append_index_after(n, idx);
-            // Names introduced later in the export are reserved too: the
-            // temporary recursor must never be captured by a later declaration.
-            if tester.as_ref().decl_idx() == crate::name::NO_DECL {
+            if tester.as_ref().decl_idx() == crate::name::NO_DECL
+                && !reserved.contains(&tester.get_hash())
+            {
                 st.next_ngen_idx = idx + 1;
                 return tester;
             }
