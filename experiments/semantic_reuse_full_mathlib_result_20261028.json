@@ -1,0 +1,39 @@
+{
+  "arena_revision": "b83254de5146ef34147ab82a48edbe1856b0edcc",
+  "both_exited_successfully": true,
+  "census": {
+    "basis": "sampled source-global closed unsubstituted expression identity",
+    "counts": {
+      "across_generation_candidate": 72249,
+      "cache_resets": 146638,
+      "excluded": 0,
+      "first": 15702,
+      "same_generation": 0,
+      "sampled_cache_hits": 787731
+    },
+    "excluded_from_warrant": [
+      "possible source-environment visibility differences",
+      "expression-identity recurrence does not establish typed semantic equivalence",
+      "cache-reset candidates are not proven safely reusable",
+      "call counts do not measure avoided machine instructions"
+    ],
+    "qualification": "CANDIDATE_IDENTITY_ONLY",
+    "sample_denominator": 256,
+    "speedup_measured": false
+  },
+  "checker_revision": "83134470c98656d82dddb834d60b0ebe955b84d3",
+  "cross_reset_candidate_fraction_of_sampled_misses": 0.8214687723846232,
+  "mathlib_sha256": "22c5de83469408950005589a3bc5ef5157c65549b5a802f85d567c29151306a6",
+  "measured_speedup": false,
+  "predeclared_next_phase_gate": {
+    "minimum_candidate_fraction": 0.05,
+    "minimum_sampled_candidates": 1000,
+    "result": "INVESTIGATE_TYPED_SCOPE"
+  },
+  "qualification": "CANDIDATE_IDENTITY_ONLY",
+  "same_stdout": true,
+  "sampled_closed_eval_misses": 87951,
+  "sampled_cross_reset_candidates": 72249,
+  "verification_boundary": "full-Mathlib source-pinned acceptance parity and sampled exact-identity census only",
+  "warranted_semantic_reuse": false
+}
