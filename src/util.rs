@@ -611,6 +611,7 @@ pub struct ExportFile<'p> {
     pub name_cache: NameCache<'p>,
     pub config: Config,
     pub mutual_block_sizes: FxHashMap<NamePtr<'p>, (usize, usize)>,
+    pub(crate) reserved_nested_prefix_hashes: std::sync::OnceLock<FxHashSet<u64>>,
 }
 
 impl<'p> ExportFile<'p> {
