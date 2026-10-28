@@ -1,0 +1,113 @@
+{
+  "arena_revision": "b83254de5146ef34147ab82a48edbe1856b0edcc",
+  "both_exited_successfully": true,
+  "checker_revision": "6d1ebdb2e9e6b32409fcc03bd1aef88f306e87d2",
+  "identity_census": {
+    "basis": "sampled source-global closed unsubstituted expression identity",
+    "counts": {
+      "across_generation_candidate": 97746,
+      "cache_resets": 146636,
+      "excluded": 0,
+      "first": 16434,
+      "same_generation": 0,
+      "sampled_cache_hits": 515671
+    },
+    "excluded_from_warrant": [
+      "possible source-environment visibility differences",
+      "expression-identity recurrence does not establish typed semantic equivalence",
+      "cache-reset candidates are not proven safely reusable",
+      "call counts do not measure avoided machine instructions"
+    ],
+    "qualification": "CANDIDATE_IDENTITY_ONLY",
+    "sample_denominator": 256,
+    "speedup_measured": false
+  },
+  "mathlib_sha256": "22c5de83469408950005589a3bc5ef5157c65549b5a802f85d567c29151306a6",
+  "measured_speedup": false,
+  "predeclared_next_phase_gate": {
+    "advanced_visible_count": 94216,
+    "advanced_visible_fraction_of_cross_reset_candidates": 0.9638859902195486,
+    "decision": "INVESTIGATE_TRANSITIVE_PREFIX_PROOF_AND_COST_WEIGHTED_SLICE",
+    "max_acceptable_instrumented_rss_ratio": 1.15,
+    "strict_same_cutoff_count": 56,
+    "strict_same_cutoff_fraction_of_cross_reset_candidates": 0.0005729134696048943
+  },
+  "qualification": "CANDIDATE_CONTEXT_DIAGNOSTIC_ONLY",
+  "same_stdout": true,
+  "scope_census": {
+    "counts": {
+      "advanced_blocked_direct_support": 0,
+      "advanced_unknown_support": 0,
+      "advanced_visible_direct_support": 94216,
+      "excluded": 0,
+      "first": 16434,
+      "regressed_prefix": 2,
+      "same_generation": 0,
+      "strict_same_cutoff": 56,
+      "temporary_context": 3472,
+      "unmatched_source_identity": 0
+    },
+    "limitations": [
+      "direct reference visibility does not prove transitive source dependency or a typed judgment",
+      "source prefix and temporary environment are not a complete semantic certificate",
+      "sampled inclusive elapsed nanoseconds are neither guest instructions nor causal savings",
+      "nested sampled evaluations and OS scheduling may inflate inclusive times"
+    ],
+    "qualification": "CANDIDATE_CONTEXT_DIAGNOSTIC_ONLY",
+    "recurrent_by_head": {
+      "App": 23025,
+      "Const": 52954,
+      "Lambda": 6548,
+      "Let": 0,
+      "NatLit": 2,
+      "Pi": 11871,
+      "Proj": 0,
+      "Sort": 2651,
+      "StringLit": 695,
+      "Var": 0
+    },
+    "recurrent_elapsed_ns_by_head": {
+      "App": 15110819,
+      "Const": 6721577,
+      "Lambda": 334464,
+      "Let": 0,
+      "NatLit": 120,
+      "Pi": 1029989,
+      "Proj": 0,
+      "Sort": 410698,
+      "StringLit": 26381,
+      "Var": 0
+    },
+    "sampled_inclusive_elapsed_ns": {
+      "advanced_blocked_direct_support": 0,
+      "advanced_unknown_support": 0,
+      "advanced_visible_direct_support": 23246207,
+      "excluded": 0,
+      "first": 13280829,
+      "regressed_prefix": 210,
+      "same_generation": 0,
+      "strict_same_cutoff": 4050,
+      "temporary_context": 383581,
+      "unmatched_source_identity": 0
+    },
+    "scope_rule": "direct syntactic declaration references visible within both source prefixes; no temporary extension",
+    "sound_persistent_reuse_implemented": false,
+    "source_support_limit_nodes": 8192,
+    "speedup_measured": false
+  },
+  "timing_observations": {
+    "baseline": {
+      "max_rss_kib": 7750612,
+      "user_seconds": 258.7,
+      "wall_seconds": 73.63
+    },
+    "instrumented": {
+      "max_rss_kib": 7858508,
+      "user_seconds": 268.6,
+      "wall_seconds": 81.26
+    },
+    "instrumented_to_baseline_peak_rss": 1.013920965208941
+  },
+  "verification_boundary": "native complete-Mathlib acceptance parity + sampled direct-source-scope and inclusive-time census, not semantic reuse or a speedup",
+  "warranted_persistent_reuse": false
+}
