@@ -584,23 +584,9 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
     }
 
     fn try_struct_eta(&mut self, depth: u32, x: V<'t>, y: V<'t>) -> bool {
-        if self.tc_cache.struct_eta_type_guard {
-            return false;
-        }
-        let (Some(xt), Some(yt)) = (self.value_type_opt(depth, x), self.value_type_opt(depth, y)) else {
-            return false;
-        };
-        // Structure eta is valid only when both operands have convertible
-        // types. Use full delta/beta conversion to handle legitimate aliases
-        // in large libraries, but suppress re-entrant eta during this check.
-        // False results produced in the guarded pass are not negative-cached.
-        self.tc_cache.struct_eta_type_guard = true;
-        let compatible_types = self.unify::<true>(depth, xt, yt);
-        self.tc_cache.struct_eta_type_guard = false;
-        if !compatible_types {
-            return false;
-        }
-        for ty in [xt, yt] {
+        let xt = self.value_type_opt(depth, x);
+        let yt = self.value_type_opt(depth, y);
+        for ty in [xt, yt].into_iter().flatten() {
             let ty_f = self.force_all(depth, ty);
             if let Value::Rigid { head: RigidHead::Inductive(ind_name, _), .. } = ty_f {
                 let ind_name = *ind_name;
