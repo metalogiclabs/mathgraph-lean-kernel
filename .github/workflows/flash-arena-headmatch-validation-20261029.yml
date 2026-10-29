@@ -1,0 +1,126 @@
+name: Flash eta headmatch validation
+on:
+  push:
+    branches: [flash-arena-eta-headmatch-20261029]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build release checker
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rustup toolchain install 1.99.1 --profile minimal
+          RUSTFLAGS='-C target-cpu=x86-64-v3' cargo +1.99.1 build --release --locked
+      - name: Verify and replay exact pinned static Arena proofs
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone --quiet --filter=blob:none https://github.com/leanprover/lean-kernel-arena.git /tmp/arena
+          git -C /tmp/arena checkout --quiet 112b2ed3ef66f022235684c969ccb1046cf1600b
+          printf '%s\n' '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2,"print_success_message":false}' >/tmp/config.json
+          mkdir -p /tmp/flash-smoke
+          cat >/tmp/flash-smoke/cases.tsv <<'CASES'
+          bugs/closure-level-subst	reject	ba61ad635f4a1e8929b3ada25df22a8ab854f908d5fac44f9e7bf5f2d91ae3a0
+          bugs/constlevels	reject	2fa6a967f15f76cfdcea3ef1992ff31a4cc4aa647b0f8fabf0ff61eedb3afbf1
+          bugs/level-imax-normalization	reject	d368d5569321b717b7ec95bd1f4fa5bbd7d6e1f8d6ebdf1a0644dc8bc76bc2ec
+          bugs/nested-name-capture	reject	9d38f6480b12a9061ac54dec8ea27477414a39c65301dfb7ee5cedaa8d3cffad
+          bugs/pi-closure-context	reject	730013454f261b1c20e3ee4600821e325715929a6ddca36779f6ce9e5f506520
+          bugs/unit-rec-rule	reject	cb6d127a5f0daa9fa2047c338e809d1ffb9cc3d8454956c30eede38091a4a969
+          other/level-index-out-of-order	accept	7db8148079e2e8160a1a4c71258ad11b17ce18edfa84ab1e12eae937ec9538d1
+          other/sparse-name-index	accept	3279c9c8ae24d5b3a8433ddee5d4a421c4e15e3cd84117fb4873d1284112b96d
+          corner-cases/proof-param-ok	accept	7f9b3c07a64b441f8dd0f7dd2912274241fdb17118953fb089f796fdd1590af4
+          CASES
+          python3 - <<'PY'
+          import hashlib,subprocess,json
+          from pathlib import Path
+          root=Path("/tmp/arena")
+          cases=Path("/tmp/flash-smoke/cases.tsv").read_text().splitlines()
+          summary=[]
+          for line in cases:
+              label,expect,sha=line.split("\t")
+              path=root/"tests"/(label+".ndjson")
+              assert path.exists(),f"missing pinned export {label}"
+              with path.open("rb") as h:
+                  actual=hashlib.file_digest(h,"sha256").hexdigest()
+              assert actual==sha,f"SHA MISMATCH {label} {actual}"
+              with path.open("rb") as h:
+                  try:
+                      p=subprocess.run(["target/release/sokonanoda","/tmp/config.json"],
+                                       stdin=h,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=15)
+                      rc=p.returncode
+                  except subprocess.TimeoutExpired:
+                      rc=124
+              ok=(rc==0 if expect=="accept" else rc==1)
+              summary.append((label,expect,actual,rc,"PASS" if ok else "FAIL"))
+              print(f"{label}: {expect} -> exit {rc} {'PASS' if ok else 'FAIL'}",flush=True)
+          out=Path("/tmp/flash-smoke/results.tsv")
+          out.write_text("name\texpect\tsha256\texit\tstatus\n"+"\n".join("\t".join(map(str,r)) for r in summary)+"\n")
+          assert all(x[-1]=="PASS" for x in summary),"failed exact smoke gate"
+          print(f"SMOKE_ALL_{len(summary)}_PASS")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-headmatch-smoke
+          path: /tmp/flash-smoke/
+          if-no-files-found: warn
+
+  valid:
+    needs: smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 70
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {test: "init", sha256: "620502ac9e63ba4a2dea9d46386c2f6aebc49faf8848ea3aaa18a77a09491a6a", timeout_seconds: 500}
+          - {test: "std", sha256: "289ed65a367abdc7388a855d2acf59cc1f401f5e06295acbb8a420682d9f00bd", timeout_seconds: 590}
+          - {test: "perf/magma-list-pair-n21", sha256: "b8279fa9189a203c6c11b04702c27c0f99a650b37f2b0165dd260b1d14e9ef84", timeout_seconds: 260}
+          - {test: "cslib", sha256: "bc5c88e028d02a3c0789de6efb9cd96e8506d1e96b3d26672d28ae3bb33d0b30", timeout_seconds: 1200}
+          - {test: "mathlib", sha256: "22c5de83469408950005589a3bc5ef5157c65549b5a802f85d567c29151306a6", timeout_seconds: 1200}
+          - {test: "navier-stokes-euler", sha256: "632943fca6795d48bc13e703aabfaef39931f9445f1275d2150a44f4de7b55e6", timeout_seconds: 1200}
+    env:
+      TEST_NAME: ${{ matrix.test }}
+      TEST_SHA: ${{ matrix.sha256 }}
+      TEST_TIMEOUT: ${{ matrix.timeout_seconds }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Build experiment checker
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rustup toolchain install 1.99.1 --profile minimal
+          RUSTFLAGS='-C target-cpu=x86-64-v3' cargo +1.99.1 build --release --locked
+          mkdir -p /tmp/eta-evidence
+          sha256sum target/release/sokonanoda > /tmp/eta-evidence/binary.sha256
+      - name: Recreate, hash check, and replay valid export
+        shell: bash
+        run: |
+          set -uo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena.git /tmp/arena || exit 1
+          git -C /tmp/arena checkout -q 112b2ed3ef66f022235684c969ccb1046cf1600b || exit 1
+          (cd /tmp/arena && nix develop -c ./lka.py build-test "$TEST_NAME") || exit 1
+          f="/tmp/arena/_build/tests/$TEST_NAME.ndjson"
+          printf '%s  %s\n' "$TEST_SHA" "$f" | sha256sum -c - || exit 1
+          printf '%s\n' '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2,"print_success_message":false}' > /tmp/eta-evidence/config.json
+          rc=0
+          /usr/bin/time -f 'elapsed=%e user=%U system=%S max_rss_kb=%M' -o /tmp/eta-evidence/time.txt \
+            timeout --kill-after=10s "$TEST_TIMEOUT" target/release/sokonanoda /tmp/eta-evidence/config.json \
+            < "$f" > /tmp/eta-evidence/stdout.txt 2> /tmp/eta-evidence/stderr.txt || rc=$?
+          printf 'case=%s\nchecker_exit=%s\nsha256=%s\nsource_sha=%s\n' "$TEST_NAME" "$rc" "$TEST_SHA" "$GITHUB_SHA" | tee /tmp/eta-evidence/verdict.txt
+          cat /tmp/eta-evidence/time.txt
+          if [ "$rc" -ne 0 ]; then tail -80 /tmp/eta-evidence/stderr.txt; exit 1; fi
+          echo "VALID_EXPORT_ACCEPTED: $TEST_NAME"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: headmatch-valid-${{ strategy.job-index }}
+          path: /tmp/eta-evidence/
+          if-no-files-found: warn
