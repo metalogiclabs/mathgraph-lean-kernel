@@ -42,7 +42,23 @@ jobs:
           git clone -q https://github.com/leanprover/lean-kernel-arena.git /tmp/arena
           git -C /tmp/arena checkout -q "$ARENA_SHA"
           cd /tmp/arena
-          nix develop -c ./lka.py build-test --skip-ci
+          # Large Nix substitutions sometimes fail with transient 416/cache
+          # range errors. A failed attempt does not establish a kernel verdict.
+          mkdir -p /tmp/flash-evidence
+          export NIX_CONFIG="$(printf 'http-connections = 4\nmax-substitution-jobs = 4\nconnect-timeout = 30\n')"
+          ok=0
+          for attempt in 1 2 3; do
+            echo "ARENA_BUILD_ATTEMPT=$attempt" | tee -a /tmp/flash-evidence/fixture-build.attempts
+            if nix develop -c ./lka.py build-test --skip-ci                 > "/tmp/flash-evidence/fixture-build-$attempt.log" 2>&1; then
+              ok=1
+              cat "/tmp/flash-evidence/fixture-build-$attempt.log" | tail -30
+              break
+            fi
+            tail -45 "/tmp/flash-evidence/fixture-build-$attempt.log"
+            sleep $((12*attempt))
+          done
+          test "$ok" -eq 1
+          echo ARENA_PINNED_FIXTURES_GENERATED
       - name: Exact soundness and prescribed verdict gate
         shell: bash
         run: |
@@ -170,8 +186,22 @@ jobs:
           rustup toolchain install 1.99.1 --profile minimal
           git clone -q https://github.com/leanprover/lean-kernel-arena.git /tmp/arena
           git -C /tmp/arena checkout -q "$ARENA_SHA"
-          (cd /tmp/arena && nix develop -c ./lka.py build-test init-prelude mathlib)
+          mkdir -p /tmp/flash-evidence
+          export NIX_CONFIG="$(printf 'http-connections = 4\nmax-substitution-jobs = 4\nconnect-timeout = 30\n')"
+          ok=0
+          for attempt in 1 2 3; do
+            echo "MATHLIB_EXPORT_ATTEMPT=$attempt" | tee -a /tmp/flash-evidence/export-build.attempts
+            if (cd /tmp/arena && nix develop -c ./lka.py build-test init-prelude mathlib)               > "/tmp/flash-evidence/export-build-$attempt.log" 2>&1; then
+              ok=1
+              tail -30 "/tmp/flash-evidence/export-build-$attempt.log"
+              break
+            fi
+            tail -45 "/tmp/flash-evidence/export-build-$attempt.log"
+            sleep $((12*attempt))
+          done
+          test "$ok" -eq 1
           printf '22c5de83469408950005589a3bc5ef5157c65549b5a802f85d567c29151306a6  %s\n' /tmp/arena/_build/tests/mathlib.ndjson | sha256sum -c -
+          sha256sum /tmp/arena/_build/tests/mathlib.ndjson > /tmp/flash-evidence/mathlib-input.sha256
           git worktree add --detach /tmp/baseline "$BASE_SHA"
           git worktree add --detach /tmp/candidate "$GITHUB_SHA"
           printf '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2,"print_success_message":false}\n' > /tmp/flash-config.json
