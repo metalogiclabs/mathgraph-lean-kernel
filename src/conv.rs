@@ -584,37 +584,35 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
     }
 
     fn try_struct_eta(&mut self, depth: u32, x: V<'t>, y: V<'t>) -> bool {
-        if self.tc_cache.struct_eta_type_guard {
-            return false;
-        }
+        // A genuine structure-eta conversion needs a common inductive type.
+        // Comparing full types here can recursively re-enter eta and reject
+        // valid nested conversions in large libraries. Instead normalize
+        // both types to their rigid inductive heads, then check *all* their
+        // universe levels and arguments before applying eta.
         let (Some(xt), Some(yt)) = (self.value_type_opt(depth, x), self.value_type_opt(depth, y)) else {
             return false;
         };
-        // Structure eta is valid only when both operands have convertible
-        // types. Use full delta/beta conversion to handle legitimate aliases
-        // in large libraries, but suppress re-entrant eta during this check.
-        // False results produced in the guarded pass are not negative-cached.
-        self.tc_cache.struct_eta_type_guard = true;
-        let compatible_types = self.unify::<true>(depth, xt, yt);
-        self.tc_cache.struct_eta_type_guard = false;
-        if !compatible_types {
+        let tx = self.force_all(depth, xt);
+        let ty = self.force_all(depth, yt);
+        let (nx, lx, sx) = match tx {
+            Value::Rigid { head: RigidHead::Inductive(n, l), spine, .. } => (*n, *l, *spine),
+            _ => return false,
+        };
+        let (ny, ly, sy) = match ty {
+            Value::Rigid { head: RigidHead::Inductive(n, l), spine, .. } => (*n, *l, *spine),
+            _ => return false,
+        };
+        if nx != ny || !self.ctx.eq_antisymm_many(lx, ly) {
             return false;
         }
-        for ty in [xt, yt] {
-            let ty_f = self.force_all(depth, ty);
-            if let Value::Rigid { head: RigidHead::Inductive(ind_name, _), .. } = ty_f {
-                let ind_name = *ind_name;
-                if self.is_unit_inductive(ind_name) {
-                    return true;
-                }
-                if self.can_be_struct_memo(ind_name)
-                    && (self.try_eta_struct_v(depth, ind_name, x, y) || self.try_eta_struct_v(depth, ind_name, y, x))
-                {
-                    return true;
-                }
-            }
+        if !self.unify_spine::<true>(depth, sx, sy, Sig::ALL_RELEVANT, 0) {
+            return false;
         }
-        false
+        if self.is_unit_inductive(nx) {
+            return true;
+        }
+        self.can_be_struct_memo(nx)
+            && (self.try_eta_struct_v(depth, nx, x, y) || self.try_eta_struct_v(depth, nx, y, x))
     }
 
     fn value_type_opt(&mut self, depth: u32, v: V<'t>) -> Option<V<'t>> {
