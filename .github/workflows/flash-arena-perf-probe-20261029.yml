@@ -1,0 +1,52 @@
+name: Flash Arena perf PMU availability probe
+on:
+  push:
+    branches: [flash-arena-perf-probe-20261029]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  perf-capability:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test exact Arena retired-instruction collector
+        shell: bash
+        run: |
+          mkdir -p /tmp/perf-probe
+          echo "runner=$(uname -a)" | tee /tmp/perf-probe/host.txt
+          echo "perf_event_paranoid=$(cat /proc/sys/kernel/perf_event_paranoid)" | tee -a /tmp/perf-probe/host.txt
+          command -v perf | tee -a /tmp/perf-probe/host.txt || :
+          set +e
+          perf stat -j -o /tmp/perf-probe/perf.json \
+            -e duration_time -e task-clock -e instructions -- \
+            python3 -c 's=0;exec("for i in range(2000000):\n s+=i");print(s)' \
+            > /tmp/perf-probe/stdout.txt 2> /tmp/perf-probe/stderr.txt
+          rc=$?
+          set -e
+          echo "perf_exit=$rc" | tee /tmp/perf-probe/status.txt
+          cat /tmp/perf-probe/stderr.txt
+          cat /tmp/perf-probe/perf.json 2>/dev/null || :
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('/tmp/perf-probe/perf.json')
+          found=[]
+          if p.exists():
+           for line in p.read_text().splitlines():
+            try:
+             z=json.loads(line)
+             if z.get('event','').split(':')[0]=='instructions':
+              found.append(z.get('counter-value',''))
+            except (ValueError,TypeError):
+             pass
+          Path('/tmp/perf-probe/instructions.txt').write_text(str(found)+'\n')
+          print('HARDWARE_INSTRUCTION_COUNTERS='+str(found))
+          PY
+          echo "PROBE_ONLY_NO_RANKING_CLAIM"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-arena-perf-pmu-diagnostic
+          path: /tmp/perf-probe/
