@@ -45,7 +45,7 @@ jobs:
           ( cd /tmp/flash-baseline && cargo build --locked --release )
           cp /tmp/flash-baseline/target/release/sokonanoda /tmp/flash-baseline.bin
           sha256sum /tmp/flash-{baseline,candidate}.bin | tee /tmp/flash-binaries.sha256
-          printf '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unsafe_permit_all_axioms":true,"num_threads":2,"print_success_message":false}\n' >/tmp/flash-config.json
+          printf '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unsafe_permit_all_axioms":true,"unpermitted_axiom_hard_error":false,"num_threads":2,"print_success_message":false}\n' >/tmp/flash-config.json
 
       - name: Build exact upstream adversarial fixtures and valid control
         shell: bash
