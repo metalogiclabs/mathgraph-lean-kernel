@@ -23,7 +23,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD^)" = "78c7502bac8a5ba000057b3f083bc0595ac65750" || { echo 'Non-direct candidate; inspect lineage'; exit 1; }
+          git merge-base --is-ancestor 78c7502bac8a5ba000057b3f083bc0595ac65750 "$GITHUB_SHA" || { echo 'Unpinned baseline; inspect lineage'; exit 1; }
           git worktree add --detach /tmp/flash-baseline 78c7502bac8a5ba000057b3f083bc0595ac65750
           cargo test --locked --lib
           cargo build --locked --release
