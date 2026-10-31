@@ -25,7 +25,21 @@ jobs:
           set -euo pipefail
           git merge-base --is-ancestor 78c7502bac8a5ba000057b3f083bc0595ac65750 "$GITHUB_SHA" || { echo 'Unpinned baseline; inspect lineage'; exit 1; }
           git worktree add --detach /tmp/flash-baseline 78c7502bac8a5ba000057b3f083bc0595ac65750
-          cargo test --locked --lib
+          # Preserve the published source's two known failing unit cases explicitly.
+          set +e
+          cargo test --locked --lib >/tmp/flash-candidate-unit.log 2>&1
+          candidate_rc=$?
+          ( cd /tmp/flash-baseline && cargo test --locked --lib ) >/tmp/flash-baseline-unit.log 2>&1
+          baseline_rc=$?
+          set -e
+          test "$baseline_rc" -eq "$candidate_rc"
+          for name in reject_rec_rule_with_forged_lambda_domains reject_unlisted_recursor; do
+            grep -F "tests::util::$name" /tmp/flash-baseline-unit.log >/dev/null
+            grep -F "tests::util::$name" /tmp/flash-candidate-unit.log >/dev/null
+          done
+          grep -F '43 passed; 2 failed;' /tmp/flash-baseline-unit.log
+          grep -F '43 passed; 2 failed;' /tmp/flash-candidate-unit.log
+          printf 'BASELINE_UNIT_RC=%s CANDIDATE_UNIT_RC=%s EXISTING_FAILURES=2\n' "$baseline_rc" "$candidate_rc" > /tmp/flash-unit-parity.txt
           cargo build --locked --release
           cp target/release/sokonanoda /tmp/flash-candidate.bin
           ( cd /tmp/flash-baseline && cargo build --locked --release )
@@ -83,6 +97,9 @@ jobs:
         with:
           name: flash-nested-recursor-discriminator
           path: |
+            /tmp/flash-unit-parity.txt
+            /tmp/flash-baseline-unit.log
+            /tmp/flash-candidate-unit.log
             /tmp/flash-binaries.sha256
             /tmp/flash-fixture.sha256
             /tmp/flash-verdicts.tsv
