@@ -1,0 +1,87 @@
+name: Flash restored-recursors soundness qualification
+
+on:
+  push:
+    branches:
+      - candidate/nested-recursor-validation-20261101
+    paths:
+      - src/inductive.rs
+      - .github/workflows/flash-restored-recursor-qualification.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  nested-recursor:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build and run native Rust tests
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cargo test --locked --lib
+          RUSTFLAGS='-C target-cpu=x86-64-v3' cargo build --locked --release
+          sha256sum target/release/sokonanoda | tee /tmp/flash-binary.sha256
+          printf 'checker_sha=%s\n' "$GITHUB_SHA" > /tmp/flash-soundness-provenance.txt
+
+      - name: Build pinned Arena negative and positive exports
+        shell: bash
+        timeout-minutes: 65
+        run: |
+          set -euxo pipefail
+          ARENA_SHA=020136965c82f37b457cd4dd7665d5d8510a96f4
+          git clone -q https://github.com/leanprover/lean-kernel-arena.git /tmp/arena
+          git -C /tmp/arena checkout -q "$ARENA_SHA"
+          printf 'arena_sha=%s\n' "$ARENA_SHA" >> /tmp/flash-soundness-provenance.txt
+          cd /tmp/arena
+          nix develop -c ./lka.py build-test bugs/nested-rec-rule-nfields
+          nix develop -c ./lka.py build-test init-prelude
+          test -f tests/other/inductive-undeclared-universe.ndjson
+          find _build/tests -name 'nested-rec-rule-nfields.ndjson' -o -name 'init-prelude.ndjson' | sort | tee /tmp/flash-built-exports.txt
+          test "$(grep -c 'nested-rec-rule-nfields.ndjson' /tmp/flash-built-exports.txt)" -eq 1
+          test "$(grep -c 'init-prelude.ndjson' /tmp/flash-built-exports.txt)" -eq 1
+
+      - name: Assert exact acceptance and rejection boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat >/tmp/flash-qual-config.json <<'EOF'
+          {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2,"print_success_message":false}
+          EOF
+          bin="$GITHUB_WORKSPACE/target/release/sokonanoda"
+          nested="$(grep 'nested-rec-rule-nfields.ndjson' /tmp/flash-built-exports.txt)"
+          positive="$(grep 'init-prelude.ndjson' /tmp/flash-built-exports.txt)"
+          universe="/tmp/arena/tests/other/inductive-undeclared-universe.ndjson"
+          : >/tmp/flash-soundness-verdicts.tsv
+          failed=0
+          for row in "nested|reject|$nested" "universe|reject|$universe" "init-prelude|accept|$positive"; do
+            IFS='|' read -r name expected file <<< "$row"
+            sha="$(sha256sum "$file" | cut -d' ' -f1)"
+            set +e
+            "$bin" /tmp/flash-qual-config.json <"$file" >"/tmp/flash-$name.stdout" 2>"/tmp/flash-$name.stderr"
+            rc=$?
+            set -e
+            actual=reject
+            if [ "$rc" -eq 0 ]; then actual=accept; fi
+            printf '%s\t%s\t%s\t%s\t%s\n' "$name" "$expected" "$actual" "$rc" "$sha" | tee -a /tmp/flash-soundness-verdicts.tsv
+            if [ "$actual" != "$expected" ]; then failed=1; fi
+          done
+          test "$failed" -eq 0
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-restored-recursor-source-pinned
+          path: |
+            /tmp/flash-binary.sha256
+            /tmp/flash-soundness-provenance.txt
+            /tmp/flash-built-exports.txt
+            /tmp/flash-soundness-verdicts.tsv
+            /tmp/flash-*.stderr
+            /tmp/flash-*.stdout
+          if-no-files-found: warn
