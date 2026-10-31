@@ -2050,7 +2050,10 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
                     assert_eq!(old.ctor_name, new.ctor_name);
                     // The imported nested recursor rule must use the reconstructed
                     // constructor field count; its reduction arity is not trusted.
-                    assert_eq!(old.ctor_telescope_size_wo_params, new.ctor_telescope_size_wo_params);
+                    assert_eq!(
+                        old.ctor_telescope_size_wo_params,
+                        new.ctor_telescope_size_wo_params
+                    );
                     self.assert_imported_expr_matches(old.val, new.val);
                 }
             }
