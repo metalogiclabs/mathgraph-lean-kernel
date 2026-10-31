@@ -1,0 +1,90 @@
+name: Flash nested-recursor soundness separator
+
+on:
+  push:
+    branches:
+      - fix/flash-nested-recursor-field-count-20261101
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  nested-recursor-separator:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 95
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build source-pinned baseline and candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = "78c7502bac8a5ba000057b3f083bc0595ac65750" || { echo 'Non-direct candidate; inspect lineage'; exit 1; }
+          git worktree add --detach /tmp/flash-baseline 78c7502bac8a5ba000057b3f083bc0595ac65750
+          cargo test --locked --lib
+          cargo build --locked --release
+          cp target/release/sokonanoda /tmp/flash-candidate.bin
+          ( cd /tmp/flash-baseline && cargo build --locked --release )
+          cp /tmp/flash-baseline/target/release/sokonanoda /tmp/flash-baseline.bin
+          sha256sum /tmp/flash-{baseline,candidate}.bin | tee /tmp/flash-binaries.sha256
+          printf '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unsafe_permit_all_axioms":true,"num_threads":2,"print_success_message":false}\n' >/tmp/flash-config.json
+
+      - name: Build exact upstream adversarial fixtures and valid control
+        shell: bash
+        timeout-minutes: 75
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/arena
+          git -C /tmp/arena checkout -q 7e8cc90a3bc1ca827f616d038df13592020c6bf0
+          cd /tmp/arena
+          for t in bugs/nested-rec-rule-nfields bugs/nested-name-capture other/inductive-undeclared-universe init-prelude; do
+            nix develop -c ./lka.py build-test "$t"
+            test -s "_build/tests/$t.ndjson"
+          done
+          sha256sum _build/tests/bugs/nested-rec-rule-nfields.ndjson | tee /tmp/flash-fixture.sha256
+          test "$(sha256sum _build/tests/bugs/nested-rec-rule-nfields.ndjson | cut -d' ' -f1)" = "8874ecde1a57edbc52428cb7ea7c8834f74e623a164b0c0f69e78613effc0c56"
+
+      - name: A/B semantic discriminator
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/arena
+          : >/tmp/flash-verdicts.tsv
+          check() {
+            local arm="$1" fixture="$2" want="$3" rc
+            set +e
+            timeout 180 "/tmp/flash-$arm.bin" /tmp/flash-config.json <"_build/tests/$fixture.ndjson" >/tmp/flash-output.txt 2>/tmp/flash-error.txt
+            rc=$?
+            set -e
+            printf '%s\t%s\t%s\t%s\n' "$arm" "$fixture" "$rc" "$want" | tee -a /tmp/flash-verdicts.tsv
+            if [ "$rc" -ne "$want" ]; then
+              echo "VERDICT MISMATCH $arm $fixture (wanted $want; got $rc)" >&2
+              tail -c 1500 /tmp/flash-error.txt >&2 || true
+              exit 1
+            fi
+          }
+          # The baseline must reproduce the original defect. No false-green qualification.
+          check baseline bugs/nested-rec-rule-nfields 0
+          check candidate bugs/nested-rec-rule-nfields 1
+          # Other upstream attacks must be strictly rejected, not merely declined.
+          check candidate bugs/nested-name-capture 1
+          check candidate other/inductive-undeclared-universe 1
+          # Ordinary authentic source remains acceptable.
+          check baseline init-prelude 0
+          check candidate init-prelude 0
+          echo FLASH_NESTED_FIELD_COUNT_DISCRIMINATOR_PASS | tee /tmp/flash-summary.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-nested-recursor-discriminator
+          path: |
+            /tmp/flash-binaries.sha256
+            /tmp/flash-fixture.sha256
+            /tmp/flash-verdicts.tsv
+            /tmp/flash-summary.txt
+          if-no-files-found: warn
