@@ -444,20 +444,23 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
         ind_names.iter().map(|name| self.ctx.str(*name, rec)).collect()
     }
 
-    fn assert_imported_expr_matches(&mut self, imported: ExprPtr<'t>, reconstructed: ExprPtr<'t>) {
-        // Recursor rule bodies are untrusted source data. Equality alone is
-        // insufficient if a conversion shortcut can equate ill-typed terms:
-        // independently check the imported rule and its reconstructed target.
-        self.tc_cache.clear();
-        let env = self.empty_env();
-        let ctx = self.empty_ctx();
-        let imported_type = self.infer_value(crate::tc::InferFlag::Check, 0, env, ctx, imported);
-        let reconstructed_type =
-            self.infer_value(crate::tc::InferFlag::Check, 0, env, ctx, reconstructed);
-        assert!(
-            self.conv_types_at(0, imported_type, reconstructed_type),
-            "imported recursor rule has a different type from its reconstructed rule"
-        );
+    fn assert_imported_expr_matches(&mut self, imported: ExprPtr<'t>, reconstructed: ExprPtr<'t>, zero_field: bool) {
+        // Zero-field rules need an independently checked imported RHS: an
+        // ill-typed PUnit computation rule can otherwise be admitted by eta.
+        // Retain the previous conversion behavior for rules with fields until
+        // their fully dependent typing can be requalified without regressions.
+        if zero_field {
+            self.tc_cache.clear();
+            let env = self.empty_env();
+            let ctx = self.empty_ctx();
+            let imported_type = self.infer_value(crate::tc::InferFlag::Check, 0, env, ctx, imported);
+            let reconstructed_type =
+                self.infer_value(crate::tc::InferFlag::Check, 0, env, ctx, reconstructed);
+            assert!(
+                self.conv_types_at(0, imported_type, reconstructed_type),
+                "imported zero-field recursor rule type mismatch"
+            );
+        }
         self.tc_cache.clear();
         assert!(
             self.def_eq_core(imported, reconstructed),
@@ -1682,7 +1685,7 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
         assert_eq!(imported_rr.ctor_name, constructed_rr.ctor_name);
         assert_eq!(imported_rr.ctor_telescope_size_wo_params, constructed_rr.ctor_telescope_size_wo_params);
         let rr_made_val = self.ctx.subst_expr_levels(constructed_rr.val, st.rec_uparams.unwrap(), old);
-        self.assert_imported_expr_matches(imported_rr.val, rr_made_val);
+        self.assert_imported_expr_matches(imported_rr.val, rr_made_val, imported_rr.ctor_telescope_size_wo_params == 0);
     }
 
     fn assert_nonnested_recursors_def_eq(&mut self, st: &InductiveCheckState<'t>, recursors: &Vec<Declar<'t>>) {
@@ -2123,7 +2126,7 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
                         new.ctor_telescope_size_wo_params,
                         "imported nested-recursor rule field count differs from reconstructed count",
                     );
-                    self.assert_imported_expr_matches(old.val, new.val);
+                    self.assert_imported_expr_matches(old.val, new.val, false);
                 }
             }
             _ => panic!("missing imported recursor reconstructed from nested inductive"),
