@@ -2048,6 +2048,12 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
                     let old = original.rec_rules[i];
                     let new = restored.rec_rules[i];
                     assert_eq!(old.ctor_name, new.ctor_name);
+                    // Never trust exported nested-recursor field counts without reconstruction.
+                    assert_eq!(
+                        old.ctor_telescope_size_wo_params,
+                        new.ctor_telescope_size_wo_params,
+                        "imported nested-recursor rule field count differs from reconstructed count",
+                    );
                     self.assert_imported_expr_matches(old.val, new.val);
                 }
             }
