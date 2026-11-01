@@ -68,8 +68,8 @@ jobs:
           {"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2,"print_success_message":false}
           EOF
           bin="$GITHUB_WORKSPACE/target/release/sokonanoda"
-          nested="$(grep 'nested-rec-rule-nfields.ndjson' /tmp/flash-built-exports.txt)"
-          positive="$(grep 'init-prelude.ndjson' /tmp/flash-built-exports.txt)"
+          nested="/tmp/arena/$(grep 'nested-rec-rule-nfields.ndjson' /tmp/flash-built-exports.txt)"
+          positive="/tmp/arena/$(grep 'init-prelude.ndjson' /tmp/flash-built-exports.txt)"
           universe="/tmp/arena/tests/other/inductive-undeclared-universe.ndjson"
           : >/tmp/flash-soundness-verdicts.tsv
           failed=0
