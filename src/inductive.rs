@@ -162,7 +162,7 @@ impl<'t, 'p: 't> TcCtx<'t, 'p> {
             if !seen.insert(e) {
                 continue;
             }
-            match *self.read_expr(e) {
+            match self.read_expr(e) {
                 Sort { level, .. } => assert!(
                     self.all_uparams_defined(level, allowed),
                     "undeclared universe parameter in inductive block type"
