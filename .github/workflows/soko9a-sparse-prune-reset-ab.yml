@@ -1,0 +1,196 @@
+name: Soko9a sparse prune reset exact A/B
+
+on:
+  push:
+    branches: [research/soko9a-sparse-prune-reset-20261102]
+    paths: [.github/workflows/soko9a-sparse-prune-reset-ab.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-typed-ab:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+
+      - name: Build original and narrow sparse-reset candidate
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/abc-soko
+          git -C /tmp/abc-soko worktree add --detach /tmp/soko-base 9a021b66f804a1d1df68a981337c67413ef72f6b
+          git -C /tmp/abc-soko worktree add --detach /tmp/soko-candidate 9a021b66f804a1d1df68a981337c67413ef72f6b
+          python3 - <<'PY'
+          from pathlib import Path
+          root=Path('/tmp/soko-candidate/src/checker')
+          cache=root/'cache.rs'
+          text=cache.read_text()
+          code='''/// Preserve exact direct-mapped prune semantics, clear only slots written.
+          pub(crate) struct PruneMemo {
+              slots: Box<[(u64, E, E); PRUNE_DM_LEN]>,
+              touched: Vec<usize>,
+              written: Box<[bool; PRUNE_DM_LEN]>,
+          }
+
+          impl Reset for PruneMemo {
+              fn with_cap(_: usize) -> Self {
+                  Self {
+                      slots: Box::new([Default::default(); PRUNE_DM_LEN]),
+                      touched: Vec::new(),
+                      written: Box::new([false; PRUNE_DM_LEN]),
+                  }
+              }
+
+              fn reset(&mut self) {
+                  for slot in self.touched.drain(..) {
+                      self.slots[slot] = Default::default();
+                      self.written[slot] = false;
+                  }
+              }
+
+              fn reset_shrink(&mut self) { self.reset(); }
+          }
+
+          impl PruneMemo {
+              #[inline(always)]
+              pub(crate) fn get(&self, slot: usize) -> (u64, E, E) { self.slots[slot] }
+
+              #[inline(always)]
+              pub(crate) fn put(&mut self, slot: usize, item: (u64, E, E)) {
+                  if !self.written[slot] {
+                      self.written[slot] = true;
+                      self.touched.push(slot);
+                  }
+                  self.slots[slot] = item;
+              }
+          }
+
+          '''
+          a='macro_rules! caches {'
+          b='#[cap(0)] prune_dm: Box<[(u64, E, E); PRUNE_DM_LEN]>,'
+          assert text.count(a)==text.count(b)==1
+          text=text.replace(a,code+a).replace(b,'#[cap(0)] prune_dm: PruneMemo,')
+          cache.write_text(text)
+          env=root/'eval/environment.rs'
+          text=env.read_text()
+          a='let (m, k, hit) = self.tc_cache.prune_dm[slot];'
+          b='self.tc_cache.prune_dm[slot] = (mask, e, r);'
+          assert text.count(a)==text.count(b)==1
+          text=text.replace(a,'let (m, k, hit) = self.tc_cache.prune_dm.get(slot);')
+          text=text.replace(b,'self.tc_cache.prune_dm.put(slot, (mask, e, r));')
+          env.write_text(text)
+          PY
+          git -C /tmp/soko-candidate diff --check
+          git -C /tmp/soko-candidate diff -- src/checker/cache.rs src/checker/eval/environment.rs > /tmp/soko-sparse-exact-patch.diff
+          test -s /tmp/soko-sparse-exact-patch.diff
+          sha256sum /tmp/soko-candidate/src/checker/cache.rs /tmp/soko-candidate/src/checker/eval/environment.rs > /tmp/soko-sparse-source-files.sha256
+          printf 'upstream=%s\n' "$(git -C /tmp/soko-base rev-parse HEAD)" >/tmp/soko-sparse-source.txt
+          for arm in base candidate; do
+            (cd /tmp/soko-$arm && RUSTFLAGS="-C target-cpu=x86-64-v3 -C debuginfo=1" cargo +1.99.1 build --release --locked)
+          done
+          sha256sum /tmp/soko-base/target/release/sokonanoda /tmp/soko-candidate/target/release/sokonanoda >/tmp/soko-sparse-binaries.sha256
+
+      - name: Original exact portable Arena corpus
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p /tmp/source-archive /tmp/portable-inputs /tmp/soko-sparse-results
+          gh api repos/leanprover/lean-kernel-arena/actions/artifacts/11272848230/zip >/tmp/source-196.zip
+          sha256sum /tmp/source-196.zip >/tmp/soko-sparse-archive.sha256
+          unzip -q /tmp/source-196.zip -d /tmp/source-archive
+          tar --no-same-owner -xzf /tmp/source-archive/lean-arena-tests.tar.gz -C /tmp/portable-inputs
+          test "$(find /tmp/portable-inputs/good /tmp/portable-inputs/bad -name '*.ndjson' | wc -l)" -eq 196
+
+      - name: Freeze complete verdict vectors under same exact input bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, pathlib, subprocess, hashlib
+          root=pathlib.Path('/tmp/portable-inputs')
+          rows=[]
+          for group,expected in [('good',0),('bad',1)]:
+            for p in sorted((root/group).rglob('*.ndjson')):
+              for arm in ['base','candidate']:
+                bin=f'/tmp/soko-{arm}/target/release/sokonanoda'
+                cmd=[bin,'--stdin','--nat-extension','--string-extension','--axiom-allow-all','--threads','1']
+                with p.open('rb') as f:
+                  try:r=subprocess.run(cmd,stdin=f,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,timeout=180)
+                  except subprocess.TimeoutExpired:r=None
+                rows.append({'name':str(p.relative_to(root)),'group':group,'arm':arm,
+                  'rc':r.returncode if r else 124,'expected':expected,
+                  'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),
+                  'stderr_tail':r.stderr.decode(errors='replace')[-250:] if r else 'TIMEOUT'})
+          base={r['name']:r for r in rows if r['arm']=='base'}
+          candidate={r['name']:r for r in rows if r['arm']=='candidate'}
+          disagreements=[k for k in base if candidate[k]['rc']!=base[k]['rc']]
+          wrong=[r for r in rows if (r['rc']==1 and r['expected']==0) or (r['rc']==0 and r['expected']==1) or r['rc'] not in [0,1,2]]
+          report={'source':'9a021b66f804a1d1df68a981337c67413ef72f6b','cases':len(base),'disagreements':disagreements,
+             'wrong_or_error':[(r['arm'],r['name'],r['rc']) for r in wrong],'rows':rows}
+          pathlib.Path('/tmp/soko-sparse-results/portable196.json').write_text(json.dumps(report,indent=2)+'\n')
+          print('PORTABLE196',json.dumps({k:v for k,v in report.items() if k!='rows'}),flush=True)
+          if len(base)!=196 or disagreements or wrong:raise SystemExit('PARITY_GATE_RED')
+          PY
+
+      - name: Paired guest-instruction screen on three real exports
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq valgrind
+          python3 - <<'PY'
+          import json, pathlib, subprocess, hashlib
+          root=pathlib.Path('/tmp/portable-inputs/good')
+          cases={'init-prelude':root/'init-prelude.ndjson',
+            'magma-list-pair-n7':root/'perf/magma-list-pair-n7.ndjson',
+            'grind-ring-5':root/'perf/grind-ring-5.ndjson'}
+          rows=[]
+          for name,p in cases.items():
+            for arm in ['base','candidate']:
+              file=f'/tmp/soko-sparse-results/{name}-{arm}.callgrind'
+              bin=f'/tmp/soko-{arm}/target/release/sokonanoda'
+              cmd=['valgrind','--tool=callgrind','--callgrind-out-file='+file,bin,
+                '--stdin','--nat-extension','--string-extension','--axiom-allow-all','--threads','1']
+              try:
+                with p.open('rb') as src:r=subprocess.run(cmd,stdin=src,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,timeout=350)
+              except subprocess.TimeoutExpired:r=None
+              ir=None
+              if pathlib.Path(file).exists():
+                for line in pathlib.Path(file).read_text(errors='replace').splitlines():
+                  if line.startswith('summary:'):
+                    ir=int(line.split()[1]);break
+              row={'name':name,'arm':arm,'rc':r.returncode if r else 124,'guest_Ir':ir,
+                'sha256':hashlib.sha256(p.read_bytes()).hexdigest()}
+              rows.append(row)
+              print('CALLGRIND',json.dumps(row),flush=True)
+          pairs={}
+          for name in cases:
+            b=next(x for x in rows if x['name']==name and x['arm']=='base')
+            c=next(x for x in rows if x['name']==name and x['arm']=='candidate')
+            if b['guest_Ir'] and c['guest_Ir']:pairs[name]={'ratio':c['guest_Ir']/b['guest_Ir']}
+          report={'scope':'single-worker source-pinned Callgrind guest Ir; NOT official hardware retired instructions',
+             'source':'9a021b66f804a1d1df68a981337c67413ef72f6b',
+             'rows':rows,'pairs':pairs}
+          pathlib.Path('/tmp/soko-sparse-results/instruction-report.json').write_text(json.dumps(report,indent=2)+'\n')
+          print('RATIOS',json.dumps(pairs),flush=True)
+          if len(pairs)!=len(cases) or any(r['rc']!=0 for r in rows):raise SystemExit('COST_SCREEN_FAILED')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: soko9a-sparse-prune-exact-ab
+          path: |
+            /tmp/soko-sparse-source.txt
+            /tmp/soko-sparse-exact-patch.diff
+            /tmp/soko-sparse-source-files.sha256
+            /tmp/soko-sparse-binaries.sha256
+            /tmp/soko-sparse-archive.sha256
+            /tmp/soko-sparse-results/*.json
+          if-no-files-found: warn
