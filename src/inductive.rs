@@ -177,29 +177,29 @@ impl<'t, 'p: 't> TcCtx<'t, 'p> {
             if !visited.insert(current) { continue; }
             match self.read_expr(current) {
                 Sort { level, .. } => {
-                    assert!(self.all_uparams_defined(*level, params),
+                    assert!(self.all_uparams_defined(level, params),
                         "undeclared universe parameter in inductive type");
                 }
                 Const { levels, .. } => {
-                    for &level in self.read_levels(*levels).iter() {
+                    for &level in self.read_levels(levels).iter() {
                         assert!(self.all_uparams_defined(level, params),
                             "undeclared universe parameter in inductive constant");
                     }
                 }
                 App { fun, arg, .. } => {
-                    pending.push(*fun);
-                    pending.push(*arg);
+                    pending.push(fun);
+                    pending.push(arg);
                 }
                 Pi { binder_type, body, .. } | Lambda { binder_type, body, .. } => {
-                    pending.push(*binder_type);
-                    pending.push(*body);
+                    pending.push(binder_type);
+                    pending.push(body);
                 }
                 Let { data, .. } => {
                     pending.push(data.binder_type);
                     pending.push(data.val);
                     pending.push(data.body);
                 }
-                Proj { structure, .. } => pending.push(*structure),
+                Proj { structure, .. } => pending.push(structure),
                 Var { .. } | NatLit { .. } | StringLit { .. } => {}
             }
         }
