@@ -1,0 +1,56 @@
+name: Flash full native regression with source-pinned recovered fixtures
+
+on:
+  push:
+    branches: [research/flash-native-adversarial-fixtures-20261102]
+    paths:
+      - src/tests/util.rs
+      - test_resources/RuleDomainMismatch/**
+      - test_resources/UnlistedRecursor/**
+      - .github/workflows/flash-native-fixtures-full-test.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  full-native-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+
+      - name: Require exact official bad-export bytes
+        shell: bash
+        run: |
+          set -euxo pipefail
+          printf '64a5dfe3c75f879afbb47efe0bb5df4f1a58d4a5\n' | diff -u - <(git hash-object test_resources/RuleDomainMismatch/export)
+          printf 'bce8481c48455f23aaa2fdfd36aa1257a750757e\n' | diff -u - <(git hash-object test_resources/UnlistedRecursor/export)
+          printf 'source_commit=%s\n' "$GITHUB_SHA" >/tmp/flash-native-fixture-sources.txt
+          sha256sum test_resources/RuleDomainMismatch/export test_resources/UnlistedRecursor/export >/tmp/flash-native-fixture-inputs.sha256
+
+      - name: Run EVERY native Rust test without exclusions
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cargo +1.99.1 test --release --locked -- --nocapture > /tmp/flash-native-tests.txt 2>&1 || {
+            tail -120 /tmp/flash-native-tests.txt
+            exit 1
+          }
+          grep -E 'test result:|test reject_' /tmp/flash-native-tests.txt | tail -80
+          grep -q 'test reject_forged_zero_field_recursor_rule - should panic ... ok' /tmp/flash-native-tests.txt
+          grep -q 'test reject_unlisted_recursor - should panic ... ok' /tmp/flash-native-tests.txt
+          if grep -q 'test result: FAILED' /tmp/flash-native-tests.txt; then exit 1; fi
+          echo ALL_NATIVE_TESTS_PASS >/tmp/flash-native-summary.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-native-complete-regression
+          path: |
+            /tmp/flash-native-fixture-sources.txt
+            /tmp/flash-native-fixture-inputs.sha256
+            /tmp/flash-native-tests.txt
+            /tmp/flash-native-summary.txt
+          if-no-files-found: warn
