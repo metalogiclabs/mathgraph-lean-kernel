@@ -130,8 +130,10 @@ fn check_proj_from_prop() {
 }
 
 #[test]
-#[should_panic(expected = "imported recursor rule does not match the reconstructed rule")]
-fn reject_rec_rule_with_forged_lambda_domains() {
+#[should_panic(expected = "imported zero-field recursor rule type mismatch")]
+fn reject_forged_zero_field_recursor_rule() {
+    // Exact upstream Arena bugs/unit-rec-rule.ndjson: the imported PUnit.rec
+    // rule has an ill-typed computation body despite correct zero field count.
     test_export_file_should_panic(Some(Path::new("test_resources/RuleDomainMismatch/config.json")), |export| {
         for declar in export.declars.values() {
             export.check_declar(declar);
