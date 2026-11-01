@@ -601,7 +601,15 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
             if let Value::Rigid { head: RigidHead::Inductive(ind_name, _), .. } = ty_f {
                 let ind_name = *ind_name;
                 if self.is_unit_inductive(ind_name) {
-                    return true;
+                    // A unit-like type permits eta only for inhabitants of
+                    // that SAME type. Matching one side's type alone can
+                    // incorrectly equate a constructor with an unrelated
+                    // recursor minor and admit a forged computation rule.
+                    if let (Some(a), Some(b)) = (xt, yt) {
+                        if self.conv_types_at(depth, a, b) {
+                            return true;
+                        }
+                    }
                 }
                 if self.can_be_struct_memo(ind_name)
                     && (self.try_eta_struct_v(depth, ind_name, x, y) || self.try_eta_struct_v(depth, ind_name, y, x))
