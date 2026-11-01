@@ -25,10 +25,12 @@ impl<'t, 'p: 't> ExportFile<'p> {
                         self.declars.get_index(idx).expect("inductive block boundary exceeds environment");
                     match declar {
                         Declar::Inductive(inductive) => {
+                            ctx.assert_source_universe_scope(inductive.info.ty, inductive.info.uparams);
                             physical_ind_names.push(inductive.info.name);
                             physical_inductive_types_and_ctors.push(inductive.info.ty);
                         }
                         Declar::Constructor(constructor) => {
+                            ctx.assert_source_universe_scope(constructor.info.ty, constructor.info.uparams);
                             physical_ctor_types.push(constructor.info.ty);
                             physical_inductive_types_and_ctors.push(constructor.info.ty);
                         }
@@ -164,6 +166,45 @@ impl<'t, 'p: 't> ExportFile<'p> {
 }
 
 impl<'t, 'p: 't> TcCtx<'t, 'p> {
+    /// Check universe parameter scope on the *imported* inductive/constructor
+    /// type before any temporary environment or conversion cache is created.
+    /// Unlike the ordinary definition checker, nested reconstruction runs
+    /// without declaration-info scope on its temporary TypeChecker instances.
+    fn assert_source_universe_scope(&self, root: ExprPtr<'t>, params: LevelsPtr<'t>) {
+        let mut pending = vec![root];
+        let mut visited = crate::util::new_fx_hash_set();
+        while let Some(current) = pending.pop() {
+            if !visited.insert(current) { continue; }
+            match self.read_expr(current) {
+                Sort { level, .. } => {
+                    assert!(self.all_uparams_defined(*level, params),
+                        "undeclared universe parameter in inductive type");
+                }
+                Const { levels, .. } => {
+                    for &level in self.read_levels(*levels).iter() {
+                        assert!(self.all_uparams_defined(level, params),
+                            "undeclared universe parameter in inductive constant");
+                    }
+                }
+                App { fun, arg, .. } => {
+                    pending.push(*fun);
+                    pending.push(*arg);
+                }
+                Pi { binder_type, body, .. } | Lambda { binder_type, body, .. } => {
+                    pending.push(*binder_type);
+                    pending.push(*body);
+                }
+                Let { data, .. } => {
+                    pending.push(data.binder_type);
+                    pending.push(data.val);
+                    pending.push(data.body);
+                }
+                Proj { structure, .. } => pending.push(*structure),
+                Var { .. } | NatLit { .. } | StringLit { .. } => {}
+            }
+        }
+    }
+
     pub(crate) fn check_uniform_inductive_occurrences(
         &self,
         e: ExprPtr<'t>,
