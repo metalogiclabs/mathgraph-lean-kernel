@@ -1,0 +1,92 @@
+name: Flash current Sokonanoda source comparison (research)
+
+on:
+  push:
+    branches: [research/flash-current-soko-comparator-20261102]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-exact-compare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - name: Build exact current top-line upstream and verified Flash candidate
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/current-soko
+          git -C /tmp/current-soko checkout -q 9a021b66f804a1d1df68a981337c67413ef72f6b
+          RUSTFLAGS="-C target-cpu=x86-64-v3" cargo build --release --locked
+          (cd /tmp/current-soko && RUSTFLAGS="-C target-cpu=x86-64-v3" cargo build --release --locked)
+          cp target/release/sokonanoda /tmp/flash-comparator.bin
+          cp /tmp/current-soko/target/release/sokonanoda /tmp/soko-comparator.bin
+          sha256sum /tmp/flash-comparator.bin /tmp/soko-comparator.bin > /tmp/soko-comparator-binaries.sha256
+          printf 'flash=%s\nsoko=%s\n' "$GITHUB_SHA" "$(git -C /tmp/current-soko rev-parse HEAD)" >/tmp/soko-comparator-source.txt
+          printf '%s\n' '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":4,"print_success_message":false}' >/tmp/flash-comparator.json
+
+      - name: Reuse immutable source-pinned tests without Nix
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/comparator-arena
+          git -C /tmp/comparator-arena checkout -q 7e8cc90a3bc1ca827f616d038df13592020c6bf0
+          mkdir -p /tmp/comparator-archive /tmp/comparator-frozen
+          gh api repos/leanprover/lean-kernel-arena/actions/artifacts/11272848230/zip > /tmp/comparator-frozen.zip
+          unzip -q /tmp/comparator-frozen.zip -d /tmp/comparator-archive
+          tar --no-same-owner -xzf /tmp/comparator-archive/lean-arena-tests.tar.gz -C /tmp/comparator-frozen
+          sha256sum /tmp/comparator-frozen.zip > /tmp/soko-comparator-archive.sha256
+          test "$(find /tmp/comparator-frozen/good /tmp/comparator-frozen/bad -name '*.ndjson' | wc -l)" -eq 196
+
+      - name: Check exact verdicts and cost screen (not an official Arena score)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,pathlib,subprocess,time
+          root=pathlib.Path('/tmp/comparator-frozen')
+          static=pathlib.Path('/tmp/comparator-arena/tests')
+          engines={
+            'flash':['/tmp/flash-comparator.bin','/tmp/flash-comparator.json'],
+            'soko':['/tmp/soko-comparator.bin','--stdin','--nat-extension','--string-extension','--axiom-allow-all','--threads','4']}
+          tests=[('good/init-prelude',root/'good/init-prelude.ndjson',0)]
+          for n in ['closure-level-subst','pi-closure-context','unit-rec-rule','nested-name-capture']:
+            tests.append(('bugs/'+n,static/('bugs/'+n+'.ndjson'),1))
+          tests.append(('inductive-undeclared-universe',static/'other/inductive-undeclared-universe.ndjson',1))
+          for n in ['magma-list-pair-n7','magma-list-deep-n21','grind-ring-5','fueled-chain']:
+            f=root/'good/perf'/ (n+'.ndjson')
+            if f.exists():tests.append((n,f,0))
+          rows=[]
+          for label,p,expected in tests:
+            for arm in ['flash','soko','soko','flash']:
+              start=time.monotonic()
+              with p.open('rb') as f:
+                try:r=subprocess.run(engines[arm],stdin=f,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,timeout=90)
+                except subprocess.TimeoutExpired:r=None
+              row={'label':label,'arm':arm,'rc':r.returncode if r else 124,
+                   'expected':expected,'wall_s':time.monotonic()-start,
+                   'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),
+                   'stderr_tail':(r.stderr.decode(errors='replace')[-250:] if r else 'TIMEOUT')}
+              rows.append(row)
+              print(label,arm,row['rc'],'expected',expected,'wall',round(row['wall_s'],4),flush=True)
+          pathlib.Path('/tmp/soko-comparator-results.json').write_text(json.dumps({'evidence_boundary':'selected frozen and static inputs only; host CPU timing not PMU', 'rows':rows},indent=2)+'\n')
+          if any(x['rc'] != x['expected'] for x in rows if x['arm']=='flash'):
+            raise SystemExit('FLASH_SELECTED_VERDICT_REGRESSION')
+          print('FLASH_SELECTED_VERDICT_PASS; SOKO_DISAGREEMENTS_ARE_DIAGNOSTIC')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-current-soko-comparator
+          path: |
+            /tmp/soko-comparator-source.txt
+            /tmp/soko-comparator-binaries.sha256
+            /tmp/soko-comparator-archive.sha256
+            /tmp/soko-comparator-results.json
+          if-no-files-found: warn
