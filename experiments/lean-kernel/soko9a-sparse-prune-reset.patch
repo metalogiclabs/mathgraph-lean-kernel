@@ -1,0 +1,81 @@
+diff --git a/src/checker/cache.rs b/src/checker/cache.rs
+index 2b00112..137a8de 100644
+--- a/src/checker/cache.rs
++++ b/src/checker/cache.rs
+@@ -35,6 +35,46 @@ impl<T: Copy + Default, const N: usize> Reset for Box<[T; N]> {
+     }
+ }
+ 
++/// Preserve exact direct-mapped prune semantics, clear only slots written.
++pub(crate) struct PruneMemo {
++    slots: Box<[(u64, E, E); PRUNE_DM_LEN]>,
++    touched: Vec<usize>,
++    written: Box<[bool; PRUNE_DM_LEN]>,
++}
++
++impl Reset for PruneMemo {
++    fn with_cap(_: usize) -> Self {
++        Self {
++            slots: Box::new([Default::default(); PRUNE_DM_LEN]),
++            touched: Vec::new(),
++            written: Box::new([false; PRUNE_DM_LEN]),
++        }
++    }
++
++    fn reset(&mut self) {
++        for slot in self.touched.drain(..) {
++            self.slots[slot] = Default::default();
++            self.written[slot] = false;
++        }
++    }
++
++    fn reset_shrink(&mut self) { self.reset(); }
++}
++
++impl PruneMemo {
++    #[inline(always)]
++    pub(crate) fn get(&self, slot: usize) -> (u64, E, E) { self.slots[slot] }
++
++    #[inline(always)]
++    pub(crate) fn put(&mut self, slot: usize, item: (u64, E, E)) {
++        if !self.written[slot] {
++            self.written[slot] = true;
++            self.touched.push(slot);
++        }
++        self.slots[slot] = item;
++    }
++}
++
+ macro_rules! caches {
+     (@init $small:ident, cap($cap:expr)) => { Reset::with_cap(if $small { SMALL } else { $cap }) };
+     (@init $small:ident, $kind:ident($init:expr)) => { $init };
+@@ -123,7 +163,7 @@ caches! {
+         #[cap(SESSION)] type_cache: PtrMap<(E, ExprId), CachedType>,
+         #[cap(SESSION)] quote_cache: PtrMap<(V, u32), ExprId>,
+         #[cap(SMALL)] level_subs: PtrMap<(LevelsId, LevelsId), LsubId>,
+-        #[cap(0)] prune_dm: Box<[(u64, E, E); PRUNE_DM_LEN]>,
++        #[cap(0)] prune_dm: PruneMemo,
+         #[cap(SMALL)] struct_eta_cache: PtrMap<(V, NameId), Option<V>>,
+         #[cap(SMALL)] ind_occ_cache: PtrMap<V, bool>,
+         #[memos(Vals::new())] vals: Vals,
+diff --git a/src/checker/eval/environment.rs b/src/checker/eval/environment.rs
+index 5f1a1e8..1710b48 100644
+--- a/src/checker/eval/environment.rs
++++ b/src/checker/eval/environment.rs
+@@ -81,7 +81,7 @@ impl TypeChecker<'_, '_> {
+             return e;
+         }
+         let slot = prune_slot(e, mask);
+-        let (m, k, hit) = self.tc_cache.prune_dm[slot];
++        let (m, k, hit) = self.tc_cache.prune_dm.get(slot);
+         if k == e && m == mask {
+             return hit;
+         }
+@@ -209,7 +209,7 @@ impl TypeChecker<'_, '_> {
+         if !fresh {
+             self.vals_mut().drop_env_slots(start);
+         }
+-        self.tc_cache.prune_dm[slot] = (mask, e, r);
++        self.tc_cache.prune_dm.put(slot, (mask, e, r));
+         r
+     }
