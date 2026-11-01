@@ -1,0 +1,84 @@
+name: Flash closure-context source-typed adversarial separator
+
+on:
+  push:
+    branches: [research/flash-closure-context-soundness-20261102]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  closure-separator:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Exact baseline versus closure-candidate build
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git worktree add --detach /tmp/flash-pre acc853dcd687087b5a46ada91ffcaf14a2f8345f
+          (cd /tmp/flash-pre && cargo build --locked --release)
+          cargo build --locked --release
+          cp /tmp/flash-pre/target/release/sokonanoda /tmp/flash-pre.bin
+          cp target/release/sokonanoda /tmp/flash-post.bin
+          sha256sum /tmp/flash-pre.bin /tmp/flash-post.bin > /tmp/flash-binaries.sha256
+          printf 'pre=%s\npost=%s\n' acc853dcd687087b5a46ada91ffcaf14a2f8345f "$GITHUB_SHA" > /tmp/flash-source-shas.txt
+          printf '%s\n' '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2,"print_success_message":false}' >/tmp/flash-cfg.json
+
+      - name: Recover source-pinned genuine positive and adversarial exports
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/flash-arena
+          git -C /tmp/flash-arena checkout -q 7e8cc90a3bc1ca827f616d038df13592020c6bf0
+          cd /tmp/flash-arena
+          nix develop -c ./lka.py build-test init-prelude
+          nix develop -c ./lka.py build-test bugs/nested-rec-rule-nfields
+          sha256sum tests/bugs/closure-level-subst.ndjson tests/bugs/pi-closure-context.ndjson tests/bugs/unit-rec-rule.ndjson tests/other/inductive-undeclared-universe.ndjson _build/tests/init-prelude.ndjson _build/tests/bugs/nested-rec-rule-nfields.ndjson >/tmp/flash-fixture-shas.txt
+
+      - name: Compare exact verdicts with positive controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, json, pathlib, subprocess
+          root=pathlib.Path('/tmp/flash-arena')
+          fixtures=[
+            ('bugs/closure-level-subst',root/'tests/bugs/closure-level-subst.ndjson',1),
+            ('bugs/pi-closure-context',root/'tests/bugs/pi-closure-context.ndjson',1),
+            ('bugs/unit-rec-rule',root/'tests/bugs/unit-rec-rule.ndjson',1),
+            ('bugs/nested-rec-rule-nfields',root/'_build/tests/bugs/nested-rec-rule-nfields.ndjson',1),
+            ('other/inductive-undeclared-universe',root/'tests/other/inductive-undeclared-universe.ndjson',1),
+            ('init-prelude',root/'_build/tests/init-prelude.ndjson',0)]
+          records=[]
+          for name,f,expected in fixtures:
+            for arm in ('pre','post'):
+              with f.open('rb') as src:
+                try: p=subprocess.run([f'/tmp/flash-{arm}.bin','/tmp/flash-cfg.json'],stdin=src,capture_output=True,timeout=180)
+                except subprocess.TimeoutExpired: p=None
+              rc=p.returncode if p else 124
+              item=dict(name=name,arm=arm,rc=rc,expected=expected,sha256=hashlib.sha256(f.read_bytes()).hexdigest(),stderr=(p.stderr.decode(errors='replace') if p else 'TIMEOUT')[-600:])
+              records.append(item)
+              print(name,arm,rc,'expected',expected,flush=True)
+          pathlib.Path('/tmp/flash-verdict-report.json').write_text(json.dumps(records,indent=2)+'\n')
+          post=[i for i in records if i['arm']=='post']
+          if any(i['rc']!=i['expected'] for i in post):
+            raise SystemExit('candidate not qualified: exact adversarial or positive mismatch')
+          print('CANDIDATE_EXACT_SIX_CASES_PASS')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-closure-context-separator
+          path: |
+            /tmp/flash-source-shas.txt
+            /tmp/flash-binaries.sha256
+            /tmp/flash-fixture-shas.txt
+            /tmp/flash-verdict-report.json
+          if-no-files-found: warn
