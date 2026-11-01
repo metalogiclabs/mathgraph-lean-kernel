@@ -88,6 +88,30 @@ impl<'t, 'p: 't> ExportFile<'p> {
             let mut st =
                 ctx.with_tc(env_limit, arena, cache, |tc| tc.specialize_nested(ind, unmodified_tys_ctors.clone()));
 
+            // Preserve the separately qualified internal-name capture guard from
+            // source commit 659817869468bca641200707ba1b8bbfdf3b0d34.
+            // Only exact generated temporary names are reserved.
+            if st.is_nested() {
+                let rec = ctx.alloc_string(std::borrow::Cow::Borrowed("rec"));
+                for nested_ty in st.all_inductives_incl_specialized.iter().skip(ind.all_ind_names.len()) {
+                    assert!(
+                        !self.declars.contains_key(&nested_ty.name),
+                        "temporary nested inductive name collides with exported declaration"
+                    );
+                    for ctor in nested_ty.ctors.iter() {
+                        assert!(
+                            !self.declars.contains_key(&ctor.name),
+                            "temporary nested constructor name collides with exported declaration"
+                        );
+                    }
+                    let rec_name = ctx.str(nested_ty.name, rec);
+                    assert!(
+                        !self.declars.contains_key(&rec_name),
+                        "temporary nested recursor name collides with exported declaration"
+                    );
+                }
+            }
+
             // Check the (potentially modified) inductive specs against the base environment.
             ctx.with_tc(env_limit, arena, cache, |tc| tc.check_inductive_specs(&mut st));
 
