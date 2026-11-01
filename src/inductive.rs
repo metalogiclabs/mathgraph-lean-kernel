@@ -445,6 +445,19 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
     }
 
     fn assert_imported_expr_matches(&mut self, imported: ExprPtr<'t>, reconstructed: ExprPtr<'t>) {
+        // Recursor rule bodies are untrusted source data. Equality alone is
+        // insufficient if a conversion shortcut can equate ill-typed terms:
+        // independently check the imported rule and its reconstructed target.
+        self.tc_cache.clear();
+        let env = self.empty_env();
+        let ctx = self.empty_ctx();
+        let imported_type = self.infer_value(crate::tc::InferFlag::Check, 0, env, ctx, imported);
+        let reconstructed_type =
+            self.infer_value(crate::tc::InferFlag::Check, 0, env, ctx, reconstructed);
+        assert!(
+            self.conv_types_at(0, imported_type, reconstructed_type),
+            "imported recursor rule has a different type from its reconstructed rule"
+        );
         self.tc_cache.clear();
         assert!(
             self.def_eq_core(imported, reconstructed),
