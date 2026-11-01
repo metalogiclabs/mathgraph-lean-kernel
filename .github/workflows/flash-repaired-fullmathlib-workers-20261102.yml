@@ -17,6 +17,8 @@ jobs:
       EXPECTED_INPUT: 22c5de83469408950005589a3bc5ef5157c65549b5a802f85d567c29151306a6
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: dtolnay/rust-toolchain@1.99.1
 
       - name: Recover immutable Mathlib from independent archived source
