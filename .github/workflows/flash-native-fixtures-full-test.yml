@@ -39,8 +39,8 @@ jobs:
             exit 1
           }
           grep -E 'test result:|test reject_' /tmp/flash-native-tests.txt | tail -80
-          grep -q 'test reject_forged_zero_field_recursor_rule - should panic ... ok' /tmp/flash-native-tests.txt
-          grep -q 'test reject_unlisted_recursor - should panic ... ok' /tmp/flash-native-tests.txt
+          grep -Eq 'test [^ ]*reject_forged_zero_field_recursor_rule - should panic \.\.\. ok' /tmp/flash-native-tests.txt
+          grep -Eq 'test [^ ]*reject_unlisted_recursor - should panic \.\.\. ok' /tmp/flash-native-tests.txt
           if grep -q 'test result: FAILED' /tmp/flash-native-tests.txt; then exit 1; fi
           echo ALL_NATIVE_TESTS_PASS >/tmp/flash-native-summary.txt
 
