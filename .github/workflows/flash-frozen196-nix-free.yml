@@ -1,0 +1,80 @@
+name: Flash exact frozen196 independent verdict gate
+
+on:
+  push:
+    branches: [research/flash-closure-context-soundness-20261102]
+    paths: [.github/workflows/flash-frozen196-nix-free.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frozen196:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build source-pinned candidate checker
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo build --release --locked
+          sha256sum target/release/sokonanoda >/tmp/flash-frozen-binary.sha256
+          printf 'source=%s\n' "$GITHUB_SHA" >/tmp/flash-frozen-source.txt
+          printf '%s\n' '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2,"print_success_message":false}' >/tmp/flash-frozen-config.json
+
+      - name: Recover immutable official Arena test artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/frozen-archive /tmp/frozen-tests
+          gh api repos/leanprover/lean-kernel-arena/actions/artifacts/11272848230/zip >/tmp/arena-frozen196.zip
+          sha256sum /tmp/arena-frozen196.zip >/tmp/flash-frozen-archive.sha256
+          unzip -q /tmp/arena-frozen196.zip -d /tmp/frozen-archive
+          tar --no-same-owner -xzf /tmp/frozen-archive/lean-arena-tests.tar.gz -C /tmp/frozen-tests
+          test "$(find /tmp/frozen-tests/good /tmp/frozen-tests/bad -name '*.ndjson' | wc -l)" -eq 196
+
+      - name: Classify all source-exact verdicts, fail closed
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,pathlib,subprocess
+          root=pathlib.Path('/tmp/frozen-tests')
+          checker='target/release/sokonanoda'
+          config='/tmp/flash-frozen-config.json'
+          rows=[]
+          for bucket,expected in [('good',0),('bad',1)]:
+            for p in sorted((root/bucket).rglob('*.ndjson')):
+              with p.open('rb') as file:
+                try:
+                  r=subprocess.run([checker,config],stdin=file,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=180)
+                  rc=r.returncode
+                  stderr=r.stderr.decode(errors='replace')[-800:]
+                except subprocess.TimeoutExpired:rc,stderr=124,'TIMEOUT'
+              rows.append(dict(case=str(p.relative_to(root)),expected=expected,rc=rc,
+                sha256=hashlib.sha256(p.read_bytes()).hexdigest(),stderr=stderr))
+          assert len(rows)==196,len(rows)
+          counts=dict(accept=sum(r['rc']==0 for r in rows),reject=sum(r['rc']==1 for r in rows),
+            unknown=sum(r['rc']==2 for r in rows),incorrect=sum(r['rc'] in (0,1) and r['rc']!=r['expected'] for r in rows),
+            errors=sum(r['rc'] not in (0,1,2) for r in rows))
+          pathlib.Path('/tmp/flash-frozen196.json').write_text(json.dumps(dict(counts=counts,rows=rows),indent=2)+'\n')
+          print(json.dumps(counts,sort_keys=True),flush=True)
+          for r in rows:
+            if r['rc'] != r['expected']:print('NOT_QUALIFIED',r['case'],'expected',r['expected'],'actual',r['rc'],'sha256',r['sha256'],flush=True)
+          if counts['incorrect'] or counts['errors'] or counts['unknown']:raise SystemExit('STRICT_FROZEN196_RED')
+          print('STRICT_FROZEN196_PASS')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-exact-frozen196
+          path: |
+            /tmp/flash-frozen-source.txt
+            /tmp/flash-frozen-binary.sha256
+            /tmp/flash-frozen-archive.sha256
+            /tmp/flash-frozen196.json
+          if-no-files-found: warn
