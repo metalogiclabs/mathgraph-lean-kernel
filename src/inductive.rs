@@ -23,6 +23,15 @@ impl<'t, 'p: 't> ExportFile<'p> {
                 for idx in start..start + size {
                     let (_, declar) =
                         self.declars.get_index(idx).expect("inductive block boundary exceeds environment");
+                    // Each imported member owns its declared universe scope.  In
+                    // particular, a mutual inductive must not inherit a free
+                    // universe variable from a later declaration's parameters.
+                    let info = declar.info();
+                    assert!(
+                        ctx.no_dupes_all_params(info.uparams),
+                        "duplicate universe parameters in inductive block"
+                    );
+                    ctx.assert_inductive_member_uparams_defined(info.ty, info.uparams);
                     match declar {
                         Declar::Inductive(inductive) => {
                             physical_ind_names.push(inductive.info.name);
@@ -138,6 +147,53 @@ impl<'t, 'p: 't> ExportFile<'p> {
 }
 
 impl<'t, 'p: 't> TcCtx<'t, 'p> {
+    /// Validate the *exported* expression DAG against this member's own
+    /// universe parameters before any evaluation, substitution or caching.
+    /// Inspect all child nodes: a free parameter can hide under applications,
+    /// binders, or structure projections.
+    fn assert_inductive_member_uparams_defined(
+        &self,
+        root: ExprPtr<'t>,
+        allowed: LevelsPtr<'t>,
+    ) {
+        let mut work = vec![root];
+        let mut seen = FxHashSet::<ExprPtr<'t>>::default();
+        while let Some(e) = work.pop() {
+            if !seen.insert(e) {
+                continue;
+            }
+            match self.read_expr(e) {
+                Sort { level, .. } => assert!(
+                    self.all_uparams_defined(level, allowed),
+                    "undeclared universe parameter in inductive block type"
+                ),
+                Const { levels, .. } => {
+                    for level in self.read_levels(levels).iter().copied() {
+                        assert!(
+                            self.all_uparams_defined(level, allowed),
+                            "undeclared universe parameter in inductive block constant"
+                        );
+                    }
+                }
+                App { fun, arg, .. } => {
+                    work.push(fun);
+                    work.push(arg);
+                }
+                Pi { binder_type, body, .. } | Lambda { binder_type, body, .. } => {
+                    work.push(binder_type);
+                    work.push(body);
+                }
+                Let { data, .. } => {
+                    work.push(data.binder_type);
+                    work.push(data.val);
+                    work.push(data.body);
+                }
+                Proj { structure, .. } => work.push(structure),
+                Var { .. } | NatLit { .. } | StringLit { .. } => {}
+            }
+        }
+    }
+
     pub(crate) fn check_uniform_inductive_occurrences(
         &self,
         e: ExprPtr<'t>,
@@ -2048,6 +2104,12 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
                     let old = original.rec_rules[i];
                     let new = restored.rec_rules[i];
                     assert_eq!(old.ctor_name, new.ctor_name);
+                    // Never trust exported nested-recursor field counts without reconstruction.
+                    assert_eq!(
+                        old.ctor_telescope_size_wo_params,
+                        new.ctor_telescope_size_wo_params,
+                        "imported nested-recursor rule field count differs from reconstructed count",
+                    );
                     self.assert_imported_expr_matches(old.val, new.val);
                 }
             }
