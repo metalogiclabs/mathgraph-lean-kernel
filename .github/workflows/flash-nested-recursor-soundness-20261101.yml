@@ -68,6 +68,7 @@ jobs:
           set -euo pipefail
           cd /tmp/arena
           : >/tmp/flash-verdicts.tsv
+          failures=0
           check() {
             local arm="$1" fixture="$2" want="$3" rc
             set +e
@@ -78,7 +79,7 @@ jobs:
             if [ "$rc" -ne "$want" ]; then
               echo "VERDICT MISMATCH $arm $fixture (wanted $want; got $rc)" >&2
               tail -c 1500 /tmp/flash-error.txt >&2 || true
-              exit 1
+              failures=$((failures + 1))
             fi
           }
           # The baseline must reproduce the original defect. No false-green qualification.
@@ -90,7 +91,12 @@ jobs:
           # Ordinary authentic source remains acceptable.
           check baseline init-prelude 0
           check candidate init-prelude 0
-          echo FLASH_NESTED_FIELD_COUNT_DISCRIMINATOR_PASS | tee /tmp/flash-summary.txt
+          printf "differential_failures=%s\n" "$failures" | tee /tmp/flash-summary.txt
+          if [ "$failures" -ne 0 ]; then
+            echo FLASH_SOUNDNESS_QUALIFICATION_RED | tee -a /tmp/flash-summary.txt
+            exit 1
+          fi
+          echo FLASH_NESTED_FIELD_COUNT_DISCRIMINATOR_PASS | tee -a /tmp/flash-summary.txt
 
       - uses: actions/upload-artifact@v4
         if: always()
