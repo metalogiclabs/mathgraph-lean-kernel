@@ -118,7 +118,7 @@ jobs:
             print(name,expected,rc,classification,flush=True)
           if observed!=set(sha):
            errors.append("Missing exact adversarial cases: "+repr(set(sha)-observed))
-          if "other/inductive-undeclared-universe" not in {x.strip().split("\\t")[0] for x in evidence.read_text().splitlines()[1:]}:
+          if "other/inductive-undeclared-universe" not in {x.strip().split()[0] for x in evidence.read_text().splitlines()[1:]}:
            errors.append("Missing undeclared-universe regression")
           if sum(counts.values())<190:
            errors.append("Incomplete portable coverage: "+repr(counts))
