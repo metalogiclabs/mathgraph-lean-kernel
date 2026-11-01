@@ -71,7 +71,7 @@ index 5f1a1e8..1710b48 100644
          if k == e && m == mask {
              return hit;
          }
-@@ -209,7 +209,7 @@ impl TypeChecker<'_, '_> {
+@@ -209,6 +209,6 @@ impl TypeChecker<'_, '_> {
          if !fresh {
              self.vals_mut().drop_env_slots(start);
          }
