@@ -30,7 +30,7 @@ jobs:
           (cd /tmp/soko9a && RUSTFLAGS="-C target-cpu=x86-64-v3 -C debuginfo=1" cargo +1.99.1 build --release --locked)
           sha256sum /tmp/soko9a/target/release/sokonanoda > /tmp/soko-atlas-binary.sha256
           valgrind --version
-          callgrind_annotate --version
+          test -x "$(command -v callgrind_annotate)"
 
       - name: Recover original immutable Arena portable fixtures
         shell: bash
