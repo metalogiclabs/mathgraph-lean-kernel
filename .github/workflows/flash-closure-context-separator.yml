@@ -37,7 +37,7 @@ jobs:
           git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/flash-arena
           git -C /tmp/flash-arena checkout -q 7e8cc90a3bc1ca827f616d038df13592020c6bf0
           cd /tmp/flash-arena
-          export NIX_CONFIG="$(printf 'http-connections = 4\\nmax-substitution-jobs = 4\\nconnect-timeout = 30\\n')"
+          export NIX_CONFIG="$(printf 'http-connections = 4\nmax-substitution-jobs = 4\nconnect-timeout = 30\n')"
           for case in init-prelude bugs/nested-rec-rule-nfields; do
             done_ok=0
             for attempt in 1 2 3; do
