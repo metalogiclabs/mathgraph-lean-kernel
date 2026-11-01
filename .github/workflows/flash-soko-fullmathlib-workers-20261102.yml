@@ -1,0 +1,128 @@
+name: Flash vNext Sokonanoda exact Mathlib worker-cost gate
+
+on:
+  push:
+    branches: [research/flash-soko-fullmathlib-workers-20261102]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  whole-mathlib:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 140
+    env:
+      GH_TOKEN: ${{ github.token }}
+      EXPECTED_INPUT: 22c5de83469408950005589a3bc5ef5157c65549b5a802f85d567c29151306a6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+
+      - name: Recover immutable Mathlib from independent archived source
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p /tmp/mathlib-parts
+          for part in \
+            aa:11853198746:c468c622861bfdef1f5ec63f7847dca47650c52cb019a9c034a6e5127ff47ba6 \
+            ab:11852254787:aab2a4f6b069b75a0c4123e91b440350846cf252e7bb362729e95d14f014b7da \
+            ac:11854400199:7538292d02c16aeed628932431724b2f088893c4396bcd652fbabf6ba39f0d73 \
+            ad:11853742466:ae5b674378b731fd3b62df99ba02d5867103efaa9313556de4506fb1a06c119a; do
+            IFS=: read -r label artifact digest <<< "$part"
+            got=0
+            for attempt in 1 2 3; do
+              if gh api "repos/heathsanchez/test/actions/artifacts/$artifact/zip" >"/tmp/part-$label.zip"; then got=1;break;fi
+              sleep $((8*attempt))
+            done
+            test "$got" -eq 1
+            printf '%s  %s\n' "$digest" "/tmp/part-$label.zip" | sha256sum -c -
+            test "$(unzip -Z -1 "/tmp/part-$label.zip" | wc -l)" -eq 1
+            unzip -p "/tmp/part-$label.zip" >"/tmp/mathlib-parts/$label"
+            rm "/tmp/part-$label.zip"
+          done
+          cat /tmp/mathlib-parts/{aa,ab,ac,ad} >/tmp/mathlib.ndjson.gz
+          gzip -t /tmp/mathlib.ndjson.gz
+          rm -rf /tmp/mathlib-parts
+          gzip -d -c /tmp/mathlib.ndjson.gz >/tmp/mathlib.ndjson
+          rm /tmp/mathlib.ndjson.gz
+          test "$(stat -c '%s' /tmp/mathlib.ndjson)" -eq 6184415052
+          printf '%s  %s\n' "$EXPECTED_INPUT" /tmp/mathlib.ndjson | sha256sum -c -
+          sha256sum /tmp/mathlib.ndjson >/tmp/whole-mathlib-input.sha256
+          df -h /tmp
+
+      - name: Exact Arena-pin PGO source build
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/soko
+          git -C /tmp/soko checkout -q 9a021b66f804a1d1df68a981337c67413ef72f6b
+          git rev-parse HEAD >/tmp/soko-whole-source.txt
+          rustup component add llvm-tools-preview --toolchain 1.99.1
+          HOST="$(rustc +1.99.1 -vV | sed -n 's/^host: //p')"
+          PROFDATA="$(rustc +1.99.1 --print sysroot)/lib/rustlib/$HOST/bin/llvm-profdata"
+          test -x "$PROFDATA"
+          gh api repos/leanprover/lean-kernel-arena/actions/artifacts/11272848230/zip >/tmp/arena-frozen196.zip
+          mkdir -p /tmp/arena-archive /tmp/frozen
+          unzip -q /tmp/arena-frozen196.zip -d /tmp/arena-archive
+          tar --no-same-owner -xzf /tmp/arena-archive/lean-arena-tests.tar.gz -C /tmp/frozen
+          rm /tmp/arena-frozen196.zip
+          cd /tmp/soko
+          mkdir -p pgo
+          RUSTFLAGS="-C target-cpu=native -Cprofile-generate=$PWD/pgo" cargo +1.99.1 build --release --locked
+          target/release/sokonanoda --stdin --nat-extension --string-extension --axiom-allow-all --threads 4 < /tmp/frozen/good/init-prelude.ndjson > /dev/null
+          "$PROFDATA" merge -o "$PWD/pgo/merged.profdata" "$PWD/pgo"
+          RUSTFLAGS="-C target-cpu=native -Cprofile-use=$PWD/pgo/merged.profdata" cargo +1.99.1 build --release --locked
+          sha256sum target/release/sokonanoda >/tmp/soko-whole-binary.sha256
+          rm -rf /tmp/frozen /tmp/arena-archive
+          df -h /tmp
+
+      - name: Source-identical 4 versus 1 worker ABBA on complete Mathlib
+        shell: bash
+        run: |
+          set +e
+          mkdir -p /tmp/worker-whole-mathlib-times
+          printf 'rep,threads,exit,timefile\n' >/tmp/whole-mathlib-verdicts.csv
+          rep=0
+          for n in 4 1 1 4; do
+            rep=$((rep+1))
+            /usr/bin/time -f 'elapsed=%e user=%U system=%S max_rss_kb=%M' \
+              -o "/tmp/worker-whole-mathlib-times/run-$rep.txt" \
+              timeout --kill-after=10s 5680s \
+              /tmp/soko/target/release/sokonanoda --stdin --nat-extension --string-extension --axiom-allow-all --threads "$n" \
+              < /tmp/mathlib.ndjson > "/tmp/worker-whole-mathlib-times/run-$rep.out" 2> "/tmp/worker-whole-mathlib-times/run-$rep.err"
+            rc=$?
+            echo "$rep,$n,$rc,run-$rep.txt" | tee -a /tmp/whole-mathlib-verdicts.csv
+          done
+          python3 - <<'PY'
+          import csv,json,pathlib,statistics
+          p=pathlib.Path('/tmp/whole-mathlib-verdicts.csv')
+          rows=[]
+          for item in list(csv.DictReader(p.open())):
+            t=(pathlib.Path('/tmp/worker-whole-mathlib-times')/item['timefile']).read_text().strip()
+            measurements=dict(k.split('=',1) for k in t.split() if '=' in k)
+            rows.append({**item,**measurements})
+          good=all(r['exit']=='0' for r in rows)
+          samples={x:[float(r['user']) for r in rows if r['threads']==x] for x in ['1','4']}
+          med={x:statistics.median(v) for x,v in samples.items()}
+          report={'source':'9a021b66f804a1d1df68a981337c67413ef72f6b',
+            'input_sha256':'22c5de83469408950005589a3bc5ef5157c65549b5a802f85d567c29151306a6',
+            'environment':'same native x86 runner, matching PGO binary; NOT PMU retired instructions or official ranking',
+            'all_accept':good,'rows':rows,'median_user_cpu_s':med,'ratio_one_to_four':med['1']/med['4']}
+          pathlib.Path('/tmp/whole-mathlib-worker-report.json').write_text(json.dumps(report,indent=2)+'\n')
+          print(json.dumps(report,indent=2))
+          if not good:raise SystemExit('WHOLE_MATHLIB_VERDICT_MISMATCH')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: soko-mathlib-worker-count-abba
+          path: |
+            /tmp/whole-mathlib-input.sha256
+            /tmp/soko-whole-source.txt
+            /tmp/soko-whole-binary.sha256
+            /tmp/whole-mathlib-verdicts.csv
+            /tmp/whole-mathlib-worker-report.json
+            /tmp/worker-whole-mathlib-times/*.txt
+          if-no-files-found: warn
