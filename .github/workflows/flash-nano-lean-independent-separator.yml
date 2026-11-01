@@ -1,0 +1,71 @@
+name: Flash independent nano-lean soundness separator
+
+on:
+  push:
+    branches: [fix/flash-nested-recursor-nfields-20261101]
+    paths: [.github/workflows/flash-nano-lean-independent-separator.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - uses: dtolnay/rust-toolchain@1.97.1
+      - name: Build independently implemented checker at exact Arena pin
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/sdiehl/nano-lean /tmp/nano-lean
+          git -C /tmp/nano-lean checkout -q c251061da8e1e93c56d40d9c7988453c0c36935a
+          (cd /tmp/nano-lean && cargo build --release --locked --bin nl-fast)
+          sha256sum /tmp/nano-lean/target/release/nl-fast >/tmp/nano-binary.sha256
+          printf 'nano_source=%s\n' "$(git -C /tmp/nano-lean rev-parse HEAD)" >/tmp/nano-source.txt
+      - name: Acquire identical Arena source-pinned fixtures
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/nano-arena
+          git -C /tmp/nano-arena checkout -q 7e8cc90a3bc1ca827f616d038df13592020c6bf0
+          cd /tmp/nano-arena
+          nix develop -c ./lka.py build-test bugs/nested-rec-rule-nfields
+          nix develop -c ./lka.py build-test init-prelude
+          sha256sum _build/tests/bugs/nested-rec-rule-nfields.ndjson tests/other/inductive-undeclared-universe.ndjson _build/tests/init-prelude.ndjson >/tmp/nano-inputs.sha256
+      - name: Independent exact verdict separator
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/nano-arena
+          : >/tmp/nano-verdicts.tsv
+          check() {
+            local name="$1" f="$2" expected="$3" rc
+            set +e
+            /tmp/nano-lean/target/release/nl-fast -q -j 4 "$f" >/tmp/"$name".out 2>/tmp/"$name".err
+            rc=$?
+            set -e
+            printf '%s\t%s\t%s\n' "$name" "$rc" "$expected" | tee -a /tmp/nano-verdicts.tsv
+            test "$rc" -eq "$expected"
+          }
+          check nested-rec-rule-nfields _build/tests/bugs/nested-rec-rule-nfields.ndjson 1
+          check inductive-undeclared-universe tests/other/inductive-undeclared-universe.ndjson 1
+          check init-prelude _build/tests/init-prelude.ndjson 0
+          echo NANO_EXACT_INDEPENDENT_SEPARATOR_PASS > /tmp/nano-summary.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-nano-lean-independent-separator
+          path: |
+            /tmp/nano-source.txt
+            /tmp/nano-binary.sha256
+            /tmp/nano-inputs.sha256
+            /tmp/nano-verdicts.tsv
+            /tmp/nano-summary.txt
+            /tmp/nested-rec-rule-nfields.err
+            /tmp/inductive-undeclared-universe.err
+            /tmp/init-prelude.err
+          if-no-files-found: warn
