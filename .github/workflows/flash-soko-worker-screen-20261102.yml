@@ -1,0 +1,94 @@
+name: Sokonanoda 9a thread-count source-pinned screening
+
+on:
+  push:
+    branches: [research/flash-current-soko-comparator-20261102]
+    paths: [.github/workflows/flash-soko-worker-screen-20261102.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  workers:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 80
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - name: Build identical pinned checker for all arms
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/soko-workers
+          git -C /tmp/soko-workers checkout -q 9a021b66f804a1d1df68a981337c67413ef72f6b
+          (cd /tmp/soko-workers && RUSTFLAGS="-C target-cpu=x86-64-v3" cargo build --locked --release)
+          sha256sum /tmp/soko-workers/target/release/sokonanoda >/tmp/worker-binary.sha256
+          printf 'source=%s\n' "$(git -C /tmp/soko-workers rev-parse HEAD)" >/tmp/worker-source.txt
+
+      - name: Recover exactly pinned portable originals
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/w-archive /tmp/w-corpus
+          gh api repos/leanprover/lean-kernel-arena/actions/artifacts/11272848230/zip > /tmp/w-source.zip
+          sha256sum /tmp/w-source.zip >/tmp/worker-archive.sha256
+          unzip -q /tmp/w-source.zip -d /tmp/w-archive
+          tar --no-same-owner -xzf /tmp/w-archive/lean-arena-tests.tar.gz -C /tmp/w-corpus
+          test "$(find /tmp/w-corpus/good /tmp/w-corpus/bad -name '*.ndjson' | wc -l)" -eq 196
+
+      - name: CPU, RSS and verdict screening across 1, 2 and 4 workers
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,pathlib,subprocess,time,statistics
+          root=pathlib.Path('/tmp/w-corpus/good')
+          paths=[root/'init-prelude.ndjson']
+          for name in ['magma-list-pair-n7','magma-list-deep-n21','grind-ring-5','fueled-chain']:
+            p=root/'perf'/(name+'.ndjson')
+            if p.exists():paths.append(p)
+          rows=[]
+          bin='/tmp/soko-workers/target/release/sokonanoda'
+          for p in paths:
+            for n in [1,2,4,4,2,1,1,2,4]:
+              out=pathlib.Path('/tmp/timing.txt')
+              cmd=['/usr/bin/time','-f','%U %M','-o',str(out),bin,'--stdin','--nat-extension','--string-extension','--axiom-allow-all','--threads',str(n)]
+              start=time.monotonic()
+              with p.open('rb') as src:
+                try:r=subprocess.run(cmd,stdin=src,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,timeout=120)
+                except subprocess.TimeoutExpired:r=None
+              rc=r.returncode if r else 124
+              sample=out.read_text().strip().split() if out.exists() else []
+              try:cpu,rss=map(float,sample[:2])
+              except (ValueError,TypeError):cpu=rss=None
+              row={'case':str(p.relative_to(root)),'threads':n,'exit':rc,'cpu_s':cpu,'rss_kb':rss,'wall_s':time.monotonic()-start,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()}
+              rows.append(row)
+              print(json.dumps(row),flush=True)
+          summaries={}
+          for p in paths:
+            name=str(p.relative_to(root))
+            summaries[name]={}
+            for n in [1,2,4]:
+              rr=[r for r in rows if r['case']==name and r['threads']==n]
+              summaries[name][n]={'n':len(rr),'median_cpu_s':statistics.median(r['cpu_s'] for r in rr if r['cpu_s'] is not None),
+                'median_wall_s':statistics.median(r['wall_s'] for r in rr)}
+          report={'claim_boundary':'same-host portable screening; no PGO, full Mathlib, or guest instruction counts',
+             'source':'9a021b66f804a1d1df68a981337c67413ef72f6b','rows':rows,'summary':summaries}
+          pathlib.Path('/tmp/worker-results.json').write_text(json.dumps(report,indent=2)+'\n')
+          print(json.dumps(summaries,indent=2),flush=True)
+          if any(r['exit']!=0 for r in rows):raise SystemExit('WORKER_SCREEN_VALID_VERDICT_RED')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: soko-worker-count-screen
+          path: |
+            /tmp/worker-binary.sha256
+            /tmp/worker-source.txt
+            /tmp/worker-archive.sha256
+            /tmp/worker-results.json
+          if-no-files-found: warn
