@@ -3,7 +3,7 @@ name: Soko9a exact full Mathlib sparse-prune PGO A/B
 on:
   push:
     branches: [research/soko9a-sparse-prune-reset-20261102]
-    paths: [.github/workflows/soko9a-sparse-prune-mathlib-ab.yml]
+    paths: [.github/workflows/soko9a-sparse-prune-mathlib-ab.yml, experiments/lean-kernel/soko9a-sparse-prune-reset.patch]
   workflow_dispatch:
 
 permissions:
