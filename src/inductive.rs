@@ -714,13 +714,38 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
         all_inductives
     }
 
-    fn mk_unique_name(&mut self, n: NamePtr<'t>, st: &mut InductiveCheckState<'t>) -> NamePtr<'t> {
+    fn mk_unique_name(
+        &mut self,
+        n: NamePtr<'t>,
+        st: &mut InductiveCheckState<'t>,
+        container_name: NamePtr<'t>,
+        ctor_names: &[NamePtr<'t>],
+    ) -> NamePtr<'t> {
+        let rec_suffix = self.ctx.alloc_string(std::borrow::Cow::Borrowed("rec"));
         for idx in st.next_ngen_idx..u64::MAX {
             let tester = self.ctx.append_index_after(n, idx);
-            if !self.env.get_old_declar(&tester).is_some() {
-                st.next_ngen_idx = idx + 1;
-                return tester;
+            let rec_name = self.ctx.str(tester, rec_suffix);
+            // Temporary inductive, constructor, and recursor names must not be
+            // re-bound by *any* declaration in the export, including later ones.
+            // Testing only the temporary type name admits nested-name capture.
+            if self.ctx.export_file.declars.contains_key(&tester)
+                || self.ctx.export_file.declars.contains_key(&rec_name)
+            {
+                continue;
             }
+            let mut ctor_collision = false;
+            for &ctor in ctor_names {
+                let fresh_ctor = self.ctx.replace_pfx(ctor, container_name, tester);
+                if self.ctx.export_file.declars.contains_key(&fresh_ctor) {
+                    ctor_collision = true;
+                    break;
+                }
+            }
+            if ctor_collision {
+                continue;
+            }
+            st.next_ngen_idx = idx + 1;
+            return tester;
         }
         panic!("Unable to generate unique name, u64 exhausted")
     }
@@ -774,7 +799,7 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
                 let aux_nested_container_name = {
                     let nested_pfx = self.ctx.str1("_nested");
                     let base = self.ctx.concat_name(nested_pfx, nested_container_name);
-                    self.mk_unique_name(base, st)
+                    self.mk_unique_name(base, st, nested_container_name, all_nested_container_ctor_names.as_ref())
                 };
                 // Replace the telescope on the auxiliary declaration to match the declaration
                 // we're currently checking. Can also add parameters as needed.
