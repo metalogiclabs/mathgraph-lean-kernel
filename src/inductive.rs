@@ -37,6 +37,10 @@ impl<'t, 'p: 't> ExportFile<'p> {
                 }
                 assert!(!physical_ind_names.is_empty(), "inductive block contains no inductive types");
 
+                for ty in physical_inductive_types_and_ctors.iter().copied() {
+                    ctx.assert_inductive_universe_scope(ty, ind.info.uparams);
+                }
+
                 for ty in physical_ctor_types.iter().copied() {
                     ctx.check_uniform_inductive_occurrences(
                         ty,
@@ -138,6 +142,53 @@ impl<'t, 'p: 't> ExportFile<'p> {
 }
 
 impl<'t, 'p: 't> TcCtx<'t, 'p> {
+    /// Inspect the imported source tree, not an inferred/normalized type.
+    /// Inductive and constructor universes must be bound by this block.
+    pub(crate) fn assert_inductive_universe_scope(
+        &self,
+        source: ExprPtr<'t>,
+        declared: LevelsPtr<'t>,
+    ) {
+        let mut pending = vec![source];
+        let mut visited = crate::util::new_fx_hash_set();
+        while let Some(expr) = pending.pop() {
+            if !visited.insert(expr) {
+                continue;
+            }
+            match self.read_expr(expr) {
+                Sort { level, .. } => {
+                    assert!(
+                        self.all_uparams_defined(level, declared),
+                        "inductive references undeclared universe parameter"
+                    );
+                }
+                Const { levels, .. } => {
+                    for &level in self.read_levels(levels) {
+                        assert!(
+                            self.all_uparams_defined(level, declared),
+                            "constructor references undeclared universe parameter"
+                        );
+                    }
+                }
+                App { fun, arg, .. } => {
+                    pending.push(fun);
+                    pending.push(arg);
+                }
+                Pi { binder_type, body, .. } | Lambda { binder_type, body, .. } => {
+                    pending.push(binder_type);
+                    pending.push(body);
+                }
+                Let { data, .. } => {
+                    pending.push(data.binder_type);
+                    pending.push(data.val);
+                    pending.push(data.body);
+                }
+                Proj { structure, .. } => pending.push(structure),
+                Var { .. } | StringLit { .. } | NatLit { .. } => {}
+            }
+        }
+    }
+
     pub(crate) fn check_uniform_inductive_occurrences(
         &self,
         e: ExprPtr<'t>,
