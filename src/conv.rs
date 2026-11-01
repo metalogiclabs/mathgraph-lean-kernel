@@ -55,6 +55,14 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
 
     #[inline]
     fn envs_ptr_equal(e1: E<'t>, e2: E<'t>) -> bool {
+        // Two syntactically identical closures may still instantiate their
+        // universe parameters differently. An empty environment alone is not
+        // evidence that their level substitutions agree.
+        match (e1.lsub(), e2.lsub()) {
+            (None, None) => {}
+            (Some(x), Some(y)) if x.ks == y.ks && x.vs == y.vs => {}
+            _ => return false,
+        }
         let mut a = e1;
         let mut b = e2;
         loop {
@@ -78,6 +86,18 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 }
                 _ => return false,
             }
+        }
+    }
+
+    #[inline]
+    fn same_closure_mode(a: &value::Closure<'t>, b: &value::Closure<'t>) -> bool {
+        // A closure whose body is inferred as a TYPE and one evaluated as a
+        // VALUE have different meanings even if the source body is identical.
+        // The fast path is sound only with identical inference ownership.
+        match (a.ctx, b.ctx) {
+            (None, None) => true,
+            (Some(x), Some(y)) => std::ptr::eq(x, y),
+            _ => false,
         }
     }
 
@@ -201,6 +221,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
             (Value::Pi { domain: dx, body: bx, .. }, Value::Pi { domain: dy, body: by, .. }) => {
                 if bx.body == by.body
                     && std::ptr::eq(*dx, *dy)
+                    && Self::same_closure_mode(bx, by)
                     && Self::envs_ptr_equal(bx.env, by.env)
                 {
                     return true;
@@ -220,6 +241,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 let dy = self.lam_domain(depth, t2);
                 if bx.body == by.body
                     && std::ptr::eq(dx, dy)
+                    && Self::same_closure_mode(bx, by)
                     && Self::envs_ptr_equal(bx.env, by.env)
                 {
                     return true;
