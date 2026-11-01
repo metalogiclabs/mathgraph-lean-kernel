@@ -3,7 +3,7 @@ name: Flash static adversarial corpus without Nix
 on:
   push:
     branches: [research/flash-closure-context-soundness-20261102]
-    paths: [.github/workflows/flash-static-adversarial-no-nix.yml]
+    paths: [.github/workflows/flash-static-adversarial-no-nix.yml, src/inductive.rs, src/conv.rs]
   workflow_dispatch:
 
 permissions:
