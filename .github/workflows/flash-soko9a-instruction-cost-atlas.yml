@@ -1,0 +1,101 @@
+name: Soko9a source-pinned Callgrind instruction cost atlas
+
+on:
+  push:
+    branches: [research/flash-soko9a-instruction-cost-atlas-20261102]
+    paths: [.github/workflows/flash-soko9a-instruction-cost-atlas.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  guest-ir-atlas:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - name: Prepare source-pinned checker and instructions profiler
+        shell: bash
+        run: |
+          set -euxo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq valgrind
+          git clone -q https://github.com/intgrah/sokonanoda /tmp/soko9a
+          git -C /tmp/soko9a checkout -q 9a021b66f804a1d1df68a981337c67413ef72f6b
+          git -C /tmp/soko9a rev-parse HEAD >/tmp/soko-atlas-source.txt
+          (cd /tmp/soko9a && RUSTFLAGS="-C target-cpu=x86-64-v3 -C debuginfo=1" cargo +1.99.1 build --release --locked)
+          sha256sum /tmp/soko9a/target/release/sokonanoda > /tmp/soko-atlas-binary.sha256
+          valgrind --version
+          callgrind_annotate --version
+
+      - name: Recover original immutable Arena portable fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/arena-archive /tmp/arena-inputs /tmp/atlas-results
+          gh api repos/leanprover/lean-kernel-arena/actions/artifacts/11272848230/zip >/tmp/arena-196.zip
+          sha256sum /tmp/arena-196.zip > /tmp/soko-atlas-archive.sha256
+          unzip -q /tmp/arena-196.zip -d /tmp/arena-archive
+          tar --no-same-owner -xzf /tmp/arena-archive/lean-arena-tests.tar.gz -C /tmp/arena-inputs
+          for case in init-prelude magma-list-pair-n7 grind-ring-5; do
+            if [ "$case" = "init-prelude" ]; then input="/tmp/arena-inputs/good/$case.ndjson"; else input="/tmp/arena-inputs/good/perf/$case.ndjson"; fi
+            test -s "$input"
+            sha256sum "$input"
+          done
+
+      - name: Exact checker verdict and Callgrind guest instructions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,pathlib,subprocess
+          binary='/tmp/soko9a/target/release/sokonanoda'
+          root=pathlib.Path('/tmp/arena-inputs/good')
+          out=pathlib.Path('/tmp/atlas-results')
+          cases={'init-prelude':root/'init-prelude.ndjson',
+            'magma-list-pair-n7':root/'perf/magma-list-pair-n7.ndjson',
+            'grind-ring-5':root/'perf/grind-ring-5.ndjson'}
+          rows=[]
+          for name,p in cases.items():
+            for arm in ['native','callgrind']:
+              target=out/('callgrind-'+name+'.out')
+              base=[binary,'--stdin','--nat-extension','--string-extension','--axiom-allow-all','--threads','1']
+              cmd=base if arm=='native' else ['valgrind','--tool=callgrind','--callgrind-out-file='+str(target)]+base
+              try:
+                with p.open('rb') as f: result=subprocess.run(cmd,stdin=f,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,timeout=450)
+                rc=result.returncode; stderr=result.stderr.decode(errors='replace')[-1800:]
+              except subprocess.TimeoutExpired:rc,stderr=124,'TIMEOUT'
+              row=dict(name=name,arm=arm,exit_code=rc,input_sha256=hashlib.sha256(p.read_bytes()).hexdigest(),stderr_tail=stderr)
+              if arm=='callgrind' and target.exists():
+                for line in target.read_text(errors='replace').splitlines():
+                  if line.startswith('summary:'):
+                    try:row['guest_Ir']=int(line.split()[1])
+                    except (ValueError,IndexError):pass
+                    break
+                annotated=subprocess.run(['callgrind_annotate','--threshold=95',str(target)],capture_output=True,text=True,timeout=60)
+                (out/(name+'.top95.txt')).write_text(annotated.stdout+'\n'+annotated.stderr)
+              rows.append(row)
+              print(json.dumps({k:v for k,v in row.items() if k!='stderr_tail'}),flush=True)
+          summary={'source':'9a021b66f804a1d1df68a981337c67413ef72f6b',
+            'scope':'single worker, no-PGO selected genuine original Arena exports, instrumented guest Ir not hardware retired instruction',
+            'all_accept':all(r['exit_code']==0 for r in rows),'rows':rows}
+          (out/'summary.json').write_text(json.dumps(summary,indent=2)+'\n')
+          if not summary['all_accept'] or any('guest_Ir' not in r for r in rows if r['arm']=='callgrind'):
+            raise SystemExit('ATLAS_NOT_QUALIFIED')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: soko9a-source-pinned-instruction-atlas
+          path: |
+            /tmp/soko-atlas-source.txt
+            /tmp/soko-atlas-binary.sha256
+            /tmp/soko-atlas-archive.sha256
+            /tmp/atlas-results/summary.json
+            /tmp/atlas-results/*.top95.txt
+          if-no-files-found: warn
