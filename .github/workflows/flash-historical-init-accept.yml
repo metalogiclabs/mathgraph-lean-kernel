@@ -1,0 +1,78 @@
+name: Flash genuine Init from frozen Arena corpus
+
+on:
+  push:
+    branches: [research/flash-closure-context-soundness-20261102]
+    paths: [.github/workflows/flash-historical-init-accept.yml, src/conv.rs, src/inductive.rs]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  original-init:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build exact baseline and candidate
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git worktree add --detach /tmp/pre acc853dcd687087b5a46ada91ffcaf14a2f8345f
+          (cd /tmp/pre && cargo build --release --locked)
+          cargo build --release --locked
+          cp /tmp/pre/target/release/sokonanoda /tmp/flash-pre.bin
+          cp target/release/sokonanoda /tmp/flash-post.bin
+          sha256sum /tmp/flash-pre.bin /tmp/flash-post.bin > /tmp/flash-init-binaries.sha256
+
+      - name: Retrieve and hash frozen original source corpus
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p /tmp/archive /tmp/inputs
+          gh api repos/leanprover/lean-kernel-arena/actions/artifacts/11272848230/zip > /tmp/arena-frozen196.zip
+          sha256sum /tmp/arena-frozen196.zip > /tmp/flash-init-archive.sha256
+          unzip -q /tmp/arena-frozen196.zip -d /tmp/archive
+          tar --no-same-owner -xzf /tmp/archive/lean-arena-tests.tar.gz -C /tmp/inputs
+          f=/tmp/inputs/good/init-prelude.ndjson
+          test -s "$f"
+          printf 'eac8baf0fd48f5e7ccada755b36823d402a1e980882818995ade19cffe15a2c5  %s\n' "$f" | sha256sum -c -
+          sha256sum "$f" > /tmp/flash-init-input.sha256
+          printf '%s\n' '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2,"print_success_message":false}' >/tmp/flash-init-config.json
+
+      - name: Require unchanged full original Init acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > /tmp/flash-init-verdicts.tsv
+          for arm in pre post; do
+            set +e
+            "/tmp/flash-$arm.bin" /tmp/flash-init-config.json < /tmp/inputs/good/init-prelude.ndjson > "/tmp/$arm-init.stdout" 2> "/tmp/$arm-init.stderr"
+            rc=$?
+            set -e
+            printf '%s\t%d\n' "$arm" "$rc" | tee -a /tmp/flash-init-verdicts.tsv
+            if [ "$rc" -ne 0 ]; then
+              tail -30 "/tmp/$arm-init.stderr"
+              exit 1
+            fi
+          done
+          echo 'FROZEN_INIT_ACCEPT_PASS' >/tmp/flash-init-summary.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-original-init-frozen
+          path: |
+            /tmp/flash-init-binaries.sha256
+            /tmp/flash-init-archive.sha256
+            /tmp/flash-init-input.sha256
+            /tmp/flash-init-verdicts.tsv
+            /tmp/flash-init-summary.txt
+            /tmp/pre-init.stderr
+            /tmp/post-init.stderr
+          if-no-files-found: warn

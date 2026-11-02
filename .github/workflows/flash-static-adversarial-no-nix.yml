@@ -1,0 +1,83 @@
+name: Flash static adversarial corpus without Nix
+
+on:
+  push:
+    branches: [research/flash-closure-context-soundness-20261102]
+    paths: [.github/workflows/flash-static-adversarial-no-nix.yml, src/inductive.rs, src/conv.rs]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-separator:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build source-pinned original and repaired checker
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git worktree add --detach /tmp/flash-pre acc853dcd687087b5a46ada91ffcaf14a2f8345f
+          (cd /tmp/flash-pre && cargo build --release --locked)
+          cargo build --release --locked
+          cp /tmp/flash-pre/target/release/sokonanoda /tmp/flash-pre.bin
+          cp target/release/sokonanoda /tmp/flash-post.bin
+          sha256sum /tmp/flash-pre.bin /tmp/flash-post.bin >/tmp/flash-static-binaries.sha256
+          printf 'pre=%s\npost=%s\n' acc853dcd687087b5a46ada91ffcaf14a2f8345f "$GITHUB_SHA" >/tmp/flash-static-sources.txt
+          printf '%s\n' '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2,"print_success_message":false}' >/tmp/flash-static-cfg.json
+
+      - name: Checkout pinned static NDJSON files
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena /tmp/flash-static-arena
+          git -C /tmp/flash-static-arena checkout -q 7e8cc90a3bc1ca827f616d038df13592020c6bf0
+          cd /tmp/flash-static-arena
+          sha256sum tests/bugs/closure-level-subst.ndjson tests/bugs/pi-closure-context.ndjson tests/bugs/unit-rec-rule.ndjson tests/bugs/nested-name-capture.ndjson tests/other/inductive-undeclared-universe.ndjson tests/other/level-index-out-of-order.ndjson tests/other/sparse-name-index.ndjson >/tmp/flash-static-fixtures.sha256
+
+      - name: Exact expected verdicts on identical bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,pathlib,subprocess
+          root=pathlib.Path('/tmp/flash-static-arena/tests')
+          examples=[
+            ('bugs/closure-level-subst.ndjson',1),
+            ('bugs/pi-closure-context.ndjson',1),
+            ('bugs/unit-rec-rule.ndjson',1),
+            ('bugs/nested-name-capture.ndjson',1),
+            ('other/inductive-undeclared-universe.ndjson',1),
+            ('other/level-index-out-of-order.ndjson',0),
+            ('other/sparse-name-index.ndjson',0)]
+          records=[]
+          for name,expected in examples:
+            path=root/name
+            for arm in ('pre','post'):
+              with path.open('rb') as f:
+                try:p=subprocess.run([f'/tmp/flash-{arm}.bin','/tmp/flash-static-cfg.json'],stdin=f,capture_output=True,timeout=60)
+                except subprocess.TimeoutExpired:p=None
+              rc=p.returncode if p else 124
+              record=dict(name=name,arm=arm,expected=expected,rc=rc,sha256=hashlib.sha256(path.read_bytes()).hexdigest(),stderr=(p.stderr.decode(errors='replace') if p else 'TIMEOUT')[-400:])
+              records.append(record)
+              print(name,arm,rc,'expected',expected,flush=True)
+          pathlib.Path('/tmp/flash-static-verdicts.json').write_text(json.dumps(records,indent=2)+'\n')
+          if any(r['rc']!=r['expected'] for r in records if r['arm']=='post'):
+            raise SystemExit('STATIC_GATE_RED')
+          print('STATIC_GATE_PASS')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-static-adversarial-no-nix
+          path: |
+            /tmp/flash-static-sources.txt
+            /tmp/flash-static-binaries.sha256
+            /tmp/flash-static-fixtures.sha256
+            /tmp/flash-static-verdicts.json
+          if-no-files-found: warn

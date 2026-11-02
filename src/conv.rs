@@ -55,6 +55,14 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
 
     #[inline]
     fn envs_ptr_equal(e1: E<'t>, e2: E<'t>) -> bool {
+        // Two syntactically identical closures may still instantiate their
+        // universe parameters differently. An empty environment alone is not
+        // evidence that their level substitutions agree.
+        match (e1.lsub(), e2.lsub()) {
+            (None, None) => {}
+            (Some(x), Some(y)) if x.ks == y.ks && x.vs == y.vs => {}
+            _ => return false,
+        }
         let mut a = e1;
         let mut b = e2;
         loop {
@@ -78,6 +86,18 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 }
                 _ => return false,
             }
+        }
+    }
+
+    #[inline]
+    fn same_closure_mode(a: &value::Closure<'t>, b: &value::Closure<'t>) -> bool {
+        // A closure whose body is inferred as a TYPE and one evaluated as a
+        // VALUE have different meanings even if the source body is identical.
+        // The fast path is sound only with identical inference ownership.
+        match (a.ctx, b.ctx) {
+            (None, None) => true,
+            (Some(x), Some(y)) => std::ptr::eq(x, y),
+            _ => false,
         }
     }
 
@@ -201,6 +221,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
             (Value::Pi { domain: dx, body: bx, .. }, Value::Pi { domain: dy, body: by, .. }) => {
                 if bx.body == by.body
                     && std::ptr::eq(*dx, *dy)
+                    && Self::same_closure_mode(bx, by)
                     && Self::envs_ptr_equal(bx.env, by.env)
                 {
                     return true;
@@ -220,6 +241,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 let dy = self.lam_domain(depth, t2);
                 if bx.body == by.body
                     && std::ptr::eq(dx, dy)
+                    && Self::same_closure_mode(bx, by)
                     && Self::envs_ptr_equal(bx.env, by.env)
                 {
                     return true;
@@ -579,7 +601,15 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
             if let Value::Rigid { head: RigidHead::Inductive(ind_name, _), .. } = ty_f {
                 let ind_name = *ind_name;
                 if self.is_unit_inductive(ind_name) {
-                    return true;
+                    // A unit-like type permits eta only for inhabitants of
+                    // that SAME type. Matching one side's type alone can
+                    // incorrectly equate a constructor with an unrelated
+                    // recursor minor and admit a forged computation rule.
+                    if let (Some(a), Some(b)) = (xt, yt) {
+                        if self.conv_types_at(depth, a, b) {
+                            return true;
+                        }
+                    }
                 }
                 if self.can_be_struct_memo(ind_name)
                     && (self.try_eta_struct_v(depth, ind_name, x, y) || self.try_eta_struct_v(depth, ind_name, y, x))

@@ -1,0 +1,92 @@
+name: Flash nested-recursor source gate
+
+on:
+  push:
+    branches:
+      - fix/flash-nested-recursor-nfields-20261101
+    paths:
+      - src/inductive.rs
+      - .github/workflows/flash-nested-recursor-source-gate.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-pinned-regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+
+      - name: Build baseline and candidate from exact commits
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git worktree add --detach /tmp/flash-original 78c7502bac8a5ba000057b3f083bc0595ac65750
+          (cd /tmp/flash-original && cargo build --release --locked)
+          cargo build --release --locked
+          cp /tmp/flash-original/target/release/sokonanoda /tmp/flash-original.bin
+          cp target/release/sokonanoda /tmp/flash-candidate.bin
+          printf '%s\n' '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2,"print_success_message":false}' >/tmp/flash-config.json
+          sha256sum /tmp/flash-original.bin /tmp/flash-candidate.bin >/tmp/flash-binaries.sha256
+          printf 'baseline=78c7502bac8a5ba000057b3f083bc0595ac65750\ncandidate=%s\n' "$GITHUB_SHA" >/tmp/flash-source.txt
+
+      - name: Generate exact Arena regression and valid control
+        shell: bash
+        timeout-minutes: 90
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena.git /tmp/flash-arena
+          git -C /tmp/flash-arena checkout -q 7e8cc90a3bc1ca827f616d038df13592020c6bf0
+          cd /tmp/flash-arena
+          nix develop -c ./lka.py build-test bugs/nested-rec-rule-nfields
+          nix develop -c ./lka.py build-test init-prelude
+          test -s _build/tests/bugs/nested-rec-rule-nfields.ndjson
+          test -s _build/tests/init-prelude.ndjson
+          test -s tests/other/inductive-undeclared-universe.ndjson
+          sha256sum _build/tests/bugs/nested-rec-rule-nfields.ndjson _build/tests/init-prelude.ndjson tests/other/inductive-undeclared-universe.ndjson >/tmp/flash-inputs.sha256
+
+      - name: Verify before-after forged recursor rejection and controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/flash-arena
+          : >/tmp/flash-verdicts.tsv
+          check() {
+            local name="$1" input="$2" binary="$3" expected="$4"
+            local rc
+            set +e
+            "$binary" /tmp/flash-config.json <"$input" >/tmp/"$name".out 2>/tmp/"$name".err
+            rc=$?
+            set -e
+            printf '%s\t%s\t%s\n' "$name" "$rc" "$expected" | tee -a /tmp/flash-verdicts.tsv
+            test "$rc" -eq "$expected"
+          }
+          # The source defect must be reproduced, not just the candidate result.
+          check forged-baseline _build/tests/bugs/nested-rec-rule-nfields.ndjson /tmp/flash-original.bin 0
+          check forged-candidate _build/tests/bugs/nested-rec-rule-nfields.ndjson /tmp/flash-candidate.bin 1
+          # Genuine exports must remain valid, and the newer universe-scope attack
+          # must not be incorrectly admitted by the candidate.
+          check init-baseline _build/tests/init-prelude.ndjson /tmp/flash-original.bin 0
+          check init-candidate _build/tests/init-prelude.ndjson /tmp/flash-candidate.bin 0
+          check universe-candidate tests/other/inductive-undeclared-universe.ndjson /tmp/flash-candidate.bin 1
+          echo "FLASH_SOURCE_PINNED_GATE_PASS" | tee /tmp/flash-summary.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-nested-recursor-source-gate
+          path: |
+            /tmp/flash-source.txt
+            /tmp/flash-binaries.sha256
+            /tmp/flash-inputs.sha256
+            /tmp/flash-verdicts.tsv
+            /tmp/flash-summary.txt
+            /tmp/forged-baseline.err
+            /tmp/forged-candidate.err
+            /tmp/universe-candidate.err
+          if-no-files-found: warn
