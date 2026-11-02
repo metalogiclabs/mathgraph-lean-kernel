@@ -1,0 +1,277 @@
+name: Flash current Arena and matched resource qualification
+
+on:
+  push:
+    branches: [research/flash-assurance-resource-matrix-20261102]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flash-resource-assurance-20261102
+  cancel-in-progress: true
+
+env:
+  ARENA_SHA: d7f74a9e67459e2c251d608f524dc5efc6dc223c
+  BASE_SHA: 78c7502bac8a5ba000057b3f083bc0595ac65750
+
+jobs:
+  prescribed:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Build checker and native controls
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git merge-base --is-ancestor "$BASE_SHA" "$GITHUB_SHA"
+          rustup toolchain install 1.99.1 --profile minimal
+          cargo +1.99.1 test --release --locked
+          RUSTFLAGS='-C target-cpu=x86-64-v3' cargo +1.99.1 build --release --locked
+          sha256sum target/release/sokonanoda | tee /tmp/flash-binary.sha256
+          printf '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2,"print_success_message":false}\n' > /tmp/flash-config.json
+      - name: Recreate the October 28 pinned Arena fixtures
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone -q https://github.com/leanprover/lean-kernel-arena.git /tmp/arena
+          git -C /tmp/arena checkout -q "$ARENA_SHA"
+          cd /tmp/arena
+          # Large Nix substitutions sometimes fail with transient 416/cache
+          # range errors. A failed attempt does not establish a kernel verdict.
+          mkdir -p /tmp/flash-evidence
+          export NIX_CONFIG="$(printf 'http-connections = 4\nmax-substitution-jobs = 4\nconnect-timeout = 30\n')"
+          ok=0
+          for attempt in 1 2 3; do
+            echo "ARENA_BUILD_ATTEMPT=$attempt" | tee -a /tmp/flash-evidence/fixture-build.attempts
+            if nix develop -c ./lka.py build-test --skip-ci                 > "/tmp/flash-evidence/fixture-build-$attempt.log" 2>&1; then
+              ok=1
+              cat "/tmp/flash-evidence/fixture-build-$attempt.log" | tail -30
+              break
+            fi
+            tail -45 "/tmp/flash-evidence/fixture-build-$attempt.log"
+            sleep $((12*attempt))
+          done
+          test "$ok" -eq 1
+          echo ARENA_PINNED_FIXTURES_GENERATED
+      - name: Exact soundness and prescribed verdict gate
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p /tmp/flash-evidence
+          python3 - <<'PY'
+          import hashlib,json,subprocess,sys
+          from pathlib import Path
+          root=Path("/tmp/arena/_build/tests")
+          sha={
+           "bugs/closure-level-subst":"ba61ad635f4a1e8929b3ada25df22a8ab854f908d5fac44f9e7bf5f2d91ae3a0",
+           "bugs/nested-name-capture":"9d38f6480b12a9061ac54dec8ea27477414a39c65301dfb7ee5cedaa8d3cffad",
+           "bugs/nested-rec-rule-nfields":"8874ecde1a57edbc52428cb7ea7c8834f74e623a164b0c0f69e78613effc0c56",
+           # The complete test manifest at the pinned Arena SHA must include the
+           # new scope attack; its verdict and digest are recorded per row below.
+           "bugs/pi-closure-context":"730013454f261b1c20e3ee4600821e325715929a6ddca36779f6ce9e5f506520",
+           "bugs/unit-rec-rule":"cb6d127a5f0daa9fa2047c338e809d1ffb9cc3d8454956c30eede38091a4a969",
+          }
+          observed=set()
+          errors=[]
+          counts={"accept":0,"reject":0}
+          bin=Path.cwd()/"target/release/sokonanoda"
+          evidence=Path("/tmp/flash-evidence/verdicts.tsv")
+          with evidence.open("w") as out:
+           out.write("test\texpected\texit\tclassification\tsha256\n")
+           for stats_path in sorted(root.rglob("*.stats.json")):
+            stats=json.loads(stats_path.read_text())
+            expected=stats.get("outcome")
+            if expected not in ("accept","reject"):continue
+            name=stats["name"]
+            if name=="perf/magma-list-pair-n21":continue
+            ndjson=stats_path.with_name(stats_path.name.replace(".stats.json",".ndjson"))
+            if not ndjson.exists():
+             errors.append("missing input "+name)
+             continue
+            digest=hashlib.file_digest(ndjson.open("rb"),"sha256").hexdigest()
+            if name in sha:
+             observed.add(name)
+             if digest!=sha[name]:
+              errors.append("HASH_MISMATCH "+name)
+              continue
+            timeout=min(int(stats.get("timeout",240)),600)
+            try:
+             with ndjson.open("rb") as inp:
+              res=subprocess.run([str(bin),"/tmp/flash-config.json"],stdin=inp,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,timeout=timeout)
+             rc=res.returncode
+             ok=(expected=="accept" and rc==0) or (expected=="reject" and rc==1)
+             classification="PASS" if ok else "FAIL"
+            except subprocess.TimeoutExpired:
+             rc=124
+             classification="TIMEOUT"
+            if classification!="PASS":
+             errors.append(name+" "+classification+" "+str(rc))
+            else:
+             counts[expected]+=1
+            out.write(f"{name}\t{expected}\t{rc}\t{classification}\t{digest}\n")
+            print(name,expected,rc,classification,flush=True)
+          if observed!=set(sha):
+           errors.append("Missing exact adversarial cases: "+repr(set(sha)-observed))
+          if "other/inductive-undeclared-universe" not in {x.strip().split()[0] for x in evidence.read_text().splitlines()[1:]}:
+           errors.append("Missing undeclared-universe regression")
+          if sum(counts.values())<190:
+           errors.append("Incomplete portable coverage: "+repr(counts))
+          summary={"source":"candidate","arena_sha":"d7f74a9e67459e2c251d608f524dc5efc6dc223c","correct":counts,"wrong_or_missing":errors,"excluded_heavy":"perf/magma-list-pair-n21"}
+          Path("/tmp/flash-evidence/summary.json").write_text(json.dumps(summary,indent=2))
+          print(json.dumps(summary,indent=2))
+          if errors:sys.exit(1)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: headmatch-prescribed-20261029
+          path: |
+            /tmp/flash-binary.sha256
+            /tmp/flash-evidence/
+          if-no-files-found: warn
+
+  magma:
+    needs: prescribed
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Build pinned candidate and stress fixture
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rustup toolchain install 1.99.1 --profile minimal
+          RUSTFLAGS='-C target-cpu=x86-64-v3' cargo +1.99.1 build --release --locked
+          git clone -q https://github.com/leanprover/lean-kernel-arena.git /tmp/arena
+          git -C /tmp/arena checkout -q "$ARENA_SHA"
+          (cd /tmp/arena && nix develop -c ./lka.py build-test perf/magma-list-pair-n21)
+          printf '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2,"print_success_message":false}\n' > /tmp/flash-config.json
+      - name: Two-worker bounded memory and verdict replay
+        shell: bash
+        run: |
+          set -uxo pipefail
+          mkdir -p /tmp/flash-evidence
+          f=/tmp/arena/_build/tests/perf/magma-list-pair-n21.ndjson
+          printf 'b8279fa9189a203c6c11b04702c27c0f99a650b37f2b0165dd260b1d14e9ef84  %s\n' "$f" | sha256sum -c -
+          /usr/bin/time -f 'elapsed=%e user=%U system=%S max_rss_kb=%M' -o /tmp/flash-evidence/magma-time.txt \
+            timeout --kill-after=10s 260s target/release/sokonanoda /tmp/flash-config.json \
+            < "$f" > /tmp/flash-evidence/magma.stdout 2> /tmp/flash-evidence/magma.stderr
+          rc=$?
+          printf 'checker_exit=%s\n' "$rc" | tee /tmp/flash-evidence/magma-status.txt
+          if [ "$rc" -eq 0 ]; then echo "MAGMA_ACCEPT"; else echo "MAGMA_NOT_YET_ACCEPTED"; fi
+          exit "$rc"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: headmatch-magma-20261029
+          path: /tmp/flash-evidence/
+          if-no-files-found: warn
+
+  mathlib:
+    needs: prescribed
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - name: Build source-pinned original Mathlib and PGO training input
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rustup toolchain install 1.99.1 --profile minimal
+          git clone -q https://github.com/leanprover/lean-kernel-arena.git /tmp/arena
+          git -C /tmp/arena checkout -q "$ARENA_SHA"
+          mkdir -p /tmp/flash-evidence
+          export NIX_CONFIG="$(printf 'http-connections = 4\nmax-substitution-jobs = 4\nconnect-timeout = 30\n')"
+          ok=0
+          for attempt in 1 2 3; do
+            echo "MATHLIB_EXPORT_ATTEMPT=$attempt" | tee -a /tmp/flash-evidence/export-build.attempts
+            if (cd /tmp/arena && nix develop -c ./lka.py build-test init-prelude mathlib)               > "/tmp/flash-evidence/export-build-$attempt.log" 2>&1; then
+              ok=1
+              tail -30 "/tmp/flash-evidence/export-build-$attempt.log"
+              break
+            fi
+            tail -45 "/tmp/flash-evidence/export-build-$attempt.log"
+            sleep $((12*attempt))
+          done
+          test "$ok" -eq 1
+          printf '22c5de83469408950005589a3bc5ef5157c65549b5a802f85d567c29151306a6  %s\n' /tmp/arena/_build/tests/mathlib.ndjson | sha256sum -c -
+          sha256sum /tmp/arena/_build/tests/mathlib.ndjson > /tmp/flash-evidence/mathlib-input.sha256
+          git worktree add --detach /tmp/baseline "$BASE_SHA"
+          git worktree add --detach /tmp/candidate "$GITHUB_SHA"
+          printf '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2,"print_success_message":false}\n' > /tmp/flash-config.json
+      - name: Identically trained official-style PGO builds
+        shell: bash
+        run: |
+          set -euxo pipefail
+          # Use llvm-profdata built against the same LLVM as rustc 1.99.1.
+          # The GitHub Ubuntu image does not provide an unversioned executable.
+          rustup component add llvm-tools-preview --toolchain 1.99.1
+          RUST_HOST="$(rustc +1.99.1 -vV | sed -n 's/^host: //p')"
+          RUST_SYSROOT="$(rustc +1.99.1 --print sysroot)"
+          PROFDATA="$RUST_SYSROOT/lib/rustlib/$RUST_HOST/bin/llvm-profdata"
+          test -x "$PROFDATA"
+          "$PROFDATA" --version
+          df -h /tmp
+          for arm in baseline candidate; do
+            (
+              cd "/tmp/$arm"
+              mkdir -p pgo
+              RUSTFLAGS="-C target-cpu=native -Cprofile-generate=$PWD/pgo" cargo +1.99.1 build --release --locked
+              target/release/sokonanoda /tmp/flash-config.json < /tmp/arena/_build/tests/init-prelude.ndjson > /dev/null
+              "$PROFDATA" merge -o "$PWD/pgo/merged.profdata" "$PWD/pgo"
+              RUSTFLAGS="-C target-cpu=native -Cprofile-use=$PWD/pgo/merged.profdata" cargo +1.99.1 build --release --locked
+              test -s target/release/sokonanoda
+            )
+          done
+          df -h /tmp
+      - name: Matched one two four worker resource tradeoffs
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,pathlib,subprocess,statistics,os,platform
+          out=pathlib.Path('/tmp/flash-evidence')
+          binary=pathlib.Path('/tmp/candidate/target/release/sokonanoda')
+          inp=pathlib.Path('/tmp/arena/_build/tests/mathlib.ndjson')
+          rows=[]
+          config=json.loads(pathlib.Path('/tmp/flash-config.json').read_text())
+          meta=dict(source=os.environ['GITHUB_SHA'],arena=os.environ['ARENA_SHA'],input_sha256=hashlib.file_digest(inp.open('rb'),'sha256').hexdigest(),input_bytes=inp.stat().st_size,binary_sha256=hashlib.file_digest(binary.open('rb'),'sha256').hexdigest(),platform=platform.platform(),cpu=pathlib.Path('/proc/cpuinfo').read_text(),order=[[1,2,4],[4,2,1],[2,1,4]],instruction_metric='hardware retired instructions only when perf access succeeds')
+          (out/'resource-provenance.json').write_text(json.dumps(meta,indent=2))
+          probe=subprocess.run(['perf','stat','-e','instructions','--','true'],capture_output=True) if pathlib.Path('/usr/bin/perf').exists() else None
+          hardware=probe is not None and probe.returncode==0
+          (out/'perf-capability.log').write_bytes((probe.stdout+probe.stderr) if probe else b'perf unavailable')
+          for rep,order in enumerate(meta['order'],1):
+            for workers in order:
+              config['num_threads']=workers
+              cfg=out/f'workers-{workers}.json';cfg.write_text(json.dumps(config))
+              tag=f'workers-{workers}-rep-{rep}'
+              cmd=[str(binary),str(cfg)]
+              if hardware:cmd=['perf','stat','-x',',','-e','instructions','-o',str(out/(tag+'.perf')),'--']+cmd
+              with inp.open('rb') as fd:
+                p=subprocess.run(['/usr/bin/time','-f','wall=%e user=%U system=%S rss_kb=%M','-o',str(out/(tag+'.time')),'timeout','--kill-after=10s','1800s']+cmd,stdin=fd,capture_output=True)
+              (out/(tag+'.stdout')).write_bytes(p.stdout)
+              (out/(tag+'.stderr')).write_bytes(p.stderr)
+              metrics={k:float(v) for k,v in (word.split('=') for word in (out/(tag+'.time')).read_text().split() if '=' in word)}
+              row=dict(workers=workers,rep=rep,rc=p.returncode,hardware_instructions_available=hardware,**metrics)
+              rows.append(row);print(json.dumps(row),flush=True)
+              (out/'resource-rows.json').write_text(json.dumps(rows,indent=2))
+          summary={str(n):{m:statistics.median(r[m] for r in rows if r['workers']==n) for m in ('wall','user','system','rss_kb')} for n in (1,2,4)}
+          (out/'resource-summary.json').write_text(json.dumps(summary,indent=2))
+          print(json.dumps(summary,indent=2),flush=True)
+          assert len(rows)==9 and all(r['rc']==0 for r in rows),'RESOURCE_QUALIFICATION_RED'
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-resource-matrix
+          path: /tmp/flash-evidence/
+          if-no-files-found: warn
