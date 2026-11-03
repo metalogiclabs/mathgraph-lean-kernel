@@ -20,6 +20,7 @@ impl<'t, 'p: 't> ExportFile<'p> {
                 let mut physical_ind_names = Vec::new();
                 let mut physical_ctor_types = Vec::new();
                 let mut physical_inductive_types_and_ctors = Vec::new();
+                let mut physical_type_uparams = Vec::new();
                 for idx in start..start + size {
                     let (_, declar) =
                         self.declars.get_index(idx).expect("inductive block boundary exceeds environment");
@@ -27,15 +28,23 @@ impl<'t, 'p: 't> ExportFile<'p> {
                         Declar::Inductive(inductive) => {
                             physical_ind_names.push(inductive.info.name);
                             physical_inductive_types_and_ctors.push(inductive.info.ty);
+                            physical_type_uparams.push((inductive.info.ty, inductive.info.uparams));
                         }
                         Declar::Constructor(constructor) => {
                             physical_ctor_types.push(constructor.info.ty);
                             physical_inductive_types_and_ctors.push(constructor.info.ty);
+                            physical_type_uparams.push((constructor.info.ty, constructor.info.uparams));
                         }
                         _ => {}
                     }
                 }
                 assert!(!physical_ind_names.is_empty(), "inductive block contains no inductive types");
+                // All levels in each imported inductive/constructor type must be
+                // bound by that declaration, independently of later declarations.
+                for (ty, uparams) in physical_type_uparams.iter().copied() {
+                    ctx.assert_inductive_type_uparams_defined(ty, uparams);
+                }
+
 
                 for ty in physical_ctor_types.iter().copied() {
                     ctx.check_uniform_inductive_occurrences(
@@ -138,6 +147,48 @@ impl<'t, 'p: 't> ExportFile<'p> {
 }
 
 impl<'t, 'p: 't> TcCtx<'t, 'p> {
+    /// Validate the source-level universe scope of an inductive or constructor
+    /// before checking it in an environment without an active DeclarInfo.
+    /// This is an iterative DAG walk: no trusted memoized ACCEPT or name special case.
+    fn assert_inductive_type_uparams_defined(&self, ty: ExprPtr<'t>, allowed: LevelsPtr<'t>) {
+        let mut pending = vec![ty];
+        let mut seen = crate::util::new_fx_hash_set();
+        while let Some(e) = pending.pop() {
+            if !seen.insert(e) {
+                continue;
+            }
+            match self.read_expr(e) {
+                Var { .. } | NatLit { .. } | StringLit { .. } => {}
+                Sort { level, .. } => assert!(
+                    self.all_uparams_defined(level, allowed),
+                    "inductive block type uses an undeclared universe parameter"
+                ),
+                Const { levels, .. } => {
+                    for level in self.read_levels(levels).iter().copied() {
+                        assert!(
+                            self.all_uparams_defined(level, allowed),
+                            "inductive block constant uses an undeclared universe parameter"
+                        );
+                    }
+                }
+                App { fun, arg, .. } => {
+                    pending.push(fun);
+                    pending.push(arg);
+                }
+                Pi { binder_type, body, .. } | Lambda { binder_type, body, .. } => {
+                    pending.push(binder_type);
+                    pending.push(body);
+                }
+                Let { data, .. } => {
+                    pending.push(data.binder_type);
+                    pending.push(data.val);
+                    pending.push(data.body);
+                }
+                Proj { structure, .. } => pending.push(structure),
+            }
+        }
+    }
+
     pub(crate) fn check_uniform_inductive_occurrences(
         &self,
         e: ExprPtr<'t>,
