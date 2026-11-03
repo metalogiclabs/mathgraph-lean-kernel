@@ -1,0 +1,78 @@
+name: Flash nested temporary-name freshness — paired official Arena regression
+
+on:
+  push:
+    branches:
+      - research/flash-nested-name-freshness-20261104
+  pull_request:
+    branches:
+      - flash
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  paired-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    env:
+      CARGO_INCREMENTAL: 0
+      CARGO_TERM_COLOR: always
+      RUSTFLAGS: -C target-cpu=native
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Record exact source and official baseline
+        run: |
+          set -euo pipefail
+          git rev-parse HEAD
+          git cat-file -e 78c7502bac8a5ba000057b3f083bc0595ac65750^{commit}
+          rustc --version
+          cargo --version
+          mkdir -p /tmp/flash-qualification
+
+      - name: Build published Flash source and patched candidate identically
+        run: |
+          set -euo pipefail
+          git worktree add --detach /tmp/flash-published 78c7502bac8a5ba000057b3f083bc0595ac65750
+          cargo build --manifest-path /tmp/flash-published/Cargo.toml --release --locked
+          cargo build --manifest-path Cargo.toml --release --locked
+          sha256sum /tmp/flash-published/target/release/sokonanoda target/release/sokonanoda | tee /tmp/flash-qualification/binaries.sha256
+
+      - name: Fetch official Arena small-test corpus and record its SHA
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error --retry 3 --max-time 120 \
+            https://arena.lean-lang.org/lean-arena-tests.tar.gz \
+            --output /tmp/flash-qualification/lean-arena-tests.tar.gz
+          sha256sum /tmp/flash-qualification/lean-arena-tests.tar.gz
+          mkdir -p /tmp/flash-qualification/tests
+          tar -xzf /tmp/flash-qualification/lean-arena-tests.tar.gz -C /tmp/flash-qualification/tests
+          find /tmp/flash-qualification/tests -name '*.ndjson' | wc -l
+
+      - name: Qualify changed soundness case with all other bounded verdicts preserved
+        run: |
+          set -euo pipefail
+          printf '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2}\n' > /tmp/flash-qualification/config.json
+          python3 experiments/flash-nested-name-freshness-20261104/qualify.py \
+            --before /tmp/flash-published/target/release/sokonanoda \
+            --after "$PWD/target/release/sokonanoda" \
+            --config /tmp/flash-qualification/config.json \
+            --fixtures /tmp/flash-qualification/tests \
+            --fixture-archive /tmp/flash-qualification/lean-arena-tests.tar.gz \
+            --report /tmp/flash-qualification/report.json
+
+      - name: Preserve source-pinned artifacts, including negative evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flash-nested-name-freshness-${{ github.sha }}
+          if-no-files-found: warn
+          path: |
+            /tmp/flash-qualification/report.json
+            /tmp/flash-qualification/binaries.sha256
+            /tmp/flash-qualification/config.json
+            /tmp/flash-qualification/lean-arena-tests.tar.gz
