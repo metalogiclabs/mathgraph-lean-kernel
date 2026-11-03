@@ -2048,6 +2048,14 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
                     let old = original.rec_rules[i];
                     let new = restored.rec_rules[i];
                     assert_eq!(old.ctor_name, new.ctor_name);
+                    // Reconstructed nested recursors own their field counts; the export
+                    // must not control iota argument splitting. Adapted from upstream
+                    // nanoda_lib PR #63 (ammkrn, 2026-10-23).
+                    assert_eq!(
+                        old.ctor_telescope_size_wo_params,
+                        new.ctor_telescope_size_wo_params,
+                        "restored nested recursor field count mismatch",
+                    );
                     self.assert_imported_expr_matches(old.val, new.val);
                 }
             }
