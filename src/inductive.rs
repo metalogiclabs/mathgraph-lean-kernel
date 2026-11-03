@@ -1613,6 +1613,26 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
         assert_eq!(imported_rr.ctor_name, constructed_rr.ctor_name);
         assert_eq!(imported_rr.ctor_telescope_size_wo_params, constructed_rr.ctor_telescope_size_wo_params);
         let rr_made_val = self.ctx.subst_expr_levels(constructed_rr.val, st.rec_uparams.unwrap(), old);
+        if constructed_rr.ctor_telescope_size_wo_params == 0 {
+            // A nullary constructor's rule must select its minor premise.
+            // Preserve that binder-variable identity separately from the
+            // conversion check, which can otherwise admit a different RHS.
+            let mut imported_body = imported_rr.val;
+            let mut reconstructed_body = rr_made_val;
+            while let (Lambda { body: a, .. }, Lambda { body: b, .. }) =
+                (self.ctx.read_expr(imported_body), self.ctx.read_expr(reconstructed_body))
+            {
+                imported_body = a;
+                reconstructed_body = b;
+            }
+            assert!(
+                matches!(
+                    (self.ctx.read_expr(imported_body), self.ctx.read_expr(reconstructed_body)),
+                    (Var { dbj_idx: a, .. }, Var { dbj_idx: b, .. }) if a == b
+                ),
+                "imported nullary recursor rule does not select the reconstructed minor",
+            );
+        }
         self.assert_imported_expr_matches(imported_rr.val, rr_made_val);
     }
 
