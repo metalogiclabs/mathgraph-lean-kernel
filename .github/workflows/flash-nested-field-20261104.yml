@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - research/flash-nested-field-count-20261104
+  pull_request:
+    branches:
+      - flash
   workflow_dispatch:
 
 permissions:
