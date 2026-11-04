@@ -62,7 +62,15 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 return true;
             }
             match (a, b) {
-                (Env::Nil { .. }, Env::Nil { .. }) => return true,
+                (Env::Nil { .. }, Env::Nil { .. }) => {
+                    // A closure with zero bound variables can still carry a
+                    // nontrivial universe substitution. Hash equality is not proof.
+                    return match (a.lsub(), b.lsub()) {
+                        (None, None) => true,
+                        (Some(x), Some(y)) => x.ks == y.ks && x.vs == y.vs,
+                        _ => false,
+                    };
+                },
                 (
                     Env::Cons { v: va, parent: pa, hash: ha, .. },
                     Env::Cons { v: vb, parent: pb, hash: hb, .. },
@@ -202,6 +210,11 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 if bx.body == by.body
                     && std::ptr::eq(*dx, *dy)
                     && Self::envs_ptr_equal(bx.env, by.env)
+                    && match (bx.ctx, by.ctx) {
+                        (None, None) => true,
+                        (Some(x), Some(y)) => std::ptr::eq(x, y),
+                        _ => false,
+                    }
                 {
                     return true;
                 }
@@ -221,6 +234,11 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 if bx.body == by.body
                     && std::ptr::eq(dx, dy)
                     && Self::envs_ptr_equal(bx.env, by.env)
+                    && match (bx.ctx, by.ctx) {
+                        (None, None) => true,
+                        (Some(x), Some(y)) => std::ptr::eq(x, y),
+                        _ => false,
+                    }
                 {
                     return true;
                 }
