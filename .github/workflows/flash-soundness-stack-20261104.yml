@@ -1,0 +1,104 @@
+name: Flash six-guard soundness stack — official Arena and exact Mathlib
+
+on:
+  pull_request:
+    branches:
+      - flash
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  six-guard-regression-and-mathlib:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 95
+    env:
+      CARGO_INCREMENTAL: 0
+      CARGO_TERM_COLOR: always
+      RUSTFLAGS: -C target-cpu=native
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Record exact source, compiler, and published Flash baseline
+        run: |
+          set -euo pipefail
+          git rev-parse HEAD
+          git cat-file -e 78c7502bac8a5ba000057b3f083bc0595ac65750^{commit}
+          rustc --version
+          cargo --version
+          mkdir -p /tmp/flash-qualification
+
+      - name: Build published Flash and stacked candidate identically
+        run: |
+          set -euo pipefail
+          git worktree add --detach /tmp/flash-published 78c7502bac8a5ba000057b3f083bc0595ac65750
+          cargo build --manifest-path /tmp/flash-published/Cargo.toml --release --locked
+          cargo build --manifest-path Cargo.toml --release --locked
+          sha256sum /tmp/flash-published/target/release/sokonanoda target/release/sokonanoda | tee /tmp/flash-qualification/binaries.sha256
+
+      - name: Fetch official Arena small corpus and hash it
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error --retry 3 --max-time 120 \
+            https://arena.lean-lang.org/lean-arena-tests.tar.gz \
+            --output /tmp/flash-qualification/lean-arena-tests.tar.gz
+          printf '%s  %s\n' 8223cb53aa5fa65f471054fbdf8cdcf50206556cfc7888f75e910f7816f4c8bb /tmp/flash-qualification/lean-arena-tests.tar.gz | sha256sum -c -
+          mkdir -p /tmp/flash-qualification/tests
+          tar -xzf /tmp/flash-qualification/lean-arena-tests.tar.gz -C /tmp/flash-qualification/tests
+
+      - name: Require all six false ACCEPTs fixed and all other small verdicts unchanged
+        run: |
+          set -euo pipefail
+          printf '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2}\n' > /tmp/flash-qualification/config.json
+          python3 experiments/flash-soundness-stack-20261104/qualify.py \
+            --before /tmp/flash-published/target/release/sokonanoda \
+            --after "$PWD/target/release/sokonanoda" \
+            --config /tmp/flash-qualification/config.json \
+            --fixtures /tmp/flash-qualification/tests \
+            --fixture-archive /tmp/flash-qualification/lean-arena-tests.tar.gz \
+            --report /tmp/flash-qualification/report.json
+
+      - name: Restore exact independently pinned full Mathlib export
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/flash-qualification/mathlib-source /tmp/flash-qualification/mathlib
+          gh api repos/heathsanchez/test/actions/artifacts/13231986845/zip > /tmp/flash-qualification/mathlib.zip
+          printf '%s  %s\n' 3dd3fbb522816bdaa9d9cd2808196e075bfa27e3d6c82648731140594f87ce2b /tmp/flash-qualification/mathlib.zip | sha256sum -c -
+          unzip -q /tmp/flash-qualification/mathlib.zip -d /tmp/flash-qualification/mathlib-source
+          zstd -d /tmp/flash-qualification/mathlib-source/mathlib.ndjson.zst -o /tmp/flash-qualification/mathlib.ndjson
+          printf '%s  %s\n' 22c5de83469408950005589a3bc5ef5157c65549b5a802f85d567c29151306a6 /tmp/flash-qualification/mathlib.ndjson | sha256sum -c -
+          rm /tmp/flash-qualification/mathlib.zip /tmp/flash-qualification/mathlib-source/mathlib.ndjson.zst
+          ls -lh /tmp/flash-qualification/mathlib.ndjson
+
+      - name: Matched published-versus-stacked full Mathlib A/B/B/A
+        run: |
+          set -euo pipefail
+          python3 experiments/flash-soundness-stack-20261104/profile_mathlib.py \
+            --before /tmp/flash-published/target/release/sokonanoda \
+            --after "$PWD/target/release/sokonanoda" \
+            --config /tmp/flash-qualification/config.json \
+            --input /tmp/flash-qualification/mathlib.ndjson \
+            --outdir /tmp/flash-qualification/mathlib \
+            --seconds 900 \
+            --expected-input-sha256 22c5de83469408950005589a3bc5ef5157c65549b5a802f85d567c29151306a6
+
+      - name: Preserve results and negative evidence even if a gate fails
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flash-six-guard-stack-${{ github.sha }}
+          if-no-files-found: warn
+          path: |
+            /tmp/flash-qualification/report.json
+            /tmp/flash-qualification/binaries.sha256
+            /tmp/flash-qualification/config.json
+            /tmp/flash-qualification/lean-arena-tests.tar.gz
+            /tmp/flash-qualification/mathlib/mathlib-report.json
+            /tmp/flash-qualification/mathlib/*.time
+            /tmp/flash-qualification/mathlib/*.stderr
+            /tmp/flash-qualification/mathlib/*.stdout
