@@ -1,0 +1,96 @@
+name: Flash Arena PGO causal reproduction — exact published source
+
+on:
+  pull_request:
+    branches:
+      - flash
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  published-pgo-comparison:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    env:
+      CARGO_INCREMENTAL: 0
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Record exact published source and compiler provenance
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^{tree})" = "$(git rev-parse 78c7502bac8a5ba000057b3f083bc0595ac65750^{tree})" || echo 'Additional experiment-only files are present; checked Rust source stays published'
+          git diff 78c7502bac8a5ba000057b3f083bc0595ac65750 -- src/
+          test -z "$(git diff --name-only 78c7502bac8a5ba000057b3f083bc0595ac65750 -- src/)"
+          git rev-parse HEAD
+          rustc --version
+          cargo --version
+          rustup component add llvm-tools-preview
+          mkdir -p /tmp/magma-pgo
+          find "$(rustc --print sysroot)/lib/rustlib" -name llvm-profdata -type f -print | head -3
+
+      - name: Source-pin Arena official training and magma inputs
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error --retry 3 --max-time 120 \
+            https://arena.lean-lang.org/lean-arena-tests.tar.gz \
+            -o /tmp/magma-pgo/tests.tar.gz
+          printf '%s  %s\n' 8223cb53aa5fa65f471054fbdf8cdcf50206556cfc7888f75e910f7816f4c8bb /tmp/magma-pgo/tests.tar.gz | sha256sum -c -
+          mkdir -p /tmp/magma-pgo/tests
+          tar -xzf /tmp/magma-pgo/tests.tar.gz -C /tmp/magma-pgo/tests
+          test "$(find /tmp/magma-pgo/tests -name init-prelude.ndjson | wc -l)" -eq 1
+          test "$(find /tmp/magma-pgo/tests -name magma-list-pair-n21.ndjson | wc -l)" -eq 1
+          printf '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2}\n' > /tmp/magma-pgo/config.json
+          sha256sum "$(find /tmp/magma-pgo/tests -name init-prelude.ndjson)" /tmp/magma-pgo/config.json
+
+      - name: Compile plain release reference from same source
+        run: |
+          set -euo pipefail
+          RUSTFLAGS='-C target-cpu=native' cargo build --release --locked
+          cp target/release/sokonanoda /tmp/magma-pgo/plain-sokonanoda
+          sha256sum /tmp/magma-pgo/plain-sokonanoda
+
+      - name: Follow exact Arena PGO train-merge-use procedure
+        run: |
+          set -euo pipefail
+          mkdir -p "$PWD/pgo"
+          RUSTFLAGS="-C target-cpu=native -Cprofile-generate=$PWD/pgo" cargo build --release --locked
+          target/release/sokonanoda /tmp/magma-pgo/config.json < "$(find /tmp/magma-pgo/tests -name init-prelude.ndjson)" >/dev/null
+          LLVM_PROFDATA="$(find "$(rustc --print sysroot)/lib/rustlib" -name llvm-profdata -type f -print -quit)"
+          test -n "$LLVM_PROFDATA"
+          "$LLVM_PROFDATA" merge -o "$PWD/pgo/merged.profdata" "$PWD/pgo"
+          sha256sum "$PWD/pgo/merged.profdata" | tee /tmp/magma-pgo/profile.sha256
+          RUSTFLAGS="-C target-cpu=native -Cprofile-use=$PWD/pgo/merged.profdata" cargo build --release --locked
+          cp target/release/sokonanoda /tmp/magma-pgo/pgo-sokonanoda
+          sha256sum /tmp/magma-pgo/plain-sokonanoda /tmp/magma-pgo/pgo-sokonanoda | tee /tmp/magma-pgo/binaries.sha256
+
+      - name: Compare exact magma n7/n21 verdict and resource effects of PGO
+        run: |
+          set -euo pipefail
+          python3 experiments/flash-pgo-arena-repro-20261104/screen.py \
+            --plain /tmp/magma-pgo/plain-sokonanoda \
+            --pgo /tmp/magma-pgo/pgo-sokonanoda \
+            --config /tmp/magma-pgo/config.json \
+            --fixtures /tmp/magma-pgo/tests \
+            --archive /tmp/magma-pgo/tests.tar.gz \
+            --output /tmp/magma-pgo/results
+
+      - name: Save negative evidence, profile provenance, and resource comparisons
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flash-pgo-arena-repro-${{ github.sha }}
+          if-no-files-found: warn
+          path: |
+            /tmp/magma-pgo/config.json
+            /tmp/magma-pgo/profile.sha256
+            /tmp/magma-pgo/binaries.sha256
+            /tmp/magma-pgo/results/*.json
+            /tmp/magma-pgo/results/*.time
+            /tmp/magma-pgo/results/*.stderr
+            /tmp/magma-pgo/results/*.stdout
+            pgo/merged.profdata
