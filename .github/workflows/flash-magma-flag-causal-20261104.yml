@@ -1,0 +1,71 @@
+name: Flash magma causal screen — five fast-path flags off
+
+on:
+  pull_request:
+    branches:
+      - flash
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  memory-and-completeness-screen:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      CARGO_INCREMENTAL: 0
+      RUSTFLAGS: -C target-cpu=native
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build matched published baseline and all-flags-off diagnostic
+        run: |
+          set -euo pipefail
+          git rev-parse HEAD
+          git worktree add --detach /tmp/magma-published 78c7502bac8a5ba000057b3f083bc0595ac65750
+          cargo build --manifest-path /tmp/magma-published/Cargo.toml --release --locked
+          cargo build --manifest-path Cargo.toml --release --locked
+          mkdir -p /tmp/magma-screen
+          sha256sum /tmp/magma-published/target/release/sokonanoda target/release/sokonanoda | tee /tmp/magma-screen/binaries.sha256
+          git diff 78c7502bac8a5ba000057b3f083bc0595ac65750 -- src/flash.rs | tee /tmp/magma-screen/flag-diff.patch
+
+      - name: Fetch official source-pinned Arena magma fixtures
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error --retry 3 --max-time 120 \
+            https://arena.lean-lang.org/lean-arena-tests.tar.gz \
+            --output /tmp/magma-screen/lean-arena-tests.tar.gz
+          printf '%s  %s\n' 8223cb53aa5fa65f471054fbdf8cdcf50206556cfc7888f75e910f7816f4c8bb /tmp/magma-screen/lean-arena-tests.tar.gz | sha256sum -c -
+          mkdir -p /tmp/magma-screen/tests
+          tar -xzf /tmp/magma-screen/lean-arena-tests.tar.gz -C /tmp/magma-screen/tests
+          find /tmp/magma-screen/tests -name 'magma-list-pair-n*.ndjson' -print
+
+      - name: Execute two-arm source-pinned small and large magma screen
+        run: |
+          set -euo pipefail
+          printf '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2}\n' > /tmp/magma-screen/config.json
+          python3 experiments/flash-magma-flag-causal-20261104/screen.py \
+            --published /tmp/magma-published/target/release/sokonanoda \
+            --all-off "$PWD/target/release/sokonanoda" \
+            --config /tmp/magma-screen/config.json \
+            --fixtures /tmp/magma-screen/tests \
+            --archive /tmp/magma-screen/lean-arena-tests.tar.gz \
+            --output /tmp/magma-screen/results
+
+      - name: Preserve causal report including failed and incomplete runs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flash-magma-five-flags-off-${{ github.sha }}
+          if-no-files-found: warn
+          path: |
+            /tmp/magma-screen/binaries.sha256
+            /tmp/magma-screen/flag-diff.patch
+            /tmp/magma-screen/config.json
+            /tmp/magma-screen/results/*.json
+            /tmp/magma-screen/results/*.time
+            /tmp/magma-screen/results/*.stderr
+            /tmp/magma-screen/results/*.stdout
