@@ -43,7 +43,7 @@ def trial(binary, config, fixture, output, arm, tag, seconds):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--plain", type=Path, required=True)
-    ap.add_argument("--all-off", type=Path, required=True)
+    ap.add_argument("--pgo", type=Path, required=True)
     ap.add_argument("--config", type=Path, required=True)
     ap.add_argument("--fixtures", type=Path, required=True)
     ap.add_argument("--archive", type=Path, required=True)
