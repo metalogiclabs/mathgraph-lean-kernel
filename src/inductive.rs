@@ -20,6 +20,7 @@ impl<'t, 'p: 't> ExportFile<'p> {
                 let mut physical_ind_names = Vec::new();
                 let mut physical_ctor_types = Vec::new();
                 let mut physical_inductive_types_and_ctors = Vec::new();
+                let mut physical_type_uparams = Vec::new();
                 for idx in start..start + size {
                     let (_, declar) =
                         self.declars.get_index(idx).expect("inductive block boundary exceeds environment");
@@ -27,15 +28,22 @@ impl<'t, 'p: 't> ExportFile<'p> {
                         Declar::Inductive(inductive) => {
                             physical_ind_names.push(inductive.info.name);
                             physical_inductive_types_and_ctors.push(inductive.info.ty);
+                            physical_type_uparams.push((inductive.info.ty, inductive.info.uparams));
                         }
                         Declar::Constructor(constructor) => {
                             physical_ctor_types.push(constructor.info.ty);
                             physical_inductive_types_and_ctors.push(constructor.info.ty);
+                            physical_type_uparams.push((constructor.info.ty, constructor.info.uparams));
                         }
                         _ => {}
                     }
                 }
                 assert!(!physical_ind_names.is_empty(), "inductive block contains no inductive types");
+                // Require source-inductive/constructor universe scope independent of later declarations.
+                for (ty, uparams) in physical_type_uparams.iter().copied() {
+                    ctx.assert_inductive_type_uparams_defined(ty, uparams);
+                }
+
 
                 for ty in physical_ctor_types.iter().copied() {
                     ctx.check_uniform_inductive_occurrences(
@@ -138,6 +146,48 @@ impl<'t, 'p: 't> ExportFile<'p> {
 }
 
 impl<'t, 'p: 't> TcCtx<'t, 'p> {
+    /// Validate the source-level universe scope of an inductive or constructor
+    /// before checking it in an environment without an active DeclarInfo.
+    /// This is an iterative DAG walk: no trusted memoized ACCEPT or name special case.
+    fn assert_inductive_type_uparams_defined(&self, ty: ExprPtr<'t>, allowed: LevelsPtr<'t>) {
+        let mut pending = vec![ty];
+        let mut seen = crate::util::new_fx_hash_set();
+        while let Some(e) = pending.pop() {
+            if !seen.insert(e) {
+                continue;
+            }
+            match self.read_expr(e) {
+                Var { .. } | NatLit { .. } | StringLit { .. } => {}
+                Sort { level, .. } => assert!(
+                    self.all_uparams_defined(level, allowed),
+                    "inductive block type uses an undeclared universe parameter"
+                ),
+                Const { levels, .. } => {
+                    for level in self.read_levels(levels).iter().copied() {
+                        assert!(
+                            self.all_uparams_defined(level, allowed),
+                            "inductive block constant uses an undeclared universe parameter"
+                        );
+                    }
+                }
+                App { fun, arg, .. } => {
+                    pending.push(fun);
+                    pending.push(arg);
+                }
+                Pi { binder_type, body, .. } | Lambda { binder_type, body, .. } => {
+                    pending.push(binder_type);
+                    pending.push(body);
+                }
+                Let { data, .. } => {
+                    pending.push(data.binder_type);
+                    pending.push(data.val);
+                    pending.push(data.body);
+                }
+                Proj { structure, .. } => pending.push(structure),
+            }
+        }
+    }
+
     pub(crate) fn check_uniform_inductive_occurrences(
         &self,
         e: ExprPtr<'t>,
@@ -714,13 +764,34 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
         all_inductives
     }
 
-    fn mk_unique_name(&mut self, n: NamePtr<'t>, st: &mut InductiveCheckState<'t>) -> NamePtr<'t> {
+    fn mk_unique_name(
+        &mut self,
+        n: NamePtr<'t>,
+        st: &mut InductiveCheckState<'t>,
+        container_name: NamePtr<'t>,
+        container_ctors: &[NamePtr<'t>],
+    ) -> NamePtr<'t> {
+        // Temporary specialized types, their recursors, and their constructors
+        // must not collide with *any* declaration in the full imported export.
+        // The old environment cutoff alone excludes later declarations and
+        // permits a later definition to capture a previously checked recursor.
+        let rec_suffix = self.ctx.alloc_string(std::borrow::Cow::Borrowed("rec"));
         for idx in st.next_ngen_idx..u64::MAX {
             let tester = self.ctx.append_index_after(n, idx);
-            if !self.env.get_old_declar(&tester).is_some() {
-                st.next_ngen_idx = idx + 1;
-                return tester;
+            let rec_name = self.ctx.str(tester, rec_suffix);
+            let declarations = &self.ctx.export_file.declars;
+            if declarations.contains_key(&tester) || declarations.contains_key(&rec_name) {
+                continue;
             }
+            let ctor_conflict = container_ctors.iter().copied().any(|original_ctor| {
+                let temp_ctor = self.ctx.replace_pfx(original_ctor, container_name, tester);
+                self.ctx.export_file.declars.contains_key(&temp_ctor)
+            });
+            if ctor_conflict {
+                continue;
+            }
+            st.next_ngen_idx = idx + 1;
+            return tester;
         }
         panic!("Unable to generate unique name, u64 exhausted")
     }
@@ -774,7 +845,8 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
                 let aux_nested_container_name = {
                     let nested_pfx = self.ctx.str1("_nested");
                     let base = self.ctx.concat_name(nested_pfx, nested_container_name);
-                    self.mk_unique_name(base, st)
+                    let ctor_names = all_nested_container_ctor_names.clone();
+                    self.mk_unique_name(base, st, nested_container_name, ctor_names.as_ref())
                 };
                 // Replace the telescope on the auxiliary declaration to match the declaration
                 // we're currently checking. Can also add parameters as needed.
@@ -1613,6 +1685,26 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
         assert_eq!(imported_rr.ctor_name, constructed_rr.ctor_name);
         assert_eq!(imported_rr.ctor_telescope_size_wo_params, constructed_rr.ctor_telescope_size_wo_params);
         let rr_made_val = self.ctx.subst_expr_levels(constructed_rr.val, st.rec_uparams.unwrap(), old);
+        if constructed_rr.ctor_telescope_size_wo_params == 0 {
+            // A nullary constructor's rule must select its minor premise.
+            // Preserve that binder-variable identity separately from the
+            // conversion check, which can otherwise admit a different RHS.
+            let mut imported_body = imported_rr.val;
+            let mut reconstructed_body = rr_made_val;
+            while let (Lambda { body: a, .. }, Lambda { body: b, .. }) =
+                (self.ctx.read_expr(imported_body), self.ctx.read_expr(reconstructed_body))
+            {
+                imported_body = a;
+                reconstructed_body = b;
+            }
+            assert!(
+                matches!(
+                    (self.ctx.read_expr(imported_body), self.ctx.read_expr(reconstructed_body)),
+                    (Var { dbj_idx: a, .. }, Var { dbj_idx: b, .. }) if a == b
+                ),
+                "imported nullary recursor rule does not select the reconstructed minor",
+            );
+        }
         self.assert_imported_expr_matches(imported_rr.val, rr_made_val);
     }
 
@@ -2048,6 +2140,14 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
                     let old = original.rec_rules[i];
                     let new = restored.rec_rules[i];
                     assert_eq!(old.ctor_name, new.ctor_name);
+                    // Reconstructed nested recursors own their field counts; the export
+                    // must not control iota argument splitting. Adapted from upstream
+                    // nanoda_lib PR #63 (ammkrn, 2026-10-23).
+                    assert_eq!(
+                        old.ctor_telescope_size_wo_params,
+                        new.ctor_telescope_size_wo_params,
+                        "restored nested recursor field count mismatch",
+                    );
                     self.assert_imported_expr_matches(old.val, new.val);
                 }
             }
