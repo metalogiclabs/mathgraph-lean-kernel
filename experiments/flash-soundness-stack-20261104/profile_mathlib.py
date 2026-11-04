@@ -27,7 +27,7 @@ def run(binary, config, inp, outdir, arm, index, seconds):
     stderr = stem.with_suffix(".stderr")
     metrics = stem.with_suffix(".time")
     command = ['/usr/bin/time', '-f',
-               'wall_seconds=%e\\nuser_seconds=%U\\nsys_seconds=%S\\npeak_rss_kb=%M',
+               'wall_seconds=%e\nuser_seconds=%U\nsys_seconds=%S\npeak_rss_kb=%M',
                '-o', str(metrics), str(binary), str(config)]
     result = {'arm': arm, 'ordinal': index, 'binary_sha256': digest(binary)}
     start = time.monotonic()
@@ -76,13 +76,13 @@ def main():
               'method': 'sequential A/B/B/A same runner, exact input and config; wall/RSS not arena-calibrated',
               'runs': []}
     path = a.outdir / 'mathlib-report.json'
-    path.write_text(json.dumps(report, indent=2) + '\\n')
+    path.write_text(json.dumps(report, indent=2) + '\n')
     for index, arm in enumerate(report['order']):
         binary = a.before if arm == 'before' else a.after
         print('MATHLIB_BEGIN', json.dumps({'index': index, 'arm': arm}), flush=True)
         result = run(binary, a.config, a.input, a.outdir, arm, index, a.seconds)
         report['runs'].append(result)
-        path.write_text(json.dumps(report, indent=2) + '\\n')
+        path.write_text(json.dumps(report, indent=2) + '\n')
         print('MATHLIB_RUN', json.dumps(result), flush=True)
         if result['returncode'] != 0:
             print('MATHLIB_STOP', json.dumps({'cause': 'non-ACCEPT, timeout or resource failure',
@@ -100,7 +100,7 @@ def main():
         report['status'] = 'BOUNDED_MATCHED_MATHLIB_ACCEPTANCE'
     else:
         report['status'] = 'UNKNOWN_OR_REJECTED_MATCHED_MATHLIB'
-    path.write_text(json.dumps(report, indent=2) + '\\n')
+    path.write_text(json.dumps(report, indent=2) + '\n')
     print('MATHLIB_STACK_SUMMARY', json.dumps({
         k: v for k, v in report.items() if k != 'runs'}), flush=True)
     if not valid:
