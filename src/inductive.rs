@@ -1639,7 +1639,13 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
                     // proof-irrelevant definitional comparison can obscure a bad
                     // argument inside the imported type.
                     self.tc_cache.clear();
-                    self.check_declar_info_v(old);
+                    let typed = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        self.check_declar_info_v(old);
+                    }));
+                    if let Err(e) = typed {
+                        eprintln!("FLASH_INIT_FAILURE mode=TYPE_NONNESTED owner={:?}", self.ctx.debug_print(old.info().name));
+                        std::panic::resume_unwind(e);
+                    }
                     self.tc_cache.clear();
                     assert!(old_r.aux_data_ck(new_r));
                     assert!(!std::ptr::eq(old, new));
@@ -1650,7 +1656,14 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
                     self.assert_def_eq(imported_w_new_uparams, new.info().ty);
                     assert_eq!(old_rec_rules.len(), new_rec_rules.len());
                     for (r_old, r_new) in old_rec_rules.iter().zip(new_rec_rules.iter()) {
-                        self.assert_nonnested_rec_rule_def_eq(st, old.info().uparams, r_old, r_new)
+                        let checked = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                            self.assert_nonnested_rec_rule_def_eq(st, old.info().uparams, r_old, r_new);
+                        }));
+                        if let Err(e) = checked {
+                            eprintln!("FLASH_INIT_FAILURE mode=RULE_NONNESTED owner={:?} ctor={:?}",
+                                self.ctx.debug_print(old.info().name), self.ctx.debug_print(r_old.ctor_name));
+                            std::panic::resume_unwind(e);
+                        }
                     }
                 }
                 _ => panic!("Expected (Declar::Recursor, Declar::Recursor)"),
@@ -2068,7 +2081,14 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
                     let old = original.rec_rules[i];
                     let new = restored.rec_rules[i];
                     assert_eq!(old.ctor_name, new.ctor_name);
-                    self.assert_imported_expr_matches(old.val, new.val);
+                    let checked = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        self.assert_imported_expr_matches(old.val, new.val);
+                    }));
+                    if let Err(e) = checked {
+                        eprintln!("FLASH_INIT_FAILURE mode=RULE_NESTED owner={:?} ctor={:?}",
+                            self.ctx.debug_print(resolved_rec_name), self.ctx.debug_print(old.ctor_name));
+                        std::panic::resume_unwind(e);
+                    }
                 }
             }
             _ => panic!("missing imported recursor reconstructed from nested inductive"),
