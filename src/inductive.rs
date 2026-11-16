@@ -388,10 +388,111 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
         ind_names.iter().map(|name| self.ctx.str(*name, rec)).collect()
     }
 
+    /// Exact, representation-independent comparison of names. Neither their
+    /// printed spelling nor their arena pointers are used as authorities.
+    fn same_source_name(&self, lhs: NamePtr<'t>, rhs: NamePtr<'t>) -> bool {
+        let mut pairs = vec![(lhs, rhs)];
+        while let Some((a, b)) = pairs.pop() {
+            if a == b { continue; }
+            match (self.ctx.read_name(a), self.ctx.read_name(b)) {
+                (crate::name::Name::Anon, crate::name::Name::Anon) => {}
+                (crate::name::Name::Str(ap, at, _), crate::name::Name::Str(bp, bt, _))
+                    if self.ctx.read_string(at) == self.ctx.read_string(bt) => {
+                        pairs.push((ap, bp));
+                    }
+                (crate::name::Name::Num(ap, ai, _), crate::name::Name::Num(bp, bi, _))
+                    if ai == bi => {
+                        pairs.push((ap, bp));
+                    }
+                _ => return false,
+            }
+        }
+        true
+    }
+
+    fn same_source_level(&self, lhs: LevelPtr<'t>, rhs: LevelPtr<'t>) -> bool {
+        let mut pairs = vec![(lhs, rhs)];
+        while let Some((a, b)) = pairs.pop() {
+            if a == b { continue; }
+            match (self.ctx.read_level(a), self.ctx.read_level(b)) {
+                (crate::level::Level::Zero, crate::level::Level::Zero) => {}
+                (crate::level::Level::Succ(ap, _), crate::level::Level::Succ(bp, _)) => pairs.push((ap, bp)),
+                (crate::level::Level::Max(al, ar, _), crate::level::Level::Max(bl, br, _))
+                | (crate::level::Level::IMax(al, ar, _), crate::level::Level::IMax(bl, br, _)) => {
+                    pairs.push((al, bl));
+                    pairs.push((ar, br));
+                }
+                (crate::level::Level::Param(an, _), crate::level::Level::Param(bn, _))
+                    if self.same_source_name(an, bn) => {}
+                _ => return false,
+            }
+        }
+        true
+    }
+
+    /// The source rule is admitted as identical only if its complete expression
+    /// graph equals an independently reconstructed, checked rule *syntactically*.
+    /// In particular, do not use definitional equality or proof irrelevance to
+    /// discharge an untrusted proof argument. All other differences still follow
+    /// the prior independent type-check + defeq path and may fail closed.
+    fn same_source_expr(&self, lhs: ExprPtr<'t>, rhs: ExprPtr<'t>) -> bool {
+        let mut pairs = vec![(lhs, rhs)];
+        let mut seen: FxHashSet<(ExprPtr<'t>, ExprPtr<'t>)> = FxHashSet::default();
+        while let Some((a, b)) = pairs.pop() {
+            if a == b { continue; }
+            if !seen.insert((a, b)) { continue; }
+            if seen.len() > 200_000 { return false; }
+            match (self.ctx.read_expr(a), self.ctx.read_expr(b)) {
+                (Var { dbj_idx: ai, .. }, Var { dbj_idx: bi, .. }) if ai == bi => {}
+                (Sort { level: al, .. }, Sort { level: bl, .. })
+                    if self.same_source_level(al, bl) => {}
+                (Const { name: an, levels: als, .. }, Const { name: bn, levels: bls, .. }) => {
+                    if !self.same_source_name(an, bn) { return false; }
+                    let a_levels = self.ctx.read_levels(als);
+                    let b_levels = self.ctx.read_levels(bls);
+                    if a_levels.len() != b_levels.len() { return false; }
+                    for (al, bl) in a_levels.iter().copied().zip(b_levels.iter().copied()) {
+                        if !self.same_source_level(al, bl) { return false; }
+                    }
+                }
+                (App { fun: af, arg: aa, .. }, App { fun: bf, arg: ba, .. }) => {
+                    pairs.push((af, bf));
+                    pairs.push((aa, ba));
+                }
+                (Lambda { binder_type: at, body: ab, .. }, Lambda { binder_type: bt, body: bb, .. })
+                | (Pi { binder_type: at, body: ab, .. }, Pi { binder_type: bt, body: bb, .. }) => {
+                    pairs.push((at, bt));
+                    pairs.push((ab, bb));
+                }
+                (Let { data: ad, .. }, Let { data: bd, .. }) => {
+                    if ad.nondep != bd.nondep { return false; }
+                    pairs.push((ad.binder_type, bd.binder_type));
+                    pairs.push((ad.val, bd.val));
+                    pairs.push((ad.body, bd.body));
+                }
+                (Proj { ty_name: an, idx: ai, structure: av, .. },
+                 Proj { ty_name: bn, idx: bi, structure: bv, .. })
+                    if ai == bi && self.same_source_name(an, bn) => {
+                        pairs.push((av, bv));
+                    }
+                (NatLit { ptr: ap, .. }, NatLit { ptr: bp, .. })
+                    if self.ctx.read_bignum(ap) == self.ctx.read_bignum(bp) => {}
+                (StringLit { ptr: ap, .. }, StringLit { ptr: bp, .. })
+                    if self.ctx.read_string(ap) == self.ctx.read_string(bp) => {}
+                _ => return false,
+            }
+        }
+        true
+    }
+
     fn assert_imported_expr_matches(&mut self, imported: ExprPtr<'t>, reconstructed: ExprPtr<'t>) {
-        // Definitional equality can erase an ill-typed proof argument via proof
-        // irrelevance. Validate the exported rule independently before comparing
-        // it to the rule derived from the constructors.
+        // A structural identity to the *checked reconstructed* rule is a
+        // sufficient witness; never replace this with pretty-printed equality.
+        // In particular this handles legitimate nested rules whose standalone
+        // re-inference is insufficient in the temporary recursor environment.
+        if self.same_source_expr(imported, reconstructed) { return; }
+        // A true source difference may be hidden by proof irrelevance during
+        // defeq, so independently check such an imported rule before comparison.
         self.tc_cache.clear();
         self.infer_value(
             crate::tc::InferFlag::Check,
