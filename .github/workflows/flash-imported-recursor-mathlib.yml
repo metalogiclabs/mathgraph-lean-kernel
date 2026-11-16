@@ -1,8 +1,8 @@
-name: Flash nested-type ablation - unchanged Mathlib A/B/B/A
+name: Flash structural rule witness - original Mathlib A/B/B/A
 on:
   push:
     branches:
-      - research/flash-rec-nested-type-ablation-20261116
+      - research/flash-rec-source-exact-rule-20261116
     paths:
       - src/inductive.rs
       - .github/workflows/flash-imported-recursor-mathlib.yml
