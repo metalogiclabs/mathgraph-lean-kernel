@@ -1639,7 +1639,13 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
                     // proof-irrelevant definitional comparison can obscure a bad
                     // argument inside the imported type.
                     self.tc_cache.clear();
-                    self.check_declar_info_v(old);
+                    let type_check = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        self.check_declar_info_v(old);
+                    }));
+                    if let Err(err) = type_check {
+                        eprintln!("FLASH_WF_TYPE_NONNESTED recursor={:?}", self.ctx.debug_print(old.info().name));
+                        std::panic::resume_unwind(err);
+                    }
                     self.tc_cache.clear();
                     assert!(old_r.aux_data_ck(new_r));
                     assert!(!std::ptr::eq(old, new));
@@ -1650,7 +1656,17 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
                     self.assert_def_eq(imported_w_new_uparams, new.info().ty);
                     assert_eq!(old_rec_rules.len(), new_rec_rules.len());
                     for (r_old, r_new) in old_rec_rules.iter().zip(new_rec_rules.iter()) {
-                        self.assert_nonnested_rec_rule_def_eq(st, old.info().uparams, r_old, r_new)
+                        let checked = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                            self.assert_nonnested_rec_rule_def_eq(st, old.info().uparams, r_old, r_new);
+                        }));
+                        if let Err(err) = checked {
+                            eprintln!(
+                                "FLASH_WF_RULE_NONNESTED recursor={:?} ctor={:?}",
+                                self.ctx.debug_print(old.info().name),
+                                self.ctx.debug_print(r_old.ctor_name)
+                            );
+                            std::panic::resume_unwind(err);
+                        }
                     }
                 }
                 _ => panic!("Expected (Declar::Recursor, Declar::Recursor)"),
@@ -2060,7 +2076,16 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
                 // A forged nested recursor can contain ill-typed applications
                 // hidden by proof irrelevance during definitional equality.
                 self.tc_cache.clear();
-                self.check_declar_info_v(&Declar::Recursor(original.clone()));
+                let checked_type = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    self.check_declar_info_v(&Declar::Recursor(original.clone()));
+                }));
+                if let Err(err) = checked_type {
+                    eprintln!(
+                        "FLASH_WF_TYPE_NESTED recursor={:?}",
+                        self.ctx.debug_print(resolved_rec_name)
+                    );
+                    std::panic::resume_unwind(err);
+                }
                 self.tc_cache.clear();
                 self.assert_def_eq(original.info.ty, restored.info.ty);
                 // have to do the rec rules as well.
@@ -2069,7 +2094,17 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
                     let old = original.rec_rules[i];
                     let new = restored.rec_rules[i];
                     assert_eq!(old.ctor_name, new.ctor_name);
-                    self.assert_imported_expr_matches(old.val, new.val);
+                    let checked_rule = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        self.assert_imported_expr_matches(old.val, new.val);
+                    }));
+                    if let Err(err) = checked_rule {
+                        eprintln!(
+                            "FLASH_WF_RULE_NESTED recursor={:?} ctor={:?}",
+                            self.ctx.debug_print(resolved_rec_name),
+                            self.ctx.debug_print(old.ctor_name)
+                        );
+                        std::panic::resume_unwind(err);
+                    }
                 }
             }
             _ => panic!("missing imported recursor reconstructed from nested inductive"),
