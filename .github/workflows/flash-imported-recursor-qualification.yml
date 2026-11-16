@@ -94,6 +94,94 @@ jobs:
           if report['errors']:
               sys.exit(1)
           PY
+      - name: Run Rust unit tests under the candidate
+        run: |
+          set -euo pipefail
+          cargo test --release --locked
+      - name: Require full 212-case exact-verdict parity except two soundness repairs
+        run: |
+          python3 - "$RUNNER_TEMP/flash-recursor" "$RUNNER_TEMP/flash-published/target/release/sokonanoda" "$PWD/target/release/sokonanoda" <<'PY'
+          import collections
+          import concurrent.futures
+          import hashlib
+          import json
+          import pathlib
+          import subprocess
+          import sys
+
+          out, before, after = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2]), pathlib.Path(sys.argv[3])
+          root = out / 'fixtures'
+          config = out / 'config.json'
+          archive_sha = hashlib.sha256((out / 'arena-tests.tar.gz').read_bytes()).hexdigest()
+          expected_archive = 'f6449acdf8dc5bc7b6c6e690f06daa948598d0bdde7d6cadcbb2286a9bfd49b0'
+          expected_repairs = {
+              'bad/bugs/rec-rule-proof-irrel.ndjson',
+              'bad/bugs/rec-rule-proof-irrel-nested.ndjson',
+          }
+          fixtures = sorted(root.rglob('*.ndjson'))
+          report = {
+              'baseline_commit': '78c7502bac8a5ba000057b3f083bc0595ac65750',
+              'candidate_commit': (out / 'candidate-commit.txt').read_text().strip(),
+              'archive_sha256': archive_sha,
+              'expected_archive_sha256': expected_archive,
+              'case_count': len(fixtures),
+              'cases': [],
+              'errors': [],
+          }
+          def one_run(binary, fixture):
+              try:
+                  with fixture.open('rb') as stream:
+                      p = subprocess.run([str(binary), str(config)], stdin=stream,
+                                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=150)
+                  return p.returncode
+              except subprocess.TimeoutExpired:
+                  return 'TIMEOUT'
+
+          def one_case(path):
+              name = str(path.relative_to(root))
+              if not (name.startswith('good/') or name.startswith('bad/')):
+                  return {'case': name, 'error': 'unknown fixture category'}
+              expected = 0 if name.startswith('good/') else 1
+              previous = one_run(before, path)
+              candidate = one_run(after, path)
+              return {
+                  'case': name, 'sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
+                  'expected': expected, 'published': previous, 'candidate': candidate
+              }
+
+          if archive_sha != expected_archive:
+              report['errors'].append('Arena archive digest differs from previously qualified 212; compare must be rerun against explicit pinned source')
+          if len(fixtures) != 212:
+              report['errors'].append('Expected the exact 212-case Arena portable corpus')
+          if not report['errors']:
+              with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+                  report['cases'] = list(pool.map(one_case, fixtures))
+              report['cases'].sort(key=lambda row: row['case'])
+              differences = [r for r in report['cases'] if r.get('published') != r.get('candidate')]
+              actual_repairs = {r['case'] for r in differences}
+              if actual_repairs != expected_repairs:
+                  report['errors'].append(f'Unexpected verdict changes: {sorted(actual_repairs ^ expected_repairs)}')
+              for row in differences:
+                  if row['case'] in expected_repairs and (row['published'], row['candidate']) != (0, 1):
+                      report['errors'].append(f'Expected 0->1 repair, got {row["case"]}: {row["published"]}->{row["candidate"]}')
+              wrong = lambda key: [r['case'] for r in report['cases'] if r.get(key) in (0,1) and r[key] != r['expected']]
+              report['published_wrong_decisive'] = wrong('published')
+              report['candidate_wrong_decisive'] = wrong('candidate')
+              report['published_counts'] = dict(collections.Counter(str(r.get('published')) for r in report['cases']))
+              report['candidate_counts'] = dict(collections.Counter(str(r.get('candidate')) for r in report['cases']))
+              report['differences'] = differences
+          report['status'] = 'EXACT_212_PARITY_TWO_REPAIRS' if not report['errors'] else 'FAILED_OR_UNKNOWN'
+          (out / 'full-212-report.json').write_text(json.dumps(report, indent=2) + '\n')
+          print(json.dumps({
+              'status': report['status'], 'case_count': len(fixtures),
+              'published_counts': report.get('published_counts'),
+              'candidate_counts': report.get('candidate_counts'),
+              'differences': report.get('differences'),
+              'errors': report['errors'],
+          }), flush=True)
+          if report['errors']:
+              sys.exit(1)
+          PY
       - name: Retain evidence even if a gate fails
         uses: actions/upload-artifact@v4
         if: always()
@@ -106,3 +194,4 @@ jobs:
             ${{ runner.temp }}/flash-recursor/config.json
             ${{ runner.temp }}/flash-recursor/archive.sha256
             ${{ runner.temp }}/flash-recursor/target-report.json
+            ${{ runner.temp }}/flash-recursor/full-212-report.json
