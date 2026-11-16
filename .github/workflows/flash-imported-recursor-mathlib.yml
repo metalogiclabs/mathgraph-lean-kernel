@@ -1,8 +1,8 @@
-name: Flash recursor repair - original full Mathlib A/B/B/A (research only)
+name: Flash genuine-Mathlib recursor first-failure diagnostic
 on:
   push:
     branches:
-      - research/flash-recursor-typed-input-20261116
+      - research/flash-imported-recursor-diagnostic-20261116
     paths:
       - src/inductive.rs
       - .github/workflows/flash-imported-recursor-mathlib.yml
@@ -51,7 +51,7 @@ jobs:
           import hashlib, json, pathlib, subprocess, sys, time, statistics
           out, inp, before, after = map(pathlib.Path, sys.argv[1:])
           cfg = out / 'config.json'
-          order = [('published', before), ('candidate', after), ('candidate', after), ('published', before)]
+          order = [('candidate', after)]
           def sha(path):
               h=hashlib.sha256()
               with path.open('rb') as stream:
@@ -65,7 +65,7 @@ jobs:
               'published_binary_sha256': sha(before),
               'candidate_binary_sha256': sha(after),
               'candidate_commit': (out/'candidate-commit.txt').read_text().strip(),
-              'method': 'A/B/B/A same runner; wall and RSS are NOT Arena retired instructions',
+              'method': 'Diagnostic-only: single unchanged genuine Mathlib candidate replay; expected false REJECT. Not a soundness qualification',
               'order': [name for name,_ in order],
               'runs': [], 'status': 'INCOMPLETE'
           }
