@@ -1,9 +1,9 @@
-name: Flash exact recursor-forgery gate (research only)
+name: Flash nested-type ablation: source-pinned safety and corpus
 
 on:
   push:
     branches:
-      - research/flash-recursor-typed-input-20261116
+      - research/flash-rec-nested-type-ablation-20261116
     paths:
       - src/inductive.rs
       - .github/workflows/flash-imported-recursor-qualification.yml
@@ -61,6 +61,7 @@ jobs:
               'bad/bugs/rec-type-proof-irrel.ndjson': 'a366791c3deb8c259c8b5f03d61c5016879c1177756372fbd2302539d7c8e581',
               'bad/bugs/rec-rule-wrong-arg.ndjson': 'cf3b02e4dc0c8a3adcf912f09e81a2e467c7cc667b5c5c545b50ad03760eccc9',
               'good/tutorial/001_basicDef.ndjson': '66160bdc748c91306eddc888fe8a268dd336c385979902022c2902da0680efd5',
+              'good/init-prelude.ndjson': 'eac8baf0fd48f5e7ccada755b36823d402a1e980882818995ade19cffe15a2c5',
           }
           report = {'source': 'Arena exports; SHA-256 pinned per fixture', 'baseline': '78c7502bac8a5ba000057b3f083bc0595ac65750', 'cases': [], 'errors': []}
           def run(binary, fixture):
@@ -186,14 +187,24 @@ jobs:
               report['cases'].sort(key=lambda row: row['case'])
               differences = [r for r in report['cases'] if r.get('published') != r.get('candidate')]
               actual_repairs = {r['case'] for r in differences}
-              if actual_repairs != expected_repairs:
-                  report['errors'].append(f'Unexpected verdict changes: {sorted(actual_repairs ^ expected_repairs)}')
+              cases_by_name = {r['case']: r for r in report['cases']}
+              for target in expected_repairs:
+                  row = cases_by_name[target]
+                  if (row['published'], row['candidate']) != (0, 1):
+                      report['errors'].append(f'Required 0->1 repair failed: {target}')
               for row in differences:
-                  if row['case'] in expected_repairs and (row['published'], row['candidate']) != (0, 1):
-                      report['errors'].append(f'Expected 0->1 repair, got {row["case"]}: {row["published"]}->{row["candidate"]}')
+                  if row['case'] in expected_repairs:
+                      continue
+                  if row['expected'] == 1 and (row['published'], row['candidate']) == (0, 1):
+                      continue  # other independently expected invalid exports corrected
+                  if row['expected'] == 0 and (row['published'], row['candidate']) == ('TIMEOUT', 0):
+                      continue  # resource outcome improved, reported but not a soundness proof
+                  report['errors'].append(f'Unjustified verdict change: {row["case"]}: {row["published"]}->{row["candidate"]}')
               wrong = lambda key: [r['case'] for r in report['cases'] if r.get(key) in (0,1) and r[key] != r['expected']]
               report['published_wrong_decisive'] = wrong('published')
               report['candidate_wrong_decisive'] = wrong('candidate')
+              if set(report['candidate_wrong_decisive']) - set(report['published_wrong_decisive']):
+                  report['errors'].append('New incorrect decisive verdicts introduced by candidate')
               report['published_counts'] = dict(collections.Counter(str(r.get('published')) for r in report['cases']))
               report['candidate_counts'] = dict(collections.Counter(str(r.get('candidate')) for r in report['cases']))
               report['differences'] = differences
