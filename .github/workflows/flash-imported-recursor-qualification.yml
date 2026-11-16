@@ -1,0 +1,108 @@
+name: Flash exact recursor-forgery gate (research only)
+
+on:
+  push:
+    branches:
+      - research/flash-recursor-typed-input-20261116
+    paths:
+      - src/inductive.rs
+      - .github/workflows/flash-imported-recursor-qualification.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recursor-forgeries:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.99.1"
+      - name: Build identical baseline and research candidate
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/flash-recursor"
+          git rev-parse HEAD | tee "$RUNNER_TEMP/flash-recursor/candidate-commit.txt"
+          git cat-file -e 78c7502bac8a5ba000057b3f083bc0595ac65750^{commit}
+          git worktree add --detach "$RUNNER_TEMP/flash-published" 78c7502bac8a5ba000057b3f083bc0595ac65750
+          cargo build --release --locked --manifest-path "$RUNNER_TEMP/flash-published/Cargo.toml"
+          cargo build --release --locked
+          sha256sum "$RUNNER_TEMP/flash-published/target/release/sokonanoda" target/release/sokonanoda | tee "$RUNNER_TEMP/flash-recursor/binaries.sha256"
+          printf '%s\n' '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2}' > "$RUNNER_TEMP/flash-recursor/config.json"
+      - name: Recover original Arena exports and record source hash
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error --retry 3 --max-time 180 \
+            https://arena.lean-lang.org/lean-arena-tests.tar.gz \
+            --output "$RUNNER_TEMP/flash-recursor/arena-tests.tar.gz"
+          sha256sum "$RUNNER_TEMP/flash-recursor/arena-tests.tar.gz" | tee "$RUNNER_TEMP/flash-recursor/archive.sha256"
+          mkdir -p "$RUNNER_TEMP/flash-recursor/fixtures"
+          tar --no-same-owner -xzf "$RUNNER_TEMP/flash-recursor/arena-tests.tar.gz" -C "$RUNNER_TEMP/flash-recursor/fixtures"
+      - name: Require source-pinned four forged recursors REJECT and authentic controls ACCEPT
+        run: |
+          python3 - "$RUNNER_TEMP/flash-recursor" "$RUNNER_TEMP/flash-published/target/release/sokonanoda" "$PWD/target/release/sokonanoda" <<'PY'
+          import hashlib
+          import json
+          import pathlib
+          import subprocess
+          import sys
+
+          out, before, after = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2]), pathlib.Path(sys.argv[3])
+          root = out / 'fixtures'
+          cfg = out / 'config.json'
+          pinned = {
+              'bad/bugs/rec-rule-proof-irrel.ndjson': 'e144c9d6a65cc1fbd26a0875788306d72e7690eae61d12d2967a3c4ea7c3287c',
+              'bad/bugs/rec-rule-proof-irrel-nested.ndjson': '61cff0dc13e0287cd21541543b63fc47aa89bebf14d30f14766b4d74f5c77c8c',
+              'bad/bugs/rec-type-proof-irrel.ndjson': 'a366791c3deb8c259c8b5f03d61c5016879c1177756372fbd2302539d7c8e581',
+              'bad/bugs/rec-rule-wrong-arg.ndjson': 'cf3b02e4dc0c8a3adcf912f09e81a2e467c7cc667b5c5c545b50ad03760eccc9',
+              'good/tutorial/001_basicDef.ndjson': '66160bdc748c91306eddc888fe8a268dd336c385979902022c2902da0680efd5',
+          }
+          report = {'source': 'Arena exports; SHA-256 pinned per fixture', 'baseline': '78c7502bac8a5ba000057b3f083bc0595ac65750', 'cases': [], 'errors': []}
+          def run(binary, fixture):
+              try:
+                  with fixture.open('rb') as f:
+                      p = subprocess.run([str(binary), str(cfg)], stdin=f, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120)
+                  return {'exit': p.returncode, 'stderr_tail': p.stderr.decode(errors='replace')[-800:]}
+              except subprocess.TimeoutExpired:
+                  return {'exit': 'TIMEOUT'}
+          for name, sha in pinned.items():
+              files = [p for p in root.rglob(name.split('/')[-1]) if str(p).endswith(name)]
+              if len(files) != 1:
+                  report['errors'].append(f'{name}: expected one fixture, found {len(files)}')
+                  continue
+              fixture = files[0]
+              actual_sha = hashlib.sha256(fixture.read_bytes()).hexdigest()
+              if actual_sha != sha:
+                  report['errors'].append(f'{name}: SHA-256 drift {actual_sha} != {sha}')
+                  continue
+              b, a = run(before, fixture), run(after, fixture)
+              expected = 0 if name.startswith('good/') else 1
+              report['cases'].append({'name': name, 'sha256': sha, 'expected': expected, 'published': b, 'candidate': a})
+              print(json.dumps({'name': name, 'expected': expected, 'published': b['exit'], 'candidate': a['exit']}), flush=True)
+              if a['exit'] != expected:
+                  report['errors'].append(f'{name}: candidate returned {a["exit"]}; required {expected}')
+              if expected == 0 and b['exit'] != 0:
+                  report['errors'].append(f'{name}: published positive-control result {b["exit"]}; cannot compare')
+          report['status'] = 'QUALIFIED_PINNED_RECURSORS' if not report['errors'] else 'FAILED_OR_UNKNOWN'
+          (out / 'target-report.json').write_text(json.dumps(report, indent=2) + '\n')
+          print(json.dumps({'status': report['status'], 'error_count': len(report['errors']), 'errors': report['errors']}), flush=True)
+          if report['errors']:
+              sys.exit(1)
+          PY
+      - name: Retain evidence even if a gate fails
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-imported-recursor-exact-${{ github.sha }}
+          retention-days: 60
+          path: |
+            ${{ runner.temp }}/flash-recursor/candidate-commit.txt
+            ${{ runner.temp }}/flash-recursor/binaries.sha256
+            ${{ runner.temp }}/flash-recursor/config.json
+            ${{ runner.temp }}/flash-recursor/archive.sha256
+            ${{ runner.temp }}/flash-recursor/target-report.json
