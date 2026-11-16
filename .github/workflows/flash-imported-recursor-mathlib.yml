@@ -1,8 +1,8 @@
-name: Flash recursor repair - original full Mathlib A/B/B/A (research only)
+name: Flash nested-type ablation - unchanged Mathlib A/B/B/A
 on:
   push:
     branches:
-      - research/flash-recursor-typed-input-20261116
+      - research/flash-rec-nested-type-ablation-20261116
     paths:
       - src/inductive.rs
       - .github/workflows/flash-imported-recursor-mathlib.yml
