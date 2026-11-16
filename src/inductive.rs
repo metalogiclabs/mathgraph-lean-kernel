@@ -2087,6 +2087,14 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
                     if let Err(e) = checked {
                         eprintln!("FLASH_INIT_FAILURE mode=RULE_NESTED owner={:?} ctor={:?}",
                             self.ctx.debug_print(resolved_rec_name), self.ctx.debug_print(old.ctor_name));
+                        // Read-only normalization witness: exported and reconstructed
+                        // expressions, without treating a pretty-print match as a warrant.
+                        let source = format!("{:?}", self.ctx.debug_print(old.val));
+                        let derived = format!("{:?}", self.ctx.debug_print(new.val));
+                        eprintln!("FLASH_NESTED_SOURCE_RULE bytes={} text={:?}", source.len(),
+                            source.chars().take(1200).collect::<String>());
+                        eprintln!("FLASH_NESTED_DERIVED_RULE bytes={} text={:?}", derived.len(),
+                            derived.chars().take(1200).collect::<String>());
                         std::panic::resume_unwind(e);
                     }
                 }
