@@ -96,6 +96,9 @@ jobs:
           PY
       - name: Audit published and candidate Rust tests including missing historical fixtures
         run: |
+          # GitHub launches bash with -e; temporarily disable it to collect BOTH
+          # preexisting unit-test exits, then restore fail-closed behaviour.
+          set +e
           set -uo pipefail
           OUT="$RUNNER_TEMP/flash-recursor"
           cargo test --release --locked --manifest-path "$RUNNER_TEMP/flash-published/Cargo.toml" > "$OUT/published-unit.log" 2>&1
