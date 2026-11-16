@@ -102,6 +102,7 @@ jobs:
           BASE_RC=$?
           cargo test --release --locked > "$OUT/candidate-unit.log" 2>&1
           CAND_RC=$?
+          set -euo pipefail
           python3 - "$OUT" "$BASE_RC" "$CAND_RC" "$RUNNER_TEMP/flash-published" <<'PY'
           import json, pathlib, re, sys
           out, base_rc, cand_rc, base_dir = pathlib.Path(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3]), pathlib.Path(sys.argv[4])
