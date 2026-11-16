@@ -1,4 +1,4 @@
-name: Flash nested-type ablation: source-pinned safety and corpus
+name: Flash nested-type ablation - source-pinned safety and corpus
 
 on:
   push:
@@ -208,7 +208,7 @@ jobs:
               report['published_counts'] = dict(collections.Counter(str(r.get('published')) for r in report['cases']))
               report['candidate_counts'] = dict(collections.Counter(str(r.get('candidate')) for r in report['cases']))
               report['differences'] = differences
-          report['status'] = 'EXACT_212_PARITY_TWO_REPAIRS' if not report['errors'] else 'FAILED_OR_UNKNOWN'
+          report['status'] = 'EXACT_212_NO_NEW_WRONG_AND_REQUIRED_REPAIRS' if not report['errors'] else 'FAILED_OR_UNKNOWN'
           (out / 'full-212-report.json').write_text(json.dumps(report, indent=2) + '\n')
           print(json.dumps({
               'status': report['status'], 'case_count': len(fixtures),
