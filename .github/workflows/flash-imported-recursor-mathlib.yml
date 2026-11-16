@@ -1,0 +1,127 @@
+name: Flash recursor repair - original full Mathlib A/B/B/A (research only)
+on:
+  push:
+    branches:
+      - research/flash-recursor-typed-input-20261116
+    paths:
+      - src/inductive.rs
+      - .github/workflows/flash-imported-recursor-mathlib.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  exact-mathlib:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 70
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RUSTFLAGS: -C target-cpu=native
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.99.1"
+      - name: Build published Flash and repaired Flash under matched flags
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/flash-mathlib"
+          git rev-parse HEAD > "$RUNNER_TEMP/flash-mathlib/candidate-commit.txt"
+          git cat-file -e 78c7502bac8a5ba000057b3f083bc0595ac65750^{commit}
+          git worktree add --detach "$RUNNER_TEMP/flash-published" 78c7502bac8a5ba000057b3f083bc0595ac65750
+          cargo build --release --locked --manifest-path "$RUNNER_TEMP/flash-published/Cargo.toml"
+          cargo build --release --locked
+          sha256sum "$RUNNER_TEMP/flash-published/target/release/sokonanoda" target/release/sokonanoda | tee "$RUNNER_TEMP/flash-mathlib/binaries.sha256"
+          printf '%s\n' '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2}' > "$RUNNER_TEMP/flash-mathlib/config.json"
+      - name: Restore unchanged original full Mathlib and verify SHA256
+        run: |
+          set -euo pipefail
+          gh api repos/heathsanchez/test/actions/artifacts/13231986845/zip > "$RUNNER_TEMP/flash-mathlib/original.zip"
+          printf '%s  %s\n' 3dd3fbb522816bdaa9d9cd2808196e075bfa27e3d6c82648731140594f87ce2b "$RUNNER_TEMP/flash-mathlib/original.zip" | sha256sum -c -
+          unzip -p "$RUNNER_TEMP/flash-mathlib/original.zip" mathlib.ndjson.zst | zstd -dc > "$RUNNER_TEMP/mathlib.ndjson"
+          sha256sum "$RUNNER_TEMP/mathlib.ndjson" | tee "$RUNNER_TEMP/flash-mathlib/source.sha256"
+          printf '%s  %s\n' 22c5de83469408950005589a3bc5ef5157c65549b5a802f85d567c29151306a6 "$RUNNER_TEMP/mathlib.ndjson" | sha256sum -c -
+          test "$(stat -c %s "$RUNNER_TEMP/mathlib.ndjson")" -eq 6184415052
+          rm "$RUNNER_TEMP/flash-mathlib/original.zip"
+      - name: Matched source acceptance and resource replay A/B/B/A
+        run: |
+          python3 - "$RUNNER_TEMP/flash-mathlib" "$RUNNER_TEMP/mathlib.ndjson" "$RUNNER_TEMP/flash-published/target/release/sokonanoda" "$PWD/target/release/sokonanoda" <<'PY'
+          import hashlib, json, pathlib, subprocess, sys, time, statistics
+          out, inp, before, after = map(pathlib.Path, sys.argv[1:])
+          cfg = out / 'config.json'
+          order = [('published', before), ('candidate', after), ('candidate', after), ('published', before)]
+          def sha(path):
+              h=hashlib.sha256()
+              with path.open('rb') as stream:
+                  for block in iter(lambda:stream.read(4*1024*1024),b''):
+                      h.update(block)
+              return h.hexdigest()
+          report = {
+              'source_sha256': sha(inp),
+              'source_bytes': inp.stat().st_size,
+              'config_sha256': sha(cfg),
+              'published_binary_sha256': sha(before),
+              'candidate_binary_sha256': sha(after),
+              'candidate_commit': (out/'candidate-commit.txt').read_text().strip(),
+              'method': 'A/B/B/A same runner; wall and RSS are NOT Arena retired instructions',
+              'order': [name for name,_ in order],
+              'runs': [], 'status': 'INCOMPLETE'
+          }
+          path=out/'full-mathlib-report.json'
+          path.write_text(json.dumps(report,indent=2)+'\n')
+          for i,(arm,binary) in enumerate(order):
+              clock=out/f'{i:02d}-{arm}.time'
+              stdout=out/f'{i:02d}-{arm}.stdout'
+              stderr=out/f'{i:02d}-{arm}.stderr'
+              t=time.monotonic()
+              result={'arm':arm,'ordinal':i}
+              with inp.open('rb') as stream,stdout.open('wb') as so,stderr.open('wb') as se:
+                  try:
+                      p=subprocess.run(['/usr/bin/time','-f','wall_seconds=%e\npeak_rss_kb=%M',
+                                        '-o',str(clock),str(binary),str(cfg)],stdin=stream,stdout=so,stderr=se,timeout=1500)
+                      result['exit']=p.returncode
+                  except subprocess.TimeoutExpired:
+                      result['exit']='TIMEOUT'
+              result['elapsed_monotonic_s']=round(time.monotonic()-t,3)
+              result['stdout_sha256']=sha(stdout)
+              result['stderr_tail']=stderr.read_bytes()[-500:].decode(errors='replace')
+              if clock.exists():
+                  for line in clock.read_text().splitlines():
+                      if '=' in line:
+                          key,val=line.split('=',1)
+                          try: result[key]=float(val)
+                          except ValueError: result[key]=val
+              report['runs'].append(result)
+              path.write_text(json.dumps(report,indent=2)+'\n')
+              print('MATHLIB_RUN',json.dumps(result),flush=True)
+              if result['exit'] != 0:
+                  break
+          if len(report['runs'])==4 and all(r['exit']==0 for r in report['runs']):
+              a=[r['wall_seconds'] for r in report['runs'] if r['arm']=='published']
+              b=[r['wall_seconds'] for r in report['runs'] if r['arm']=='candidate']
+              report['published_median_wall_s']=statistics.median(a)
+              report['candidate_median_wall_s']=statistics.median(b)
+              report['candidate_vs_published_wall_ratio']=round(statistics.median(b)/statistics.median(a),4)
+              report['status']='BOUNDED_MATCHED_MATHLIB_ACCEPTANCE'
+          else:
+              report['status']='FULL_MATHLIB_UNKNOWN_OR_REJECTED'
+          path.write_text(json.dumps(report,indent=2)+'\n')
+          print('MATHLIB_SUMMARY',json.dumps({k:v for k,v in report.items() if k!='runs'}),flush=True)
+          if report['status']!='BOUNDED_MATCHED_MATHLIB_ACCEPTANCE': sys.exit(1)
+          PY
+      - name: Preserve exact SHA-bound artifacts and failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flash-imported-recursor-mathlib-${{ github.sha }}
+          retention-days: 60
+          path: |
+            ${{ runner.temp }}/flash-mathlib/candidate-commit.txt
+            ${{ runner.temp }}/flash-mathlib/binaries.sha256
+            ${{ runner.temp }}/flash-mathlib/config.json
+            ${{ runner.temp }}/flash-mathlib/source.sha256
+            ${{ runner.temp }}/flash-mathlib/full-mathlib-report.json
+            ${{ runner.temp }}/flash-mathlib/*.time
+            ${{ runner.temp }}/flash-mathlib/*.stderr
