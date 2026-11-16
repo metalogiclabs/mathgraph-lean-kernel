@@ -389,6 +389,17 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
     }
 
     fn assert_imported_expr_matches(&mut self, imported: ExprPtr<'t>, reconstructed: ExprPtr<'t>) {
+        // Definitional equality can erase an ill-typed proof argument via proof
+        // irrelevance. Validate the exported rule independently before comparing
+        // it to the rule derived from the constructors.
+        self.tc_cache.clear();
+        self.infer_value(
+            crate::tc::InferFlag::Check,
+            0,
+            self.empty_env(),
+            self.empty_ctx(),
+            imported,
+        );
         self.tc_cache.clear();
         assert!(
             self.def_eq_core(imported, reconstructed),
@@ -1624,6 +1635,11 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
                     Some(old @ Declar::Recursor(old_r @ RecursorData { rec_rules: old_rec_rules, .. })),
                     new @ Declar::Recursor(new_r @ RecursorData { rec_rules: new_rec_rules, .. }),
                 ) => {
+                    // The exported recursor type must be well-formed before
+                    // proof-irrelevant definitional comparison can obscure a bad
+                    // argument inside the imported type.
+                    self.tc_cache.clear();
+                    self.check_declar_info_v(old);
                     self.tc_cache.clear();
                     assert!(old_r.aux_data_ck(new_r));
                     assert!(!std::ptr::eq(old, new));
@@ -2040,6 +2056,11 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
         match self.env.get_old_declar(&resolved_rec_name) {
             Some(Declar::Recursor(original @ RecursorData { .. })) => {
                 assert!(original.aux_data_ck(&restored));
+                // Check the exported type, not only the reconstructed one.
+                // A forged nested recursor can contain ill-typed applications
+                // hidden by proof irrelevance during definitional equality.
+                self.tc_cache.clear();
+                self.check_declar_info_v(&Declar::Recursor(original.clone()));
                 self.tc_cache.clear();
                 self.assert_def_eq(original.info.ty, restored.info.ty);
                 // have to do the rec rules as well.
