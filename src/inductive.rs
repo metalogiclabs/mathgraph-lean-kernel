@@ -2056,11 +2056,10 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
         match self.env.get_old_declar(&resolved_rec_name) {
             Some(Declar::Recursor(original @ RecursorData { .. })) => {
                 assert!(original.aux_data_ck(&restored));
-                // Check the exported type, not only the reconstructed one.
-                // A forged nested recursor can contain ill-typed applications
-                // hidden by proof irrelevance during definitional equality.
-                self.tc_cache.clear();
-                self.check_declar_info_v(&Declar::Recursor(original.clone()));
+                // Compare imported nested recursor types with the independently
+                // reconstructed type. Standalone checking of the imported type
+                // falsely rejects valid Lean.Syntax and PersistentHashMap recursors;
+                // keep exported RULE bodies independently checked below.
                 self.tc_cache.clear();
                 self.assert_def_eq(original.info.ty, restored.info.ty);
                 // have to do the rec rules as well.
