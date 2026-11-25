@@ -1,0 +1,11 @@
+{
+  "source": "leanprover/lean-kernel-arena tutorial/068_punitRec",
+  "source_revision": "cb0665b7b0f34d53fa8d62584535c27c86dfa982",
+  "source_sha256": "41fff78db80acf9708296374404045ca35022e898cecea8e6bdb900c3f7a9778",
+  "license": "Apache-2.0, as in Lean Kernel Arena",
+  "changes": {
+    "RuleDomainMismatch": "Keep the first inductive block; change its rule outer lambda domain from expression 3 to expression 0.",
+    "UnlistedRecursor": "Keep the first inductive block; append another recursor named PUnit.extraRec."
+  },
+  "verification": "Both reject on the unmodified release binary with the diagnostics required by the existing tests."
+}
