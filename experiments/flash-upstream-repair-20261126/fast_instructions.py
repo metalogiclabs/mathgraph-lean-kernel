@@ -30,6 +30,7 @@ p.add_argument('--binaries', type=Path, required=True)
 p.add_argument('--out', type=Path, required=True)
 p.add_argument('--whole', action='store_true')
 p.add_argument('--rounds', type=int, default=2)
+p.add_argument('--baseline-cli', action='store_true', help='Use flag arguments for a reconciled-core baseline.')
 a = p.parse_args()
 for name in ['drrun', 'client', 'fixture', 'binaries', 'out']:
     setattr(a, name, getattr(a, name).resolve())
@@ -66,6 +67,7 @@ save(config, {'use_stdin': True, 'num_threads': 1, 'nat_extension': True,
     'unpermitted_axiom_hard_error': False, 'print_success_message': True})
 identity = {'binary_sha256': hashes, 'input_sha256': expected[1], 'input_size': expected[0],
     'client_sha256': digest(a.client), 'threads': 1,
+    'baseline_interface': 'flags' if a.baseline_cli else 'JSON configuration',
     'boundary': 'Dynamic basic-block application instruction estimate, including libraries. '
         'REP-string and asynchronous interruption accounting differs from other tools. '
         'Calibration covers straight-line loops, not all x86 or hardware semantics. '
@@ -77,7 +79,7 @@ for round_no in range(a.rounds):
     for name in order:
         tag = f'{name}-{round_no}'
         command = base_command + [str(binaries[name])]
-        command += [str(config)] if name == 'baseline' else [
+        command += [str(config)] if name == 'baseline' and not a.baseline_cli else [
             '--stdin', '--threads', '1', '--nat-extension', '--string-extension', '--axiom-allow-all']
         start = time.monotonic()
         with a.fixture.open('rb') as inp:
@@ -101,6 +103,8 @@ for round_no in range(a.rounds):
         save(a.out / 'rows.json', rows)
         print(json.dumps(row), flush=True)
         assert code == 0 and row['dynamic_instructions'] is not None and row['complete_count'], row
+        assert digest(a.client) == identity['client_sha256'], 'Counter changed during measurement'
+        assert {n: digest(b) for n, b in binaries.items()} == hashes, 'Checker changed during measurement'
 totals = {n: sum(r['dynamic_instructions'] for r in rows if r['arm'] == n) for n in binaries}
 summary = {'observations': len(rows), 'strict_to_baseline_ratio': totals['strict'] / totals['baseline'],
     'boundary': identity['boundary']}

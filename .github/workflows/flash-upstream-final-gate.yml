@@ -1,0 +1,33 @@
+name: Flash final joined 240-case qualification
+on:
+  push:
+    branches: [research/flash-upstream-reconciliation-20261126]
+    paths: ['.github/workflows/flash-upstream-final-gate.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+  pull-requests: write
+jobs:
+  final-gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 95
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Require the unchanged checker and build inputs
+        run: |
+          set -euo pipefail
+          git diff --exit-code bc704eebed4e009bc66af1a849f18315c11f1926 -- src Cargo.toml Cargo.lock tests test_resources
+          test "$(git rev-parse HEAD:src)" = 06c257f0f2ff1f64711cfa54620b650e6dd59b7e
+      - name: Verify and join the remaining exact-source artifact
+        run: python3 experiments/flash-upstream-repair-20261126/finish_qualification.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-final-joined-qualification
+          path: ${{ runner.temp }}/final-flash-qualification/
+          retention-days: 90
