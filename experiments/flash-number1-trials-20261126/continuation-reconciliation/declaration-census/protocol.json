@@ -1,0 +1,16 @@
+{
+  "state": "DIAGNOSTIC_CANDIDATE",
+  "fixture_base": "ca69e6ab8a3c7b795716128372fdaf67c697b68e",
+  "base_src_tree": "623a8575bbe54541e0be6217394336f4c2727994",
+  "diagnostic_src_tree": "deb3a3356a3b7ec6dd00c607dc56ecdc419ab4e1",
+  "patch_sha256": "24170d9a2860a8c9ded2d5312b28cf7f354fe7e93806d1f5135605f3296c47db",
+  "feature": "declaration-costs",
+  "library_tests": 46,
+  "full_input_sha256": "f749dfd084fc0727d107c7aaded7d492cebfc0b517cfaa7337d8a7578a6c0dec",
+  "full_input_bytes": 6326141213,
+  "declarations": 739167,
+  "rounds": 2,
+  "threads": 1,
+  "question": "Does checking time concentrate in a small number of declarations on exact full Mathlib, and which semantic operation families do those declarations exercise?",
+  "boundary": "Instrumented per-declaration elapsed time excluding parsing/session maintenance; not hardware instructions, a speedup or an Arena score. Names are diagnostic output only and never control checking."
+}

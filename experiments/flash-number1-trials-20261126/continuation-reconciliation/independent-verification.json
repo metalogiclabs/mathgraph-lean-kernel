@@ -1,0 +1,132 @@
+{
+  "state": "WARRANTED_BOUNDED_EXECUTION_EVIDENCE",
+  "source_commit": "bc704eebed4e009bc66af1a849f18315c11f1926",
+  "source_tree": "06c257f0f2ff1f64711cfa54620b650e6dd59b7e",
+  "qualified_prescribed_outcomes": 239,
+  "missing": [
+    "navier-stokes-euler"
+  ],
+  "source_integrity_controls": 16,
+  "native": {
+    "observations": 4,
+    "declarations_each": 739167,
+    "binary_sha256": {
+      "baseline": "fac0383d03d4841c90903df288a6be6ccb4b414ba669f1e842300f2994462f27",
+      "strict": "5dbef78a90dc4e6944d1d3209f0a110cf7ceb953ff2a17f7d05b6843854c7453"
+    },
+    "cpu_medians_s": {
+      "baseline": 245.195,
+      "strict": 164.685
+    },
+    "cpu_ratio": 0.6716490956177736,
+    "peak_rss_ratio": 0.7505009266835573
+  },
+  "large_inputs": [
+    {
+      "name": "reachability",
+      "input_sha256": "31d06d90f2cd6037bb03f98c771304b0530132be514ea1c63b31f3c975fda065",
+      "binary_sha256": "211291c36dd87307b46e3c878cd02ed257ceeccb11083a559630d3bb61010876",
+      "threads": 2,
+      "raw_exit": 0,
+      "elapsed_s": 10.439756468000041,
+      "checked_declarations": 4846,
+      "boundary": "Exact complete input compatibility; native resources are not an Arena instruction score."
+    },
+    {
+      "name": "perf/magma-string-pair-n9",
+      "input_sha256": "ed9a15a45140b12a52c196cc97e8bca39d0fa98896859f564d98348e0af6b350",
+      "binary_sha256": "8a0d01968d258eb4c5e176c7cdcde2168c4ab96a78fedee0cf59e3d38a3711b2",
+      "threads": 2,
+      "raw_exit": 0,
+      "elapsed_s": 1.232664647000007,
+      "checked_declarations": 3542,
+      "boundary": "Exact complete input compatibility; native resources are not an Arena instruction score."
+    },
+    {
+      "name": "std",
+      "input_sha256": "15b659c12c14eb5c104b169ff288dcbd35baaff51412f43c9a078f79e9cf2f7d",
+      "binary_sha256": "32f6c9a3b8298ba3e8a5e4965217ddbd0fe8f9dcd6b85a76064c09da4090e76b",
+      "threads": 2,
+      "raw_exit": 0,
+      "elapsed_s": 6.030083218999835,
+      "checked_declarations": 103885,
+      "boundary": "Exact complete input compatibility; native resources are not an Arena instruction score."
+    },
+    {
+      "name": "perf/magma-string-n4",
+      "input_sha256": "b63ebfd31193fbbfc7d8aa4314971d4231c86fb2c261c31e1aea8e4feeb3d612",
+      "binary_sha256": "8b6ca2fa1fdbd3cfa093bcb1d01e84dc0290b44fd9a691a9fe0633dd75e90f71",
+      "threads": 2,
+      "raw_exit": 0,
+      "elapsed_s": 0.32764708700000256,
+      "checked_declarations": 3542,
+      "boundary": "Exact complete input compatibility; native resources are not an Arena instruction score."
+    },
+    {
+      "name": "init",
+      "input_sha256": "93b61a432ed4241b1d2184de65354e0b98333bf4403a8d63922da18e10b430ba",
+      "binary_sha256": "17674b37d6e242943475b36859bd160672b392eeb6efb4e9cc7f155e4608b412",
+      "threads": 2,
+      "raw_exit": 0,
+      "elapsed_s": 4.363303873999996,
+      "checked_declarations": 59979,
+      "boundary": "Exact complete input compatibility; native resources are not an Arena instruction score."
+    },
+    {
+      "name": "cslib",
+      "input_sha256": "09d1225013197983fe16b7078f6475707ce13da8f7e92d7c41ab1bc354522567",
+      "binary_sha256": "a2d829f89d9786fa007ad338aafb3a454f1306164ac8945fa639a7b8a1b175a9",
+      "threads": 2,
+      "raw_exit": 0,
+      "elapsed_s": 26.617943155000034,
+      "checked_declarations": 413186,
+      "boundary": "Exact complete input compatibility; native resources are not an Arena instruction score."
+    },
+    {
+      "name": "con-leche",
+      "input_sha256": "799c9744ccb5d10bf5ffb0ea63bc11532aaaf95d7eecc678ec43175f18f66f1c",
+      "binary_sha256": "c58ff3a910847b3b5f12729b94bbad87f411534db7f9785a4d3daa2c6cb26be6",
+      "threads": 2,
+      "raw_exit": 0,
+      "elapsed_s": 8.373859142000015,
+      "checked_declarations": 38246,
+      "boundary": "Exact complete input compatibility; native resources are not an Arena instruction score."
+    },
+    {
+      "name": "cedar",
+      "input_sha256": "787b0e0790186f14f79f450896650fe120cd64efcdb4ca9220667612519f0a79",
+      "binary_sha256": "ad9ea5f814488d532f30f33258f92d9ac4418892fd3636f575f5d57e94cd23d2",
+      "threads": 2,
+      "raw_exit": 0,
+      "elapsed_s": 8.939814580000075,
+      "checked_declarations": 151772,
+      "boundary": "Exact complete input compatibility; native resources are not an Arena instruction score."
+    }
+  ],
+  "old_core_declaration_census": {
+    "rounds": [
+      {
+        "round": 0,
+        "declarations": 739167,
+        "elapsed_s": 187.171240531,
+        "top100_share": 0.08961370994103197,
+        "top1000_share": 0.16115562389722504
+      },
+      {
+        "round": 1,
+        "declarations": 739167,
+        "elapsed_s": 189.58445869399998,
+        "top100_share": 0.08640263167251036,
+        "top1000_share": 0.1590330665520893
+      }
+    ],
+    "top100_overlap": 92
+  },
+  "boundaries": [
+    "CPU and peak RSS are two alternating native observations per arm, not an Arena instruction measurement or statistical generalization.",
+    "Portable and native evidence uses the frozen strict binary. Large jobs rebuild identical source with generic flags; their executable hashes differ and are retained.",
+    "Complete input hashes are execution-record attestations; archives do not include all giant input bytes.",
+    "Declaration costs are instrumented elapsed time on the old core, excluding parsing and session maintenance. They are not the new core profile.",
+    "Navier-Stokes/Euler and official rank improvement remain UNKNOWN."
+  ]
+}

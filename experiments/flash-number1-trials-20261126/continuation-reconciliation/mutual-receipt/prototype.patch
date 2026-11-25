@@ -1,0 +1,442 @@
+diff --git a/src/inductive.rs b/src/inductive.rs
+index 9a18918..21a3a04 100644
+--- a/src/inductive.rs
++++ b/src/inductive.rs
+@@ -13,7 +13,16 @@ impl<'t, 'p: 't> ExportFile<'p> {
+         arena: &'t bumpalo::Bump,
+         d: &Declar<'t>,
+     ) {
+-        let (ind, env_limit) = match d {
++        let env_limit = self.check_inductive_header(ctx, d);
++        self.check_inductive_body(ctx, cache, arena, d, env_limit);
++    }
++
++    pub(crate) fn check_inductive_header(
++        &'t self,
++        ctx: &mut TcCtx<'t, 'p>,
++        d: &Declar<'t>,
++    ) -> crate::env::EnvLimit<'p> {
++        let (_, env_limit) = match d {
+             Declar::Inductive(ind) => {
+                 let &(start, size) =
+                     self.mutual_block_sizes.get(&ind.info.name).expect("missing inductive block boundaries");
+@@ -75,6 +84,18 @@ impl<'t, 'p: 't> ExportFile<'p> {
+             }
+             _ => panic!("expected inductive"),
+         };
++        env_limit
++    }
++
++    pub(crate) fn check_inductive_body(
++        &'t self,
++        ctx: &mut TcCtx<'t, 'p>,
++        cache: &mut crate::util::TcCache<'t, 't>,
++        arena: &'t bumpalo::Bump,
++        d: &Declar<'t>,
++        env_limit: crate::env::EnvLimit<'p>,
++    ) {
++        let Declar::Inductive(ind) = d else { panic!("expected inductive") };
+         {
+             // The **unmodified** types and constructors for all of the types in this mutual block.
+             let unmodified_tys_ctors = ctx.with_tc(env_limit, arena, cache, |tc| {
+diff --git a/src/tc.rs b/src/tc.rs
+index 4fc3302..2954f95 100644
+--- a/src/tc.rs
++++ b/src/tc.rs
+@@ -10,6 +10,15 @@ const SESSION_BUDGET: usize = 16 * 1024 * 1024;
+ 
+ const CHUNK_SIZE: usize = 64;
+ 
++// These receipts exist only during one immutable check_all_declars invocation.
++// A cell is filled only after every reconstruction and source-rule check passes.
++pub(crate) struct BlockReceipt {
++    owner: usize,
++    done: std::sync::OnceLock<()>,
++}
++
++pub(crate) type BlockReceipts = crate::util::FxHashMap<usize, BlockReceipt>;
++
+ /// An enum for type safety and convenience; used during nat literal reduction, and also for testing.
+ #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+ pub(crate) enum NatBinOp {
+@@ -68,7 +77,7 @@ pub struct TypeChecker<'x, 't, 'p> {
+ impl<'p> ExportFile<'p> {
+     /// The entry point for checking a declaration `d`.
+     pub fn check_declar(&self, d: &Declar<'p>) {
+-        self.with_ctx(|ctx, cache, bump| self.check_declar_with(ctx, cache, bump, d))
++        self.with_ctx(|ctx, cache, bump| self.check_declar_with(ctx, cache, bump, d, None))
+     }
+ 
+     fn check_declar_with<'t>(
+@@ -77,10 +86,29 @@ impl<'p> ExportFile<'p> {
+         cache: &mut TcCache<'t, 't>,
+         bump: &'t bumpalo::Bump,
+         d: &Declar<'t>,
++        blocks: Option<&BlockReceipts>,
+     ) {
+         use Declar::*;
+         match d {
+-            Inductive(..) => self.check_inductive_declar(ctx, cache, bump, d),
++            Inductive(..) => {
++                let receipt = blocks.and_then(|blocks| {
++                    let &(start, _) = self.mutual_block_sizes.get(&d.info().name)?;
++                    blocks.get(&start)
++                });
++                if let Some(receipt) = receipt {
++                    // Per-member recursion, source universe and declaration-type
++                    // checks run even after another member completed the block.
++                    let limit = self.check_inductive_header(ctx, d);
++                    ctx.with_tc(limit, bump, cache, |tc| tc.check_declar_info_v(d));
++                    receipt.done.get_or_init(|| {
++                        let (_, owner) = self.declars.get_index(receipt.owner).unwrap();
++                        self.check_inductive_body(ctx, cache, bump, owner, limit);
++                    });
++                    cache.clear();
++                } else {
++                    self.check_inductive_declar(ctx, cache, bump, d);
++                }
++            },
+             Quot { .. } => crate::quot::check_quot(ctx, cache, bump, d),
+             _ => self.check_simple_declar(ctx, cache, bump, d),
+         }
+@@ -129,17 +157,17 @@ impl<'p> ExportFile<'p> {
+         }
+     }
+ 
+-    fn run_session<F>(&self, first: (usize, usize), mut next_chunk: F)
++    fn run_session<F>(&self, first: (usize, usize), mut next_chunk: F, blocks: &BlockReceipts)
+     where
+         F: FnMut() -> Option<(usize, usize)>, {
+         let mut thread_arena = stumpalo::Arena::new();
+         thread_arena.with_scope(|tscope| {
+             let mut tctx = TcCtx::new(self, tscope);
+-            self.run_session_inner(first, &mut next_chunk, &mut tctx)
++            self.run_session_inner(first, &mut next_chunk, &mut tctx, blocks)
+         })
+     }
+ 
+-    fn run_session_inner<'h, F>(&'h self, first: (usize, usize), next_chunk: &mut F, tctx: &mut TcCtx<'h, 'p>)
++    fn run_session_inner<'h, F>(&'h self, first: (usize, usize), next_chunk: &mut F, tctx: &mut TcCtx<'h, 'p>, blocks: &BlockReceipts)
+     where
+         F: FnMut() -> Option<(usize, usize)>, {
+         let base = bumpalo::Bump::new();
+@@ -152,7 +180,7 @@ impl<'p> ExportFile<'p> {
+                 while i < end {
+                     let (_, d) = self.declars.get_index(i).expect("declaration index out of range");
+                     i += 1;
+-                    self.check_declar_with(tctx, cache, sbump.get(), d);
++                    self.check_declar_with(tctx, cache, sbump.get(), d, Some(blocks));
+                     if sbump.allocated_bytes() > SESSION_BUDGET {
+                         pending = Some((i, end));
+                         return false
+@@ -167,13 +195,43 @@ impl<'p> ExportFile<'p> {
+         }
+     }
+ 
++    fn block_receipts(&self) -> BlockReceipts {
++        let mut plans = crate::util::new_fx_hash_map();
++        let mut seen = crate::util::new_fx_hash_set();
++        for &(start, size) in self.mutual_block_sizes.values() {
++            if !seen.insert(start) { continue; }
++            let members: Vec<_> = (start..start + size).filter_map(|index| {
++                match self.declars.get_index(index) {
++                    Some((_, Declar::Inductive(ind))) => Some((index, ind)),
++                    _ => None,
++                }
++            }).collect();
++            if members.len() <= 1 { continue; }
++            let (owner, root) = members[0];
++            let names: Vec<_> = members.iter().map(|(_, ind)| ind.info.name).collect();
++            // Unsupported layouts take the complete original path. Exact
++            // source-owned ordering and universe identity justify one shared
++            // reconstruction; nested blocks keep their original checks.
++            if members.iter().all(|(_, ind)| {
++                !ind.is_nested
++                    && ind.info.uparams == root.info.uparams
++                    && ind.num_params == root.num_params
++                    && ind.all_ind_names.as_ref() == names.as_slice()
++                    && self.mutual_block_sizes.get(&ind.info.name) == Some(&(start, size))
++            }) {
++                plans.insert(start, BlockReceipt { owner, done: std::sync::OnceLock::new() });
++            }
++        }
++        plans
++    }
++
+     /// Check all declarations in this export file using a single thread.
+-    pub(crate) fn check_all_declars_serial(&self) {
++    pub(crate) fn check_all_declars_serial(&self, blocks: &BlockReceipts) {
+         let total = self.declars.len();
+         std::thread::scope(|sco| {
+             std::thread::Builder::new()
+                 .stack_size(crate::STACK_SIZE)
+-                .spawn_scoped(sco, || self.run_session((0, total), || None))
++                .spawn_scoped(sco, || self.run_session((0, total), || None, blocks))
+                 .unwrap()
+                 .join()
+                 .expect("serial checker thread panicked");
+@@ -181,7 +239,7 @@ impl<'p> ExportFile<'p> {
+     }
+ 
+     /// Check all declarations in this export file, spawning `num_threads` as
+-    fn check_all_declars_par(&self, num_threads: usize) {
++    fn check_all_declars_par(&self, num_threads: usize, blocks: &BlockReceipts) {
+         use std::sync::atomic::{AtomicUsize, Ordering::Relaxed};
+         use std::thread;
+         let task_num = AtomicUsize::new(0);
+@@ -203,7 +261,7 @@ impl<'p> ExportFile<'p> {
+                         .stack_size(crate::STACK_SIZE)
+                         .spawn_scoped(sco, || {
+                             if let Some(first) = claim() {
+-                                self.run_session(first, claim);
++                                self.run_session(first, claim, blocks);
+                             }
+                         })
+                         .unwrap(),
+@@ -218,10 +276,11 @@ impl<'p> ExportFile<'p> {
+     /// Check all of the declarations in this export file on the specified number
+     /// of threads (checking will be serial on the main thread is num_threads <= 1).
+     pub fn check_all_declars(&self) {
++        let blocks = self.block_receipts();
+         if self.config.num_threads > 1 {
+-            self.check_all_declars_par(self.config.num_threads)
++            self.check_all_declars_par(self.config.num_threads, &blocks)
+         } else {
+-            self.check_all_declars_serial()
++            self.check_all_declars_serial(&blocks)
+         }
+     }
+ }
+@@ -273,3 +332,38 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
+         self.is_prop_type(depth, ty)
+     }
+ }
++
++#[cfg(test)]
++mod block_receipt_tests {
++    use super::*;
++
++    #[test]
++    fn mutual_members_can_share_a_completed_check_across_workers() -> Result<(), Box<dyn std::error::Error>> {
++        crate::tests::util::test_export_file(
++            Some(std::path::Path::new("test_resources/MutualReceipt/config.json")),
++            |export| {
++                let blocks = export.block_receipts();
++                assert_eq!(blocks.len(), 1);
++                let members: Vec<_> = export.declars.iter().enumerate().filter_map(|(index, (_, d))| {
++                    match d {
++                        Declar::Inductive(ind) if ind.all_ind_names.len() == 2 => Some(index),
++                        _ => None,
++                    }
++                }).collect();
++                assert_eq!(members.len(), 2);
++                let barrier = std::sync::Barrier::new(2);
++                std::thread::scope(|scope| {
++                    for index in members {
++                        let blocks = &blocks;
++                        let barrier = &barrier;
++                        scope.spawn(move || {
++                            barrier.wait();
++                            export.run_session((index, index + 1), || None, blocks);
++                        });
++                    }
++                });
++                assert!(blocks.values().all(|receipt| receipt.done.get().is_some()));
++            },
++        )
++    }
++}
+diff --git a/src/tests.rs b/src/tests.rs
+index 2ddc112..0ef1bbe 100644
+--- a/src/tests.rs
++++ b/src/tests.rs
+@@ -1,3 +1,3 @@
+ mod level;
+ mod natlit;
+-mod util;
++pub(crate) mod util;
+diff --git a/src/tests/util.rs b/src/tests/util.rs
+index 65a4652..6b7f394 100644
+--- a/src/tests/util.rs
++++ b/src/tests/util.rs
+@@ -73,6 +73,28 @@ fn check_empty() -> Result<(), Box<dyn Error>> {
+     })
+ }
+ 
++#[test]
++fn mutual_block_receipt_is_revoked_between_validation_runs() -> Result<(), Box<dyn Error>> {
++    let config = test_config(Some(Path::new("test_resources/MutualReceipt/config.json")))?;
++    let arena = Arena::new();
++    let (mut export, _) = config.to_export_file(arena.as_arena_ref())?;
++    let constructor = export.declars.values().find_map(|d| match d {
++        crate::env::Declar::Inductive(ind) if ind.all_ind_names.len() == 2 => {
++            let second = ind.all_ind_names[1];
++            let crate::env::Declar::Inductive(other) = export.declars.get(&second).unwrap() else { unreachable!() };
++            Some(other.all_ctor_names[0])
++        }
++        _ => None,
++    }).expect("two-member fixture missing");
++    export.check_all_declars();
++    let crate::env::Declar::Constructor(ctor) = export.declars.get_mut(&constructor).unwrap() else { unreachable!() };
++    ctor.num_fields += 1;
++    export.config.num_threads = 2;
++    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| export.check_all_declars()));
++    assert!(result.is_err(), "a receipt survived source mutation and admitted a forged constructor");
++    Ok(())
++}
++
+ /// The export format assigns each name/level/expression an explicit index. Those
+ /// indices need not be dense or in increasing order — the exporter only guarantees
+ /// that an item is emitted after the items it references. `LevelIndexOutOfOrder`
+diff --git a/test_resources/MutualReceipt/config.json b/test_resources/MutualReceipt/config.json
+new file mode 100644
+index 0000000..4577614
+--- /dev/null
++++ b/test_resources/MutualReceipt/config.json
+@@ -0,0 +1 @@
++{"export_file_path":"test_resources/MutualReceipt/export","num_threads":1,"nat_extension":true,"string_extension":true,"unsafe_permit_all_axioms":true,"unpermitted_axiom_hard_error":false}
+diff --git a/test_resources/MutualReceipt/export b/test_resources/MutualReceipt/export
+new file mode 100644
+index 0000000..8440971
+--- /dev/null
++++ b/test_resources/MutualReceipt/export
+@@ -0,0 +1,139 @@
++{"meta":{"exporter":{"name":"lean4export","version":"3.1.0"},"format":{"version":"3.1.0"},"lean":{"githash":"611c117bfaf7b7ae1cfcf246ce6fba31e8f509e9","version":"4.36.0"}}}
++{"in":1,"str":{"pre":0,"str":"False"}}
++{"ie":0,"sort":0}
++{"in":2,"str":{"pre":1,"str":"rec"}}
++{"in":3,"str":{"pre":0,"str":"u"}}
++{"il":1,"param":3}
++{"in":4,"str":{"pre":0,"str":"motive"}}
++{"in":5,"str":{"pre":0,"str":"t"}}
++{"const":{"name":1,"us":[]},"ie":1}
++{"ie":2,"sort":1}
++{"forallE":{"binderInfo":"default","body":2,"name":5,"type":1},"ie":3}
++{"bvar":1,"ie":4}
++{"bvar":0,"ie":5}
++{"app":{"arg":5,"fn":4},"ie":6}
++{"forallE":{"binderInfo":"default","body":6,"name":5,"type":1},"ie":7}
++{"forallE":{"binderInfo":"default","body":7,"name":4,"type":3},"ie":8}
++{"inductive":{"ctors":[],"recs":[{"all":[1],"isUnsafe":false,"k":false,"levelParams":[3],"name":2,"numIndices":0,"numMinors":0,"numMotives":1,"numParams":0,"rules":[],"type":8}],"types":[{"all":[1],"ctors":[],"isRec":false,"isReflexive":false,"isUnsafe":false,"levelParams":[],"name":1,"numIndices":0,"numNested":0,"numParams":0,"type":0}]}}
++{"in":6,"str":{"pre":0,"str":"Eq"}}
++{"in":7,"str":{"pre":0,"str":"u_1"}}
++{"il":2,"param":7}
++{"in":8,"str":{"pre":0,"str":"α"}}
++{"ie":9,"sort":2}
++{"in":9,"str":{"pre":0,"str":"a"}}
++{"in":10,"str":{"pre":9,"str":"_@"}}
++{"in":11,"str":{"pre":10,"str":"_internal"}}
++{"in":12,"str":{"pre":11,"str":"_hyg"}}
++{"in":13,"num":{"i":0,"pre":12}}
++{"forallE":{"binderInfo":"default","body":0,"name":13,"type":4},"ie":10}
++{"forallE":{"binderInfo":"default","body":10,"name":13,"type":5},"ie":11}
++{"forallE":{"binderInfo":"implicit","body":11,"name":8,"type":9},"ie":12}
++{"in":14,"str":{"pre":6,"str":"refl"}}
++{"const":{"name":6,"us":[2]},"ie":13}
++{"app":{"arg":4,"fn":13},"ie":14}
++{"app":{"arg":5,"fn":14},"ie":15}
++{"app":{"arg":5,"fn":15},"ie":16}
++{"forallE":{"binderInfo":"default","body":16,"name":9,"type":5},"ie":17}
++{"forallE":{"binderInfo":"implicit","body":17,"name":8,"type":9},"ie":18}
++{"in":15,"str":{"pre":6,"str":"rec"}}
++{"bvar":2,"ie":19}
++{"app":{"arg":19,"fn":13},"ie":20}
++{"app":{"arg":4,"fn":20},"ie":21}
++{"app":{"arg":5,"fn":21},"ie":22}
++{"forallE":{"binderInfo":"default","body":2,"name":5,"type":22},"ie":23}
++{"forallE":{"binderInfo":"default","body":23,"name":13,"type":4},"ie":24}
++{"in":16,"str":{"pre":0,"str":"refl"}}
++{"app":{"arg":4,"fn":5},"ie":25}
++{"const":{"name":14,"us":[2]},"ie":26}
++{"app":{"arg":19,"fn":26},"ie":27}
++{"app":{"arg":4,"fn":27},"ie":28}
++{"app":{"arg":28,"fn":25},"ie":29}
++{"bvar":3,"ie":30}
++{"bvar":4,"ie":31}
++{"app":{"arg":31,"fn":13},"ie":32}
++{"app":{"arg":30,"fn":32},"ie":33}
++{"app":{"arg":5,"fn":33},"ie":34}
++{"app":{"arg":4,"fn":30},"ie":35}
++{"app":{"arg":5,"fn":35},"ie":36}
++{"forallE":{"binderInfo":"default","body":36,"name":5,"type":34},"ie":37}
++{"forallE":{"binderInfo":"implicit","body":37,"name":13,"type":30},"ie":38}
++{"forallE":{"binderInfo":"default","body":38,"name":16,"type":29},"ie":39}
++{"forallE":{"binderInfo":"implicit","body":39,"name":4,"type":24},"ie":40}
++{"forallE":{"binderInfo":"implicit","body":40,"name":13,"type":5},"ie":41}
++{"forallE":{"binderInfo":"implicit","body":41,"name":8,"type":9},"ie":42}
++{"ie":43,"lam":{"binderInfo":"default","body":5,"name":16,"type":29}}
++{"ie":44,"lam":{"binderInfo":"default","body":43,"name":4,"type":24}}
++{"ie":45,"lam":{"binderInfo":"default","body":44,"name":13,"type":5}}
++{"ie":46,"lam":{"binderInfo":"implicit","body":45,"name":8,"type":9}}
++{"inductive":{"ctors":[{"cidx":0,"induct":6,"isUnsafe":false,"levelParams":[7],"name":14,"numFields":0,"numParams":2,"type":18}],"recs":[{"all":[6],"isUnsafe":false,"k":true,"levelParams":[3,7],"name":15,"numIndices":1,"numMinors":1,"numMotives":1,"numParams":2,"rules":[{"ctor":14,"nfields":0,"rhs":46}],"type":42}],"types":[{"all":[6],"ctors":[14],"isRec":false,"isReflexive":false,"isUnsafe":false,"levelParams":[7],"name":6,"numIndices":1,"numNested":0,"numParams":2,"type":12}]}}
++{"in":17,"str":{"pre":0,"str":"Bool"}}
++{"il":3,"succ":0}
++{"ie":47,"sort":3}
++{"in":18,"str":{"pre":17,"str":"false"}}
++{"in":19,"str":{"pre":17,"str":"true"}}
++{"const":{"name":17,"us":[]},"ie":48}
++{"in":20,"str":{"pre":17,"str":"rec"}}
++{"forallE":{"binderInfo":"default","body":2,"name":5,"type":48},"ie":49}
++{"in":21,"str":{"pre":0,"str":"false"}}
++{"const":{"name":18,"us":[]},"ie":50}
++{"app":{"arg":50,"fn":5},"ie":51}
++{"in":22,"str":{"pre":0,"str":"true"}}
++{"const":{"name":19,"us":[]},"ie":52}
++{"app":{"arg":52,"fn":4},"ie":53}
++{"app":{"arg":5,"fn":30},"ie":54}
++{"forallE":{"binderInfo":"default","body":54,"name":5,"type":48},"ie":55}
++{"forallE":{"binderInfo":"default","body":55,"name":22,"type":53},"ie":56}
++{"forallE":{"binderInfo":"default","body":56,"name":21,"type":51},"ie":57}
++{"forallE":{"binderInfo":"implicit","body":57,"name":4,"type":49},"ie":58}
++{"ie":59,"lam":{"binderInfo":"default","body":4,"name":22,"type":53}}
++{"ie":60,"lam":{"binderInfo":"default","body":59,"name":21,"type":51}}
++{"ie":61,"lam":{"binderInfo":"default","body":60,"name":4,"type":49}}
++{"ie":62,"lam":{"binderInfo":"default","body":5,"name":22,"type":53}}
++{"ie":63,"lam":{"binderInfo":"default","body":62,"name":21,"type":51}}
++{"ie":64,"lam":{"binderInfo":"default","body":63,"name":4,"type":49}}
++{"inductive":{"ctors":[{"cidx":0,"induct":17,"isUnsafe":false,"levelParams":[],"name":18,"numFields":0,"numParams":0,"type":48},{"cidx":1,"induct":17,"isUnsafe":false,"levelParams":[],"name":19,"numFields":0,"numParams":0,"type":48}],"recs":[{"all":[17],"isUnsafe":false,"k":false,"levelParams":[3],"name":20,"numIndices":0,"numMinors":2,"numMotives":1,"numParams":0,"rules":[{"ctor":18,"nfields":0,"rhs":61},{"ctor":19,"nfields":0,"rhs":64}],"type":58}],"types":[{"all":[17],"ctors":[18,19],"isRec":false,"isReflexive":false,"isUnsafe":false,"levelParams":[],"name":17,"numIndices":0,"numNested":0,"numParams":0,"type":47}]}}
++{"in":23,"str":{"pre":0,"str":"ImaxPropDummy"}}
++{"in":24,"str":{"pre":0,"str":"ImaxProp"}}
++{"in":25,"str":{"pre":23,"str":"intro"}}
++{"il":4,"imax":[3,0]}
++{"ie":65,"sort":4}
++{"in":26,"str":{"pre":24,"str":"mk"}}
++{"const":{"name":23,"us":[]},"ie":66}
++{"in":27,"str":{"pre":0,"str":"value"}}
++{"const":{"name":24,"us":[]},"ie":67}
++{"forallE":{"binderInfo":"default","body":67,"name":27,"type":48},"ie":68}
++{"in":28,"str":{"pre":24,"str":"rec"}}
++{"in":29,"str":{"pre":0,"str":"motive_1"}}
++{"forallE":{"binderInfo":"default","body":0,"name":5,"type":66},"ie":69}
++{"in":30,"str":{"pre":0,"str":"motive_2"}}
++{"forallE":{"binderInfo":"default","body":0,"name":5,"type":67},"ie":70}
++{"in":31,"str":{"pre":0,"str":"intro"}}
++{"const":{"name":25,"us":[]},"ie":71}
++{"app":{"arg":71,"fn":4},"ie":72}
++{"in":32,"str":{"pre":0,"str":"mk"}}
++{"const":{"name":26,"us":[]},"ie":73}
++{"app":{"arg":5,"fn":73},"ie":74}
++{"app":{"arg":74,"fn":19},"ie":75}
++{"forallE":{"binderInfo":"default","body":75,"name":27,"type":48},"ie":76}
++{"forallE":{"binderInfo":"default","body":54,"name":5,"type":67},"ie":77}
++{"forallE":{"binderInfo":"default","body":77,"name":32,"type":76},"ie":78}
++{"forallE":{"binderInfo":"default","body":78,"name":31,"type":72},"ie":79}
++{"forallE":{"binderInfo":"implicit","body":79,"name":30,"type":70},"ie":80}
++{"forallE":{"binderInfo":"implicit","body":80,"name":29,"type":69},"ie":81}
++{"ie":82,"lam":{"binderInfo":"default","body":6,"name":27,"type":48}}
++{"ie":83,"lam":{"binderInfo":"default","body":82,"name":32,"type":76}}
++{"ie":84,"lam":{"binderInfo":"default","body":83,"name":31,"type":72}}
++{"ie":85,"lam":{"binderInfo":"default","body":84,"name":30,"type":70}}
++{"ie":86,"lam":{"binderInfo":"default","body":85,"name":29,"type":69}}
++{"in":33,"str":{"pre":23,"str":"rec"}}
++{"app":{"arg":5,"fn":31},"ie":87}
++{"forallE":{"binderInfo":"default","body":87,"name":5,"type":66},"ie":88}
++{"forallE":{"binderInfo":"default","body":88,"name":32,"type":76},"ie":89}
++{"forallE":{"binderInfo":"default","body":89,"name":31,"type":72},"ie":90}
++{"forallE":{"binderInfo":"implicit","body":90,"name":30,"type":70},"ie":91}
++{"forallE":{"binderInfo":"implicit","body":91,"name":29,"type":69},"ie":92}
++{"ie":93,"lam":{"binderInfo":"default","body":4,"name":32,"type":76}}
++{"ie":94,"lam":{"binderInfo":"default","body":93,"name":31,"type":72}}
++{"ie":95,"lam":{"binderInfo":"default","body":94,"name":30,"type":70}}
++{"ie":96,"lam":{"binderInfo":"default","body":95,"name":29,"type":69}}
++{"inductive":{"ctors":[{"cidx":0,"induct":23,"isUnsafe":false,"levelParams":[],"name":25,"numFields":0,"numParams":0,"type":66},{"cidx":0,"induct":24,"isUnsafe":false,"levelParams":[],"name":26,"numFields":1,"numParams":0,"type":68}],"recs":[{"all":[23,24],"isUnsafe":false,"k":false,"levelParams":[],"name":28,"numIndices":0,"numMinors":2,"numMotives":2,"numParams":0,"rules":[{"ctor":26,"nfields":1,"rhs":86}],"type":81},{"all":[23,24],"isUnsafe":false,"k":false,"levelParams":[],"name":33,"numIndices":0,"numMinors":2,"numMotives":2,"numParams":0,"rules":[{"ctor":25,"nfields":0,"rhs":96}],"type":92}],"types":[{"all":[23,24],"ctors":[25],"isRec":false,"isReflexive":false,"isUnsafe":false,"levelParams":[],"name":23,"numIndices":0,"numNested":0,"numParams":0,"type":0},{"all":[23,24],"ctors":[26],"isRec":false,"isReflexive":false,"isUnsafe":false,"levelParams":[],"name":24,"numIndices":0,"numNested":0,"numParams":0,"type":65}]}}

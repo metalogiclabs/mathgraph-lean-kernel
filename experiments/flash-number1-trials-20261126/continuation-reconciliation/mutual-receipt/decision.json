@@ -1,0 +1,27 @@
+{
+  "state": "SUPERSEDED_AS_PERFORMANCE_TARGET",
+  "base_remote_commit": "ca69e6ab8a3c7b795716128372fdaf67c697b68e",
+  "base_local_commit": "d0fb9a9",
+  "prototype_source_tree": "e4d79042b2e51a79a24d18ccb504d635992aa982",
+  "patch_sha256": "00fcecfa7da7eba13c934b409850126fef712a643b91928e06844f7fdb5f920a",
+  "binary_sha256": "e876ddb61195ffaff9afc39b01b8ea5112e4d7f9a8a7894813d2476b1fdb0756",
+  "library_tests": 48,
+  "prescribed_source_cases": 10,
+  "differential_only_cases": 1,
+  "raw_process_observations": 44,
+  "threads": [
+    1,
+    2
+  ],
+  "portable_230": "NOT_RUN",
+  "full_mathlib": "NOT_RUN",
+  "performance": "NOT_MEASURED",
+  "superseded_by": "bc704eebed4e009bc66af1a849f18315c11f1926",
+  "reason": "The reconciled core already reconstructs an entire mutual inductive block once and persists derived terms. Adding a second old-core receipt layer would duplicate existing architecture.",
+  "reusable_controls": [
+    "Concurrent non-owner checking",
+    "Receipt invalidation between source mutations",
+    "Raw source correspondence, including non-owner constructor and recursor records"
+  ],
+  "boundary": "Old-core prototype has bounded test warrant only. Postparse source mutation is outside the new core public immutable input boundary; new-core controls therefore modify NDJSON before preprocessing. Unbound universe-name malformed control triggers internal parser failure, not semantic REJECT."
+}

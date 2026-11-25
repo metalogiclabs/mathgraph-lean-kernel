@@ -1,0 +1,37 @@
+Creating test: reachability (type: module)
+  Fetching https://github.com/Arrow7000/reachability at d822b1c70b4a6ec858b54ee51f12b0cb30628982...
+  Running pre-build: # Add an arena module under the existing Bench.+ library glob. Keep the
+# named proofs here so the test remains self-contained at the pinned release.
+cat > bench/Bench/Arena.lean <<'EOF'
+import Bench.Graphs
+
+namespace Bench.Arena
+
+open Relation
+
+set_option Elab.async false
+
+theorem path_reachable : TransGen (path 100).Adj 0 99 := by decide +kernel
+
+-- Starting at 1 explores the rest of the path before reporting failure.
+theorem path_unreachable : ¬TransGen (path 100).Adj 1 0 := by decide +kernel
+
+theorem grid_reachable : TransGen (grid 10).Adj 0 99 := by decide +kernel
+
+theorem random_reachable : TransGen (random 100 3 0).Adj 0 99 := by decide +kernel
+
+theorem dag_reachable : TransGen (dag 300).Adj 0 299 := by decide +kernel
+
+theorem grid_shortest :
+    (grid 5).shortest 0 24 = some [1, 2, 3, 4, 9, 14, 19] := by decide +kernel
+
+end Bench.Arena
+EOF
+
+  Building module Bench.Arena...
+  Exporting module Bench.Arena (Bench.Arena.path_reachable, Bench.Arena.path_unreachable, Bench.Arena.grid_reachable, Bench.Arena.random_reachable, Bench.Arena.dag_reachable, Bench.Arena.grid_shortest)...
+  Cloning lean4export for toolchain leanprover/lean4:v4.34.1...
+  Building lean4export with toolchain leanprover/lean4:v4.34.1...
+  Created /home/runner/work/_temp/arena-source/_build/tests/reachability.ndjson (18.1 MB, 361.8 k lines)
+
+Results: 1 succeeded, 0 failed

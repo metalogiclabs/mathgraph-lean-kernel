@@ -1,0 +1,402 @@
+[
+  {
+    "case": "valid",
+    "arm": "baseline",
+    "threads": 1,
+    "sha256": "0e65fcea9ca58f38c5f0fecc416e6a1f6a9ec2e7dbda1ae886e888c5b604ff9f",
+    "expected": 0,
+    "raw_exit": 0,
+    "stdout": "Checked 15 declarations with no errors\n",
+    "stderr_tail": ""
+  },
+  {
+    "case": "valid",
+    "arm": "candidate",
+    "threads": 1,
+    "sha256": "0e65fcea9ca58f38c5f0fecc416e6a1f6a9ec2e7dbda1ae886e888c5b604ff9f",
+    "expected": 0,
+    "raw_exit": 0,
+    "stdout": "Checked 15 declarations with no errors\n",
+    "stderr_tail": ""
+  },
+  {
+    "case": "nonowner-recursion-flag",
+    "arm": "baseline",
+    "threads": 1,
+    "sha256": "70bfc851ce1626178f57297909993732cdd8b6625f2d11fb8465173246cfac92",
+    "expected": 1,
+    "raw_exit": 1,
+    "stdout": "",
+    "stderr_tail": "\nthread '<unnamed>' (11) panicked at src/inductive.rs:73:17:\nassertion `left == right` failed\n  left: true\n right: false\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'main' (10) panicked at src/tc.rs:179:18:\nserial checker thread panicked: Any { .. }\n"
+  },
+  {
+    "case": "nonowner-recursion-flag",
+    "arm": "candidate",
+    "threads": 1,
+    "sha256": "70bfc851ce1626178f57297909993732cdd8b6625f2d11fb8465173246cfac92",
+    "expected": 1,
+    "raw_exit": 1,
+    "stdout": "",
+    "stderr_tail": "\nthread '<unnamed>' (13) panicked at src/inductive.rs:82:17:\nassertion `left == right` failed\n  left: true\n right: false\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'main' (12) panicked at src/tc.rs:237:18:\nserial checker thread panicked: Any { .. }\n"
+  },
+  {
+    "case": "nonowner-index-count",
+    "arm": "baseline",
+    "threads": 1,
+    "sha256": "5d1b5e40e35f980ab399c80c99f69e397e57bbd65f803216022d35f20ac88ded",
+    "expected": 1,
+    "raw_exit": 1,
+    "stdout": "",
+    "stderr_tail": "\nthread '<unnamed>' (15) panicked at src/inductive.rs:1656:21:\nassertion failed: old.aux_data_ck(new)\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'main' (14) panicked at src/tc.rs:179:18:\nserial checker thread panicked: Any { .. }\n"
+  },
+  {
+    "case": "nonowner-index-count",
+    "arm": "candidate",
+    "threads": 1,
+    "sha256": "5d1b5e40e35f980ab399c80c99f69e397e57bbd65f803216022d35f20ac88ded",
+    "expected": 1,
+    "raw_exit": 1,
+    "stdout": "",
+    "stderr_tail": "\nthread '<unnamed>' (17) panicked at src/inductive.rs:1677:21:\nassertion failed: old.aux_data_ck(new)\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'main' (16) panicked at src/tc.rs:237:18:\nserial checker thread panicked: Any { .. }\n"
+  },
+  {
+    "case": "nonowner-constructor-fields",
+    "arm": "baseline",
+    "threads": 1,
+    "sha256": "70238fead927f2dd2730fa271eed61c47a2bdc2abff49777fc0c9739ee2dfa11",
+    "expected": 1,
+    "raw_exit": 1,
+    "stdout": "",
+    "stderr_tail": "\nthread '<unnamed>' (19) panicked at src/inductive.rs:1672:25:\nassertion failed: old.aux_data_ck(new)\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'main' (18) panicked at src/tc.rs:179:18:\nserial checker thread panicked: Any { .. }\n"
+  },
+  {
+    "case": "nonowner-constructor-fields",
+    "arm": "candidate",
+    "threads": 1,
+    "sha256": "70238fead927f2dd2730fa271eed61c47a2bdc2abff49777fc0c9739ee2dfa11",
+    "expected": 1,
+    "raw_exit": 1,
+    "stdout": "",
+    "stderr_tail": "\nthread '<unnamed>' (21) panicked at src/inductive.rs:1693:25:\nassertion failed: old.aux_data_ck(new)\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'main' (20) panicked at src/tc.rs:237:18:\nserial checker thread panicked: Any { .. }\n"
+  },
+  {
+    "case": "nonowner-constructor-index",
+    "arm": "baseline",
+    "threads": 1,
+    "sha256": "cfee852e00cc5f3f9955cbc2b09e160cef70830b5984d46b95bc29020a7f0531",
+    "expected": 1,
+    "raw_exit": 1,
+    "stdout": "",
+    "stderr_tail": "\nthread '<unnamed>' (23) panicked at src/inductive.rs:1672:25:\nassertion failed: old.aux_data_ck(new)\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'main' (22) panicked at src/tc.rs:179:18:\nserial checker thread panicked: Any { .. }\n"
+  },
+  {
+    "case": "nonowner-constructor-index",
+    "arm": "candidate",
+    "threads": 1,
+    "sha256": "cfee852e00cc5f3f9955cbc2b09e160cef70830b5984d46b95bc29020a7f0531",
+    "expected": 1,
+    "raw_exit": 1,
+    "stdout": "",
+    "stderr_tail": "\nthread '<unnamed>' (25) panicked at src/inductive.rs:1693:25:\nassertion failed: old.aux_data_ck(new)\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'main' (24) panicked at src/tc.rs:237:18:\nserial checker thread panicked: Any { .. }\n"
+  },
+  {
+    "case": "nonowner-duplicate-universe",
+    "arm": "baseline",
+    "threads": 1,
+    "sha256": "44e6cf0be77e2e71b5fc0ba501d31e9e2959bcb5cdd9dbe765fbfb58efae4627",
+    "expected": 1,
+    "raw_exit": 1,
+    "stdout": "",
+    "stderr_tail": "\nthread 'main' (26) panicked at src/parser.rs:750:72:\ncalled `Option::unwrap()` on a `None` value\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n"
+  },
+  {
+    "case": "nonowner-duplicate-universe",
+    "arm": "candidate",
+    "threads": 1,
+    "sha256": "44e6cf0be77e2e71b5fc0ba501d31e9e2959bcb5cdd9dbe765fbfb58efae4627",
+    "expected": 1,
+    "raw_exit": 1,
+    "stdout": "",
+    "stderr_tail": "\nthread 'main' (27) panicked at src/parser.rs:750:72:\ncalled `Option::unwrap()` on a `None` value\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n"
+  },
+  {
+    "case": "nonowner-nested-flag",
+    "arm": "baseline",
+    "threads": 1,
+    "sha256": "197633dba412a95dbb7cc20bfa74e07877d42fbca2386856fd614470f74ab84f",
+    "expected": 1,
+    "raw_exit": 1,
+    "stdout": "",
+    "stderr_tail": "\nthread '<unnamed>' (29) panicked at src/inductive.rs:1656:21:\nassertion failed: old.aux_data_ck(new)\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'main' (28) panicked at src/tc.rs:179:18:\nserial checker thread panicked: Any { .. }\n"
+  },
+  {
+    "case": "nonowner-nested-flag",
+    "arm": "candidate",
+    "threads": 1,
+    "sha256": "197633dba412a95dbb7cc20bfa74e07877d42fbca2386856fd614470f74ab84f",
+    "expected": 1,
+    "raw_exit": 1,
+    "stdout": "",
+    "stderr_tail": "\nthread '<unnamed>' (31) panicked at src/inductive.rs:1677:21:\nassertion failed: old.aux_data_ck(new)\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'main' (30) panicked at src/tc.rs:237:18:\nserial checker thread panicked: Any { .. }\n"
+  },
+  {
+    "case": "nonowner-recursor-type",
+    "arm": "baseline",
+    "threads": 1,
+    "sha256": "d2b7399b81a673bc008bc13caad3a944eeb445c49b66eb85ac0dc465069f4cd0",
+    "expected": 1,
+    "raw_exit": 1,
+    "stdout": "",
+    "stderr_tail": "\nthread '<unnamed>' (33) panicked at src/tc.rs:251:9:\ndef_eq failed\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'main' (32) panicked at src/tc.rs:179:18:\nserial checker thread panicked: Any { .. }\n"
+  },
+  {
+    "case": "nonowner-recursor-type",
+    "arm": "candidate",
+    "threads": 1,
+    "sha256": "d2b7399b81a673bc008bc13caad3a944eeb445c49b66eb85ac0dc465069f4cd0",
+    "expected": 1,
+    "raw_exit": 1,
+    "stdout": "",
+    "stderr_tail": "\nthread '<unnamed>' (35) panicked at src/tc.rs:310:9:\ndef_eq failed\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'main' (34) panicked at src/tc.rs:237:18:\nserial checker thread panicked: Any { .. }\n"
+  },
+  {
+    "case": "nonowner-rule-fields",
+    "arm": "baseline",
+    "threads": 1,
+    "sha256": "f3244a34fce3c42b18b232d71f1a0d60350e0e5f7cafcdfc0f64f447dc80618e",
+    "expected": 1,
+    "raw_exit": 1,
+    "stdout": "",
+    "stderr_tail": "\nthread '<unnamed>' (37) panicked at src/inductive.rs:1696:9:\nassertion `left == right` failed\n  left: 2\n right: 1\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'main' (36) panicked at src/tc.rs:179:18:\nserial checker thread panicked: Any { .. }\n"
+  },
+  {
+    "case": "nonowner-rule-fields",
+    "arm": "candidate",
+    "threads": 1,
+    "sha256": "f3244a34fce3c42b18b232d71f1a0d60350e0e5f7cafcdfc0f64f447dc80618e",
+    "expected": 1,
+    "raw_exit": 1,
+    "stdout": "",
+    "stderr_tail": "\nthread '<unnamed>' (39) panicked at src/inductive.rs:1717:9:\nassertion `left == right` failed\n  left: 2\n right: 1\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'main' (38) panicked at src/tc.rs:237:18:\nserial checker thread panicked: Any { .. }\n"
+  },
+  {
+    "case": "different-member-order-fallback",
+    "arm": "baseline",
+    "threads": 1,
+    "sha256": "75293390a7eff106c3b1f389e8d5761bf885d512abd1c4da0c8da48b5bb2b85c",
+    "expected": null,
+    "raw_exit": 1,
+    "stdout": "",
+    "stderr_tail": "\nthread '<unnamed>' (41) panicked at src/tc.rs:251:9:\ndef_eq failed\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'main' (40) panicked at src/tc.rs:179:18:\nserial checker thread panicked: Any { .. }\n"
+  },
+  {
+    "case": "different-member-order-fallback",
+    "arm": "candidate",
+    "threads": 1,
+    "sha256": "75293390a7eff106c3b1f389e8d5761bf885d512abd1c4da0c8da48b5bb2b85c",
+    "expected": null,
+    "raw_exit": 1,
+    "stdout": "",
+    "stderr_tail": "\nthread '<unnamed>' (43) panicked at src/tc.rs:310:9:\ndef_eq failed\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'main' (42) panicked at src/tc.rs:237:18:\nserial checker thread panicked: Any { .. }\n"
+  },
+  {
+    "case": "valid",
+    "arm": "baseline",
+    "threads": 2,
+    "sha256": "0e65fcea9ca58f38c5f0fecc416e6a1f6a9ec2e7dbda1ae886e888c5b604ff9f",
+    "expected": 0,
+    "raw_exit": 0,
+    "stdout": "Checked 15 declarations with no errors\n",
+    "stderr_tail": ""
+  },
+  {
+    "case": "valid",
+    "arm": "candidate",
+    "threads": 2,
+    "sha256": "0e65fcea9ca58f38c5f0fecc416e6a1f6a9ec2e7dbda1ae886e888c5b604ff9f",
+    "expected": 0,
+    "raw_exit": 0,
+    "stdout": "Checked 15 declarations with no errors\n",
+    "stderr_tail": ""
+  },
+  {
+    "case": "nonowner-recursion-flag",
+    "arm": "baseline",
+    "threads": 2,
+    "sha256": "70bfc851ce1626178f57297909993732cdd8b6625f2d11fb8465173246cfac92",
+    "expected": 1,
+    "raw_exit": 1,
+    "stdout": "",
+    "stderr_tail": "\nthread 'thread_0' (51) panicked at src/inductive.rs:73:17:\nassertion `left == right` failed\n  left: true\n right: false\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'main' (50) panicked at src/tc.rs:213:26:\nA thread in `check_all_declars` panicked while being joined: Any { .. }\n"
+  },
+  {
+    "case": "nonowner-recursion-flag",
+    "arm": "candidate",
+    "threads": 2,
+    "sha256": "70bfc851ce1626178f57297909993732cdd8b6625f2d11fb8465173246cfac92",
+    "expected": 1,
+    "raw_exit": 1,
+    "stdout": "",
+    "stderr_tail": "\nthread 'thread_0' (54) panicked at src/inductive.rs:82:17:\nassertion `left == right` failed\n  left: true\n right: false\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'main' (53) panicked at src/tc.rs:271:26:\nA thread in `check_all_declars` panicked while being joined: Any { .. }\n"
+  },
+  {
+    "case": "nonowner-index-count",
+    "arm": "baseline",
+    "threads": 2,
+    "sha256": "5d1b5e40e35f980ab399c80c99f69e397e57bbd65f803216022d35f20ac88ded",
+    "expected": 1,
+    "raw_exit": 1,
+    "stdout": "",
+    "stderr_tail": "\nthread 'thread_0' (57) panicked at src/inductive.rs:1656:21:\nassertion failed: old.aux_data_ck(new)\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'main' (56) panicked at src/tc.rs:213:26:\nA thread in `check_all_declars` panicked while being joined: Any { .. }\n"
+  },
+  {
+    "case": "nonowner-index-count",
+    "arm": "candidate",
+    "threads": 2,
+    "sha256": "5d1b5e40e35f980ab399c80c99f69e397e57bbd65f803216022d35f20ac88ded",
+    "expected": 1,
+    "raw_exit": 1,
+    "stdout": "",
+    "stderr_tail": "\nthread 'thread_0' (60) panicked at src/inductive.rs:1677:21:\nassertion failed: old.aux_data_ck(new)\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'main' (59) panicked at src/tc.rs:271:26:\nA thread in `check_all_declars` panicked while being joined: Any { .. }\n"
+  },
+  {
+    "case": "nonowner-constructor-fields",
+    "arm": "baseline",
+    "threads": 2,
+    "sha256": "70238fead927f2dd2730fa271eed61c47a2bdc2abff49777fc0c9739ee2dfa11",
+    "expected": 1,
+    "raw_exit": 1,
+    "stdout": "",
+    "stderr_tail": "\nthread 'thread_0' (63) panicked at src/inductive.rs:1672:25:\nassertion failed: old.aux_data_ck(new)\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'main' (62) panicked at src/tc.rs:213:26:\nA thread in `check_all_declars` panicked while being joined: Any { .. }\n"
+  },
+  {
+    "case": "nonowner-constructor-fields",
+    "arm": "candidate",
+    "threads": 2,
+    "sha256": "70238fead927f2dd2730fa271eed61c47a2bdc2abff49777fc0c9739ee2dfa11",
+    "expected": 1,
+    "raw_exit": 1,
+    "stdout": "",
+    "stderr_tail": "\nthread 'thread_0' (66) panicked at src/inductive.rs:1693:25:\nassertion failed: old.aux_data_ck(new)\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'main' (65) panicked at src/tc.rs:271:26:\nA thread in `check_all_declars` panicked while being joined: Any { .. }\n"
+  },
+  {
+    "case": "nonowner-constructor-index",
+    "arm": "baseline",
+    "threads": 2,
+    "sha256": "cfee852e00cc5f3f9955cbc2b09e160cef70830b5984d46b95bc29020a7f0531",
+    "expected": 1,
+    "raw_exit": 1,
+    "stdout": "",
+    "stderr_tail": "\nthread 'thread_1' (70) panicked at src/inductive.rs:1672:25:\nassertion failed: old.aux_data_ck(new)\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'main' (68) panicked at src/tc.rs:213:26:\nA thread in `check_all_declars` panicked while being joined: Any { .. }\n"
+  },
+  {
+    "case": "nonowner-constructor-index",
+    "arm": "candidate",
+    "threads": 2,
+    "sha256": "cfee852e00cc5f3f9955cbc2b09e160cef70830b5984d46b95bc29020a7f0531",
+    "expected": 1,
+    "raw_exit": 1,
+    "stdout": "",
+    "stderr_tail": "\nthread 'thread_0' (72) panicked at src/inductive.rs:1693:25:\nassertion failed: old.aux_data_ck(new)\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'main' (71) panicked at src/tc.rs:271:26:\nA thread in `check_all_declars` panicked while being joined: Any { .. }\n"
+  },
+  {
+    "case": "nonowner-duplicate-universe",
+    "arm": "baseline",
+    "threads": 2,
+    "sha256": "44e6cf0be77e2e71b5fc0ba501d31e9e2959bcb5cdd9dbe765fbfb58efae4627",
+    "expected": 1,
+    "raw_exit": 1,
+    "stdout": "",
+    "stderr_tail": "\nthread 'main' (74) panicked at src/parser.rs:750:72:\ncalled `Option::unwrap()` on a `None` value\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n"
+  },
+  {
+    "case": "nonowner-duplicate-universe",
+    "arm": "candidate",
+    "threads": 2,
+    "sha256": "44e6cf0be77e2e71b5fc0ba501d31e9e2959bcb5cdd9dbe765fbfb58efae4627",
+    "expected": 1,
+    "raw_exit": 1,
+    "stdout": "",
+    "stderr_tail": "\nthread 'main' (75) panicked at src/parser.rs:750:72:\ncalled `Option::unwrap()` on a `None` value\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n"
+  },
+  {
+    "case": "nonowner-nested-flag",
+    "arm": "baseline",
+    "threads": 2,
+    "sha256": "197633dba412a95dbb7cc20bfa74e07877d42fbca2386856fd614470f74ab84f",
+    "expected": 1,
+    "raw_exit": 1,
+    "stdout": "",
+    "stderr_tail": "\nthread 'thread_0' (77) panicked at src/inductive.rs:1656:21:\nassertion failed: old.aux_data_ck(new)\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'main' (76) panicked at src/tc.rs:213:26:\nA thread in `check_all_declars` panicked while being joined: Any { .. }\n"
+  },
+  {
+    "case": "nonowner-nested-flag",
+    "arm": "candidate",
+    "threads": 2,
+    "sha256": "197633dba412a95dbb7cc20bfa74e07877d42fbca2386856fd614470f74ab84f",
+    "expected": 1,
+    "raw_exit": 1,
+    "stdout": "",
+    "stderr_tail": "\nthread 'thread_1' (81) panicked at src/inductive.rs:1677:21:\nassertion failed: old.aux_data_ck(new)\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'main' (79) panicked at src/tc.rs:271:26:\nA thread in `check_all_declars` panicked while being joined: Any { .. }\n"
+  },
+  {
+    "case": "nonowner-recursor-type",
+    "arm": "baseline",
+    "threads": 2,
+    "sha256": "d2b7399b81a673bc008bc13caad3a944eeb445c49b66eb85ac0dc465069f4cd0",
+    "expected": 1,
+    "raw_exit": 1,
+    "stdout": "",
+    "stderr_tail": "\nthread 'thread_0' (83) panicked at src/tc.rs:251:9:\ndef_eq failed\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'main' (82) panicked at src/tc.rs:213:26:\nA thread in `check_all_declars` panicked while being joined: Any { .. }\n"
+  },
+  {
+    "case": "nonowner-recursor-type",
+    "arm": "candidate",
+    "threads": 2,
+    "sha256": "d2b7399b81a673bc008bc13caad3a944eeb445c49b66eb85ac0dc465069f4cd0",
+    "expected": 1,
+    "raw_exit": 1,
+    "stdout": "",
+    "stderr_tail": "\nthread 'thread_1' (87) panicked at src/tc.rs:310:9:\ndef_eq failed\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'main' (85) panicked at src/tc.rs:271:26:\nA thread in `check_all_declars` panicked while being joined: Any { .. }\n"
+  },
+  {
+    "case": "nonowner-rule-fields",
+    "arm": "baseline",
+    "threads": 2,
+    "sha256": "f3244a34fce3c42b18b232d71f1a0d60350e0e5f7cafcdfc0f64f447dc80618e",
+    "expected": 1,
+    "raw_exit": 1,
+    "stdout": "",
+    "stderr_tail": "\nthread 'thread_0' (89) panicked at src/inductive.rs:1696:9:\nassertion `left == right` failed\n  left: 2\n right: 1\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'main' (88) panicked at src/tc.rs:213:26:\nA thread in `check_all_declars` panicked while being joined: Any { .. }\n"
+  },
+  {
+    "case": "nonowner-rule-fields",
+    "arm": "candidate",
+    "threads": 2,
+    "sha256": "f3244a34fce3c42b18b232d71f1a0d60350e0e5f7cafcdfc0f64f447dc80618e",
+    "expected": 1,
+    "raw_exit": 1,
+    "stdout": "",
+    "stderr_tail": "\nthread 'thread_0' (92) panicked at src/inductive.rs:1717:9:\nassertion `left == right` failed\n  left: 2\n right: 1\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'main' (91) panicked at src/tc.rs:271:26:\nA thread in `check_all_declars` panicked while being joined: Any { .. }\n"
+  },
+  {
+    "case": "different-member-order-fallback",
+    "arm": "baseline",
+    "threads": 2,
+    "sha256": "75293390a7eff106c3b1f389e8d5761bf885d512abd1c4da0c8da48b5bb2b85c",
+    "expected": null,
+    "raw_exit": 1,
+    "stdout": "",
+    "stderr_tail": "\nthread 'thread_0' (95) panicked at src/tc.rs:251:9:\ndef_eq failed\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'main' (94) panicked at src/tc.rs:213:26:\nA thread in `check_all_declars` panicked while being joined: Any { .. }\n"
+  },
+  {
+    "case": "different-member-order-fallback",
+    "arm": "candidate",
+    "threads": 2,
+    "sha256": "75293390a7eff106c3b1f389e8d5761bf885d512abd1c4da0c8da48b5bb2b85c",
+    "expected": null,
+    "raw_exit": 1,
+    "stdout": "",
+    "stderr_tail": "\nthread 'thread_0' (98) panicked at src/tc.rs:310:9:\ndef_eq failed\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'main' (97) panicked at src/tc.rs:271:26:\nA thread in `check_all_declars` panicked while being joined: Any { .. }\n"
+  }
+]

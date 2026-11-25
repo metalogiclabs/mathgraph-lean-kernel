@@ -1,0 +1,9 @@
+{
+  "source": "leanprover/lean-kernel-arena bugs/proj-of-imax-prop",
+  "source_revision": "cb0665b7b0f34d53fa8d62584535c27c86dfa982",
+  "source_sha256": "b5eaae68615b8331dc28b00490939d7d304b6c4dd72ba14f8862c4b523aeb6f3",
+  "prefix_sha256": "0e65fcea9ca58f38c5f0fecc416e6a1f6a9ec2e7dbda1ae886e888c5b604ff9f",
+  "recipe": "Retain exactly the first 139 original lines through the complete two-member nonnested inductive block; omit the later invalid projection consumer. The original frozen baseline accepts this prefix.",
+  "license": "Apache-2.0, Lean Kernel Arena",
+  "changes": "Adversarial controls mutate one source metadata field on the non-owner member, constructor or recursor; a different member-order case is differential only."
+}

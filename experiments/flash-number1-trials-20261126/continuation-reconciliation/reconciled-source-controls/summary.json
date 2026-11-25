@@ -1,0 +1,34 @@
+{
+  "state": "SOURCE_BOUNDARY_CONTROL_OBSERVATIONS",
+  "cases": 11,
+  "observations": 44,
+  "threads": [
+    1,
+    2
+  ],
+  "boundary": "Raw source-boundary observations. Exit 3 with the retained panic is an internal parser failure, not a semantic REJECT. The original duplicate-universe control refers to a name without a declared Param level; the additional declared-universe control uses existing Param name 3. Differential-only fallback has no expected semantic verdict.",
+  "strict_status_differences": [
+    {
+      "case": "nonowner-duplicate-universe",
+      "arm": "candidate",
+      "threads": 1,
+      "sha256": "44e6cf0be77e2e71b5fc0ba501d31e9e2959bcb5cdd9dbe765fbfb58efae4627",
+      "expected": 1,
+      "raw_exit": 3,
+      "stdout": "",
+      "stderr_tail": "internal error: \nthread 'main' (37) panicked at src/frontend/parser.rs:764:65:\ncalled `Option::unwrap()` on a `None` value\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n"
+    },
+    {
+      "case": "nonowner-duplicate-universe",
+      "arm": "candidate",
+      "threads": 2,
+      "sha256": "44e6cf0be77e2e71b5fc0ba501d31e9e2959bcb5cdd9dbe765fbfb58efae4627",
+      "expected": 1,
+      "raw_exit": 3,
+      "stdout": "",
+      "stderr_tail": "internal error: \nthread 'main' (107) panicked at src/frontend/parser.rs:764:65:\ncalled `Option::unwrap()` on a `None` value\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n"
+    }
+  ],
+  "invalid_accepted": [],
+  "valid_not_accepted": []
+}

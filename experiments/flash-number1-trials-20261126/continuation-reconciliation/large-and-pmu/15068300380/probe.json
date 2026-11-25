@@ -1,0 +1,78 @@
+{
+  "perf_found": "/usr/bin/perf",
+  "observations": [
+    {
+      "command": [
+        "sysctl",
+        "-n",
+        "kernel.perf_event_paranoid"
+      ],
+      "raw_exit": 0,
+      "stdout": "4\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/usr/bin/perf",
+        "--version"
+      ],
+      "raw_exit": 0,
+      "stdout": "perf version 7.0.14\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/usr/bin/perf",
+        "stat",
+        "-x,",
+        "-e",
+        "instructions:u",
+        "--",
+        "/bin/true"
+      ],
+      "raw_exit": 1,
+      "stdout": "",
+      "stderr": "Error:\nNo supported events found.\nAccess to performance monitoring and observability operations is limited.\nConsider adjusting /proc/sys/kernel/perf_event_paranoid setting to open\naccess to performance monitoring and observability operations for processes\nwithout CAP_PERFMON, CAP_SYS_PTRACE or CAP_SYS_ADMIN Linux capability.\nMore information can be found at 'Perf events and tool security' document:\nhttps://www.kernel.org/doc/html/latest/admin-guide/perf-security.html\nperf_event_paranoid setting is 4:\n  -1: Allow use of (almost) all events by all users\n      Ignore mlock limit after perf_event_mlock_kb without CAP_IPC_LOCK\n>= 0: Disallow raw and ftrace function tracepoint access\n>= 1: Disallow CPU event access\n>= 2: Disallow kernel profiling\nTo make the adjusted perf_event_paranoid setting permanent preserve it\nin /etc/sysctl.conf (e.g. kernel.perf_event_paranoid = <setting>)\n"
+    },
+    {
+      "command": [
+        "sudo",
+        "sysctl",
+        "kernel.perf_event_paranoid=1"
+      ],
+      "raw_exit": 0,
+      "stdout": "kernel.perf_event_paranoid = 1\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/usr/bin/perf",
+        "stat",
+        "-x,",
+        "-e",
+        "instructions:u",
+        "--",
+        "/bin/true"
+      ],
+      "raw_exit": 1,
+      "stdout": "",
+      "stderr": "Error:\nNo supported events found.\nThe instructions:u event is not supported.\n"
+    },
+    {
+      "command": [
+        "sudo",
+        "/usr/bin/perf",
+        "stat",
+        "-x,",
+        "-e",
+        "instructions:u",
+        "--",
+        "/bin/true"
+      ],
+      "raw_exit": 1,
+      "stdout": "",
+      "stderr": "Error:\nNo supported events found.\nThe instructions:u event is not supported.\n"
+    }
+  ],
+  "boundary": "Capability and access probe only; no checker measurement or rank claim."
+}

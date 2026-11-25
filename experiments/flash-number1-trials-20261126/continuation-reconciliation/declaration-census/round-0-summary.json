@@ -1,0 +1,630 @@
+{
+  "boundary": "Instrumented per-declaration elapsed time; includes descendants of each check, excludes parsing and session maintenance. Not an Arena instruction score or an uninstrumented timing comparison.",
+  "cumulative": [
+    {
+      "elapsed_ns": 1755445643,
+      "top_n": 1
+    },
+    {
+      "elapsed_ns": 8391705058,
+      "top_n": 10
+    },
+    {
+      "elapsed_ns": 15908025414,
+      "top_n": 100
+    },
+    {
+      "elapsed_ns": 28607986013,
+      "top_n": 1000
+    },
+    {
+      "elapsed_ns": 63823495937,
+      "top_n": 10000
+    }
+  ],
+  "declarations": 739167,
+  "threads": 1,
+  "top": [
+    {
+      "elapsed_ns": 1755445643,
+      "index": 393047,
+      "kind": "theorem",
+      "name": "_private.Mathlib.AlgebraicGeometry.EllipticCurve.Affine.AddSubMap.0.WeierstrassCurve.Affine.Point.sym2x_add_sub_eq_addSubMap_sym2x._proof_1_8"
+    },
+    {
+      "elapsed_ns": 1153051524,
+      "index": 668810,
+      "kind": "theorem",
+      "name": "ModularGroup.stabilizer_\u03c1"
+    },
+    {
+      "elapsed_ns": 931019261,
+      "index": 733863,
+      "kind": "theorem",
+      "name": "_private.Init.Data.String.Lemmas.Lossy.0.String.fromUTF8Lossy_surrogate_append._proof_1_10"
+    },
+    {
+      "elapsed_ns": 901999435,
+      "index": 641108,
+      "kind": "theorem",
+      "name": "_private.Batteries.Data.Char.Basic.0.Char.of_all_eq_true_aux._proof_1_14"
+    },
+    {
+      "elapsed_ns": 716685745,
+      "index": 378743,
+      "kind": "theorem",
+      "name": "_private.Batteries.Data.Char.Basic.0.Char.of_any_eq_false_aux._proof_1_14"
+    },
+    {
+      "elapsed_ns": 673884997,
+      "index": 641111,
+      "kind": "theorem",
+      "name": "_private.Batteries.Data.Char.Basic.0.Char.of_all_eq_true_aux._proof_1_18"
+    },
+    {
+      "elapsed_ns": 671052328,
+      "index": 378747,
+      "kind": "theorem",
+      "name": "_private.Batteries.Data.Char.Basic.0.Char.of_any_eq_false_aux._proof_1_18"
+    },
+    {
+      "elapsed_ns": 630285278,
+      "index": 378745,
+      "kind": "theorem",
+      "name": "_private.Batteries.Data.Char.Basic.0.Char.of_any_eq_false_aux._proof_1_15"
+    },
+    {
+      "elapsed_ns": 626608998,
+      "index": 488716,
+      "kind": "theorem",
+      "name": "_private.Mathlib.NumberTheory.FactorisationProperties.0.Nat.weird_seventy._proof_1_1"
+    },
+    {
+      "elapsed_ns": 331671849,
+      "index": 196132,
+      "kind": "theorem",
+      "name": "_private.Mathlib.Combinatorics.SimpleGraph.Regularity.Chunk.0.SzemerediRegularity.edgeDensity_star_not_uniform._proof_1_10"
+    },
+    {
+      "elapsed_ns": 237324875,
+      "index": 114346,
+      "kind": "inductive",
+      "name": "Lean.Meta.Grind.Arith.Cutsat.CooperSplitProof"
+    },
+    {
+      "elapsed_ns": 236946882,
+      "index": 114351,
+      "kind": "inductive",
+      "name": "Lean.Meta.Grind.Arith.Cutsat.DiseqCnstrProof"
+    },
+    {
+      "elapsed_ns": 233069032,
+      "index": 114341,
+      "kind": "inductive",
+      "name": "Lean.Meta.Grind.Arith.Cutsat.EqCnstr"
+    },
+    {
+      "elapsed_ns": 232375655,
+      "index": 114352,
+      "kind": "inductive",
+      "name": "Lean.Meta.Grind.Arith.Cutsat.UnsatProof"
+    },
+    {
+      "elapsed_ns": 232352534,
+      "index": 344927,
+      "kind": "theorem",
+      "name": "_private.Mathlib.NumberTheory.EllipticDivisibilitySequence.0.IsEllipticNet.atomRel_of_even_odd._proof_1_15"
+    },
+    {
+      "elapsed_ns": 231512597,
+      "index": 114349,
+      "kind": "inductive",
+      "name": "Lean.Meta.Grind.Arith.Cutsat.LeCnstrProof"
+    },
+    {
+      "elapsed_ns": 230615947,
+      "index": 114347,
+      "kind": "inductive",
+      "name": "Lean.Meta.Grind.Arith.Cutsat.DvdCnstrProof"
+    },
+    {
+      "elapsed_ns": 230408448,
+      "index": 114348,
+      "kind": "inductive",
+      "name": "Lean.Meta.Grind.Arith.Cutsat.LeCnstr"
+    },
+    {
+      "elapsed_ns": 230254744,
+      "index": 114345,
+      "kind": "inductive",
+      "name": "Lean.Meta.Grind.Arith.Cutsat.CooperSplit"
+    },
+    {
+      "elapsed_ns": 229673292,
+      "index": 114350,
+      "kind": "inductive",
+      "name": "Lean.Meta.Grind.Arith.Cutsat.DiseqCnstr"
+    },
+    {
+      "elapsed_ns": 229017968,
+      "index": 114344,
+      "kind": "inductive",
+      "name": "Lean.Meta.Grind.Arith.Cutsat.CooperSplitPred"
+    },
+    {
+      "elapsed_ns": 227393006,
+      "index": 114343,
+      "kind": "inductive",
+      "name": "Lean.Meta.Grind.Arith.Cutsat.DvdCnstr"
+    },
+    {
+      "elapsed_ns": 226016268,
+      "index": 114342,
+      "kind": "inductive",
+      "name": "Lean.Meta.Grind.Arith.Cutsat.EqCnstrProof"
+    },
+    {
+      "elapsed_ns": 216301321,
+      "index": 309378,
+      "kind": "theorem",
+      "name": "Std.Tactic.BVDecide.BVExpr.bitblast.goCache_Inv_of_Inv._mutual"
+    },
+    {
+      "elapsed_ns": 199749829,
+      "index": 392998,
+      "kind": "theorem",
+      "name": "_private.Mathlib.AlgebraicGeometry.EllipticCurve.Affine.AddSubMap.0.WeierstrassCurve.addSubMapCoeff_condition._proof_1_3"
+    },
+    {
+      "elapsed_ns": 163022722,
+      "index": 344934,
+      "kind": "theorem",
+      "name": "_private.Mathlib.NumberTheory.EllipticDivisibilitySequence.0.IsEllipticNet.atomRel_of_even_odd._proof_1_13"
+    },
+    {
+      "elapsed_ns": 108606317,
+      "index": 371402,
+      "kind": "theorem",
+      "name": "CategoryTheory.StrictlyUnitaryLaxFunctor.ext"
+    },
+    {
+      "elapsed_ns": 101874892,
+      "index": 270449,
+      "kind": "inductive",
+      "name": "CategoryTheory.FreeBicategory.Rel.below"
+    },
+    {
+      "elapsed_ns": 100094072,
+      "index": 393051,
+      "kind": "theorem",
+      "name": "_private.Mathlib.NumberTheory.Height.EllipticCurve.0.WeierstrassCurve.Affine.approx_parallelogram_law._proof_1_3"
+    },
+    {
+      "elapsed_ns": 92655934,
+      "index": 262841,
+      "kind": "theorem",
+      "name": "PiTensorProduct.tmulEquivDep._proof_5"
+    },
+    {
+      "elapsed_ns": 89339064,
+      "index": 229189,
+      "kind": "theorem",
+      "name": "CategoryTheory.Functor.IsDenseSubsite.isIso_ranCounit_app_of_isDenseSubsite"
+    },
+    {
+      "elapsed_ns": 86155080,
+      "index": 215689,
+      "kind": "theorem",
+      "name": "Algebra.exists_etale_isIdempotentElem_forall_liesOver_eq_aux"
+    },
+    {
+      "elapsed_ns": 83411245,
+      "index": 671644,
+      "kind": "theorem",
+      "name": "_private.Init.Data.Vector.Extract.0.Vector.extract_append._proof_1"
+    },
+    {
+      "elapsed_ns": 79340119,
+      "index": 620045,
+      "kind": "theorem",
+      "name": "_private.Mathlib.Data.Int.Fib.Lemmas.0.Int.fib_add_sq_sub_fib_mul_fib_add_two_mul._proof_1_2"
+    },
+    {
+      "elapsed_ns": 78683115,
+      "index": 208353,
+      "kind": "inductive",
+      "name": "CategoryTheory.FreeBicategory.Rel"
+    },
+    {
+      "elapsed_ns": 76158723,
+      "index": 344932,
+      "kind": "theorem",
+      "name": "_private.Mathlib.NumberTheory.EllipticDivisibilitySequence.0.IsEllipticNet.atom_mul_atomRel._proof_1_2"
+    },
+    {
+      "elapsed_ns": 75406007,
+      "index": 24883,
+      "kind": "theorem",
+      "name": "_private.Init.Data.Array.Extract.0.Array.extract_append._proof_1_1"
+    },
+    {
+      "elapsed_ns": 74956320,
+      "index": 163442,
+      "kind": "theorem",
+      "name": "CategoryTheory.Limits.colimitLimitToLimitColimit_surjective"
+    },
+    {
+      "elapsed_ns": 71554047,
+      "index": 308490,
+      "kind": "theorem",
+      "name": "Std.Tactic.BVDecide.BVExpr.bitblast.goCache_decl_eq._mutual"
+    },
+    {
+      "elapsed_ns": 69959583,
+      "index": 578004,
+      "kind": "theorem",
+      "name": "_private.Mathlib.RingTheory.Etale.QuasiFinite.0.Algebra.exists_etale_completeOrthogonalIdempotents_forall_liesOver_eq'"
+    },
+    {
+      "elapsed_ns": 69785175,
+      "index": 510255,
+      "kind": "theorem",
+      "name": "Algebra.IsInvariant.exists_smul_of_under_eq_of_profinite"
+    },
+    {
+      "elapsed_ns": 68851237,
+      "index": 356995,
+      "kind": "theorem",
+      "name": "AlgebraicGeometry.isIso_pushoutSection_of_iSup_eq"
+    },
+    {
+      "elapsed_ns": 67276048,
+      "index": 508498,
+      "kind": "theorem",
+      "name": "AlgebraicGeometry.Proj.lift_awayMap\u2090_awayMap\u2090_surjective"
+    },
+    {
+      "elapsed_ns": 65413570,
+      "index": 246890,
+      "kind": "theorem",
+      "name": "QuadraticForm.tmul_comp_tensorAssoc"
+    },
+    {
+      "elapsed_ns": 62498582,
+      "index": 344924,
+      "kind": "theorem",
+      "name": "_private.Mathlib.NumberTheory.EllipticDivisibilitySequence.0.IsEllipticNet.atomRel_of_even_odd._proof_1_16"
+    },
+    {
+      "elapsed_ns": 60098506,
+      "index": 215724,
+      "kind": "theorem",
+      "name": "Algebra.exists_etale_isIdempotentElem_forall_liesOver_eq"
+    },
+    {
+      "elapsed_ns": 59579772,
+      "index": 286700,
+      "kind": "theorem",
+      "name": "_private.Mathlib.LinearAlgebra.RootSystem.Finite.G2.0.RootPairing.EmbeddedG2.isOrthogonal_short_and_long_aux._proof_1_1"
+    },
+    {
+      "elapsed_ns": 58344024,
+      "index": 245459,
+      "kind": "theorem",
+      "name": "Coalgebra.TensorProduct.assoc._proof_2"
+    },
+    {
+      "elapsed_ns": 57652417,
+      "index": 623104,
+      "kind": "theorem",
+      "name": "_private.Init.Data.Vector.Extract.0.Vector.extract_extract._proof_1"
+    },
+    {
+      "elapsed_ns": 57268542,
+      "index": 714838,
+      "kind": "theorem",
+      "name": "CartanMatrix.E_det"
+    },
+    {
+      "elapsed_ns": 56567061,
+      "index": 716375,
+      "kind": "theorem",
+      "name": "Ideal.Quotient.stabilizerHom_surjective_of_profinite"
+    },
+    {
+      "elapsed_ns": 55861144,
+      "index": 392999,
+      "kind": "theorem",
+      "name": "_private.Mathlib.AlgebraicGeometry.EllipticCurve.Affine.AddSubMap.0.WeierstrassCurve.addSubMapCoeff_condition._proof_1_5"
+    },
+    {
+      "elapsed_ns": 54866618,
+      "index": 189100,
+      "kind": "theorem",
+      "name": "CategoryTheory.Bicategory.mateEquiv_vcomp"
+    },
+    {
+      "elapsed_ns": 53050324,
+      "index": 220120,
+      "kind": "theorem",
+      "name": "_private.Mathlib.Analysis.InnerProductSpace.Rayleigh.0.ContinuousLinearMap.norm_eq_iSup_rayleighQuotient._proof_1_5"
+    },
+    {
+      "elapsed_ns": 51797209,
+      "index": 679379,
+      "kind": "theorem",
+      "name": "Real.pi_lt_d4"
+    },
+    {
+      "elapsed_ns": 51680093,
+      "index": 254157,
+      "kind": "theorem",
+      "name": "ContinuousMultilinearMap.hasStrictFDerivAt_compContinuousLinearMap"
+    },
+    {
+      "elapsed_ns": 51500820,
+      "index": 473664,
+      "kind": "theorem",
+      "name": "_private.Mathlib.NumberTheory.LSeries.WienerIkehara.0.WienerIkehara.hasDerivAt_w._proof_1_3"
+    },
+    {
+      "elapsed_ns": 50584554,
+      "index": 718967,
+      "kind": "theorem",
+      "name": "_private.Mathlib.Analysis.ODE.ExistUnique.0.ODE_solution_unique_univ._proof_1_2"
+    },
+    {
+      "elapsed_ns": 50125288,
+      "index": 736803,
+      "kind": "theorem",
+      "name": "Real.pi_lt_d20"
+    },
+    {
+      "elapsed_ns": 49058375,
+      "index": 362509,
+      "kind": "theorem",
+      "name": "Ideal.Quotient.stabilizerHomSurjectiveAuxFunctor._proof_1"
+    },
+    {
+      "elapsed_ns": 48763372,
+      "index": 688372,
+      "kind": "theorem",
+      "name": "Real.pi_lt_d2"
+    },
+    {
+      "elapsed_ns": 48578583,
+      "index": 396544,
+      "kind": "theorem",
+      "name": "Polynomial.iterate_derivative_derivative_mul_X_sq"
+    },
+    {
+      "elapsed_ns": 47875064,
+      "index": 622219,
+      "kind": "theorem",
+      "name": "_private.Mathlib.Analysis.Calculus.IteratedDeriv.Analytic.0.iteratedDeriv_mul_pow_sub_of_analytic._proof_1_3"
+    },
+    {
+      "elapsed_ns": 47429263,
+      "index": 195200,
+      "kind": "inductive",
+      "name": "CommRingCat.Colimits.Relation.below"
+    },
+    {
+      "elapsed_ns": 46409538,
+      "index": 302275,
+      "kind": "theorem",
+      "name": "_private.Std.Http.Internal.Char.0.Std.Http.Internal.Char.not_quotedStringChar_ofNat_aux"
+    },
+    {
+      "elapsed_ns": 46324736,
+      "index": 649770,
+      "kind": "theorem",
+      "name": "Real.pi_lt_d6"
+    },
+    {
+      "elapsed_ns": 46039770,
+      "index": 403789,
+      "kind": "theorem",
+      "name": "Affine.Triangle.sbtw_touchpoint_singleton"
+    },
+    {
+      "elapsed_ns": 45825486,
+      "index": 393041,
+      "kind": "theorem",
+      "name": "_private.Mathlib.AlgebraicGeometry.EllipticCurve.Affine.Formula.0.WeierstrassCurve.Affine.addX_of_X_ne._proof_1_2"
+    },
+    {
+      "elapsed_ns": 45437747,
+      "index": 286916,
+      "kind": "inductive",
+      "name": "CategoryTheory.FreeMonoidalCategory.HomEquiv.below"
+    },
+    {
+      "elapsed_ns": 44227972,
+      "index": 399545,
+      "kind": "theorem",
+      "name": "_private.Mathlib.Algebra.ContinuedFractions.Computation.CorrectnessTerminating.0.GenContFract.compExactValue_correctness_of_stream_eq_some._proof_1_4"
+    },
+    {
+      "elapsed_ns": 43125419,
+      "index": 610289,
+      "kind": "theorem",
+      "name": "Real.pi_gt_d6"
+    },
+    {
+      "elapsed_ns": 42163896,
+      "index": 387055,
+      "kind": "theorem",
+      "name": "_private.Init.Data.String.Lemmas.Pattern.String.ForwardSearcher.0.String.Slice.Pattern.Model.ForwardSliceSearcher.Invariants.isValidSearchFrom_toList"
+    },
+    {
+      "elapsed_ns": 42025396,
+      "index": 245422,
+      "kind": "theorem",
+      "name": "Algebra.TensorProduct.tensorTensorTensorComm._proof_2"
+    },
+    {
+      "elapsed_ns": 41949577,
+      "index": 723438,
+      "kind": "theorem",
+      "name": "Real.pi_gt_d20"
+    },
+    {
+      "elapsed_ns": 41009314,
+      "index": 24482,
+      "kind": "theorem",
+      "name": "_private.Init.Data.Array.Extract.0.Array.extract_append_extract._proof_1_1"
+    },
+    {
+      "elapsed_ns": 39952923,
+      "index": 600100,
+      "kind": "theorem",
+      "name": "LinearMap.BilinForm.tensorDistribEquiv_toLinearMap"
+    },
+    {
+      "elapsed_ns": 39904293,
+      "index": 24886,
+      "kind": "theorem",
+      "name": "_private.Init.Data.Array.Extract.0.Array.extract_append._proof_1_4"
+    },
+    {
+      "elapsed_ns": 39680805,
+      "index": 320709,
+      "kind": "inductive",
+      "name": "Std.DHashMap.Raw.WF.below"
+    },
+    {
+      "elapsed_ns": 39062197,
+      "index": 399423,
+      "kind": "theorem",
+      "name": "ModuleCat.extendScalars_comp_id"
+    },
+    {
+      "elapsed_ns": 38150385,
+      "index": 328618,
+      "kind": "theorem",
+      "name": "Affine.Triangle.dist_orthogonalProjectionSpan_faceOpposite_eq_iff_two_zsmul_oangle_eq"
+    },
+    {
+      "elapsed_ns": 37879338,
+      "index": 478310,
+      "kind": "theorem",
+      "name": "AlgebraicGeometry.exists_appTop_\u03c0_eq_of_isLimit"
+    },
+    {
+      "elapsed_ns": 37849153,
+      "index": 536074,
+      "kind": "theorem",
+      "name": "TemperedDistribution.besselPotential_compL_besselPotential"
+    },
+    {
+      "elapsed_ns": 37702769,
+      "index": 728986,
+      "kind": "theorem",
+      "name": "_private.Init.Data.Vector.Extract.0.Vector.extract_append_extract._proof_1"
+    },
+    {
+      "elapsed_ns": 37667100,
+      "index": 139794,
+      "kind": "definition",
+      "name": "Std.Iterators.Types.Flatten.it\u2081"
+    },
+    {
+      "elapsed_ns": 36746895,
+      "index": 543457,
+      "kind": "theorem",
+      "name": "Real.pi_gt_d4"
+    },
+    {
+      "elapsed_ns": 36435079,
+      "index": 577622,
+      "kind": "theorem",
+      "name": "_private.Init.Data.Array.Extract.0.Array.extract_reverse._proof_1_2"
+    },
+    {
+      "elapsed_ns": 36244124,
+      "index": 641784,
+      "kind": "theorem",
+      "name": "String.firstDiffPos_loop_eq._unary"
+    },
+    {
+      "elapsed_ns": 36069593,
+      "index": 171621,
+      "kind": "theorem",
+      "name": "_private.Mathlib.RingTheory.Coalgebra.TensorProduct.0.TensorProduct.coassoc"
+    },
+    {
+      "elapsed_ns": 36030524,
+      "index": 362511,
+      "kind": "theorem",
+      "name": "Ideal.Quotient.stabilizerHomSurjectiveAuxFunctor._proof_3"
+    },
+    {
+      "elapsed_ns": 35797631,
+      "index": 323792,
+      "kind": "theorem",
+      "name": "_private.Mathlib.Data.List.TakeDrop.0.List.length_dropSlice._proof_1_4"
+    },
+    {
+      "elapsed_ns": 35650782,
+      "index": 348436,
+      "kind": "theorem",
+      "name": "_private.Mathlib.RingTheory.Smooth.Fiber.0.Algebra.FormallySmooth.of_formallySmooth_residueField_tensor_aux"
+    },
+    {
+      "elapsed_ns": 35284456,
+      "index": 348412,
+      "kind": "theorem",
+      "name": "Algebra.kerTensorProductMapIdToAlgHomEquiv._proof_1"
+    },
+    {
+      "elapsed_ns": 35220511,
+      "index": 523280,
+      "kind": "theorem",
+      "name": "Real.pi_gt_d2"
+    },
+    {
+      "elapsed_ns": 35195238,
+      "index": 287992,
+      "kind": "theorem",
+      "name": "PrimeSpectrum.isOpenMap_comap_algebraMap_tensorProduct_of_field"
+    },
+    {
+      "elapsed_ns": 34976609,
+      "index": 344975,
+      "kind": "theorem",
+      "name": "_private.Mathlib.NumberTheory.EllipticDivisibilitySequence.0.IsEllipticNet.of_even_odd._proof_1_6"
+    },
+    {
+      "elapsed_ns": 34882149,
+      "index": 703675,
+      "kind": "theorem",
+      "name": "AlgebraicGeometry.Scheme.exists_\u03c0_app_comp_eq_of_locallyOfFinitePresentation"
+    },
+    {
+      "elapsed_ns": 34680275,
+      "index": 72314,
+      "kind": "theorem",
+      "name": "Rep.barComplex.d_comp_diagonalSuccIsoFree_inv_eq"
+    },
+    {
+      "elapsed_ns": 34039609,
+      "index": 219587,
+      "kind": "inductive",
+      "name": "RingCat.Colimits.Relation.below"
+    },
+    {
+      "elapsed_ns": 33980550,
+      "index": 445257,
+      "kind": "theorem",
+      "name": "TemperedDistribution.fourierMultiplierCLM_compL_fourierMultiplierCLM"
+    },
+    {
+      "elapsed_ns": 33963238,
+      "index": 308522,
+      "kind": "theorem",
+      "name": "Std.Tactic.BVDecide.BVExpr.bitblast.blastAdd.go_denote_eq._unary"
+    }
+  ],
+  "total_declaration_elapsed_ns": 177517764017
+}
