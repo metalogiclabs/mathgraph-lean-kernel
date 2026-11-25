@@ -1,0 +1,13 @@
+diff --git a/src/tc.rs b/src/tc.rs
+index 4fc3302..9d9e1e9 100644
+--- a/src/tc.rs
++++ b/src/tc.rs
+@@ -8,7 +8,7 @@ use InferFlag::*;
+ 
+ const SESSION_BUDGET: usize = 16 * 1024 * 1024;
+ 
+-const CHUNK_SIZE: usize = 64;
++const CHUNK_SIZE: usize = 4096;
+ 
+ /// An enum for type safety and convenience; used during nat literal reduction, and also for testing.
+ #[derive(Debug, Clone, Copy, PartialEq, Eq)]

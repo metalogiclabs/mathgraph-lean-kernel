@@ -80,10 +80,11 @@ def main():
     p.add_argument('--rounds', type=int, default=2)
     p.add_argument('--time', type=Path, default=Path('/usr/bin/time'))
     p.add_argument('--profile', action='store_true')
+    p.add_argument('--protocol', type=Path, default=Path(__file__).with_name('protocol.json'))
     a = p.parse_args()
     assert a.seconds > 0 and a.rss_kb > 0 and a.rounds > 0
     a.out.mkdir(parents=True, exist_ok=True)
-    protocol = json.loads(Path(__file__).with_name('protocol.json').read_text())
+    protocol = json.loads(a.protocol.read_text())
     manifest = json.loads((Path(__file__).parent.parent / 'official-mathlib-input.json').read_text())
     actual = {'size': a.fixture.stat().st_size, 'sha256': digest(a.fixture)}
     expected = {k: manifest['test'][k] for k in actual}

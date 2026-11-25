@@ -33,7 +33,7 @@
     "rank_in_artifact": 1
   },
   "required_instruction_reduction_to_tie": 0.5761478712702559,
-  "boundary": "Recomputed from official raw artifact using published scoring rules, not the still-stale public leaderboard.",
+  "boundary": "Recomputed from official raw artifact; the live leaderboard rechecked on 26 November now independently agrees at fifth place.",
   "leading_rows": [
     {
       "checker": "nano-lean",
@@ -95,5 +95,15 @@
     "total": 240,
     "incorrect": 0,
     "scope": "This official artifact only. Not qualification of any new trial."
+  },
+  "public_recheck_20261126": {
+    "url": "https://arena.lean-lang.org/",
+    "published_rank": 5,
+    "published_version": "flash-2026-11-25",
+    "correct_rejects": 92,
+    "correct_accepts": 148,
+    "virtual_s_display": "2.58 min",
+    "leader_virtual_s_display": "65.8 s",
+    "status": "Prior stale last-place publication SUPERSEDED"
   }
 }

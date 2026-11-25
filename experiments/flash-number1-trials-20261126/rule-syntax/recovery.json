@@ -1,0 +1,43 @@
+{
+  "state": "WARRANTED_BOUNDED_SPLIT_RUN_228",
+  "initial_correct": 224,
+  "initial_attempted": 228,
+  "recovered": [
+    {
+      "name": "perf/gf3-matrix-product",
+      "initial_status": -9,
+      "replay_status": 0,
+      "elapsed_s": 3.558758526998645,
+      "official_timeout": 70
+    },
+    {
+      "name": "perf/ite-taken-branch",
+      "initial_status": -9,
+      "replay_status": 0,
+      "elapsed_s": 11.478467356999317,
+      "official_timeout": 230
+    },
+    {
+      "name": "perf/ite-taken-branch-bad",
+      "initial_status": -9,
+      "replay_status": 1,
+      "elapsed_s": 7.814441845999681,
+      "official_timeout": 110
+    },
+    {
+      "name": "perf/short-circuit-and",
+      "initial_status": -9,
+      "replay_status": 0,
+      "elapsed_s": 9.310680939001031,
+      "official_timeout": 220
+    }
+  ],
+  "all_recovered_expected": true,
+  "still_excluded": [
+    "perf/magma-list-deep-n36",
+    "perf/magma-list-pair-n21"
+  ],
+  "config_sha256": "cbdb8b80eaee26ea8e1ecf8d08d3ebdc743bddeb9a1d7f48ad78398ba952eff1",
+  "cause": "Original SIGKILL cause UNKNOWN. Replay after removing only completed compiler intermediates from tmpfs succeeded for both baseline and candidate. No original status overwritten.",
+  "boundary": "Not a fresh all-230 run; remote strict qualification is still pending."
+}

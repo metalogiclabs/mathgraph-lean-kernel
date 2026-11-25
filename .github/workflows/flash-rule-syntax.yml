@@ -1,0 +1,138 @@
+name: Flash exact recursor syntax candidate
+on:
+  push:
+    branches: [research/flash-lambda-checking-20261126]
+    paths:
+      - .github/workflows/flash-rule-syntax.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  qualify-and-measure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 85
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: 0
+      RUSTFLAGS: -C target-cpu=x86-64 -C target-feature=-avx,-avx2,-avx512f,-fma -C debuginfo=1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.99.1'
+      - name: Reconstruct independent candidate and retain frozen baseline
+        run: |
+          set -euo pipefail
+          ROOT="$RUNNER_TEMP/rule-source"
+          OUT="$RUNNER_TEMP/rule-arms"
+          mkdir -p "$OUT" "$RUNNER_TEMP/rule-evidence"
+          git worktree add --detach "$ROOT" ca69e6ab8a3c7b795716128372fdaf67c697b68e
+          git -C "$ROOT" apply "$GITHUB_WORKSPACE/experiments/flash-number1-trials-20261126/rule-syntax/implementation.patch"
+          git -C "$ROOT" add src
+          git -C "$ROOT" write-tree > "$OUT/root-tree.txt"
+          python3 - <<'PY'
+          import json,os,subprocess
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP'])
+          tree=(root/'rule-arms/root-tree.txt').read_text().strip()
+          src=subprocess.check_output(['git','rev-parse',tree+':src'],cwd=root/'rule-source',text=True).strip()
+          expected=json.loads(Path('experiments/flash-number1-trials-20261126/rule-syntax/protocol.json').read_text())['arms'][1]['src_tree']
+          assert src==expected,(src,expected)
+          (root/'rule-arms/source-tree.txt').write_text(src+'\n')
+          PY
+          cargo test --locked --manifest-path "$ROOT/Cargo.toml" --target-dir "$RUNNER_TEMP/rule-target" 2>&1 | tee "$OUT/rule_syntax-tests.log"
+          cargo build --release --locked --manifest-path "$ROOT/Cargo.toml" --target-dir "$RUNNER_TEMP/rule-target" 2>&1 | tee "$OUT/rule_syntax-build.log"
+          cp "$RUNNER_TEMP/rule-target/release/sokonanoda" "$OUT/rule_syntax.bin"
+          rm -rf "$RUNNER_TEMP/rule-target"
+          gh api repos/metalogiclabs/mathgraph-lean-kernel/actions/artifacts/15064215588/zip > "$RUNNER_TEMP/frozen-builds.zip"
+          python3 - <<'PY'
+          import hashlib,json,os,re,zipfile
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP']);out=root/'rule-arms'
+          archive=root/'frozen-builds.zip'
+          assert hashlib.sha256(archive.read_bytes()).hexdigest()=='b2e10535d5f224482dfb3aace54f236ad41e3acc41a8f8ce7b0d6461e86d46aa'
+          with zipfile.ZipFile(archive) as z:
+              builds=json.loads(z.read('validated-builds.json'))
+              baseline=next(r for r in builds if r['name']=='baseline')
+              (out/'baseline.bin').write_bytes(z.read('baseline.bin'))
+              (out/'baseline-compiler.txt').write_bytes(z.read('compiler.txt'))
+              (out/'baseline-build-flags.txt').write_bytes(z.read('build-flags.txt'))
+          assert hashlib.sha256((out/'baseline.bin').read_bytes()).hexdigest()==baseline['binary_sha256']
+          logs=re.sub(r'\x1b\[[0-9;]*m','',(out/'rule_syntax-tests.log').read_text())
+          counts=[int(x) for x in re.findall(r'test result: ok\. (\d+) passed; 0 failed',logs)]
+          assert counts and counts[0]==47,counts
+          candidate={'name':'rule_syntax','library_tests':47,'src_tree':(out/'source-tree.txt').read_text().strip(),
+              'binary_sha256':hashlib.sha256((out/'rule_syntax.bin').read_bytes()).hexdigest()}
+          assert candidate['binary_sha256']!=baseline['binary_sha256']
+          (out/'validated-builds.json').write_text(json.dumps([baseline,candidate],indent=2)+'\n')
+          print(json.dumps([baseline,candidate]))
+          PY
+          chmod +x "$OUT/"*.bin
+          git rev-parse HEAD > "$OUT/commit.txt"
+          rustc -Vv > "$OUT/compiler.txt"
+          printf '%s\n' "$RUSTFLAGS" > "$OUT/build-flags.txt"
+          cmp "$OUT/compiler.txt" "$OUT/baseline-compiler.txt"
+          cmp "$OUT/build-flags.txt" "$OUT/baseline-build-flags.txt"
+          cp "$OUT/"*.txt "$OUT/"*.json "$RUNNER_TEMP/rule-evidence/"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-rule-syntax-validated-build
+          path: ${{ runner.temp }}/rule-arms/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Verify all 230 portable bytes and prescribed statuses
+        run: |
+          set -euo pipefail
+          python3 experiments/flash-number1-trials-20261126/lambda-checking/prepare_portable.py
+          python3 experiments/flash-number1-trials-20261126/portable_variants.py \
+            --results experiments/flash-number1-trials-20261126/portable-manifest.json \
+            --fixtures "$RUNNER_TEMP/lambda-portable-inputs/fixtures" \
+            --arm "rule_syntax=$RUNNER_TEMP/rule-arms/rule_syntax.bin" \
+            --out "$RUNNER_TEMP/rule-evidence/portable" --threads 2 --official-timeouts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-rule-syntax-portable
+          path: ${{ runner.temp }}/rule-evidence/
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/lambda-input/mathlib.ndjson
+          key: flash-lambda-exact-mathlib-f749dfd084fc0727d107c7aaded7d492cebfc0b517cfaa7337d8a7578a6c0dec
+          fail-on-cache-miss: true
+      - name: Measure native full Mathlib with frozen original baseline
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y time valgrind
+          lscpu > "$RUNNER_TEMP/rule-evidence/cpu.txt"
+          python3 experiments/flash-number1-trials-20261126/lambda-checking/native_mathlib.py \
+            --protocol experiments/flash-number1-trials-20261126/rule-syntax/protocol.json \
+            --fixture "$RUNNER_TEMP/lambda-input/mathlib.ndjson" \
+            --binaries "$RUNNER_TEMP/rule-arms" --out "$RUNNER_TEMP/rule-evidence/native" --rounds 2
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-rule-syntax-native
+          path: ${{ runner.temp }}/rule-evidence/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Count full Mathlib candidate instructions with matching method
+        run: |
+          set -euo pipefail
+          python3 experiments/flash-number1-trials-20261126/lambda-checking/whole_instructions.py \
+            --arm rule_syntax --build-head "$GITHUB_SHA" \
+            --fixture "$RUNNER_TEMP/lambda-input/mathlib.ndjson" \
+            --binaries "$RUNNER_TEMP/rule-arms" --out "$RUNNER_TEMP/rule-evidence/instructions"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-rule-syntax-instructions
+          path: ${{ runner.temp }}/rule-evidence/
+          if-no-files-found: error
+          retention-days: 30

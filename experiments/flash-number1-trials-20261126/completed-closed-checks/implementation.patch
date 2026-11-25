@@ -1,0 +1,226 @@
+diff --git a/src/env.rs b/src/env.rs
+index 8b5a509..e2f4cc3 100644
+--- a/src/env.rs
++++ b/src/env.rs
+@@ -266,6 +266,8 @@ impl<'x, 'a: 'x> Env<'x, 'a> {
+ 
+     pub fn has_temp_ext(&self) -> bool { self.temp_declars.is_some() }
+ 
++    pub(crate) fn visibility_cutoff(&self) -> usize { self.cutoff }
++
+     /// Get a declaration, only looking in the temporary extension.
+     pub fn get_temp_declar(&self, n: &NamePtr<'a>) -> Option<&Declar<'a>> {
+         self.temp_declars.as_ref().and_then(|ext| ext.get(n))
+diff --git a/src/infer.rs b/src/infer.rs
+index bcdd0b6..7d2bdfb 100644
+--- a/src/infer.rs
++++ b/src/infer.rs
+@@ -115,6 +115,22 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
+             }
+         }
+ 
++        // A completed closed judgement can be replayed only in the same
++        // universe-parameter scope and a persistent environment extending the
++        // one in which it was checked. Inference still computes its type in
++        // the current session; this table never retains semantic values.
++        let completed_key = if flag == Check && !e.is_local() && e.num_loose_bvars() == 0
++            && env.lsub().is_none() && !self.env.has_temp_ext()
++        {
++            self.declar_info.filter(|i| !i.uparams.is_local()).map(|i| (e, i.uparams))
++        } else {
++            None
++        };
++        let replayed = completed_key.is_some_and(|k| self.ctx.checked_closed.get(&k)
++            .is_some_and(|&minimum| minimum <= self.env.visibility_cutoff()));
++        let original_flag = flag;
++        let flag = if replayed { InferOnly } else { flag };
++
+         let r = match self.ctx.read_expr(e) {
+             App { .. } => self.infer_app_v(flag, depth, env, ctx, e),
+             Lambda { binder_type, body, .. } => {
+@@ -166,7 +182,11 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
+             _ => unreachable!(),
+         };
+ 
+-        let checked_under = if flag == Check { scope } else { CheckScope::Unchecked };
++        if let Some(k) = completed_key {
++            let current = self.env.visibility_cutoff();
++            self.ctx.checked_closed.entry(k).and_modify(|m| *m = (*m).min(current)).or_insert(current);
++        }
++        let checked_under = if original_flag == Check { scope } else { CheckScope::Unchecked };
+         self.tc_cache.type_cache.insert(key, CachedType { result: r, checked_under });
+         r
+     }
+diff --git a/src/tests/util.rs b/src/tests/util.rs
+index 65a4652..1733eba 100644
+--- a/src/tests/util.rs
++++ b/src/tests/util.rs
+@@ -48,6 +48,113 @@ pub(crate) fn test_ctx<'p, A>(path: Option<&Path>, f: impl FnOnce(&mut TcCtx) ->
+     test_export_file(path, |export_file| export_file.with_ctx(|ctx, _cache, _arena| f(ctx)))
+ }
+ 
++const CLOSED_FACT_CONFIG: &str = "test_resources/ClosedCheckFacts/config.json";
++
++#[test]
++fn closed_check_facts_survive_value_cache_reset() -> Result<(), Box<dyn Error>> {
++    test_export_file(Some(Path::new(CLOSED_FACT_CONFIG)), |export| {
++        let d = export.declars.get_index(1).unwrap().1;
++        let crate::env::Declar::Definition { val, info, .. } = d else { panic!() };
++        export.with_tc(crate::env::EnvLimit::ByIndex(1), |tc| {
++            tc.declar_info = Some(*info);
++            let first = tc.infer_value(crate::tc::InferFlag::Check, 0, tc.empty_env(), tc.empty_ctx(), *val);
++            assert_eq!(tc.ctx.checked_closed.get(&(*val, info.uparams)), Some(&1));
++            tc.tc_cache.clear();
++            let second = tc.infer_value(crate::tc::InferFlag::Check, 0, tc.empty_env(), tc.empty_ctx(), *val);
++            assert!(tc.conv_types_at(0, first, second));
++        });
++    })
++}
++
++#[test]
++fn infer_only_does_not_authorize_closed_check_replay() -> Result<(), Box<dyn Error>> {
++    test_export_file(Some(Path::new(CLOSED_FACT_CONFIG)), |export| {
++        let crate::env::Declar::Definition { val, info, .. } = export.declars.get_index(1).unwrap().1 else { panic!() };
++        export.with_tc(crate::env::EnvLimit::ByIndex(1), |tc| {
++            tc.declar_info = Some(*info);
++            tc.infer_value(crate::tc::InferFlag::InferOnly, 0, tc.empty_env(), tc.empty_ctx(), *val);
++            assert!(tc.ctx.checked_closed.is_empty());
++        });
++    })
++}
++
++#[test]
++#[should_panic(expected = "universe parameter not declared")]
++fn closed_check_replay_rejects_changed_universe_scope() {
++    test_export_file_should_panic(Some(Path::new(CLOSED_FACT_CONFIG)), |export| {
++        let crate::env::Declar::Definition { val, info, .. } = export.declars.get_index(1).unwrap().1 else { panic!() };
++        export.with_tc(crate::env::EnvLimit::ByIndex(1), |tc| {
++            tc.declar_info = Some(*info);
++            tc.infer_value(crate::tc::InferFlag::Check, 0, tc.empty_env(), tc.empty_ctx(), *val);
++            tc.tc_cache.clear();
++            let empty = tc.ctx.alloc_levels_slice(&[]);
++            tc.declar_info = Some(crate::env::DeclarInfo { uparams: empty, ..*info });
++            tc.infer_value(crate::tc::InferFlag::Check, 0, tc.empty_env(), tc.empty_ctx(), *val);
++        });
++    });
++}
++
++#[test]
++#[should_panic(expected = "unknown const")]
++fn closed_check_replay_rejects_narrower_declaration_visibility() {
++    test_export_file_should_panic(Some(Path::new(CLOSED_FACT_CONFIG)), |export| {
++        let crate::env::Declar::Definition { val, info, .. } = export.declars.get_index(1).unwrap().1 else { panic!() };
++        let visible = export.new_env(crate::env::EnvLimit::ByIndex(1));
++        let hidden = export.new_env(crate::env::EnvLimit::Empty);
++        export.with_ctx(|ctx, cache, arena| {
++            {
++                let mut tc = crate::tc::TypeChecker::new(ctx, &visible, arena, Some(*info), cache);
++                tc.infer_value(crate::tc::InferFlag::Check, 0, tc.empty_env(), tc.empty_ctx(), *val);
++                tc.tc_cache.clear();
++            }
++            let mut tc = crate::tc::TypeChecker::new(ctx, &hidden, arena, Some(*info), cache);
++            tc.infer_value(crate::tc::InferFlag::Check, 0, tc.empty_env(), tc.empty_ctx(), *val);
++        });
++    });
++}
++
++#[test]
++#[should_panic(expected = "expected a pi type")]
++fn closed_check_replay_rejects_temporary_declaration_shadow() {
++    test_export_file_should_panic(Some(Path::new(CLOSED_FACT_CONFIG)), |export| {
++        let first = export.declars.get_index(0).unwrap().1.info();
++        let crate::env::Declar::Definition { val, info, .. } = export.declars.get_index(1).unwrap().1 else { panic!() };
++        let visible = export.new_env(crate::env::EnvLimit::ByIndex(1));
++        export.with_ctx(|ctx, cache, arena| {
++            {
++                let mut tc = crate::tc::TypeChecker::new(ctx, &visible, arena, Some(*info), cache);
++                tc.infer_value(crate::tc::InferFlag::Check, 0, tc.empty_env(), tc.empty_ctx(), *val);
++                tc.tc_cache.clear();
++            }
++            let prop = ctx.prop();
++            let mut ext = crate::util::new_fx_index_map();
++            ext.insert(first.name, crate::env::Declar::Axiom {
++                info: crate::env::DeclarInfo { ty: prop, ..*first },
++            });
++            ctx.with_tc_and_env_ext(&ext, crate::env::EnvLimit::ByIndex(1), arena, cache, |tc| {
++                tc.declar_info = Some(*info);
++                tc.infer_value(crate::tc::InferFlag::Check, 0, tc.empty_env(), tc.empty_ctx(), *val);
++            });
++        });
++    });
++}
++
++#[test]
++fn local_expressions_never_enter_closed_check_facts() -> Result<(), Box<dyn Error>> {
++    test_export_file(Some(Path::new(CLOSED_FACT_CONFIG)), |export| {
++        let info = *export.declars.get_index(1).unwrap().1.info();
++        export.with_tc(crate::env::EnvLimit::ByIndex(1), |tc| {
++            tc.declar_info = Some(info);
++            let prop = tc.ctx.prop();
++            let var0 = tc.ctx.mk_var(0);
++            let term = tc.ctx.mk_lambda(prop, var0);
++            assert!(term.is_local());
++            tc.infer_value(crate::tc::InferFlag::Check, 0, tc.empty_env(), tc.empty_ctx(), term);
++            assert!(tc.ctx.checked_closed.is_empty());
++        });
++    })
++}
++
+ impl<'t, 'p: 't> TcCtx<'t, 'p> {
+     #[cfg(test)]
+     pub(crate) fn level_n(&mut self, mut l: LevelPtr<'t>, n: u64) -> LevelPtr<'t> {
+diff --git a/src/util.rs b/src/util.rs
+index a3396b9..f9e42a8 100644
+--- a/src/util.rs
++++ b/src/util.rs
+@@ -653,6 +653,9 @@ pub struct TcCtx<'t, 'p> {
+     pub(crate) expr_cache: ExprCache<'t>,
+     pub(crate) sig_cache: FxHashMap<(NamePtr<'t>, LevelsPtr<'t>), crate::relevance::Sig>,
+     pub(crate) sig_computing: FxHashSet<(NamePtr<'t>, LevelsPtr<'t>)>,
++    // Completed judgements only: no value or temporary-arena pointer survives
++    // a session reset. Keys are parser-owned closed expressions and uparams.
++    pub(crate) checked_closed: FxHashMap<(ExprPtr<'t>, LevelsPtr<'t>), usize>,
+ }
+ 
+ impl<'t, 'p: 't> TcCtx<'t, 'p> {
+@@ -665,6 +668,7 @@ impl<'t, 'p: 't> TcCtx<'t, 'p> {
+             expr_cache: ExprCache::new(),
+             sig_cache: session_fx_hash_map(),
+             sig_computing: small_fx_hash_set(),
++            checked_closed: small_fx_hash_map(),
+         }
+     }
+ 
+diff --git a/test_resources/ClosedCheckFacts/config.json b/test_resources/ClosedCheckFacts/config.json
+new file mode 100644
+index 0000000..8142e15
+--- /dev/null
++++ b/test_resources/ClosedCheckFacts/config.json
+@@ -0,0 +1,6 @@
++{
++  "export_file_path": "test_resources/ClosedCheckFacts/export",
++  "permitted_axioms": [],
++  "unpermitted_axiom_hard_error": true,
++  "print_success_message": true
++}
+diff --git a/test_resources/ClosedCheckFacts/export b/test_resources/ClosedCheckFacts/export
+new file mode 100644
+index 0000000..00b8577
+--- /dev/null
++++ b/test_resources/ClosedCheckFacts/export
+@@ -0,0 +1,15 @@
++{"meta":{"exporter":{"name":"handcrafted","version":"0.1.0"},"format":{"version":"3.1.0"},"lean":{"version":"4.36.0","githash":"611c117bfaf7b7ae1cfcf246ce6fba31e8f509e9"}}}
++{"in":1,"str":{"pre":0,"str":"u"}}
++{"in":2,"str":{"pre":0,"str":"x"}}
++{"in":3,"str":{"pre":0,"str":"idForFact"}}
++{"in":4,"str":{"pre":0,"str":"useForFact"}}
++{"il":1,"param":1}
++{"ie":0,"sort":1}
++{"ie":1,"bvar":0}
++{"ie":2,"lam":{"binderInfo":"default","body":1,"name":2,"type":0}}
++{"ie":3,"forallE":{"binderInfo":"default","body":0,"name":2,"type":0}}
++{"def":{"all":[3],"hints":"abbrev","levelParams":[1],"name":3,"safety":"safe","type":3,"value":2}}
++{"ie":4,"const":{"name":3,"us":[1]}}
++{"ie":5,"app":{"fn":4,"arg":1}}
++{"ie":6,"lam":{"binderInfo":"default","body":5,"name":2,"type":0}}
++{"def":{"all":[4],"hints":"abbrev","levelParams":[1],"name":4,"safety":"safe","type":3,"value":6}}

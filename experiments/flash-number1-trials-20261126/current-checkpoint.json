@@ -1,16 +1,68 @@
 {
+  "objective": "Get Flash to first on the current official Arena, preserving independent correctness checks and original implementation work",
   "qualified_release": "819d59c34db3fd8f7b790a83f5728f255f75f33e",
-  "candidate_src_tree": "6b5f867d4b371dcf0d7cdfc38d14e4507ba621e1",
-  "candidate_state": "CANDIDATE_PERFORMANCE; WARRANTED_BOUNDED_PORTABLE_230; FULL_MATHLIB_UNKNOWN",
-  "portable_run": 45691028748,
-  "portable_artifact_id": 15057949600,
-  "portable_archive_sha256": "73f9d0911c797eb22ae7d9126b4bd6dbc48c67bd0b46d1eed25eed3d432aa76e",
-  "corrected_mathlib_run": 45692268504,
-  "corrected_mathlib_head": "ba0a6f99a1bb2be3535ebe61bcf4a9a111dff417",
-  "mathlib_performance": "UNKNOWN_RUNNER_SHUTDOWN_DURING_CANDIDATE",
-  "invalidated_full_comparison_run": 45686409325,
-  "superseded_mathlib_run": 45691028748,
-  "superseded_run_state": "cancelled; valid portable subjob preserved",
+  "public_rank": 5,
+  "public_rechecked": "2026-11-26 Pacific/Auckland",
+  "official_mathlib_virtual_s": 155.27608729033332,
+  "leader_mathlib_virtual_s": 65.81410013883334,
+  "required_instruction_reduction": 0.5761478712702559,
+  "native_comparison": {
+    "run": 45700995014,
+    "head": "ae176b7b486366b204a844d321e2a6d8cd3a9e97",
+    "state": "WARRANTED_BOUNDED_FULL_MATHLIB_ACCEPT",
+    "declarations": 739167,
+    "observations": 6,
+    "artifacts_verified": true,
+    "cpu_ratios": {
+      "retained_types": 1.022525877279053,
+      "bidirectional": 1.030924903192141
+    },
+    "instruction_metric": "UNKNOWN: PMU unavailable; dedicated counter run active"
+  },
+  "portable_230": {
+    "retained_types": "WARRANTED_BOUNDED_230/230",
+    "bidirectional": "WARRANTED_BOUNDED_230/230"
+  },
+  "full_instruction_comparison": {
+    "run": 45702828718,
+    "head": "8b2156f2f66313212c8878c14896ebec27281812",
+    "state": "UNKNOWN_RUNNING",
+    "method": "Matched Cachegrind 3.22.0, generic x86-64, one worker; not official score"
+  },
+  "reusable_input": {
+    "artifact": 15063957079,
+    "sha256": "c3d1e08032bbfe2dbfc4c8a84fd711ba83296a47d7468d9ce15988efa4acfa3a",
+    "declarations": 25131,
+    "boundary": "Source-derived 128 MiB prefix, not prescribed Arena test"
+  },
+  "next_candidate": {
+    "name": "rule_syntax",
+    "source": "136bed4a3151e4ddf117980dcb05e242da9c0cbf",
+    "state": "CANDIDATE; 47 library tests and local recovery qualified, remote full qualification pending",
+    "prefix_instruction_ratio": 0.9713166699309577,
+    "decision": "Only exact complete syntax identity permits reusing independently checked imported rule typing; all domains, universe and metadata checks remain. No checker code copied."
+  },
   "promotion": "None; official release unchanged",
-  "corrected_mathlib_job": 139480791270
+  "prior_no_open_memo_checkpoint": {
+    "qualified_release": "819d59c34db3fd8f7b790a83f5728f255f75f33e",
+    "candidate_src_tree": "6b5f867d4b371dcf0d7cdfc38d14e4507ba621e1",
+    "candidate_state": "CANDIDATE_PERFORMANCE; WARRANTED_BOUNDED_PORTABLE_230; FULL_MATHLIB_UNKNOWN",
+    "portable_run": 45691028748,
+    "portable_artifact_id": 15057949600,
+    "portable_archive_sha256": "73f9d0911c797eb22ae7d9126b4bd6dbc48c67bd0b46d1eed25eed3d432aa76e",
+    "corrected_mathlib_run": 45692268504,
+    "corrected_mathlib_head": "ba0a6f99a1bb2be3535ebe61bcf4a9a111dff417",
+    "mathlib_performance": "UNKNOWN_RUNNER_SHUTDOWN_DURING_CANDIDATE",
+    "invalidated_full_comparison_run": 45686409325,
+    "superseded_mathlib_run": 45691028748,
+    "superseded_run_state": "cancelled; valid portable subjob preserved",
+    "promotion": "None; official release unchanged",
+    "corrected_mathlib_job": 139480791270
+  },
+  "parallel_reconciliation": {
+    "head": "20b3b76aab78e4ca9eb468b47a86ac82653cdd11",
+    "tree": "d39a912d2036ba7ca40934502b4c020b0e496651",
+    "state": "EXACT_FOREIGN_TREE_RECONSTRUCTION",
+    "decision": "Preserved complete native-full receipts and richer existing decision; removed own duplicate full-native copy."
+  }
 }

@@ -1,0 +1,82 @@
+[
+  {
+    "arm": "baseline",
+    "name": "perf/ite-taken-branch",
+    "raw_exit": 0,
+    "input_sha256": "6e669aef4f85d584bff3e35cb5a9603e859e1a0c6290a46661560883823d6088",
+    "binary_sha256": "0415d82568447e6a5040f58286b55c3431cc794d567f3667494bd5abd874d2a7",
+    "elapsed_s": 15.655165056999977,
+    "time_raw": "15.64 12.82 2.78 2969648\n",
+    "stderr_tail": ""
+  },
+  {
+    "arm": "rule-syntax",
+    "name": "perf/ite-taken-branch",
+    "raw_exit": 0,
+    "input_sha256": "6e669aef4f85d584bff3e35cb5a9603e859e1a0c6290a46661560883823d6088",
+    "binary_sha256": "4112c16574a66eb5b30034a78ceb2bd910172a1dbb6191f15dcd62aed84e9642",
+    "elapsed_s": 11.478467356999317,
+    "time_raw": "11.47 11.10 0.38 2554328\n",
+    "stderr_tail": ""
+  },
+  {
+    "arm": "baseline",
+    "name": "perf/ite-taken-branch-bad",
+    "raw_exit": 1,
+    "input_sha256": "be58b27c935928b4ae40955da0948088994d4f893c3570a10641d03f3361c909",
+    "binary_sha256": "0415d82568447e6a5040f58286b55c3431cc794d567f3667494bd5abd874d2a7",
+    "elapsed_s": 9.148482786000386,
+    "time_raw": "Command exited with non-zero status 1\n9.14 7.71 1.40 3173488\n",
+    "stderr_tail": "\nthread 'thread_1' (19) panicked at src/infer.rs:281:9:\ndef_eq failed\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'main' (17) panicked at src/tc.rs:213:26:\nA thread in `check_all_declars` panicked while being joined: Any { .. }\n"
+  },
+  {
+    "arm": "rule-syntax",
+    "name": "perf/ite-taken-branch-bad",
+    "raw_exit": 1,
+    "input_sha256": "be58b27c935928b4ae40955da0948088994d4f893c3570a10641d03f3361c909",
+    "binary_sha256": "4112c16574a66eb5b30034a78ceb2bd910172a1dbb6191f15dcd62aed84e9642",
+    "elapsed_s": 7.814441845999681,
+    "time_raw": "Command exited with non-zero status 1\n7.78 7.54 0.23 3158964\n",
+    "stderr_tail": "\nthread 'thread_1' (23) panicked at src/infer.rs:281:9:\ndef_eq failed\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'main' (21) panicked at src/tc.rs:213:26:\nA thread in `check_all_declars` panicked while being joined: Any { .. }\n"
+  },
+  {
+    "arm": "baseline",
+    "name": "perf/short-circuit-and",
+    "raw_exit": 0,
+    "input_sha256": "ab5cb78a88611603f2f2982c5d9a02f8306bcd114cd0329493259e0816793252",
+    "binary_sha256": "0415d82568447e6a5040f58286b55c3431cc794d567f3667494bd5abd874d2a7",
+    "elapsed_s": 9.45840892400156,
+    "time_raw": "9.45 8.93 0.49 2930264\n",
+    "stderr_tail": ""
+  },
+  {
+    "arm": "rule-syntax",
+    "name": "perf/short-circuit-and",
+    "raw_exit": 0,
+    "input_sha256": "ab5cb78a88611603f2f2982c5d9a02f8306bcd114cd0329493259e0816793252",
+    "binary_sha256": "4112c16574a66eb5b30034a78ceb2bd910172a1dbb6191f15dcd62aed84e9642",
+    "elapsed_s": 9.310680939001031,
+    "time_raw": "9.29 8.75 0.51 2929364\n",
+    "stderr_tail": ""
+  },
+  {
+    "arm": "baseline",
+    "name": "perf/gf3-matrix-product",
+    "raw_exit": 0,
+    "input_sha256": "9826fe188e0b5d8b77e41cad188870f25fb07270ec55c65d3b8ff0c41c82a9bc",
+    "binary_sha256": "0415d82568447e6a5040f58286b55c3431cc794d567f3667494bd5abd874d2a7",
+    "elapsed_s": 4.431104096998752,
+    "time_raw": "4.41 3.28 1.09 3952372\n",
+    "stderr_tail": ""
+  },
+  {
+    "arm": "rule-syntax",
+    "name": "perf/gf3-matrix-product",
+    "raw_exit": 0,
+    "input_sha256": "9826fe188e0b5d8b77e41cad188870f25fb07270ec55c65d3b8ff0c41c82a9bc",
+    "binary_sha256": "4112c16574a66eb5b30034a78ceb2bd910172a1dbb6191f15dcd62aed84e9642",
+    "elapsed_s": 3.558758526998645,
+    "time_raw": "3.54 3.26 0.28 3956768\n",
+    "stderr_tail": ""
+  }
+]

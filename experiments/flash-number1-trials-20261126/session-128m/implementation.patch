@@ -1,0 +1,13 @@
+diff --git a/src/tc.rs b/src/tc.rs
+index 4fc3302..d0f1939 100644
+--- a/src/tc.rs
++++ b/src/tc.rs
+@@ -6,7 +6,7 @@ use crate::value::E;
+ 
+ use InferFlag::*;
+ 
+-const SESSION_BUDGET: usize = 16 * 1024 * 1024;
++const SESSION_BUDGET: usize = 128 * 1024 * 1024;
+ 
+ const CHUNK_SIZE: usize = 64;
+ 

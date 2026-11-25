@@ -1,0 +1,114 @@
+diff --git a/src/expr.rs b/src/expr.rs
+index 95eea91..b425818 100644
+--- a/src/expr.rs
++++ b/src/expr.rs
+@@ -14,6 +14,43 @@ pub(crate) const APP_HASH: u64 = 233;
+ pub(crate) const STRING_LIT_HASH: u64 = 1493;
+ pub(crate) const NAT_LIT_HASH: u64 = 1583;
+ 
++// A bounded, sufficient condition for expression identity across the imported
++// and reconstructed arenas. Every semantic field, including lambda domains,
++// participates. Pointer inequality and exhausted work never imply inequality:
++// callers retain the ordinary conversion check on a false result.
++pub(crate) fn same_source_syntax(a: ExprPtr<'_>, b: ExprPtr<'_>, mut budget: usize) -> bool {
++    let mut pending = smallvec::SmallVec::<[(ExprPtr<'_>, ExprPtr<'_>); 16]>::new();
++    pending.push((a, b));
++    while let Some((a, b)) = pending.pop() {
++        if a == b { continue; }
++        if budget == 0 { return false; }
++        budget -= 1;
++        match (*a.as_ref(), *b.as_ref()) {
++            (Var { dbj_idx: a, .. }, Var { dbj_idx: b, .. }) if a == b => {}
++            (Sort { level: a, .. }, Sort { level: b, .. }) if a == b => {}
++            (Const { name: a, levels: u, .. }, Const { name: b, levels: v, .. })
++                if a == b && u.as_ref() == v.as_ref() => {}
++            (NatLit { ptr: a, .. }, NatLit { ptr: b, .. }) if a == b => {}
++            (StringLit { ptr: a, .. }, StringLit { ptr: b, .. }) if a == b => {}
++            (App { fun: a, arg: x, .. }, App { fun: b, arg: y, .. }) => {
++                pending.push((a, b)); pending.push((x, y));
++            }
++            (Pi { binder_type: a, body: x, .. }, Pi { binder_type: b, body: y, .. })
++            | (Lambda { binder_type: a, body: x, .. }, Lambda { binder_type: b, body: y, .. }) => {
++                pending.push((a, b)); pending.push((x, y));
++            }
++            (Proj { ty_name: a, idx: i, structure: x, .. }, Proj { ty_name: b, idx: j, structure: y, .. })
++                if a == b && i == j => pending.push((x, y)),
++            (Let { data: a, .. }, Let { data: b, .. }) if a.nondep == b.nondep => {
++                pending.push((a.binder_type, b.binder_type));
++                pending.push((a.val, b.val)); pending.push((a.body, b.body));
++            }
++            _ => return false,
++        }
++    }
++    true
++}
++
+ #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+ pub enum Expr<'a> {
+     /// A string literal with a pointer to a utf-8 string.
+diff --git a/src/inductive.rs b/src/inductive.rs
+index 9a18918..8f8507d 100644
+--- a/src/inductive.rs
++++ b/src/inductive.rs
+@@ -451,7 +451,8 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
+     fn assert_imported_expr_matches(&mut self, imported: ExprPtr<'t>, reconstructed: ExprPtr<'t>) {
+         self.tc_cache.clear();
+         assert!(
+-            self.def_eq_core(imported, reconstructed),
++            crate::expr::same_source_syntax(imported, reconstructed, 1024)
++                || self.def_eq_core(imported, reconstructed),
+             "imported recursor rule does not match the reconstructed rule"
+         );
+     }
+@@ -1691,7 +1692,6 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
+         // Should be structurally != because they come from different envs.
+         assert_ne!(imported_rr, constructed_rr);
+         assert!(!st.is_nested());
+-        self.tc_cache.clear();
+         assert_eq!(imported_rr.ctor_name, constructed_rr.ctor_name);
+         assert_eq!(imported_rr.ctor_telescope_size_wo_params, constructed_rr.ctor_telescope_size_wo_params);
+         let rr_made_val = self.ctx.subst_expr_levels(constructed_rr.val, st.rec_uparams.unwrap(), old);
+@@ -2272,6 +2272,12 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
+                 self.tc_cache.clear();
+                 let source_ty = self.infer_value(
+                     crate::tc::InferFlag::Check, 0, self.empty_env(), self.empty_ctx(), source.val);
++                // The untrusted rule has just been independently checked.
++                // Exact syntax identity makes the second typing and value
++                // comparison redundant; changed annotations cannot match.
++                if crate::expr::same_source_syntax(source.val, expected, 1024) {
++                    continue;
++                }
+                 let derived_ty = self.infer_value(
+                     crate::tc::InferFlag::Check, 0, self.empty_env(), self.empty_ctx(), expected);
+                 assert!(self.conv_types_at(0, source_ty, derived_ty),
+diff --git a/src/tests/util.rs b/src/tests/util.rs
+index 65a4652..7a2bcc4 100644
+--- a/src/tests/util.rs
++++ b/src/tests/util.rs
+@@ -48,6 +48,26 @@ pub(crate) fn test_ctx<'p, A>(path: Option<&Path>, f: impl FnOnce(&mut TcCtx) ->
+     test_export_file(path, |export_file| export_file.with_ctx(|ctx, _cache, _arena| f(ctx)))
+ }
+ 
++#[test]
++fn reconstructed_syntax_keeps_lambda_domains_and_variable_identity() -> Result<(), Box<dyn Error>> {
++    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        let prop = tc.ctx.prop();
++        let one = tc.ctx.succ(tc.ctx.zero());
++        let universe = tc.ctx.mk_sort(one);
++        let zero = tc.ctx.mk_var(0);
++        let other = tc.ctx.mk_var(1);
++        let source = tc.ctx.mk_lambda(prop, zero);
++        let copied = crate::util::ExprPtr::local(tc.arena.alloc(*source.as_ref()));
++        let forged_domain = tc.ctx.mk_lambda(universe, zero);
++        let forged_body = tc.ctx.mk_lambda(prop, other);
++        assert_ne!(source, copied);
++        assert!(crate::expr::same_source_syntax(source, copied, 8));
++        assert!(!crate::expr::same_source_syntax(source, copied, 0));
++        assert!(!crate::expr::same_source_syntax(source, forged_domain, 8));
++        assert!(!crate::expr::same_source_syntax(source, forged_body, 8));
++    }))
++}
++
+ impl<'t, 'p: 't> TcCtx<'t, 'p> {
+     #[cfg(test)]
+     pub(crate) fn level_n(&mut self, mut l: LevelPtr<'t>, n: u64) -> LevelPtr<'t> {

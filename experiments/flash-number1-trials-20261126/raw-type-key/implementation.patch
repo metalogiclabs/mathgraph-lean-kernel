@@ -1,0 +1,17 @@
+diff --git a/src/infer.rs b/src/infer.rs
+index bcdd0b6..1f99c25 100644
+--- a/src/infer.rs
++++ b/src/infer.rs
+@@ -107,7 +107,11 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
+             App { .. } | Lambda { .. } | Pi { .. } | Let { .. } | Proj { .. } => {}
+         }
+ 
+-        let key = (self.key_env(env, e) as *const value::Env<'t> as usize, e);
++        // Closed terms keep their canonical universe-substitution base.
++        // Open terms use the exact environment, a conservative refinement of
++        // the old projected key; closure capture below remains unchanged.
++        let cache_env = if e.num_loose_bvars() == 0 { self.key_env(env, e) } else { env };
++        let key = (cache_env as *const value::Env<'t> as usize, e);
+         let scope = self.uparam_scope();
+         if let Some(cached) = self.tc_cache.type_cache.get(&key).copied() {
+             if flag == InferOnly || cached.checked_under == scope {
