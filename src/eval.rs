@@ -618,22 +618,8 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
             self.tc_cache.closed_eval_cache.insert(e, v);
             return v;
         }
-        if matches!(
-            self.ctx.read_expr_ref(e),
-            Expr::App { .. } | Expr::Proj { .. } | Expr::Let { .. } | Expr::Pi { .. } | Expr::Lambda { .. }
-        ) {
-            // Full capture is an exact cache key. Retaining unused bindings
-            // trades cross-environment reuse for avoiding a pruning pass here.
-            // Closure construction keeps its independent support projection.
-            let te = env;
-            let key = (te as *const value::Env<'t> as usize, e);
-            if let Some(v) = self.tc_cache.open_eval_cache.get(&key) {
-                return v;
-            }
-            let v = self.eval_no_cache(depth, te, e);
-            self.tc_cache.open_eval_cache.insert(key, v);
-            return v;
-        }
+        // Diagnostic ablation: retain closed evaluation and value interning,
+        // but compute open expressions without their additional memo table.
         self.eval_no_cache(depth, env, e)
     }
 

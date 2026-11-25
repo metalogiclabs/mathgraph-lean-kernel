@@ -39,8 +39,10 @@ def main():
     p.add_argument("--out", required=True, type=Path)
     p.add_argument("--valgrind", default="valgrind")
     p.add_argument("--rounds", type=int, default=1)
+    p.add_argument("--case-timeout", type=int, help="Explicit per-process time limit; default is unchanged")
     a = p.parse_args()
     assert a.rounds > 0
+    assert a.case_timeout is None or a.case_timeout > 0
     a.out.mkdir(parents=True, exist_ok=True)
     manifest = json.loads(a.results.read_text())
     tests = {t["name"]: t for t in manifest["tests"]}
@@ -76,7 +78,7 @@ def main():
                         (a.out / (tag + ".stderr")).open("wb") as stderr:
                     try:
                         completed = subprocess.run(cmd, stdin=inp, stdout=stdout, stderr=stderr,
-                                                   timeout=600 if a.mode == "samples" else 180)
+                                                   timeout=a.case_timeout or (600 if a.mode == "samples" else 180))
                         status = completed.returncode
                     except subprocess.TimeoutExpired:
                         status = "TIMEOUT"

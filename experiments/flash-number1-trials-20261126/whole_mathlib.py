@@ -35,6 +35,9 @@ def main():
     p.add_argument("--out", type=Path, required=True)
     p.add_argument("--time", type=Path, default=Path("/usr/bin/time"))
     p.add_argument("--rounds", type=int, default=2)
+    p.add_argument("--arms", nargs="+", default=["baseline", "call_by_need", "full_environment"])
+    p.add_argument("--process-timeout", type=int, default=4120)
+    p.add_argument("--threads", type=int, default=1)
     a = p.parse_args()
     assert a.rounds > 0
     a.out.mkdir(parents=True, exist_ok=True)
@@ -44,11 +47,14 @@ def main():
     save(a.out / "input-identity.json", {"actual": actual, "expected": expected,
                                        "authority": manifest["authority"]})
     assert actual == expected, "Mathlib bytes differ from the official input"
-    arms = ["baseline", "call_by_need", "full_environment"]
+    arms = a.arms
+    assert arms[0] == "baseline" and len(arms) > 1 and len(set(arms)) == len(arms)
+    assert a.process_timeout > 0
     bins = {arm: (a.binaries / (arm + ".bin")).resolve() for arm in arms}
     save(a.out / "binaries.json", {arm: sha(b) for arm, b in bins.items()})
     config = (a.out / "config.json").resolve()
-    save(config, {"use_stdin": True, "num_threads": 1, "nat_extension": True,
+    assert a.threads > 0
+    save(config, {"use_stdin": True, "num_threads": a.threads, "nat_extension": True,
                   "string_extension": True, "unsafe_permit_all_axioms": True,
                   "unpermitted_axiom_hard_error": False, "parse_only": False,
                   "print_success_message": True, "print_axioms": False})
@@ -77,7 +83,7 @@ def main():
             with a.fixture.open("rb") as inp, stdout.open("wb") as out, stderr.open("wb") as err:
                 proc = subprocess.Popen(cmd, stdin=inp, stdout=out, stderr=err, start_new_session=True)
                 try:
-                    raw = proc.wait(timeout=4120)
+                    raw = proc.wait(timeout=a.process_timeout)
                 except subprocess.TimeoutExpired:
                     os.killpg(proc.pid, signal.SIGKILL)
                     proc.wait()
@@ -102,7 +108,8 @@ def main():
     wrong = [r for r in rows if r["raw_exit"] != 0 or not r["success_message"]]
     summary = {"status": "BOUNDED_NATIVE_DIAGNOSTIC" if not wrong else "FAILED_OR_UNAVAILABLE",
                "observations": len(rows), "wrong_or_unavailable": wrong, "hardware_counter_usable": pmu,
-               "boundary": "Exact full Mathlib, one worker, matched native build. Not complete Arena qualification or an official ranking."}
+               "threads": a.threads, "input_name": manifest["test"]["name"],
+               "boundary": "Native diagnostic on the pinned input, with matched build and worker count. Not complete Arena qualification or an official ranking."}
     if not wrong:
         for metric in ("cpu_s", "instructions_u"):
             if all(metric in r for r in rows):

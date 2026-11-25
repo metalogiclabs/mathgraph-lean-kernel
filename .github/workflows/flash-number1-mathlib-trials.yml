@@ -1,4 +1,4 @@
-name: Flash independent architecture trials on exact Mathlib
+name: Flash open memo ablation on exact Mathlib
 on:
   push:
     branches: [research/flash-number1-trials-20261126]
@@ -9,7 +9,79 @@ on:
 permissions:
   contents: read
 jobs:
+  portable:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      CARGO_INCREMENTAL: 0
+      RUSTFLAGS: -C target-cpu=native
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.99.1'
+      - name: Verify exact candidate source and build
+        run: |
+          set -euxo pipefail
+          OUT="$RUNNER_TEMP/no-memo-portable"
+          mkdir -p "$OUT"
+          python3 - <<'PY'
+          import json, subprocess
+          from pathlib import Path
+          d=json.loads(Path('experiments/flash-number1-trials-20261126/no-open-memo/decision.json').read_text())
+          actual=subprocess.check_output(['git','rev-parse','HEAD:src'],text=True).strip()
+          assert actual==d['src_tree'],(actual,d['src_tree'])
+          PY
+          git rev-parse HEAD > "$OUT/commit.txt"
+          rustc -Vv > "$OUT/compiler.txt"
+          cargo build --release --locked
+          sha256sum target/release/sokonanoda > "$OUT/binary.sha256"
+      - name: Retrieve portable fixtures and enforce pinned bytes
+        run: |
+          set -euxo pipefail
+          curl -fsSL https://arena.lean-lang.org/lean-arena-tests.tar.gz -o "$RUNNER_TEMP/portable.tar.gz"
+          python3 - <<'PY'
+          import hashlib, json, os, tarfile
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP'])
+          manifest=json.loads(Path('experiments/flash-number1-trials-20261126/portable-manifest.json').read_text())
+          tests={t['name']:t for t in manifest['tests']}
+          assert len(tests)==230
+          found=set()
+          with tarfile.open(root/'portable.tar.gz','r:gz') as archive:
+              for member in archive:
+                  if not member.isfile(): continue
+                  parts=Path(member.name).parts
+                  assert len(parts)>=2 and parts[0] in ('good','bad')
+                  assert not any(x in ('..','') for x in parts)
+                  assert member.name.endswith('.ndjson')
+                  name='/'.join(parts[1:])[:-7]
+                  assert name in tests and name not in found
+                  meta=tests[name]
+                  assert meta['outcome']==('accept' if parts[0]=='good' else 'reject')
+                  data=archive.extractfile(member).read()
+                  assert len(data)==meta['size'] and hashlib.sha256(data).hexdigest()==meta['sha256'],name
+                  dest=root/'portable-fixtures'/(name+'.ndjson');dest.parent.mkdir(parents=True,exist_ok=True);dest.write_bytes(data)
+                  found.add(name)
+          assert found==tests.keys()
+          PY
+      - name: Require all 230 prescribed portable statuses with two workers
+        run: |
+          set -euxo pipefail
+          python3 experiments/flash-number1-trials-20261126/portable_variants.py \
+            --results experiments/flash-number1-trials-20261126/portable-manifest.json \
+            --fixtures "$RUNNER_TEMP/portable-fixtures" \
+            --arm "no_open_memo=$PWD/target/release/sokonanoda" \
+            --out "$RUNNER_TEMP/no-memo-portable" --threads 2 --official-timeouts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-no-open-memo-portable-230
+          path: ${{ runner.temp }}/no-memo-portable/
+          if-no-files-found: error
+          retention-days: 30
   matched-mathlib:
+    needs: portable
     runs-on: ubuntu-24.04
     timeout-minutes: 100
     env:
@@ -29,17 +101,15 @@ jobs:
           OUT="$RUNNER_TEMP/mathlib-trial-evidence"
           mkdir -p "$ROOT" "$OUT"
           git worktree add --detach "$ROOT/baseline" ca69e6ab8a3c7b795716128372fdaf67c697b68e
-          git worktree add --detach "$ROOT/call_by_need" ca69e6ab8a3c7b795716128372fdaf67c697b68e
-          git worktree add --detach "$ROOT/full_environment" ca69e6ab8a3c7b795716128372fdaf67c697b68e
-          git -C "$ROOT/call_by_need" apply "$GITHUB_WORKSPACE/experiments/flash-number1-trials-20261126/call-by-need/implementation.patch"
-          git -C "$ROOT/full_environment" apply "$GITHUB_WORKSPACE/experiments/flash-number1-trials-20261126/raw-environment/implementation.patch"
+          git worktree add --detach "$ROOT/no_open_memo" ca69e6ab8a3c7b795716128372fdaf67c697b68e
+          git -C "$ROOT/no_open_memo" apply "$GITHUB_WORKSPACE/experiments/flash-number1-trials-20261126/no-open-memo/implementation.patch"
           python3 - <<'PY'
           import json, os, subprocess
           from pathlib import Path
           root = Path(os.environ['RUNNER_TEMP']) / 'mathlib-trial-arms'
           out = Path(os.environ['RUNNER_TEMP']) / 'mathlib-trial-evidence'
           rows = []
-          for arm, directory in [('baseline', None), ('call_by_need', 'call-by-need'), ('full_environment', 'raw-environment')]:
+          for arm, directory in [('baseline', None), ('no_open_memo', 'no-open-memo')]:
               worktree = root / arm
               subprocess.run(['git','add','src'],cwd=worktree,check=True)
               tree = subprocess.check_output(['git','write-tree'],cwd=worktree,text=True).strip()
@@ -57,14 +127,20 @@ jobs:
           rustc -Vv > "$OUT/compiler.txt"
           lscpu > "$OUT/cpu.txt"
           printf '%s\n' "$RUSTFLAGS" > "$OUT/build-flags.txt"
-          for arm in baseline call_by_need full_environment; do
+          for arm in baseline no_open_memo; do
             cargo test --locked --manifest-path "$ROOT/$arm/Cargo.toml" --target-dir "$RUNNER_TEMP/shared-test-target" 2>&1 | tee "$OUT/$arm-tests.log"
             cargo build --release --locked --manifest-path "$ROOT/$arm/Cargo.toml" --target-dir "$RUNNER_TEMP/shared-build-target" 2>&1 | tee "$OUT/$arm-build.log"
             cp "$RUNNER_TEMP/shared-build-target/release/sokonanoda" "$ROOT/$arm.bin"
           done
           rm -rf "$RUNNER_TEMP/shared-test-target" "$RUNNER_TEMP/shared-build-target"
           sha256sum "$ROOT/"*.bin > "$OUT/binaries.sha256"
+      - uses: actions/cache@v4
+        id: mathlib_input
+        with:
+          path: ${{ runner.temp }}/mathlib-trial-input/mathlib.ndjson
+          key: flash-exact-mathlib-f749dfd084fc0727d107c7aaded7d492cebfc0b517cfaa7337d8a7578a6c0dec
       - name: Prepare pinned official export recipe
+        if: steps.mathlib_input.outputs.cache-hit != 'true'
         run: |
           set -euxo pipefail
           A="$RUNNER_TEMP/arena-source"
@@ -78,23 +154,26 @@ jobs:
           curl -fsSL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none
           echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
       - name: Regenerate exact full Mathlib
+        if: steps.mathlib_input.outputs.cache-hit != 'true'
         run: |
           set -euxo pipefail
           cd "$RUNNER_TEMP/arena-source"
           "$RUNNER_TEMP/arena-venv/bin/python" lka.py build-test mathlib 2>&1 | tee "$RUNNER_TEMP/mathlib-trial-evidence/mathlib-export.log"
           cp _build/tests/mathlib.stats.json "$RUNNER_TEMP/mathlib-trial-evidence/exporter-stats.json"
-      - name: Compare all three native arms with alternating order
+          mkdir -p "$RUNNER_TEMP/mathlib-trial-input"
+          mv _build/tests/mathlib.ndjson "$RUNNER_TEMP/mathlib-trial-input/mathlib.ndjson"
+      - name: Compare both native arms with alternating order
         run: |
           set -euxo pipefail
           python3 experiments/flash-number1-trials-20261126/whole_mathlib.py \
-            --fixture "$RUNNER_TEMP/arena-source/_build/tests/mathlib.ndjson" \
+            --fixture "$RUNNER_TEMP/mathlib-trial-input/mathlib.ndjson" \
             --binaries "$RUNNER_TEMP/mathlib-trial-arms" \
             --out "$RUNNER_TEMP/mathlib-trial-evidence/comparison" \
-            --rounds 2
+            --rounds 2 --arms baseline no_open_memo --process-timeout 900 --threads 2
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: flash-number1-native-mathlib-trials
+          name: flash-number1-no-open-memo-mathlib
           path: ${{ runner.temp }}/mathlib-trial-evidence/
           if-no-files-found: error
           retention-days: 30

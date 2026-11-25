@@ -22,6 +22,16 @@
     },
     "wrong_or_unavailable": []
   },
-  "qualification": "All five positive comparison cases accepted; no broad portable or full-Mathlib qualification.",
-  "authorship": "Independent full-environment key experiment; no competitor code copied."
+  "qualification": "Later portable trial recorded separately: exclusions remain UNKNOWN. No complete 240-case qualification.",
+  "authorship": "Independent full-environment key experiment; no competitor code copied.",
+  "later_portable_qualification": {
+    "attempted": 228,
+    "correct": 228,
+    "excluded_unknown": [
+      "perf/magma-list-deep-n36",
+      "perf/magma-list-pair-n21"
+    ],
+    "wrong_or_unavailable": [],
+    "receipts": "../architecture-portable/"
+  }
 }

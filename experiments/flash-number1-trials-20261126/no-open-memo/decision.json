@@ -1,0 +1,57 @@
+{
+  "status": "CANDIDATE; REPEATED_SMALL_COST_GATE_AND_BOUNDED_PORTABLE_PASSED",
+  "baseline": "819d59c34db3fd8f7b790a83f5728f255f75f33e",
+  "local_commit": "bc339d2548d1f20d78cc7a7a989fb3e90cec27aa",
+  "src_tree": "6b5f867d4b371dcf0d7cdfc38d14e4507ba621e1",
+  "patch_base_published": "ca69e6ab8a3c7b795716128372fdaf67c697b68e",
+  "patch_sha256": "ac2f24e0abf03540272ad48c68475254dd16350c66b2f11c12db32f51c31d0b3",
+  "mechanism": "Ablate the additional open-expression evaluation cache and its key projection. Retain closed evaluation caching, closure support projection, value interning and all type-checking guards.",
+  "red_control_lineage": "Reuses full-environment trial\u2019s failing baseline frame-allocation control, on identical baseline source and identical test body. The ablation passes that control.",
+  "unit_library_pass": 47,
+  "integration_note": "Unconfigured integration test, not corpus qualification. Four ignored doctests.",
+  "first_cost_trial": {
+    "boundary": "Raw process status; software guest instructions are not an official Arena score.",
+    "geomean_ratio": 0.987744216794429,
+    "observations": 10,
+    "passes_1_percent_gate": true,
+    "ratios": {
+      "init-prelude": 0.9691638350247265,
+      "perf/fueled-chain": 1.3027521928829537,
+      "perf/grind-ring-5": 0.9766103422702009,
+      "perf/magma-list-deep-n21": 1.0203689273988878,
+      "perf/magma-list-pair-n7": 0.747282688009942
+    },
+    "wrong_or_unavailable": []
+  },
+  "counter_boundary": "One observation per arm and case, generic x86-64 software guest instructions. Explicit 60-second process cap.",
+  "tradeoff": "Magma pair n7 about 25% fewer instructions; fueled chain about 30% more. This is not a general speedup or a ranking claim.",
+  "authorship": "Independently authored ablation; no competitor implementation copied.",
+  "repeated_cost_trial": {
+    "boundary": "Raw process status; software guest instructions are not an official Arena score.",
+    "geomean_ratio": 0.9875250050252709,
+    "observations": 20,
+    "passes_1_percent_gate": true,
+    "ratios": {
+      "init-prelude": 0.9691271182807736,
+      "perf/fueled-chain": 1.3025572885253285,
+      "perf/grind-ring-5": 0.9762768898332811,
+      "perf/magma-list-deep-n21": 1.0192649881849245,
+      "perf/magma-list-pair-n7": 0.7476577008419509
+    },
+    "wrong_or_unavailable": []
+  },
+  "repeat_boundary": "Two observations per arm and input in an additional paired run with order reversed in the second round. All 20 accepted; same large workload tradeoff remains.",
+  "portable": {
+    "boundary": "Raw status on attempted portable inputs. Explicit exclusions remain unknown. No ten-large-input qualification.",
+    "no_open_memo": {
+      "attempted": 228,
+      "correct": 228,
+      "excluded_unknown": [
+        "perf/magma-list-deep-n36",
+        "perf/magma-list-pair-n21"
+      ],
+      "wrong_or_unavailable": []
+    }
+  },
+  "promotion_boundary": "Full all-230 native two-worker and exact full-Mathlib comparison pending. Two locally excluded common SIGKILL cases remain unknown here. No release promotion."
+}
