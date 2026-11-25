@@ -1,0 +1,112 @@
+name: Flash current Arena recovery (portable and full Mathlib)
+on:
+  push:
+    branches:
+      - research/flash-current-arena-recovery-20261125
+    paths:
+      - .github/workflows/flash-current-arena-recovery.yml
+      - experiments/flash-current-arena-20261125/recovery.py
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  recovery:
+    name: Current Arena ${{ matrix.mode }} replay
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [portable, mathlib]
+    env:
+      CARGO_INCREMENTAL: 0
+      CARGO_TERM_COLOR: always
+      RUSTFLAGS: -C target-cpu=native
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build three source-pinned checker arms
+        run: |
+          set -euxo pipefail
+          ROOT="$RUNNER_TEMP/flash-arms"
+          OUT="$RUNNER_TEMP/arena-evidence"
+          mkdir -p "$ROOT" "$OUT"
+          git worktree add --detach "$ROOT/published" 78c7502bac8a5ba000057b3f083bc0595ac65750
+          git worktree add --detach "$ROOT/stack" 6c2889330be236b3bc063b3415de6e9af65ecfe1
+          git init "$ROOT/soko"
+          git -C "$ROOT/soko" remote add origin https://github.com/intgrah/sokonanoda.git
+          git -C "$ROOT/soko" fetch --depth 1 origin 9a021b66f804a1d1df68a981337c67413ef72f6b
+          git -C "$ROOT/soko" checkout --detach FETCH_HEAD
+          test "$(git -C "$ROOT/published" rev-parse HEAD)" = 78c7502bac8a5ba000057b3f083bc0595ac65750
+          test "$(git -C "$ROOT/stack" rev-parse HEAD)" = 6c2889330be236b3bc063b3415de6e9af65ecfe1
+          test "$(git -C "$ROOT/soko" rev-parse HEAD)" = 9a021b66f804a1d1df68a981337c67413ef72f6b
+          {
+            git rev-parse HEAD
+            rustc -Vv
+            cargo -V
+            uname -a
+            lscpu
+          } > "$OUT/environment.txt"
+          for arm in published stack soko; do
+            (
+              cd "$ROOT/$arm"
+              git rev-parse HEAD
+              cargo build --release --locked
+              sha256sum target/release/sokonanoda
+            ) 2>&1 | tee "$OUT/build-$arm.log"
+          done
+      - name: Replay every prescribed portable export against the same oracle
+        if: matrix.mode == 'portable'
+        run: |
+          set -euo pipefail
+          python3 experiments/flash-current-arena-20261125/recovery.py portable \
+            --out "$RUNNER_TEMP/arena-evidence" --root "$RUNNER_TEMP/flash-arms"
+      - name: Prepare exact official Mathlib export recipe
+        if: matrix.mode == 'mathlib'
+        run: |
+          set -euxo pipefail
+          A="$RUNNER_TEMP/arena-source"
+          git init "$A"
+          git -C "$A" remote add origin https://github.com/leanprover/lean-kernel-arena.git
+          git -C "$A" fetch --depth 1 origin 99195b6b009bc3df2c946ddbcfa4a2ab1eb40350
+          git -C "$A" checkout --detach FETCH_HEAD
+          test "$(git -C "$A" rev-parse HEAD)" = 99195b6b009bc3df2c946ddbcfa4a2ab1eb40350
+          cp "$A/tests/mathlib.yaml" "$RUNNER_TEMP/arena-evidence/mathlib-recipe.yaml"
+          python3 -m venv "$RUNNER_TEMP/arena-venv"
+          "$RUNNER_TEMP/arena-venv/bin/pip" install jinja2 jsonschema markdown pyyaml
+          curl -fsSL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          df -h
+      - name: Regenerate Mathlib using official pinned recipe
+        if: matrix.mode == 'mathlib'
+        run: |
+          set -euxo pipefail
+          cd "$RUNNER_TEMP/arena-source"
+          "$RUNNER_TEMP/arena-venv/bin/python" lka.py build-test mathlib \
+            2>&1 | tee "$RUNNER_TEMP/arena-evidence/mathlib-export.log"
+          test -s _build/tests/mathlib.ndjson
+          cp _build/tests/mathlib.stats.json "$RUNNER_TEMP/arena-evidence/regenerated-mathlib.stats.json"
+          df -h
+      - name: Match exact current Mathlib bytes and compare checker arms
+        if: matrix.mode == 'mathlib'
+        run: |
+          set -euo pipefail
+          python3 experiments/flash-current-arena-20261125/recovery.py mathlib \
+            --out "$RUNNER_TEMP/arena-evidence" --root "$RUNNER_TEMP/flash-arms" \
+            --mathlib "$RUNNER_TEMP/arena-source/_build/tests/mathlib.ndjson"
+      - name: Preserve positive, negative, and partial evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flash-current-arena-${{ matrix.mode }}
+          path: |
+            ${{ runner.temp }}/arena-evidence/*.json
+            ${{ runner.temp }}/arena-evidence/*.txt
+            ${{ runner.temp }}/arena-evidence/*.yaml
+            ${{ runner.temp }}/arena-evidence/*.log
+            ${{ runner.temp }}/arena-evidence/logs/
+          if-no-files-found: error
+          retention-days: 30
