@@ -1,0 +1,92 @@
+name: Flash exact closed and open huge shift prefix discriminator
+on:
+  push:
+    branches: [research/flash-current-arena-open-shift-20261125]
+    paths: [.github/workflows/flash-arena-open-shift.yml, src/eval.rs]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  shift:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: 0
+      RUSTFLAGS: -C target-cpu=native
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build exact combined base and open-shift candidate
+        run: |
+          set -euxo pipefail
+          OUT="$RUNNER_TEMP/open-shift-evidence"
+          mkdir -p "$OUT"
+          git rev-parse HEAD > "$OUT/commit.txt"
+          git diff --stat 1da3013ce6396199d1f81e1884f7f60ce6963cea -- src
+          git worktree add --detach "$RUNNER_TEMP/combined-base" 1da3013ce6396199d1f81e1884f7f60ce6963cea
+          cargo build --release --locked
+          cargo build --release --locked --manifest-path "$RUNNER_TEMP/combined-base/Cargo.toml"
+          sha256sum target/release/sokonanoda "$RUNNER_TEMP/combined-base/target/release/sokonanoda" > "$OUT/binaries.txt"
+      - name: Exact original source prefixes and matched full-input negative controls
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY'
+          import hashlib,importlib.util,json,os,subprocess,time
+          from pathlib import Path
+          spec=importlib.util.spec_from_file_location("recovery",Path("experiments/flash-current-arena-20261125/recovery.py"))
+          m=importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(m)
+          out=Path(os.environ["RUNNER_TEMP"])/"open-shift-evidence"
+          tests=m.source_manifest(out)
+          fixtures=m.unpack_portable(out,tests)
+          cfg=m.config(out)
+          raw=fixtures["bugs/nat-shift-huge"].read_bytes()
+          assert hashlib.sha256(raw).hexdigest()=="e00dfce17f87da4e5e77b7a648b6a789d4b3e959b6a30f6ac4c9bac1a9ab4774"
+          wanted=["natShiftRightHuge","natShiftLeftZeroHuge","natShiftRightHugeOpen","natShiftLeftZeroHugeOpen"]
+          names={0:""}
+          parts=raw.splitlines(keepends=True)
+          cases={}
+          for i,line in enumerate(parts):
+              r=json.loads(line)
+              if "in" in r:
+                  n=r.get("str",r.get("num",{}))
+                  parent=names[n["pre"]]
+                  names[r["in"]]=(parent+"." if parent else "")+str(n.get("str",n.get("i")))
+              if "thm" in r:
+                  name=names[r["thm"]["name"]]
+                  if name in wanted:
+                      cases[name]=b"".join(parts[:i+1])
+          assert list(cases)==wanted
+          cases["full-original"]=raw
+          cases["protected-invalid-nested-rule"]=fixtures["bugs/rec-rule-proof-irrel-nested"].read_bytes()
+          bins={"base":Path(os.environ["RUNNER_TEMP"])/"combined-base/target/release/sokonanoda",
+                "candidate":Path("target/release/sokonanoda").resolve()}
+          rows=[]
+          for name,data in cases.items():
+              for arm,bin in bins.items():
+                  start=time.monotonic()
+                  try:
+                      p=subprocess.run([str(bin),str(cfg)],input=data,capture_output=True,timeout=35)
+                      rc=p.returncode; err=p.stderr.decode(errors="replace")[-1500:]
+                  except subprocess.TimeoutExpired as e:
+                      rc="TIMEOUT"; err=(e.stderr or b"").decode(errors="replace")[-1500:]
+                  row={"case":name,"arm":arm,"exit":rc,"expected":1 if name=="protected-invalid-nested-rule" else 0,
+                       "source_sha256":hashlib.sha256(data).hexdigest(),"elapsed":round(time.monotonic()-start,4),"stderr":err}
+                  rows.append(row)
+                  m.dump(out/"shift-prefix-rows.json",rows)
+                  print("SHIFT_PREFIX",json.dumps(row),flush=True)
+          candidate=[r for r in rows if r["arm"]=="candidate"]
+          assert len(candidate)==6 and all(r["exit"]==r["expected"] for r in candidate)
+          print("SHIFT_PREFIX_GATE_PASS",flush=True)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-open-shift-evidence
+          path: |
+            ${{ runner.temp }}/open-shift-evidence/*.json
+            ${{ runner.temp }}/open-shift-evidence/*.txt
+          if-no-files-found: error
