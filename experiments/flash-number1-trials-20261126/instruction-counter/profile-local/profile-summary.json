@@ -1,0 +1,135 @@
+{
+  "state": "WARRANTED_BOUNDED_COMPILED_FUNCTION_PROFILE",
+  "total": 10218488347,
+  "blocks": 35858,
+  "top": [
+    {
+      "function": "<sokonanoda::checker::tc::TypeChecker>::eval_no_cache",
+      "instructions": 1581376062,
+      "share": 0.15475636007005567
+    },
+    {
+      "function": "<sokonanoda::checker::tc::TypeChecker>::infer_nonvar",
+      "instructions": 1355456033,
+      "share": 0.13264741192350063
+    },
+    {
+      "function": "<sokonanoda::checker::tc::TypeChecker>::eval_node",
+      "instructions": 1171310970,
+      "share": 0.11462663852270086
+    },
+    {
+      "function": "<sokonanoda::checker::tc::TypeChecker>::prune_env_cold",
+      "instructions": 998745178,
+      "share": 0.09773903380662141
+    },
+    {
+      "function": "<sokonanoda::checker::value::Vals>::intern_frame",
+      "instructions": 556199273,
+      "share": 0.05443068036215866
+    },
+    {
+      "function": "shared libraries",
+      "instructions": 452711619,
+      "share": 0.04430318885013061
+    },
+    {
+      "function": "<sokonanoda::frontend::parser::Parser>::run_over",
+      "instructions": 394977708,
+      "share": 0.038653242494126806
+    },
+    {
+      "function": "<sokonanoda::checker::value::Vals>::app_new",
+      "instructions": 282200772,
+      "share": 0.02761668481843991
+    },
+    {
+      "function": "<sokonanoda::checker::value::Vals>::intern",
+      "instructions": 275733016,
+      "share": 0.026983738360963266
+    },
+    {
+      "function": "<sokonanoda::checker::value::Vals>::env_new",
+      "instructions": 230774557,
+      "share": 0.022584021154924746
+    },
+    {
+      "function": "<sokonanoda::frontend::parser::Parser>::other_line",
+      "instructions": 227958561,
+      "share": 0.022308442624678956
+    },
+    {
+      "function": "<sokonanoda::checker::tc::TypeChecker>::apply_many",
+      "instructions": 195011947,
+      "share": 0.01908422658790355
+    },
+    {
+      "function": "<sokonanoda::checker::tc::TypeChecker>::apply_new",
+      "instructions": 186630460,
+      "share": 0.018263998906921687
+    },
+    {
+      "function": "<sokonanoda::checker::tc::TypeChecker>::unify_general::<true>",
+      "instructions": 177075108,
+      "share": 0.01732889464535982
+    },
+    {
+      "function": "<sokonanoda::frontend::parser::Parser>::do_app",
+      "instructions": 158503689,
+      "share": 0.015511461540838805
+    },
+    {
+      "function": "<sokonanoda::checker::value::Vals>::spine_split",
+      "instructions": 158367516,
+      "share": 0.015498135401455383
+    },
+    {
+      "function": "<sokonanoda::checker::tc::TypeChecker>::unify_direct::<true>",
+      "instructions": 145066329,
+      "share": 0.014196456860724353
+    },
+    {
+      "function": "<sokonanoda::checker::tc::TypeChecker>::unfold_value_go",
+      "instructions": 124879102,
+      "share": 0.012220897823567289
+    },
+    {
+      "function": "<sokonanoda::term::intern::Interner<sokonanoda::term::expr::ExprNode>>::intern",
+      "instructions": 100752920,
+      "share": 0.009859865430054494
+    },
+    {
+      "function": "<sokonanoda::checker::tc::TypeChecker>::apply_closure",
+      "instructions": 85451192,
+      "share": 0.008362410280096589
+    },
+    {
+      "function": "<sokonanoda::checker::tc::TypeChecker>::const_head_type",
+      "instructions": 79976439,
+      "share": 0.007826640916362147
+    },
+    {
+      "function": "<sokonanoda::checker::tc::TypeChecker>::sig_of",
+      "instructions": 50801481,
+      "share": 0.004971526049145476
+    },
+    {
+      "function": "<sokonanoda::term::intern::Interner<sokonanoda::term::level::Level>>::find::<sokonanoda::term::level::Level>",
+      "instructions": 48519410,
+      "share": 0.004748198398077598
+    },
+    {
+      "function": "<sokonanoda::checker::tc::TypeChecker>::unify_spine::<true>",
+      "instructions": 46435983,
+      "share": 0.004544310412961711
+    },
+    {
+      "function": "<sokonanoda::checker::tc::TypeChecker>::fire_recursor",
+      "instructions": 44933349,
+      "share": 0.0043972598954122
+    }
+  ],
+  "boundary": "Basic-block instruction frequencies, not hardware retirement. Compiled-function attribution includes inlined callees. REP and asynchronous-interruption limits apply.",
+  "complete_local_profile_sha256": "39094cdd744c711f5cab8cab0b67671b4c3efb9c00d7559252bc8bd092130808",
+  "retained_function_rows": 25
+}

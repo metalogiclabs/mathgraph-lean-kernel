@@ -1,0 +1,76 @@
+   Compiling libc v0.2.180
+   Compiling proc-macro2 v1.0.103
+   Compiling autocfg v1.1.0
+   Compiling unicode-ident v1.0.12
+   Compiling cfg-if v1.0.0
+   Compiling serde_core v1.0.228
+   Compiling find-msvc-tools v0.1.9
+   Compiling shlex v2.0.1
+   Compiling readme-rustdocifier v0.1.1
+   Compiling semver v1.0.27
+   Compiling serde v1.0.228
+   Compiling ppv-lite86 v0.2.17
+   Compiling cc v1.4.0
+   Compiling rustc_version v0.4.1
+   Compiling equivalent v1.0.1
+   Compiling serde_json v1.0.145
+   Compiling num-traits v0.2.17
+   Compiling num-bigint v0.4.4
+   Compiling itoa v1.0.15
+   Compiling ryu v1.0.20
+   Compiling stumpalo v0.5.1
+   Compiling memchr v2.7.6
+   Compiling foldhash v0.2.0
+   Compiling quote v1.0.35
+   Compiling allocator-api2 v0.2.21
+   Compiling hashbrown v0.16.1
+   Compiling syn v2.0.111
+   Compiling getrandom v0.2.11
+   Compiling memmap2 v0.9.11
+   Compiling hashbrown v0.17.1
+   Compiling rand_core v0.6.4
+   Compiling num-integer v0.1.46
+   Compiling libmimalloc-sys v0.1.49
+   Compiling rand_chacha v0.3.1
+   Compiling indexmap v2.13.0
+   Compiling smallvec v1.15.2
+   Compiling rand v0.8.5
+   Compiling bumpalo v3.20.3
+   Compiling rustc-hash v1.1.0
+   Compiling serde_derive v1.0.228
+   Compiling mimalloc v0.1.52
+   Compiling sokonanoda v0.5.0 (/workspace/scratch/0d6c79089c5b/flash-value-subst)
+warning: constant `PROMOTED_CAPABILITY_IDS` is never used
+  --> src/flash.rs:11:18
+   |
+11 | pub(crate) const PROMOTED_CAPABILITY_IDS: &[&str] = &[
+   |                  ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `sokonanoda` (lib test) generated 1 warning
+    Finished `test` profile [optimized + debuginfo] target(s) in 12.61s
+     Running unittests src/lib.rs (target/debug/deps/sokonanoda-49c2c57d17b9578b)
+
+running 6 tests
+test tests::util::substituted_type_uses_semantic_levels_across_let_aliases ... ok
+test tests::util::substituted_types_do_not_admit_undeclared_universe_parameters - should panic ... ok
+test tests::util::substituted_types_still_check_lambda_annotation_wellformedness - should panic ... ok
+test tests::util::substituted_type_captures_variables_visible_only_in_the_result_type ... ok
+test tests::util::substituted_dependent_lambda_type_substitutes_distinct_arguments ... FAILED
+test tests::util::substituted_types_still_check_the_original_lambda_body - should panic ... ok
+
+failures:
+
+---- tests::util::substituted_dependent_lambda_type_substitutes_distinct_arguments stdout ----
+
+thread 'tests::util::substituted_dependent_lambda_type_substitutes_distinct_arguments' (849) panicked at src/eval.rs:1032:36:
+apply_closure: infer closure without a binder type
+
+
+failures:
+    tests::util::substituted_dependent_lambda_type_substitutes_distinct_arguments
+
+test result: FAILED. 5 passed; 1 failed; 0 ignored; 0 measured; 52 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `--lib`

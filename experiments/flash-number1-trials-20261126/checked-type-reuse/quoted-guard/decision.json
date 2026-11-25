@@ -1,0 +1,18 @@
+{
+  "name": "quoted-guard",
+  "arm": "quoted_guard",
+  "state": "REJECTED_PERFORMANCE_PREFIX",
+  "source_local_commit": "cc00968ce2db385cafd3cb85f184f698c40bbcc9",
+  "src_tree": "6b459947a97826fb680c416ea029bd0b00961b9c",
+  "base_fixture_commit": "ca69e6ab8a3c7b795716128372fdaf67c697b68e",
+  "base_src_tree": "623a8575bbe54541e0be6217394336f4c2727994",
+  "patch_sha256": "03b78319685079c50e4b59dc0d8289e389f63e6396282e7403f2aa608781aa3b",
+  "library_tests": 52,
+  "binary_sha256": "56c85cccd2a5cb5687c75af975b7bd8c51e172e4d0b3d95a9f7f1ecaf5ccbf7b",
+  "prefix_instruction_ratio": 1.133640242287238,
+  "input_sha256": "c3d1e08032bbfe2dbfc4c8a84fd711ba83296a47d7468d9ce15988efa4acfa3a",
+  "declarations": 25131,
+  "full_mathlib": "NOT_RUN",
+  "arena_promotion": "NONE",
+  "boundary": "One paired Cachegrind diagnostic on the exact source-derived 25,131-declaration prefix. Library checks and diagnostic acceptance are bounded evidence; no full-Mathlib or Arena speedup claim."
+}

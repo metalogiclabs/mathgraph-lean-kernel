@@ -1,0 +1,81 @@
+diff --git a/src/eval.rs b/src/eval.rs
+index 2e4c877..43a65f5 100644
+--- a/src/eval.rs
++++ b/src/eval.rs
+@@ -50,7 +50,17 @@ enum ForceStep<'a> {
+ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
+     #[inline]
+     pub(crate) fn mk_bvar_hc(&mut self, level: u32, ty: V<'t>) -> V<'t> {
+-        let key = (level, ty as *const Value<'t> as usize);
++        const _: () = assert!(std::mem::align_of::<Value<'static>>() >= 2);
++        // Sorts with the very same level are the same type even when their
++        // value nodes were allocated separately. Odd keys identify that exact
++        // level; ordinary aligned value pointers keep the disjoint even space.
++        // Preserve the old identity policy in replacement namespaces.
++        let ty_key = match ty {
++            Value::Sort { level: universe, .. } if !self.env.has_temp_ext() =>
++                (universe.as_ref() as *const crate::level::Level<'t> as usize) | 1,
++            _ => ty as *const Value<'t> as usize,
++        };
++        let key = (level, ty_key);
+         if let Some(v) = self.tc_cache.bvar_hc.get(&key) {
+             return v;
+         }
+diff --git a/src/tests/util.rs b/src/tests/util.rs
+index 65a4652..d036795 100644
+--- a/src/tests/util.rs
++++ b/src/tests/util.rs
+@@ -48,6 +48,53 @@ pub(crate) fn test_ctx<'p, A>(path: Option<&Path>, f: impl FnOnce(&mut TcCtx) ->
+     test_export_file(path, |export_file| export_file.with_ctx(|ctx, _cache, _arena| f(ctx)))
+ }
+ 
++#[test]
++fn fresh_variables_share_exact_sort_levels_across_value_allocations() -> Result<(), Box<dyn Error>> {
++    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        let level = tc.ctx.succ(tc.ctx.zero());
++        let a = crate::value::mk_sort(tc.arena, level);
++        let b = crate::value::mk_sort(tc.arena, level);
++        assert!(!std::ptr::eq(a, b));
++        let x = tc.mk_bvar_hc(0, a);
++        let y = tc.mk_bvar_hc(0, b);
++        assert!(std::ptr::eq(x, y));
++        let inferred = tc.value_type(0, x);
++        assert!(tc.conv_types_at(0, inferred, a));
++    }))
++}
++
++#[test]
++fn fresh_variables_keep_universe_and_non_sort_type_distinctions() -> Result<(), Box<dyn Error>> {
++    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        let zero = tc.ctx.zero();
++        let one = tc.ctx.succ(zero);
++        let prop = crate::value::mk_sort(tc.arena, zero);
++        let universe = crate::value::mk_sort(tc.arena, one);
++        let p = tc.mk_bvar_hc(0, prop);
++        let a = tc.mk_bvar_hc(0, universe);
++        assert!(!std::ptr::eq(p, a));
++        let b = tc.mk_bvar_hc(1, universe);
++        let x = tc.mk_bvar_hc(2, a);
++        let y = tc.mk_bvar_hc(2, b);
++        assert!(!std::ptr::eq(x, y));
++    }))
++}
++
++#[test]
++fn fresh_sort_variable_sharing_is_disabled_in_replacement_namespaces() -> Result<(), Box<dyn Error>> {
++    test_export_file(None, |export| export.with_ctx(|ctx, cache, arena| {
++        let extension = crate::util::new_fx_index_map();
++        ctx.with_tc_and_env_ext(&extension, crate::env::EnvLimit::Empty, arena, cache, |tc| {
++            let level = tc.ctx.succ(tc.ctx.zero());
++            let a = crate::value::mk_sort(tc.arena, level);
++            let b = crate::value::mk_sort(tc.arena, level);
++            let x = tc.mk_bvar_hc(0, a);
++            let y = tc.mk_bvar_hc(0, b);
++            assert!(!std::ptr::eq(x, y));
++        });
++    }))
++}
++
+ impl<'t, 'p: 't> TcCtx<'t, 'p> {
+     #[cfg(test)]
+     pub(crate) fn level_n(&mut self, mut l: LevelPtr<'t>, n: u64) -> LevelPtr<'t> {

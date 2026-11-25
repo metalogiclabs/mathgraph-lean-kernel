@@ -1,0 +1,77 @@
+name: Flash reconciled compiled-function instruction profile
+on:
+  push:
+    branches: [research/flash-lambda-checking-20261126]
+    paths: ['.github/workflows/flash-reconciled-function-profile.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  profile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Recover exact measured executable and pinned diagnostic SDK
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/reconciled-function-profile"
+          mkdir -p "$OUT"
+          gh api repos/metalogiclabs/mathgraph-lean-kernel/actions/artifacts/15069518161/zip > "$OUT/frozen.zip"
+          python3 - <<'PY'
+          import hashlib,json,os,zipfile
+          from pathlib import Path
+          out=Path(os.environ['RUNNER_TEMP'])/'reconciled-function-profile'
+          archive=out/'frozen.zip'
+          assert hashlib.sha256(archive.read_bytes()).hexdigest()=='1a24ca4c7161e0ad47e58bb0d4d3d11c3345c6d249cd6d42a9e7e3976d8ef9b5'
+          with zipfile.ZipFile(archive) as z:
+              assert z.testzip() is None
+              assert z.read('source-tree.txt').decode().strip()=='06c257f0f2ff1f64711cfa54620b650e6dd59b7e'
+              data=z.read('builds/strict.bin')
+              assert hashlib.sha256(data).hexdigest()=='09fe7ecf7421be7ad7f7c57596c214bcd6e7c0d912d6d555cb5749b17202bd5b'
+              (out/'strict.bin').write_bytes(data)
+              for name in ['compiler.txt','build-flags.txt','source-tree.txt','harness-commit.txt','counter-identity.json']:
+                  (out/('authority-'+name)).write_bytes(z.read(name))
+          (out/'strict.bin').chmod(0o755)
+          archive.unlink()
+          PY
+          git worktree add --detach "$RUNNER_TEMP/measurement-authority" 2ba65451f90ce79b48a76cb5a33d0af3950e2fa1
+          (cd "$RUNNER_TEMP/measurement-authority" && python3 experiments/flash-upstream-repair-20261126/build_counter.py)
+          SDK="$RUNNER_TEMP/flash-dynamorio/DynamoRIO-Linux-11.92.20777"
+          cc -std=c11 -O2 -shared -fPIC -DLINUX -DX86_64 \
+            -I "$SDK/include" -I "$SDK/ext/include" \
+            experiments/flash-number1-trials-20261126/instruction-counter/profile.c \
+            -L "$SDK/ext/lib64/release" -L "$SDK/lib64/release" \
+            -ldrmgr -ldrx -ldrreg -ldynamorio -o "$OUT/profile.so"
+          cp "$RUNNER_TEMP/flash-dynamorio/identity.json" "$OUT/sdk-identity.json"
+          cp experiments/flash-number1-trials-20261126/instruction-counter/profile.c "$OUT/"
+          cc --version > "$OUT/profile-compiler.txt"
+          git rev-parse HEAD > "$OUT/profile-harness-head.txt"
+          lscpu > "$OUT/cpu.txt"
+      - uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/lambda-input/mathlib.ndjson
+          key: flash-lambda-exact-mathlib-f749dfd084fc0727d107c7aaded7d492cebfc0b517cfaa7337d8a7578a6c0dec
+          fail-on-cache-miss: true
+      - name: Calibrate and profile the unchanged complete checker execution
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/reconciled-function-profile"
+          python3 experiments/flash-number1-trials-20261126/instruction-counter/profile.py \
+            --drrun "$RUNNER_TEMP/flash-dynamorio/DynamoRIO-Linux-11.92.20777/bin64/drrun" \
+            --client "$OUT/profile.so" --binary "$OUT/strict.bin" \
+            --binary-sha256 09fe7ecf7421be7ad7f7c57596c214bcd6e7c0d912d6d555cb5749b17202bd5b \
+            --fixture "$RUNNER_TEMP/lambda-input/mathlib.ndjson" \
+            --out "$OUT/result" --whole --seconds 1800
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-reconciled-function-profile
+          path: ${{ runner.temp }}/reconciled-function-profile/
+          if-no-files-found: error
+          retention-days: 30

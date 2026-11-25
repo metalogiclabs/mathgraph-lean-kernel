@@ -1,0 +1,8 @@
+{
+  "state": "CANDIDATE_DIAGNOSTIC_ONLY",
+  "mechanism": "Per-thread counters in enforced private DynamoRIO code caches; exit-time locked aggregation",
+  "controls": "Three paired known-loop controls in four concurrent workers, plus rejection of shared caches",
+  "prefix": "Both baseline and value_subst accept 25,131 declarations; different metric than Valgrind",
+  "supersession": "Do not launch a duplicate whole comparison: run 45712976230 already completed a calibrated locked-counter comparison",
+  "boundary": "Basic-block software application count including libraries, not hardware retirement. REP and asynchronous-interruption limitations apply. Client is not part of the checker."
+}

@@ -1,0 +1,366 @@
+diff --git a/src/eval.rs b/src/eval.rs
+index 2e4c877..522287b 100644
+--- a/src/eval.rs
++++ b/src/eval.rs
+@@ -50,7 +50,17 @@ enum ForceStep<'a> {
+ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
+     #[inline]
+     pub(crate) fn mk_bvar_hc(&mut self, level: u32, ty: V<'t>) -> V<'t> {
+-        let key = (level, ty as *const Value<'t> as usize);
++        const _: () = assert!(std::mem::align_of::<Value<'static>>() >= 2);
++        // Sorts with the very same level are the same type even when their
++        // value nodes were allocated separately. Odd keys identify that exact
++        // level; ordinary aligned value pointers keep the disjoint even space.
++        // Preserve the old identity policy in replacement namespaces.
++        let ty_key = match ty {
++            Value::Sort { level: universe, .. } if !self.env.has_temp_ext() =>
++                (universe.as_ref() as *const crate::level::Level<'t> as usize) | 1,
++            _ => ty as *const Value<'t> as usize,
++        };
++        let key = (level, ty_key);
+         if let Some(v) = self.tc_cache.bvar_hc.get(&key) {
+             return v;
+         }
+@@ -88,7 +98,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
+         }
+     }
+ 
+-    fn intern_frame(&mut self, hash: u64, mask: u64, slots: &[V<'t>], lsub: Option<&'t value::LevelSub<'t>>) -> E<'t> {
++    pub(crate) fn intern_frame(&mut self, hash: u64, mask: u64, slots: &[V<'t>], lsub: Option<&'t value::LevelSub<'t>>) -> E<'t> {
+         let lsub_addr = lsub.map_or(0, |l| l as *const value::LevelSub<'t> as usize);
+         if let Some(e) = self.tc_cache.frames.find(hash, |e: &E<'t>| match e {
+             value::Env::Framed { mask: m, slots: sl, lsub: l, .. } =>
+diff --git a/src/infer.rs b/src/infer.rs
+index bcdd0b6..1d28e6d 100644
+--- a/src/infer.rs
++++ b/src/infer.rs
+@@ -125,9 +125,9 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
+                     let fresh = self.mk_bvar_hc(depth, dom);
+                     let env2 = self.env_extend(env, fresh);
+                     let ctx2 = value::ctx_extend(self.arena, ctx, dom);
+-                    body_ty = Some(self.infer_value(flag, depth + 1, env2, ctx2, body));
++                    body_ty = Some((self.infer_value(flag, depth + 1, env2, ctx2, body), fresh));
+                 }
+-                let clo = match body_ty.filter(|bt| {
++                let clo = match body_ty.filter(|(bt, _)| {
+                     atomic_type(bt)
+                         && bt.is_closed()
+                         && std::ptr::eq(*bt, dom)
+@@ -135,7 +135,12 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
+                         && has_deep_bvar_prefix(env)
+                 }) {
+                     Some(_) => Closure::mk_eval(self.empty_env(), binder_type),
+-                    None => Closure::mk_infer(self.key_env(env, e), ctx, body),
++                    None => {
++                        let checked = if env.lsub().is_none() {
++                            body_ty.and_then(|(result, fresh)| self.checked_type_closure(depth, result, fresh))
++                        } else { None };
++                        checked.unwrap_or_else(|| Closure::mk_infer(self.key_env(env, e), ctx, body))
++                    }
+                 };
+                 value::mk_pi(self.arena, dom, clo)
+             }
+diff --git a/src/quote.rs b/src/quote.rs
+index 51e732c..c1c68e8 100644
+--- a/src/quote.rs
++++ b/src/quote.rs
+@@ -1,8 +1,106 @@
+ use crate::tc::TypeChecker;
+ use crate::util::ExprPtr;
+-use crate::value::{ElimView, RigidHead, Spine, Value, E, S, V};
++use crate::value::{Closure, ElimView, RigidHead, Spine, Value, E, S, V};
+ 
+ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
++    // Keep a checked type family as an expression, rather than re-inferring
++    // its proof body for every later argument. Quotation uses semantic levels;
++    // its capture environment must therefore use levels too, independently of
++    // source let-bindings and the support of the original proof expression.
++    pub(crate) fn checked_type_closure(&mut self, cutoff: u32, result: V<'t>, fresh: V<'t>) -> Option<Closure<'t>> {
++        if cutoff > 63 || self.env.has_temp_ext() || self.declar_info.is_none() {
++            return None;
++        }
++        let mut captures = [None; 64];
++        if !self.type_quote_captures(cutoff + 1, cutoff, result, &mut captures, &mut 512) {
++            return None;
++        }
++        let source = self.quote(cutoff + 1, result);
++        if source.num_loose_bvars() > 64 || u32::from(source.num_loose_bvars()) > cutoff + 1 {
++            return None;
++        }
++        let mut mask = 0u64;
++        let mut hash = 0u64;
++        let mut slots = smallvec::SmallVec::<[V<'t>; 16]>::new();
++        for index in 0..cutoff {
++            if let Some(value) = captures[(cutoff - 1 - index) as usize] {
++                mask |= 1u64 << index;
++                hash = hash.wrapping_mul(0x9E3779B97F4A7C15)
++                    .wrapping_add(value as *const Value<'t> as usize as u64);
++                slots.push(value);
++            }
++        }
++        // Bit zero is the abstracted argument. Every other free variable
++        // must have an explicit capture; never fill a missing slot by guess.
++        if source.as_ref().fv_mask() & !((mask << 1) | 1) != 0 {
++            return None;
++        }
++        let env = if mask == 0 { self.empty_env() } else {
++            let hash = mask.wrapping_mul(0x9E3779B97F4A7C15).wrapping_add(hash);
++            self.intern_frame(hash, mask, &slots, None)
++        };
++        let replay_env = self.env_extend(env, fresh);
++        let replayed = self.eval(cutoff + 1, replay_env, source);
++        // The argument is an arbitrary fresh variable, not a sampled value.
++        // Conversion under it validates this reification before admission.
++        if !self.conv_types_at(cutoff + 1, result, replayed) {
++            return None;
++        }
++        Some(Closure::mk_eval(env, source))
++    }
++
++    fn type_quote_captures(
++        &mut self,
++        depth: u32,
++        cutoff: u32,
++        value: V<'t>,
++        captures: &mut [Option<V<'t>>; 64],
++        fuel: &mut usize,
++    ) -> bool {
++        if *fuel == 0 { return false; }
++        *fuel -= 1;
++        let value = self.force_thunk(depth, value);
++        let mut spine = match value {
++            Value::Sort { .. } | Value::NatLit { .. } | Value::StrLit { .. } => return true,
++            Value::Rigid { head, spine, .. } => {
++                if let RigidHead::BVar(level, ty) = *head {
++                    if level >= depth { return false; }
++                    if level < cutoff {
++                        let head = self.mk_bvar_hc(level, ty);
++                        let slot = &mut captures[level as usize];
++                        if slot.is_some_and(|old| !std::ptr::eq(old, head)) { return false; }
++                        *slot = Some(head);
++                    }
++                }
++                *spine
++            }
++            Value::Unfold { spine, .. } => *spine,
++            Value::Lam { body, .. } => {
++                let domain = self.lam_domain(depth, value);
++                let fresh = self.mk_bvar_hc(depth, domain);
++                let body = self.apply_closure(depth + 1, body, fresh, None);
++                return self.type_quote_captures(depth, cutoff, domain, captures, fuel)
++                    && self.type_quote_captures(depth + 1, cutoff, body, captures, fuel);
++            }
++            Value::Pi { domain, body, .. } => {
++                let fresh = self.mk_bvar_hc(depth, domain);
++                let body = self.apply_closure(depth + 1, body, fresh, Some(domain));
++                return self.type_quote_captures(depth, cutoff, domain, captures, fuel)
++                    && self.type_quote_captures(depth + 1, cutoff, body, captures, fuel);
++            }
++            Value::Thunk { .. } => unreachable!("type capture: thunk after force"),
++        };
++        while let Spine::Snoc { prev, elim, .. } = spine {
++            if *fuel == 0 { return false; }
++            *fuel -= 1;
++            if let ElimView::App(arg) = elim.view() {
++                if !self.type_quote_captures(depth, cutoff, arg, captures, fuel) { return false; }
++            }
++            spine = prev;
++        }
++        true
++    }
++
+     pub(crate) fn quote(&mut self, depth: u32, v: V<'t>) -> ExprPtr<'t> {
+         let v = self.force_thunk(depth, v);
+         let key = (v as *const Value<'t> as usize, depth);
+diff --git a/src/tests/util.rs b/src/tests/util.rs
+index 65a4652..0afa406 100644
+--- a/src/tests/util.rs
++++ b/src/tests/util.rs
+@@ -48,6 +48,187 @@ pub(crate) fn test_ctx<'p, A>(path: Option<&Path>, f: impl FnOnce(&mut TcCtx) ->
+     test_export_file(path, |export_file| export_file.with_ctx(|ctx, _cache, _arena| f(ctx)))
+ }
+ 
++fn quoted_type_test_scope(tc: &mut crate::tc::TypeChecker<'_, '_, '_>) {
++    let name = tc.ctx.str1("quotedTypeTest");
++    let ty = tc.ctx.prop();
++    let uparams = tc.ctx.alloc_levels_slice(&[]);
++    tc.declar_info = Some(crate::env::DeclarInfo { name, ty, uparams });
++}
++
++#[test]
++fn quoted_dependent_lambda_type_substitutes_distinct_arguments() -> Result<(), Box<dyn Error>> {
++    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        quoted_type_test_scope(tc);
++        let one = tc.ctx.succ(tc.ctx.zero());
++        let universe = tc.ctx.mk_sort(one);
++        let var0 = tc.ctx.mk_var(0);
++        let inner = tc.ctx.mk_lambda(var0, var0);
++        let term = tc.ctx.mk_lambda(universe, inner);
++        let ty = tc.infer_value(crate::tc::InferFlag::Check, 0, tc.empty_env(), tc.empty_ctx(), term);
++        let crate::value::Value::Pi { body, .. } = ty else { panic!() };
++        let prop = tc.ctx.prop();
++        let fn_type = tc.ctx.mk_pi(prop, prop);
++        let a = tc.eval(0, tc.empty_env(), prop);
++        let b = tc.eval(0, tc.empty_env(), fn_type);
++        for actual in [a, b] {
++            // No inference context or binder type is needed for the retained
++            // type family. These are different well-typed Type arguments.
++            let result = tc.apply_closure(0, body, actual, None);
++            let crate::value::Value::Pi { domain, body, .. } = result else { panic!() };
++            assert!(tc.conv_types_at(0, domain, actual));
++            let argument = tc.mk_bvar_hc(4, domain);
++            let final_type = tc.apply_closure(5, body, argument, None);
++            assert!(tc.conv_types_at(5, final_type, actual));
++        }
++    }))
++}
++
++#[test]
++fn quoted_type_captures_variables_visible_only_in_the_result_type() -> Result<(), Box<dyn Error>> {
++    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        quoted_type_test_scope(tc);
++        let one = tc.ctx.succ(tc.ctx.zero());
++        let two = tc.ctx.succ(one);
++        let universe = tc.ctx.mk_sort(one);
++        let var1 = tc.ctx.mk_var(1);
++        let term = tc.ctx.mk_lambda(universe, var1);
++        let dom = tc.eval(0, tc.empty_env(), universe);
++        let argument_expr = tc.ctx.prop();
++        let argument = tc.eval(0, tc.empty_env(), argument_expr);
++        for sort in [one, two] {
++            let kind = crate::value::mk_sort(tc.arena, sort);
++            let a = tc.mk_bvar_hc(0, kind);
++            let x = tc.mk_bvar_hc(1, a);
++            let first = tc.env_extend(tc.empty_env(), a);
++            let full = tc.env_extend(first, x);
++            let env = tc.key_env(full, term);
++            // The term reads x; its inferred result type reads A. A is absent
++            // from the source expression's pruned evaluation environment.
++            assert!(env.lookup(1).is_none());
++            let c1 = crate::value::ctx_extend(tc.arena, tc.empty_ctx(), kind);
++            let ctx = crate::value::ctx_extend(tc.arena, c1, a);
++            let ty = tc.infer_value(crate::tc::InferFlag::Check, 2, env, ctx, term);
++            let crate::value::Value::Pi { domain, body, .. } = ty else { panic!() };
++            assert!(tc.conv_types_at(2, domain, dom));
++            let result = tc.apply_closure(2, body, argument, None);
++            // Pointer identity also detects cross-context reuse at the same
++            // numeric level with a different variable type.
++            assert!(std::ptr::eq(result, a));
++        }
++    }))
++}
++
++#[test]
++fn quoted_type_uses_semantic_levels_across_let_aliases() -> Result<(), Box<dyn Error>> {
++    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        quoted_type_test_scope(tc);
++        let one = tc.ctx.succ(tc.ctx.zero());
++        let kind = crate::value::mk_sort(tc.arena, one);
++        let a = tc.mk_bvar_hc(0, kind);
++        let first = tc.env_extend(tc.empty_env(), a);
++        let env = tc.env_extend(first, a); // a source let alias adds no fresh level
++        let c1 = crate::value::ctx_extend(tc.arena, tc.empty_ctx(), kind);
++        let ctx = crate::value::ctx_extend(tc.arena, c1, kind);
++        let var0 = tc.ctx.mk_var(0);
++        let term = tc.ctx.mk_lambda(var0, var0);
++        let ty = tc.infer_value(crate::tc::InferFlag::Check, 1, env, ctx, term);
++        let crate::value::Value::Pi { body, .. } = ty else { panic!() };
++        let x = tc.mk_bvar_hc(1, a);
++        assert!(std::ptr::eq(tc.apply_closure(2, body, x, None), a));
++    }))
++}
++
++#[test]
++#[should_panic(expected = "expected a pi type")]
++fn quoted_types_still_check_the_original_lambda_body() {
++    test_export_file_should_panic(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        quoted_type_test_scope(tc);
++        let prop = tc.ctx.prop();
++        let malformed = tc.ctx.mk_app(prop, prop);
++        let term = tc.ctx.mk_lambda(prop, malformed);
++        tc.infer_value(crate::tc::InferFlag::Check, 0, tc.empty_env(), tc.empty_ctx(), term);
++    }));
++}
++
++#[test]
++#[should_panic(expected = "expected a sort")]
++fn quoted_types_still_check_lambda_annotation_wellformedness() {
++    test_export_file_should_panic(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        quoted_type_test_scope(tc);
++        let prop = tc.ctx.prop();
++        let prop_v = tc.eval(0, tc.empty_env(), prop);
++        let p = tc.mk_bvar_hc(0, prop_v);
++        let h = tc.mk_bvar_hc(1, p);
++        let first = tc.env_extend(tc.empty_env(), p);
++        let env = tc.env_extend(first, h);
++        let c1 = crate::value::ctx_extend(tc.arena, tc.empty_ctx(), prop_v);
++        let ctx = crate::value::ctx_extend(tc.arena, c1, p);
++        let var0 = tc.ctx.mk_var(0);
++        let term = tc.ctx.mk_lambda(var0, var0);
++        tc.infer_value(crate::tc::InferFlag::Check, 2, env, ctx, term);
++    }));
++}
++
++#[test]
++#[should_panic(expected = "universe parameter not declared")]
++fn quoted_types_do_not_admit_undeclared_universe_parameters() {
++    test_export_file_should_panic(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        quoted_type_test_scope(tc);
++        let u = tc.ctx.param_quick("undeclared");
++        let domain = tc.ctx.mk_sort(u);
++        let var0 = tc.ctx.mk_var(0);
++        let term = tc.ctx.mk_lambda(domain, var0);
++        tc.infer_value(crate::tc::InferFlag::Check, 0, tc.empty_env(), tc.empty_ctx(), term);
++    }));
++}
++
++#[test]
++fn fresh_variables_share_exact_sort_levels_across_value_allocations() -> Result<(), Box<dyn Error>> {
++    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        let level = tc.ctx.succ(tc.ctx.zero());
++        let a = crate::value::mk_sort(tc.arena, level);
++        let b = crate::value::mk_sort(tc.arena, level);
++        assert!(!std::ptr::eq(a, b));
++        let x = tc.mk_bvar_hc(0, a);
++        let y = tc.mk_bvar_hc(0, b);
++        assert!(std::ptr::eq(x, y));
++        let inferred = tc.value_type(0, x);
++        assert!(tc.conv_types_at(0, inferred, a));
++    }))
++}
++
++#[test]
++fn fresh_variables_keep_universe_and_non_sort_type_distinctions() -> Result<(), Box<dyn Error>> {
++    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        let zero = tc.ctx.zero();
++        let one = tc.ctx.succ(zero);
++        let prop = crate::value::mk_sort(tc.arena, zero);
++        let universe = crate::value::mk_sort(tc.arena, one);
++        let p = tc.mk_bvar_hc(0, prop);
++        let a = tc.mk_bvar_hc(0, universe);
++        assert!(!std::ptr::eq(p, a));
++        let b = tc.mk_bvar_hc(1, universe);
++        let x = tc.mk_bvar_hc(2, a);
++        let y = tc.mk_bvar_hc(2, b);
++        assert!(!std::ptr::eq(x, y));
++    }))
++}
++
++#[test]
++fn fresh_sort_variable_sharing_is_disabled_in_replacement_namespaces() -> Result<(), Box<dyn Error>> {
++    test_export_file(None, |export| export.with_ctx(|ctx, cache, arena| {
++        let extension = crate::util::new_fx_index_map();
++        ctx.with_tc_and_env_ext(&extension, crate::env::EnvLimit::Empty, arena, cache, |tc| {
++            let level = tc.ctx.succ(tc.ctx.zero());
++            let a = crate::value::mk_sort(tc.arena, level);
++            let b = crate::value::mk_sort(tc.arena, level);
++            let x = tc.mk_bvar_hc(0, a);
++            let y = tc.mk_bvar_hc(0, b);
++            assert!(!std::ptr::eq(x, y));
++        });
++    }))
++}
++
+ impl<'t, 'p: 't> TcCtx<'t, 'p> {
+     #[cfg(test)]
+     pub(crate) fn level_n(&mut self, mut l: LevelPtr<'t>, n: u64) -> LevelPtr<'t> {

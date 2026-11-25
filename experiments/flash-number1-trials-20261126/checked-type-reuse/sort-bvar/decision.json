@@ -1,0 +1,18 @@
+{
+  "name": "sort-bvar",
+  "arm": "sort_bvar",
+  "state": "REJECTED_BELOW_1_PERCENT_PREFIX_GATE",
+  "source_local_commit": "cbc188120502753d5e97ec845a8fabb7419eaff3",
+  "src_tree": "c403c0aa0595b649bfb6a0127cf85b021ce27c9e",
+  "base_fixture_commit": "ca69e6ab8a3c7b795716128372fdaf67c697b68e",
+  "base_src_tree": "623a8575bbe54541e0be6217394336f4c2727994",
+  "patch_sha256": "ab48e7cd0970e1b63d057a0febdb163454034450c03bfb772a47091a97963f80",
+  "library_tests": 49,
+  "binary_sha256": "3db841f369204ba893169db5cb6374024e4fdce249470adc4db36a7a1197b27a",
+  "prefix_instruction_ratio": 0.9999152500199199,
+  "input_sha256": "c3d1e08032bbfe2dbfc4c8a84fd711ba83296a47d7468d9ce15988efa4acfa3a",
+  "declarations": 25131,
+  "full_mathlib": "NOT_RUN",
+  "arena_promotion": "NONE",
+  "boundary": "One paired Cachegrind diagnostic on the exact source-derived 25,131-declaration prefix. Library checks and diagnostic acceptance are bounded evidence; no full-Mathlib or Arena speedup claim."
+}

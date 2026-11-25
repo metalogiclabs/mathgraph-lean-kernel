@@ -1,0 +1,53 @@
+{
+  "state": "WARRANTED_BOUNDED_COUNTER_CONTROLS",
+  "controls": [
+    {
+      "round": 0,
+      "iterations": 1000000,
+      "instructions": 8146166,
+      "threads": 5,
+      "raw_exit": 0
+    },
+    {
+      "round": 0,
+      "iterations": 2000000,
+      "instructions": 16146255,
+      "threads": 5,
+      "raw_exit": 0
+    },
+    {
+      "round": 1,
+      "iterations": 1000000,
+      "instructions": 8146255,
+      "threads": 5,
+      "raw_exit": 0
+    },
+    {
+      "round": 1,
+      "iterations": 2000000,
+      "instructions": 16146166,
+      "threads": 5,
+      "raw_exit": 0
+    },
+    {
+      "round": 2,
+      "iterations": 1000000,
+      "instructions": 8146105,
+      "threads": 5,
+      "raw_exit": 0
+    },
+    {
+      "round": 2,
+      "iterations": 2000000,
+      "instructions": 16146077,
+      "threads": 5,
+      "raw_exit": 0
+    }
+  ],
+  "expected_delta": 8000000,
+  "delta_tolerance": 8000,
+  "negative_shared_cache_exit": 255,
+  "client_sha256": "9083039fc2a4bb3cc6a5b155afa4ef3f3399d050ce96b89c6438e71974611ec6",
+  "control_binary_sha256": "9693b20cf7c8512753d3ffe6e2c8722d8bdbcdc98580bbcb7a27dfc0948e838e",
+  "boundary": "Known two-instruction loop in four concurrent workers, complete process/library count; checks aggregation and rejection of shared caches. Software decode count, not hardware retirement."
+}

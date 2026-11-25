@@ -1,0 +1,731 @@
+diff --git a/src/checked_subst.rs b/src/checked_subst.rs
+new file mode 100644
+index 0000000..13cf8d8
+--- /dev/null
++++ b/src/checked_subst.rs
+@@ -0,0 +1,219 @@
++//! Substitute an argument in a previously checked semantic result type.
++//! This is optional reuse: unsupported values and exhausted work fall back to
++//! ordinary inference of the original body. No source checks are omitted.
++use crate::tc::TypeChecker;
++use crate::util::{new_fx_hash_map, FxHashMap};
++use crate::value::{self, Closure, Ctx, ElimView, Env, RigidHead, Spine, Value, C, E, V};
++
++struct Substitution<'a> {
++    binder: V<'a>,
++    level: u32,
++    argument: V<'a>,
++    remaining: usize,
++    values: FxHashMap<usize, V<'a>>,
++}
++
++impl Substitution<'_> {
++    fn step(&mut self) -> Option<()> {
++        self.remaining = self.remaining.checked_sub(1)?;
++        Some(())
++    }
++}
++
++impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
++    pub(crate) fn substitute_checked_type(
++        &mut self, depth: u32, result: V<'t>, binder: V<'t>, argument: V<'t>,
++    ) -> Option<V<'t>> {
++        let Value::Rigid { head: RigidHead::BVar(level, _), spine: Spine::Empty, .. } = binder else {
++            return None;
++        };
++        let mut substitution = Substitution {
++            binder, level: *level, argument, remaining: 256, values: new_fx_hash_map(),
++        };
++        self.subst_checked_value(depth, result, &mut substitution)
++    }
++
++    fn subst_checked_value(&mut self, depth: u32, v: V<'t>, s: &mut Substitution<'t>) -> Option<V<'t>> {
++        s.step()?;
++        if std::ptr::eq(v, s.binder) {
++            return Some(s.argument);
++        }
++        // Do not use the value digest's closed flag here. An evaluation
++        // lambda can mention a variable only in its binder annotation; its
++        // body support alone does not authorize skipping this substitution.
++        if matches!(v, Value::Sort { .. } | Value::NatLit { .. } | Value::StrLit { .. }) {
++            return Some(v);
++        }
++        match v {
++            Value::Rigid { head: RigidHead::BVar(level, _), spine: Spine::Empty, .. } if *level < s.level =>
++                return Some(v),
++            Value::Rigid { head: RigidHead::BVar(..), .. } => {},
++            Value::Rigid { spine: Spine::Empty, .. } | Value::Unfold { spine: Spine::Empty, .. } =>
++                return Some(v),
++            _ => {},
++        }
++        let key = v as *const Value<'t> as usize;
++        if let Some(r) = s.values.get(&key) {
++            return Some(*r);
++        }
++        let r = match v {
++            Value::Sort { .. } | Value::NatLit { .. } | Value::StrLit { .. } => v,
++            Value::Thunk { .. } => return None,
++            Value::Lam { binder_type, body, .. } => {
++                let b = self.subst_checked_closure(depth, body, s)?;
++                if std::ptr::eq(body.env, b.env) && same_context(body.ctx, b.ctx) {
++                    v
++                } else {
++                    value::mk_lam(self.arena, *binder_type, b)
++                }
++            }
++            Value::Pi { domain, body, .. } => {
++                let d = self.subst_checked_value(depth, domain, s)?;
++                let b = self.subst_checked_closure(depth, body, s)?;
++                if std::ptr::eq(*domain, d) && std::ptr::eq(body.env, b.env) && same_context(body.ctx, b.ctx) {
++                    v
++                } else {
++                    value::mk_pi(self.arena, d, b)
++                }
++            }
++            Value::Rigid { head, spine, .. } => {
++                let replacement = match *head {
++                    RigidHead::BVar(level, ty) => {
++                        // Equal numeric levels from another context are not
++                        // evidence of identity. A mismatch abandons this reuse.
++                        if level >= s.level {
++                            let Value::Rigid { head: RigidHead::BVar(_, binder_ty), .. } = s.binder else {
++                                unreachable!()
++                            };
++                            if level != s.level || !std::ptr::eq(ty, *binder_ty) { return None; }
++                            Some(s.argument)
++                        } else {
++                            None
++                        }
++                    }
++                    _ => None,
++                };
++                self.subst_checked_spine(depth, v, replacement, spine, s)?
++            }
++            Value::Unfold { spine, .. } => {
++                self.subst_checked_spine(depth, v, None, spine, s)?
++            }
++        };
++        s.values.insert(key, r);
++        Some(r)
++    }
++
++    fn subst_checked_spine(
++        &mut self, depth: u32, original: V<'t>, replacement: Option<V<'t>>, spine: value::S<'t>, s: &mut Substitution<'t>,
++    ) -> Option<V<'t>> {
++        let mut reversed = smallvec::SmallVec::<[value::Elim<'t>; 8]>::new();
++        let mut cur = spine;
++        let mut changed = replacement.is_some();
++        while let Spine::Snoc { prev, elim, .. } = cur {
++            s.step()?;
++            reversed.push(*elim);
++            cur = prev;
++        }
++        let mut forward = smallvec::SmallVec::<[value::Elim<'t>; 8]>::new();
++        while let Some(elim) = reversed.pop() {
++            let e = match elim.view() {
++                ElimView::App(a) => {
++                    let b = self.subst_checked_value(depth, a, s)?;
++                    changed |= !std::ptr::eq(a, b);
++                    value::Elim::app(b)
++                }
++                ElimView::Proj { .. } => elim,
++            };
++            forward.push(e);
++        }
++        if !changed { return Some(original); }
++        let empty = self.empty_spine();
++        let mut result = match replacement {
++            Some(v) => v,
++            None => match original {
++                Value::Rigid { head, .. } => value::mk_rigid(self.arena, *head, empty),
++                Value::Unfold { head, head_value, .. } =>
++                    value::mk_unfold(self.arena, head.name, head.levels, empty, head_value),
++                _ => unreachable!(),
++            },
++        };
++        for elim in forward {
++            result = match elim.view() {
++                ElimView::App(a) => self.apply(depth, result, a),
++                ElimView::Proj { ty_name, idx } => self.do_proj(depth, ty_name, idx, result),
++            };
++        }
++        Some(result)
++    }
++
++    fn subst_checked_closure(
++        &mut self, depth: u32, body: &Closure<'t>, s: &mut Substitution<'t>,
++    ) -> Option<Closure<'t>> {
++        let env = self.subst_checked_env(depth, body.env, s)?;
++        let ctx = match body.ctx {
++            Some(c) => Some(self.subst_checked_ctx(depth, c, s)?),
++            None => None,
++        };
++        Some(Closure { env, ctx, body: body.body })
++    }
++
++    fn subst_checked_env(&mut self, depth: u32, env: E<'t>, s: &mut Substitution<'t>) -> Option<E<'t>> {
++        s.step()?;
++        match env {
++            Env::Nil { .. } => Some(env),
++            Env::Cons { v, parent, .. } => {
++                let a = self.subst_checked_value(depth, v, s)?;
++                let p = self.subst_checked_env(depth, parent, s)?;
++                Some(if std::ptr::eq(*v, a) && std::ptr::eq(*parent, p) { env } else { self.env_extend(p, a) })
++            }
++            Env::Framed { mask, slots, lsub, .. } => {
++                let mut changed = false;
++                let mut hash = lsub.map_or(0, |l| l as *const value::LevelSub<'t> as usize as u64);
++                let mut result = smallvec::SmallVec::<[V<'t>; 16]>::new();
++                for a in *slots {
++                    let b = self.subst_checked_value(depth, a, s)?;
++                    changed |= !std::ptr::eq(*a, b);
++                    hash = hash.wrapping_mul(0x9E3779B97F4A7C15).wrapping_add(b as *const Value<'t> as usize as u64);
++                    result.push(b);
++                }
++                let hash = mask.wrapping_mul(0x9E3779B97F4A7C15).wrapping_add(hash);
++                Some(if changed { self.intern_frame(hash, *mask, &result, *lsub) } else { env })
++            }
++            Env::WideFramed { .. } => None,
++        }
++    }
++
++    fn subst_checked_ctx(&mut self, depth: u32, ctx: C<'t>, s: &mut Substitution<'t>) -> Option<C<'t>> {
++        s.step()?;
++        match ctx {
++            Ctx::Nil => Some(ctx),
++            Ctx::Cons { ty, parent } => {
++                let t = self.subst_checked_value(depth, ty, s)?;
++                let p = self.subst_checked_ctx(depth, parent, s)?;
++                Some(if std::ptr::eq(*ty, t) && std::ptr::eq(*parent, p) { ctx } else {
++                    value::ctx_extend(self.arena, p, t)
++                })
++            }
++            Ctx::InferredResult { result, binder: None, context } => {
++                let r = self.subst_checked_value(depth, result, s)?;
++                let c = self.subst_checked_ctx(depth, context, s)?;
++                Some(if std::ptr::eq(*result, r) && std::ptr::eq(*context, c) { ctx } else {
++                    self.arena.alloc(Ctx::InferredResult { result: r, binder: None, context: c })
++                })
++            }
++            // A nested retained result has its own fresh binder. Discard that
++            // optional record, preserving the original inference context and
++            // body, rather than guessing how to rename its private binder.
++            Ctx::InferredResult { context, .. } => self.subst_checked_ctx(depth, context, s),
++        }
++    }
++}
++
++fn same_context<'a>(a: Option<C<'a>>, b: Option<C<'a>>) -> bool {
++    match (a, b) {
++        (None, None) => true,
++        (Some(a), Some(b)) => std::ptr::eq(a, b),
++        _ => false,
++    }
++}
++
+diff --git a/src/eval.rs b/src/eval.rs
+index 2e4c877..8c03be9 100644
+--- a/src/eval.rs
++++ b/src/eval.rs
+@@ -88,7 +88,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
+         }
+     }
+ 
+-    fn intern_frame(&mut self, hash: u64, mask: u64, slots: &[V<'t>], lsub: Option<&'t value::LevelSub<'t>>) -> E<'t> {
++    pub(crate) fn intern_frame(&mut self, hash: u64, mask: u64, slots: &[V<'t>], lsub: Option<&'t value::LevelSub<'t>>) -> E<'t> {
+         let lsub_addr = lsub.map_or(0, |l| l as *const value::LevelSub<'t> as usize);
+         if let Some(e) = self.tc_cache.frames.find(hash, |e: &E<'t>| match e {
+             value::Env::Framed { mask: m, slots: sl, lsub: l, .. } =>
+@@ -1016,8 +1016,22 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
+     }
+ 
+     pub(crate) fn apply_closure(&mut self, depth: u32, clo: &Closure<'t>, v: V<'t>, binder_ty: Option<V<'t>>) -> V<'t> {
++        let context = match clo.ctx {
++            Some(value::Ctx::InferredResult { result, binder, context }) => {
++                if binder.is_none_or(|b| std::ptr::eq(b, v)) {
++                    return result;
++                }
++                if !self.env.has_temp_ext() {
++                    if let Some(r) = self.substitute_checked_type(depth, result, binder.unwrap(), v) {
++                        return r;
++                    }
++                }
++                Some(*context)
++            }
++            other => other,
++        };
+         let env = self.env_extend(clo.env, v);
+-        match clo.ctx {
++        match context {
+             None => self.eval(depth, env, clo.body),
+             Some(clo_ctx) => {
+                 let ty = binder_ty.expect("apply_closure: infer closure without a binder type");
+diff --git a/src/infer.rs b/src/infer.rs
+index bcdd0b6..b8b938c 100644
+--- a/src/infer.rs
++++ b/src/infer.rs
+@@ -2,7 +2,7 @@ use crate::env::Declar;
+ use crate::expr::Expr;
+ use crate::tc::{InferFlag, TypeChecker};
+ use crate::util::{ExprPtr, LevelPtr, LevelsPtr, NamePtr};
+-use crate::value::{self, Closure, RigidHead, Value, C, E, V};
++use crate::value::{self, Closure, Ctx, ElimView, RigidHead, Spine, Value, C, E, V};
+ 
+ use Expr::*;
+ use InferFlag::*;
+@@ -38,6 +38,40 @@ fn has_deep_bvar_prefix(mut env: E<'_>) -> bool {
+     true
+ }
+ 
++// Only a successful semantic support check authorizes argument-independent
++// reuse. Closures, suspensions and exhausted checks keep the original path.
++// An outer neutral's type was fixed before the new binder was introduced.
++fn result_uses_only_outer_variables(v: V<'_>, cutoff: u32, fuel: &mut u16) -> bool {
++    if *fuel == 0 {
++        return false;
++    }
++    *fuel -= 1;
++    let mut spine = match v {
++        Value::Sort { .. } | Value::NatLit { .. } | Value::StrLit { .. } => return true,
++        Value::Rigid { head: RigidHead::BVar(level, _), spine, .. } => {
++            if *level >= cutoff {
++                return false;
++            }
++            *spine
++        }
++        Value::Rigid { spine, .. } | Value::Unfold { spine, .. } => *spine,
++        Value::Lam { .. } | Value::Pi { .. } | Value::Thunk { .. } => return false,
++    };
++    while let Spine::Snoc { prev, elim, .. } = spine {
++        if *fuel == 0 {
++            return false;
++        }
++        *fuel -= 1;
++        if let ElimView::App(arg) = elim.view() {
++            if !result_uses_only_outer_variables(arg, cutoff, fuel) {
++                return false;
++            }
++        }
++        spine = prev;
++    }
++    true
++}
++
+ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
+     fn uparam_scope(&self) -> CheckScope<'t> {
+         match self.declar_info {
+@@ -107,7 +141,8 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
+             App { .. } | Lambda { .. } | Pi { .. } | Let { .. } | Proj { .. } => {}
+         }
+ 
+-        let key = (self.key_env(env, e) as *const value::Env<'t> as usize, e);
++        let capture_env = self.key_env(env, e);
++        let key = (capture_env as *const value::Env<'t> as usize, e);
+         let scope = self.uparam_scope();
+         if let Some(cached) = self.tc_cache.type_cache.get(&key).copied() {
+             if flag == InferOnly || cached.checked_under == scope {
+@@ -125,9 +160,9 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
+                     let fresh = self.mk_bvar_hc(depth, dom);
+                     let env2 = self.env_extend(env, fresh);
+                     let ctx2 = value::ctx_extend(self.arena, ctx, dom);
+-                    body_ty = Some(self.infer_value(flag, depth + 1, env2, ctx2, body));
++                    body_ty = Some((self.infer_value(flag, depth + 1, env2, ctx2, body), fresh));
+                 }
+-                let clo = match body_ty.filter(|bt| {
++                let clo = match body_ty.filter(|(bt, _)| {
+                     atomic_type(bt)
+                         && bt.is_closed()
+                         && std::ptr::eq(*bt, dom)
+@@ -135,7 +170,16 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
+                         && has_deep_bvar_prefix(env)
+                 }) {
+                     Some(_) => Closure::mk_eval(self.empty_env(), binder_type),
+-                    None => Closure::mk_infer(self.key_env(env, e), ctx, body),
++                    None => match body_ty {
++                        Some((result, fresh)) => {
++                            let independent = result_uses_only_outer_variables(result, depth, &mut 128);
++                            Closure::mk_inferred_result(
++                                self.arena, capture_env, ctx, body, result,
++                                if independent { None } else { Some(fresh) },
++                            )
++                        }
++                        None => Closure::mk_infer(capture_env, ctx, body),
++                    },
+                 };
+                 value::mk_pi(self.arena, dom, clo)
+             }
+@@ -191,7 +235,9 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
+                 let arg_ty = self.infer_value(flag, depth, env, ctx, arg);
+                 assert!(self.conv_types_at(depth, domain, arg_ty), "app arg def_eq failed");
+             }
+-            if body.ctx.is_none() && self.ctx.num_loose_bvars(body.body) == 0 {
++            if let Some(Ctx::InferredResult { result, binder: None, .. }) = body.ctx {
++                fty = result;
++            } else if body.ctx.is_none() && self.ctx.num_loose_bvars(body.body) == 0 {
+                 fty = self.eval(depth, body.env, body.body);
+             } else if crate::expr::ignores_binder(body.body) {
+                 fty = self.apply_closure(depth, body, domain, Some(domain));
+diff --git a/src/lib.rs b/src/lib.rs
+index 8dad038..702976e 100644
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -23,6 +23,7 @@ pub mod tc;
+ mod tests;
+ pub mod util;
+ pub mod value;
++mod checked_subst;
+ pub(crate) mod flash;
+ 
+ pub(crate) const STACK_SIZE: usize = 2 * 1024 * 1024 * 1024;
+diff --git a/src/tests/util.rs b/src/tests/util.rs
+index 65a4652..b2c335e 100644
+--- a/src/tests/util.rs
++++ b/src/tests/util.rs
+@@ -73,6 +73,110 @@ fn check_empty() -> Result<(), Box<dyn Error>> {
+     })
+ }
+ 
++#[test]
++fn checked_constant_result_type_needs_no_body_reinference() -> Result<(), Box<dyn Error>> {
++    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        let prop = tc.ctx.prop();
++        let one = tc.ctx.succ(tc.ctx.zero());
++        let universe = tc.ctx.mk_sort(one);
++        let term = tc.ctx.mk_lambda(universe, prop);
++        let ty = tc.infer_value(crate::tc::InferFlag::Check, 0, tc.empty_env(), tc.empty_ctx(), term);
++        let crate::value::Value::Pi { body, .. } = ty else { panic!("lambda type was not Pi") };
++        let argument = tc.eval(0, tc.empty_env(), prop);
++        let result = tc.apply_closure(1, body, argument, None);
++        assert!(matches!(result, crate::value::Value::Sort { level, .. } if *level == one));
++    }))
++}
++
++#[test]
++fn retained_result_preserves_the_actual_outer_type_capture() -> Result<(), Box<dyn Error>> {
++    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        let one = tc.ctx.succ(tc.ctx.zero());
++        let two = tc.ctx.succ(one);
++        let variable = tc.ctx.mk_var(0);
++        let identity = tc.ctx.mk_lambda(variable, variable);
++        let mut results = Vec::new();
++        for level in [one, two] {
++            let universe = crate::value::mk_sort(tc.arena, level);
++            let outer = tc.mk_bvar_hc(0, universe);
++            let env = tc.env_extend(tc.empty_env(), outer);
++            let ctx = crate::value::ctx_extend(tc.arena, tc.empty_ctx(), universe);
++            let ty = tc.infer_value(crate::tc::InferFlag::Check, 1, env, ctx, identity);
++            let crate::value::Value::Pi { body, .. } = ty else { panic!("identity type was not Pi") };
++            let argument = tc.mk_bvar_hc(1, outer);
++            let result = tc.apply_closure(2, body, argument, None);
++            assert!(std::ptr::eq(result, outer));
++            results.push(result);
++        }
++        assert!(!std::ptr::eq(results[0], results[1]));
++    }))
++}
++
++#[test]
++fn checked_dependent_result_reuses_the_identical_fresh_argument() -> Result<(), Box<dyn Error>> {
++    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        let one = tc.ctx.succ(tc.ctx.zero());
++        let universe = tc.ctx.mk_sort(one);
++        let variable = tc.ctx.mk_var(0);
++        let inner = tc.ctx.mk_lambda(variable, variable);
++        let term = tc.ctx.mk_lambda(universe, inner);
++        let ty = tc.infer_value(crate::tc::InferFlag::Check, 0, tc.empty_env(), tc.empty_ctx(), term);
++        let crate::value::Value::Pi { domain, body, .. } = ty else { panic!("outer type was not Pi") };
++        let original_fresh = tc.mk_bvar_hc(0, domain);
++        let result = tc.apply_closure(1, body, original_fresh, None);
++        let crate::value::Value::Pi { domain: inner_domain, .. } = result else { panic!("inner type was not Pi") };
++        assert!(std::ptr::eq(*inner_domain, original_fresh));
++    }))
++}
++
++#[test]
++fn dependent_lambda_result_still_substitutes_the_argument() -> Result<(), Box<dyn Error>> {
++    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        let prop = tc.ctx.prop();
++        let one = tc.ctx.succ(tc.ctx.zero());
++        let universe = tc.ctx.mk_sort(one);
++        let variable = tc.ctx.mk_var(0);
++        let inner = tc.ctx.mk_lambda(variable, variable);
++        let term = tc.ctx.mk_lambda(universe, inner);
++        let ty = tc.infer_value(crate::tc::InferFlag::Check, 0, tc.empty_env(), tc.empty_ctx(), term);
++        let crate::value::Value::Pi { domain, body, .. } = ty else { panic!("outer type was not Pi") };
++        let other_type = tc.ctx.mk_pi(prop, prop);
++        for expr in [prop, other_type] {
++            let argument = tc.eval(0, tc.empty_env(), expr);
++            let result = tc.apply_closure(1, body, argument, Some(*domain));
++            let crate::value::Value::Pi { domain: inner_domain, .. } = result else { panic!("inner type was not Pi") };
++            assert!(std::ptr::eq(*inner_domain, argument), "dependent result lost its actual type argument");
++        }
++    }))
++}
++
++#[test]
++#[should_panic(expected = "expected a pi type")]
++fn retained_result_does_not_skip_argument_checking() {
++    test_export_file_should_panic(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        let prop = tc.ctx.prop();
++        let one = tc.ctx.succ(tc.ctx.zero());
++        let universe = tc.ctx.mk_sort(one);
++        let term = tc.ctx.mk_lambda(universe, prop);
++        let malformed = tc.ctx.mk_app(prop, prop);
++        let application = tc.ctx.mk_app(term, malformed);
++        tc.infer_value(crate::tc::InferFlag::Check, 0, tc.empty_env(), tc.empty_ctx(), application);
++    }));
++}
++
++#[test]
++#[should_panic(expected = "expected a pi type")]
++fn retained_result_requires_checking_the_original_body() {
++    test_export_file_should_panic(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        let prop = tc.ctx.prop();
++        let one = tc.ctx.succ(tc.ctx.zero());
++        let universe = tc.ctx.mk_sort(one);
++        let malformed = tc.ctx.mk_app(prop, prop);
++        let term = tc.ctx.mk_lambda(universe, malformed);
++        tc.infer_value(crate::tc::InferFlag::Check, 0, tc.empty_env(), tc.empty_ctx(), term);
++    }));
++}
++
+ /// The export format assigns each name/level/expression an explicit index. Those
+ /// indices need not be dense or in increasing order — the exporter only guarantees
+ /// that an item is emitted after the items it references. `LevelIndexOutOfOrder`
+@@ -211,3 +315,169 @@ fn hash_test0() -> Result<(), Box<dyn Error>> {
+         })
+     })
+ }
++
++fn substituted_type_test_scope(tc: &mut crate::tc::TypeChecker<'_, '_, '_>) {
++    let name = tc.ctx.str1("substitutedTypeTest");
++    let ty = tc.ctx.prop();
++    let uparams = tc.ctx.alloc_levels_slice(&[]);
++    tc.declar_info = Some(crate::env::DeclarInfo { name, ty, uparams });
++}
++
++#[test]
++fn substituted_dependent_lambda_type_substitutes_distinct_arguments() -> Result<(), Box<dyn Error>> {
++    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        substituted_type_test_scope(tc);
++        let one = tc.ctx.succ(tc.ctx.zero());
++        let universe = tc.ctx.mk_sort(one);
++        let var0 = tc.ctx.mk_var(0);
++        let inner = tc.ctx.mk_lambda(var0, var0);
++        let term = tc.ctx.mk_lambda(universe, inner);
++        let ty = tc.infer_value(crate::tc::InferFlag::Check, 0, tc.empty_env(), tc.empty_ctx(), term);
++        let crate::value::Value::Pi { body, .. } = ty else { panic!() };
++        let prop = tc.ctx.prop();
++        let fn_type = tc.ctx.mk_pi(prop, prop);
++        let a = tc.eval(0, tc.empty_env(), prop);
++        let b = tc.eval(0, tc.empty_env(), fn_type);
++        for actual in [a, b] {
++            // No inference context or binder type is needed for the retained
++            // type family. These are different well-typed Type arguments.
++            let result = tc.apply_closure(0, body, actual, None);
++            let crate::value::Value::Pi { domain, body, .. } = result else { panic!() };
++            assert!(tc.conv_types_at(0, domain, actual));
++            let argument = tc.mk_bvar_hc(4, domain);
++            let final_type = tc.apply_closure(5, body, argument, None);
++            assert!(tc.conv_types_at(5, final_type, actual));
++        }
++    }))
++}
++
++#[test]
++fn substituted_type_captures_variables_visible_only_in_the_result_type() -> Result<(), Box<dyn Error>> {
++    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        substituted_type_test_scope(tc);
++        let one = tc.ctx.succ(tc.ctx.zero());
++        let two = tc.ctx.succ(one);
++        let universe = tc.ctx.mk_sort(one);
++        let var1 = tc.ctx.mk_var(1);
++        let term = tc.ctx.mk_lambda(universe, var1);
++        let dom = tc.eval(0, tc.empty_env(), universe);
++        let argument_expr = tc.ctx.prop();
++        let argument = tc.eval(0, tc.empty_env(), argument_expr);
++        for sort in [one, two] {
++            let kind = crate::value::mk_sort(tc.arena, sort);
++            let a = tc.mk_bvar_hc(0, kind);
++            let x = tc.mk_bvar_hc(1, a);
++            let first = tc.env_extend(tc.empty_env(), a);
++            let full = tc.env_extend(first, x);
++            let env = tc.key_env(full, term);
++            // The term reads x; its inferred result type reads A. A is absent
++            // from the source expression's pruned evaluation environment.
++            assert!(env.lookup(1).is_none());
++            let c1 = crate::value::ctx_extend(tc.arena, tc.empty_ctx(), kind);
++            let ctx = crate::value::ctx_extend(tc.arena, c1, a);
++            let ty = tc.infer_value(crate::tc::InferFlag::Check, 2, env, ctx, term);
++            let crate::value::Value::Pi { domain, body, .. } = ty else { panic!() };
++            assert!(tc.conv_types_at(2, domain, dom));
++            let result = tc.apply_closure(2, body, argument, None);
++            // Pointer identity also detects cross-context reuse at the same
++            // numeric level with a different variable type.
++            assert!(std::ptr::eq(result, a));
++        }
++    }))
++}
++
++#[test]
++fn substituted_type_uses_semantic_levels_across_let_aliases() -> Result<(), Box<dyn Error>> {
++    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        substituted_type_test_scope(tc);
++        let one = tc.ctx.succ(tc.ctx.zero());
++        let kind = crate::value::mk_sort(tc.arena, one);
++        let a = tc.mk_bvar_hc(0, kind);
++        let first = tc.env_extend(tc.empty_env(), a);
++        let env = tc.env_extend(first, a); // a source let alias adds no fresh level
++        let c1 = crate::value::ctx_extend(tc.arena, tc.empty_ctx(), kind);
++        let ctx = crate::value::ctx_extend(tc.arena, c1, kind);
++        let var0 = tc.ctx.mk_var(0);
++        let term = tc.ctx.mk_lambda(var0, var0);
++        let ty = tc.infer_value(crate::tc::InferFlag::Check, 1, env, ctx, term);
++        let crate::value::Value::Pi { body, .. } = ty else { panic!() };
++        let x = tc.mk_bvar_hc(1, a);
++        assert!(std::ptr::eq(tc.apply_closure(2, body, x, None), a));
++    }))
++}
++
++#[test]
++#[should_panic(expected = "expected a pi type")]
++fn substituted_types_still_check_the_original_lambda_body() {
++    test_export_file_should_panic(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        substituted_type_test_scope(tc);
++        let prop = tc.ctx.prop();
++        let malformed = tc.ctx.mk_app(prop, prop);
++        let term = tc.ctx.mk_lambda(prop, malformed);
++        tc.infer_value(crate::tc::InferFlag::Check, 0, tc.empty_env(), tc.empty_ctx(), term);
++    }));
++}
++
++#[test]
++#[should_panic(expected = "expected a sort")]
++fn substituted_types_still_check_lambda_annotation_wellformedness() {
++    test_export_file_should_panic(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        substituted_type_test_scope(tc);
++        let prop = tc.ctx.prop();
++        let prop_v = tc.eval(0, tc.empty_env(), prop);
++        let p = tc.mk_bvar_hc(0, prop_v);
++        let h = tc.mk_bvar_hc(1, p);
++        let first = tc.env_extend(tc.empty_env(), p);
++        let env = tc.env_extend(first, h);
++        let c1 = crate::value::ctx_extend(tc.arena, tc.empty_ctx(), prop_v);
++        let ctx = crate::value::ctx_extend(tc.arena, c1, p);
++        let var0 = tc.ctx.mk_var(0);
++        let term = tc.ctx.mk_lambda(var0, var0);
++        tc.infer_value(crate::tc::InferFlag::Check, 2, env, ctx, term);
++    }));
++}
++
++#[test]
++#[should_panic(expected = "universe parameter not declared")]
++fn substituted_types_do_not_admit_undeclared_universe_parameters() {
++    test_export_file_should_panic(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        substituted_type_test_scope(tc);
++        let u = tc.ctx.param_quick("undeclared");
++        let domain = tc.ctx.mk_sort(u);
++        let var0 = tc.ctx.mk_var(0);
++        let term = tc.ctx.mk_lambda(domain, var0);
++        tc.infer_value(crate::tc::InferFlag::Check, 0, tc.empty_env(), tc.empty_ctx(), term);
++    }));
++}
++
++
++#[test]
++fn substitution_preserves_annotation_only_dependencies() -> Result<(), Box<dyn Error>> {
++    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        let one = tc.ctx.succ(tc.ctx.zero());
++        let kind = crate::value::mk_sort(tc.arena, one);
++        let binder = tc.mk_bvar_hc(0, kind);
++        let var = tc.ctx.mk_var(0);
++        let prop = tc.ctx.prop();
++        let env = tc.env_extend(tc.empty_env(), binder);
++        let lambda = crate::value::mk_lam(tc.arena, var, crate::value::Closure::mk_eval(env, prop));
++        let actual = tc.eval(0, tc.empty_env(), prop);
++        let substituted = tc.substitute_checked_type(0, lambda, binder, actual).unwrap();
++        assert!(matches!(substituted, crate::value::Value::Lam { .. }));
++        let domain = tc.lam_domain(0, substituted);
++        assert!(tc.conv_types_at(0, domain, actual));
++    }))
++}
++
++#[test]
++fn substitution_declines_same_level_from_a_different_context() -> Result<(), Box<dyn Error>> {
++    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        let zero = tc.ctx.zero();
++        let one = tc.ctx.succ(zero);
++        let a = crate::value::mk_sort(tc.arena, zero);
++        let b = crate::value::mk_sort(tc.arena, one);
++        let target = tc.mk_bvar_hc(0, a);
++        let other = tc.mk_bvar_hc(0, b);
++        assert!(tc.substitute_checked_type(0, other, target, a).is_none());
++    }))
++}
+diff --git a/src/value.rs b/src/value.rs
+index 53b7677..9881228 100644
+--- a/src/value.rs
++++ b/src/value.rs
+@@ -344,6 +344,11 @@ impl<'a> Env<'a> {
+ pub enum Ctx<'a> {
+     Nil,
+     Cons { ty: V<'a>, parent: C<'a> },
++    // A closure-only record for a body already checked under `binder`.
++    // `None` means the result was proved independent of that binder by a
++    // conservative traversal of its semantic variables. This is never an
++    // active variable-lookup context.
++    InferredResult { result: V<'a>, binder: Option<V<'a>>, context: C<'a> },
+ }
+ 
+ #[derive(Debug)]
+@@ -419,19 +424,36 @@ impl<'a> Closure<'a> {
+     pub fn mk_eval(env: E<'a>, body: ExprPtr<'a>) -> Self { Closure { env, ctx: None, body } }
+ 
+     pub fn mk_infer(env: E<'a>, ctx: C<'a>, body: ExprPtr<'a>) -> Self { Closure { env, ctx: Some(ctx), body } }
++
++    pub fn mk_inferred_result(
++        arena: &'a Bump,
++        env: E<'a>,
++        context: C<'a>,
++        body: ExprPtr<'a>,
++        result: V<'a>,
++        binder: Option<V<'a>>,
++    ) -> Self {
++        let ctx = arena.alloc(Ctx::InferredResult { result, binder, context });
++        Closure { env, ctx: Some(ctx), body }
++    }
+ }
+ 
+ impl<'a> Ctx<'a> {
+     pub fn lookup(&self, mut idx: u16) -> Option<V<'a>> {
+         let mut cur = self;
+-        while let Ctx::Cons { ty, parent } = cur {
+-            if idx == 0 {
+-                return Some(*ty);
++        loop {
++            match cur {
++                Ctx::Nil => return None,
++                Ctx::Cons { ty, parent } => {
++                    if idx == 0 {
++                        return Some(*ty);
++                    }
++                    idx -= 1;
++                    cur = parent;
++                }
++                Ctx::InferredResult { .. } => panic!("retained inference result used as a variable context"),
+             }
+-            idx -= 1;
+-            cur = parent;
+         }
+-        None
+     }
+ }
+ 
+@@ -567,6 +589,7 @@ pub fn mk_thunk<'a>(arena: &'a Bump, env: E<'a>, expr: ExprPtr<'a>) -> V<'a> {
+ 
+ const _: () = assert!(std::mem::size_of::<Value<'static>>() == 56);
+ const _: () = assert!(std::mem::size_of::<Spine<'static>>() == 32);
++const _: () = assert!(std::mem::size_of::<Closure<'static>>() == 24);
+ 
+ pub fn forced_of<'a>(v: V<'a>) -> Option<V<'a>> {
+     match v {

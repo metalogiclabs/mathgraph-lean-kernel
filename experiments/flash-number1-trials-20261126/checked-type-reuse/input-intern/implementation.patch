@@ -1,0 +1,93 @@
+diff --git a/src/parser.rs b/src/parser.rs
+index f2114ad..1db1a04 100644
+--- a/src/parser.rs
++++ b/src/parser.rs
+@@ -700,7 +700,7 @@ impl<'a, R: BufRead> Parser<'a, R> {
+ 
+     #[inline(always)]
+     fn push_expr(&mut self, expected: BackRef, e: Expr<'a>, num_loose_bvars: u16, fv_mask: u64) {
+-        let r: &'a Expr<'a> = self.arena.alloc(e);
++        let r: &'a Expr<'a> = self.dag.exprs.intern(self.arena, e);
+         let ptr = ExprPtr::global(r, num_loose_bvars);
+         let entry = ExprEntry { ptr: Some(ptr), child_mask: if num_loose_bvars > 64 { 0 } else { fv_mask } };
+         debug_assert_eq!(entry.child_mask, crate::expr::child_mask(ptr));
+diff --git a/src/tests/util.rs b/src/tests/util.rs
+index 65a4652..6be4c90 100644
+--- a/src/tests/util.rs
++++ b/src/tests/util.rs
+@@ -48,6 +48,38 @@ pub(crate) fn test_ctx<'p, A>(path: Option<&Path>, f: impl FnOnce(&mut TcCtx) ->
+     test_export_file(path, |export_file| export_file.with_ctx(|ctx, _cache, _arena| f(ctx)))
+ }
+ 
++#[test]
++fn input_expression_sharing_ignores_only_erased_binder_metadata() -> Result<(), Box<dyn Error>> {
++    test_export_file(Some(Path::new("test_resources/SemanticExprSharing/config.json")), |export| {
++        let values: Vec<_> = export.declars.values().map(|d| match d {
++            crate::env::Declar::Definition { val, .. } => *val,
++            _ => panic!(),
++        }).collect();
++        assert_eq!(values.len(), 3);
++        assert_eq!(values[0], values[1]);
++        assert_ne!(values[0], values[2]); // a different domain must stay distinct
++        for d in export.declars.values() { export.check_declar(d); }
++    })
++}
++
++#[test]
++#[should_panic(expected = "def_eq failed")]
++fn input_expression_sharing_does_not_erase_changed_lambda_domains() {
++    test_export_file_should_panic(Some(Path::new("test_resources/SemanticExprSharing/config.json")), |export| {
++        let first = export.declars.get_index(0).unwrap().1;
++        let third = export.declars.get_index(2).unwrap().1;
++        let crate::env::Declar::Definition { val, hint, info } = third else { panic!() };
++        let bad = crate::env::Declar::Definition {
++            val: *val, hint: *hint,
++            info: crate::env::DeclarInfo { ty: first.info().ty, ..*info },
++        };
++        export.with_tc(crate::env::EnvLimit::ByIndex(2), |tc| {
++            tc.declar_info = Some(*bad.info());
++            tc.check_def_like_v(&bad, *val);
++        });
++    });
++}
++
+ impl<'t, 'p: 't> TcCtx<'t, 'p> {
+     #[cfg(test)]
+     pub(crate) fn level_n(&mut self, mut l: LevelPtr<'t>, n: u64) -> LevelPtr<'t> {
+diff --git a/test_resources/SemanticExprSharing/config.json b/test_resources/SemanticExprSharing/config.json
+new file mode 100644
+index 0000000..aa83604
+--- /dev/null
++++ b/test_resources/SemanticExprSharing/config.json
+@@ -0,0 +1,5 @@
++{
++  "export_file_path": "test_resources/SemanticExprSharing/export",
++  "permitted_axioms": [],
++  "unpermitted_axiom_hard_error": true
++}
+diff --git a/test_resources/SemanticExprSharing/export b/test_resources/SemanticExprSharing/export
+new file mode 100644
+index 0000000..d7f5839
+--- /dev/null
++++ b/test_resources/SemanticExprSharing/export
+@@ -0,0 +1,20 @@
++{"meta":{"exporter":{"name":"handcrafted","version":"0.1.0"},"format":{"version":"3.1.0"},"lean":{"version":"4.36.0","githash":"611c117bfaf7b7ae1cfcf246ce6fba31e8f509e9"}}}
++{"in":1,"str":{"pre":0,"str":"u"}}
++{"in":2,"str":{"pre":0,"str":"x"}}
++{"in":3,"str":{"pre":0,"str":"first"}}
++{"in":4,"str":{"pre":0,"str":"y"}}
++{"in":5,"str":{"pre":0,"str":"second"}}
++{"in":6,"str":{"pre":0,"str":"third"}}
++{"il":1,"param":1}
++{"il":2,"succ":1}
++{"ie":0,"sort":1}
++{"ie":1,"bvar":0}
++{"ie":2,"lam":{"binderInfo":"default","body":1,"name":2,"type":0}}
++{"ie":3,"forallE":{"binderInfo":"default","body":0,"name":2,"type":0}}
++{"def":{"all":[3],"hints":"abbrev","levelParams":[1],"name":3,"safety":"safe","type":3,"value":2}}
++{"ie":4,"lam":{"binderInfo":"implicit","body":1,"name":4,"type":0}}
++{"def":{"all":[5],"hints":"abbrev","levelParams":[1],"name":5,"safety":"safe","type":3,"value":4}}
++{"ie":5,"sort":2}
++{"ie":6,"lam":{"binderInfo":"default","body":1,"name":4,"type":5}}
++{"ie":7,"forallE":{"binderInfo":"default","body":5,"name":4,"type":5}}
++{"def":{"all":[6],"hints":"abbrev","levelParams":[1],"name":6,"safety":"safe","type":7,"value":6}}

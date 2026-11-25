@@ -17,7 +17,7 @@
       "retained_types": 1.022525877279053,
       "bidirectional": 1.030924903192141
     },
-    "instruction_metric": "UNKNOWN: PMU unavailable; dedicated counter run active"
+    "instruction_metric": "Old lambda variants: UNKNOWN_TIME_DIAGNOSTIC_BUDGET. Do not conflate with the completed attributed-core comparison."
   },
   "portable_230": {
     "retained_types": "WARRANTED_BOUNDED_230/230",
@@ -41,14 +41,33 @@
     "boundary": "Source-derived 128 MiB prefix, not prescribed Arena test"
   },
   "next_candidate": {
-    "name": "rule_syntax",
-    "source": "136bed4a3151e4ddf117980dcb05e242da9c0cbf",
-    "state": "WARRANTED_BOUNDED_PORTABLE_230_AND_FULL_MATHLIB_ACCEPTANCE; native material speedup gate REJECTED; instruction result UNKNOWN_RUNNING",
-    "prefix_instruction_ratio": 0.9713166699309577,
-    "decision": "Only exact complete syntax identity permits reusing independently checked imported rule typing; all domains, universe and metadata checks remain. No checker code copied.",
-    "full_mathlib_cpu_ratio": 1.0234337644147726
+    "name": "attributed_upstream_core_reconciliation",
+    "source_commit": "bc704eebed4e009bc66af1a849f18315c11f1926",
+    "src_tree": "06c257f0f2ff1f64711cfa54620b650e6dd59b7e",
+    "state": "WARRANTED_BOUNDED_239_PRESCRIBED_OUTCOMES; NAVIER_EXPORT_UNKNOWN; OFFICIAL_RANK_UNKNOWN",
+    "authorship": "Jeremy Chen Apache-2.0 sokonanoda at 9a021b66, with MathGraph source-correspondence and compatibility repairs; attributed integration",
+    "native_full_mathlib": {
+      "run": 45711005244,
+      "rounds_per_arm": 2,
+      "declarations": 739167,
+      "cpu_ratio": 0.6716490956177736,
+      "peak_rss_ratio": 0.7505009266835573
+    },
+    "full_instruction_diagnostic": {
+      "run": 45712976230,
+      "artifact": 15069518161,
+      "archive_sha256": "1a24ca4c7161e0ad47e58bb0d4d3d11c3345c6d249cd6d42a9e7e3976d8ef9b5",
+      "baseline": 964868458684,
+      "strict": 545995448357,
+      "ratio": 0.5658755278431343,
+      "observations_per_arm": 1,
+      "boundary": "Dynamic basic-block application estimate including libraries; not hardware retired instructions or official Arena score; REP and asynchronous-interruption limits."
+    },
+    "remaining_coverage": [
+      "navier-stokes-euler"
+    ]
   },
-  "promotion": "None; official release unchanged",
+  "promotion": "None; release 819d59c and official rank unchanged.",
   "prior_no_open_memo_checkpoint": {
     "qualified_release": "819d59c34db3fd8f7b790a83f5728f255f75f33e",
     "candidate_src_tree": "6b5f867d4b371dcf0d7cdfc38d14e4507ba621e1",
@@ -87,10 +106,20 @@
     "boundary": "One paired source-derived prefix observation per candidate. Neither promoted or run on full Mathlib."
   },
   "next_experiment": {
-    "name": "declaration-cost-census",
-    "state": "LOCAL_PREFIX_AND_46_TESTS_VERIFIED; COMPLETE_INPUT_TWO_RUN_CENSUS_TO_LAUNCH",
-    "src_tree": "deb3a3356a3b7ec6dd00c607dc56ecdc419ab4e1",
-    "workflow": ".github/workflows/flash-declaration-costs.yml",
-    "question": "Which declarations dominate complete-Mathlib checking? Instrumentation only; elapsed timing is not an Arena score."
-  }
+    "name": "compiled-function instruction profile of exact measured reconciled executable",
+    "workflow": ".github/workflows/flash-reconciled-function-profile.yml",
+    "binary_sha256": "09fe7ecf7421be7ad7f7c57596c214bcd6e7c0d912d6d555cb5749b17202bd5b",
+    "local_prefix": "WARRANTED_BOUNDED: 25,131 accepts; exact-loop, four-worker and shared-cache-negative controls passed",
+    "full_input": "TO_LAUNCH",
+    "question": "Which common compiled functions consume the remaining cost on the full new-core workload? Old-core census does not answer this."
+  },
+  "old_core_last_candidate": {
+    "name": "rule_syntax",
+    "source": "136bed4a3151e4ddf117980dcb05e242da9c0cbf",
+    "state": "WARRANTED_BOUNDED_PORTABLE_230_AND_FULL_MATHLIB_ACCEPTANCE; native material speedup gate REJECTED; instruction result UNKNOWN_RUNNING",
+    "prefix_instruction_ratio": 0.9713166699309577,
+    "decision": "Only exact complete syntax identity permits reusing independently checked imported rule typing; all domains, universe and metadata checks remain. No checker code copied.",
+    "full_mathlib_cpu_ratio": 1.0234337644147726
+  },
+  "old_core_architecture_trials": "Eight additional candidates preserved in checked-type-reuse/; no material prefix gain. All-argument suspension also loses 20.07% on the real prefix. No promotions; performance target superseded by bc704eeb."
 }
