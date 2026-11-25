@@ -126,21 +126,31 @@ impl<'t, 'p: 't> ExportFile<'p> {
                 out
             };
 
-            ctx.with_tc_and_env_ext(&recursor_extension, env_limit, arena, cache, |tc| {
-                tc.check_generated_recursors(&st, &recursors);
-                if st.is_nested() {
-                    tc.restore_and_check(&st, &unmodified_tys_ctors, &ind.all_ind_names);
-                } else {
-                    tc.assert_block_recursor_names(
-                        ind.info.name,
-                        recursors.iter().map(|recursor| recursor.info().name),
-                    );
-                    // Do the definitional equality assertions of new/old here.
-                    tc.assert_nonnested_tys_def_eq(ind, &st);
-                    tc.assert_nonnested_ctors_def_eq(&st);
-                    tc.assert_nonnested_recursors_def_eq(&st, &recursors);
-                }
-            })
+            let source_recursors: DeclarMap<'t> =
+                ctx.with_tc_and_env_ext(&recursor_extension, env_limit, arena, cache, |tc| {
+                    tc.check_generated_recursors(&st, &recursors);
+                    if st.is_nested() {
+                        tc.restore_and_check(&st, &unmodified_tys_ctors, &ind.all_ind_names)
+                    } else {
+                        tc.assert_block_recursor_names(
+                            ind.info.name,
+                            recursors.iter().map(|recursor| recursor.info().name),
+                        );
+                        tc.assert_nonnested_tys_def_eq(ind, &st);
+                        tc.assert_nonnested_ctors_def_eq(&st);
+                        tc.assert_nonnested_recursors_def_eq(&st, &recursors);
+                        recursors.iter().cloned().map(|r| (r.info().name, r)).collect()
+                    }
+                });
+            // Source rules refer to original inductive/constructor types, not
+            // the specialized temporary nested family. Check in that original
+            // namespace, with ALL of this block's recursors replaced by the
+            // independently constructed and restored declarations.
+            cache.clear();
+            ctx.with_tc_and_env_ext(&source_recursors, env_limit, arena, cache, |tc| {
+                tc.check_imported_rules_in_source_environment(&source_recursors);
+            });
+            cache.clear();
         }
     }
 }
@@ -2126,7 +2136,7 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
         ind_names_no_specialized: &Arc<[NamePtr<'t>]>,
         nested_rec_name_to_rec_name: &FxIndexMap<NamePtr<'t>, NamePtr<'t>>,
         rec_name: NamePtr<'t>,
-    ) {
+    ) -> RecursorData<'t> {
         let restored = self.restore_recursor1(st, ind_names_no_specialized, nested_rec_name_to_rec_name, rec_name);
         let resolved_rec_name = nested_rec_name_to_rec_name.get(&rec_name).copied().unwrap_or(rec_name);
         match self.env.get_old_declar(&resolved_rec_name) {
@@ -2153,6 +2163,7 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
             }
             _ => panic!("missing imported recursor reconstructed from nested inductive"),
         }
+        restored
     }
 
     fn restore_recursors(
@@ -2160,26 +2171,30 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
         st: &InductiveCheckState<'t>,
         specialized_rec_name_to_rec_name: &FxIndexMap<NamePtr<'t>, NamePtr<'t>>,
         ind_names_no_specialized: &Arc<[NamePtr<'t>]>,
-    ) {
+    ) -> DeclarMap<'t> {
+        let mut restored = crate::util::new_fx_index_map();
         // Check the recursors for the base inductives (NOT the specialized types)
         for old_ind_name in ind_names_no_specialized.iter().copied() {
             let rec_name = {
                 let rec_str_ptr = self.ctx.alloc_string(std::borrow::Cow::Borrowed("rec"));
                 self.ctx.str(old_ind_name, rec_str_ptr)
             };
-            self.check_restored_recursor1(st, ind_names_no_specialized, specialized_rec_name_to_rec_name, rec_name)
+            let r = self.check_restored_recursor1(st, ind_names_no_specialized, specialized_rec_name_to_rec_name, rec_name);
+            assert!(restored.insert(r.info.name, Declar::Recursor(r)).is_none());
         }
 
         // Check the recursors constructed for the specialized types,
         // like `_nested.Array_1.rec` after restoring it to `Lean.Syntax.rec_1`
         for specialized_ty_rec_name in specialized_rec_name_to_rec_name.keys().copied() {
-            self.check_restored_recursor1(
+            let r = self.check_restored_recursor1(
                 st,
                 ind_names_no_specialized,
                 specialized_rec_name_to_rec_name,
                 specialized_ty_rec_name,
-            )
+            );
+            assert!(restored.insert(r.info.name, Declar::Recursor(r)).is_none());
         }
+        restored
     }
 
     fn check_restored_ctor1(
@@ -2200,7 +2215,7 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
         st: &InductiveCheckState<'t>,
         unmodified_mutuals: &Vec<IndTyHeader<'t>>,
         ind_names_no_specialized: &Arc<[NamePtr<'t>]>,
-    ) {
+    ) -> DeclarMap<'t> {
         let specialized_to_unspecialized_rec_names = self.mk_specialized_rec_to_unspecialized_map(unmodified_mutuals);
         let base_rec_names = self.base_recursor_names(ind_names_no_specialized);
         self.assert_block_recursor_names(
@@ -2229,6 +2244,43 @@ impl<'x, 't: 'x, 'p: 't> TypeChecker<'x, 't, 'p> {
                 self.check_restored_ctor1(st, &specialized_to_unspecialized_rec_names, &ctor);
             }
         }
-        self.restore_recursors(st, &specialized_to_unspecialized_rec_names, ind_names_no_specialized);
+        self.restore_recursors(st, &specialized_to_unspecialized_rec_names, ind_names_no_specialized)
+    }
+
+    /// Independently type-check the imported rule *before* comparing its
+    /// value up to definitional equality. Use a complete source-namespace
+    /// environment with reconstructed recursors to avoid circular trust in
+    /// imported computation rules. Keep the original comparison as an
+    /// additional requirement; this is a strengthening, not a new shortcut.
+    fn check_imported_rules_in_source_environment(&mut self, reconstructed: &DeclarMap<'t>) {
+        for (name, derived) in reconstructed.iter() {
+            let Declar::Recursor(derived) = derived else { unreachable!() };
+            let Some(Declar::Recursor(imported)) = self.env.get_old_declar(name).cloned() else {
+                panic!("missing source recursor");
+            };
+            assert!(imported.aux_data_ck(derived));
+            assert_eq!(imported.rec_rules.len(), derived.rec_rules.len());
+            assert_eq!(self.ctx.read_levels(imported.info.uparams).len(),
+                       self.ctx.read_levels(derived.info.uparams).len());
+            self.declar_info = Some(imported.info);
+            for (source, generated) in imported.rec_rules.iter().zip(derived.rec_rules.iter()) {
+                assert_eq!(source.ctor_name, generated.ctor_name);
+                assert_eq!(source.ctor_telescope_size_wo_params, generated.ctor_telescope_size_wo_params);
+                self.ctx.assert_inductive_type_uparams_defined(source.val, imported.info.uparams);
+                let expected = self.ctx.subst_expr_levels(
+                    generated.val, derived.info.uparams, imported.info.uparams);
+                self.tc_cache.clear();
+                let source_ty = self.infer_value(
+                    crate::tc::InferFlag::Check, 0, self.empty_env(), self.empty_ctx(), source.val);
+                let derived_ty = self.infer_value(
+                    crate::tc::InferFlag::Check, 0, self.empty_env(), self.empty_ctx(), expected);
+                assert!(self.conv_types_at(0, source_ty, derived_ty),
+                        "imported recursor rule has wrong source-environment type");
+                assert!(self.def_eq_core(source.val, expected),
+                        "imported recursor rule differs in its source environment");
+            }
+            self.declar_info = None;
+            self.tc_cache.clear();
+        }
     }
 }
