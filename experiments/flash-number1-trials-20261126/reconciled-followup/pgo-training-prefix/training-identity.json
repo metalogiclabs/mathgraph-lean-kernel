@@ -1,0 +1,25 @@
+{
+  "source": "bc704eebed4e009bc66af1a849f18315c11f1926",
+  "source_tree": "06c257f0f2ff1f64711cfa54620b650e6dd59b7e",
+  "training_input_sha256": "c3d1e08032bbfe2dbfc4c8a84fd711ba83296a47d7468d9ce15988efa4acfa3a",
+  "training_bytes": 134232002,
+  "generator_binary_sha256": "f623b37c7441aafd2c6d7f54c480d43099b927666a71eb10855b2d3d7d645aad",
+  "profdata_sha256": "67d8ee0830c7186cecdcb39bfd338eab63509e266cd92127674e5f0bded3c863",
+  "profdata_bytes": 5449544,
+  "raw_profile_files": 13,
+  "training": [
+    {
+      "threads": 1,
+      "raw_exit": 0,
+      "declarations": 25131,
+      "elapsed_s": 4.582015004998539
+    },
+    {
+      "threads": 2,
+      "raw_exit": 0,
+      "declarations": 25131,
+      "elapsed_s": 4.244385625999712
+    }
+  ],
+  "boundary": "Profile-guided compiler experiment. The training prefix is part of the full Mathlib workload, so performance is not an independent out-of-distribution result. No source/verdict dispatch or skipped checks."
+}

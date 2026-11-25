@@ -1,0 +1,69 @@
+diff --git a/src/checker/eval/environment.rs b/src/checker/eval/environment.rs
+index 5f1a1e8..79d6890 100644
+--- a/src/checker/eval/environment.rs
++++ b/src/checker/eval/environment.rs
+@@ -154,11 +154,26 @@ impl TypeChecker<'_, '_> {
+                     let taken = cut.min(NEAR - consumed);
+                     let m2 = rem & fmask & ((1u64 << taken) - 1);
+                     out_mask |= m2 << consumed;
++                    // MathGraph experiment: transfer our earlier exact slot-
++                    // rank selection to the segmented environment layout.
++                    // BMI2 extracts the selected source positions into the
++                    // packed frame-slot index space. Other CPUs retain the
++                    // original population-count path, including FAR handling.
++                    #[cfg(target_arch = "x86_64")]
++                    let packed = std::is_x86_feature_detected!("bmi2");
++                    #[cfg(not(target_arch = "x86_64"))]
++                    let packed = false;
++                    #[cfg(target_arch = "x86_64")]
++                    let mut sel = if packed { unsafe { selected_ranks(m2, fmask) } } else { m2 };
++                    #[cfg(not(target_arch = "x86_64"))]
+                     let mut sel = m2;
+                     while sel != 0 {
+-                        let below = fmask & ((1u64 << sel.trailing_zeros()) - 1);
++                        let position = sel.trailing_zeros();
++                        let index = if packed { position } else {
++                            (fmask & ((1u64 << position) - 1)).count_ones()
++                        };
+                         sel &= sel - 1;
+-                        let sv = self.vals().env_slot(fstart + below.count_ones() as usize);
++                        let sv = self.vals().env_slot(fstart + index as usize);
+                         self.vals_mut().push_env_slot(sv);
+                         slots_hash = slots_hash
+                             .wrapping_mul(GOLDEN)
+@@ -240,3 +255,35 @@ fn prune_slot(env: E, mask: u64) -> usize {
+     ((u64::from(env.raw()).wrapping_mul(GOLDEN) ^ mask.wrapping_mul(0xD6E8_FEB8_6659_FD93))
+         >> crate::checker::cache::PRUNE_DM_SHIFT) as usize
+ }
++
++#[cfg(target_arch = "x86_64")]
++#[target_feature(enable = "bmi2")]
++unsafe fn selected_ranks(selected: u64, frame: u64) -> u64 {
++    std::arch::x86_64::_pext_u64(selected, frame)
++}
++
++#[cfg(all(test, target_arch = "x86_64"))]
++mod rank_selection_tests {
++    use super::selected_ranks;
++
++    #[test]
++    fn hardware_selection_preserves_source_slot_order() {
++        if !std::is_x86_feature_detected!("bmi2") { return; }
++        for frame in 0u64..256 {
++            for selection in 0u64..256 {
++                let selection = selection & frame;
++                let positions: Vec<_> = (0..8).filter(|bit| frame & (1 << bit) != 0).collect();
++                let expected = positions.iter().enumerate().filter(|(_, bit)| selection & (1 << *bit) != 0)
++                    .map(|(rank, _)| 1u64 << rank).sum::<u64>();
++                assert_eq!(unsafe { selected_ranks(selection, frame) }, expected);
++            }
++        }
++        // High near positions and the FAR marker participate in rank order,
++        // while an unselected FAR marker never creates a packed slot.
++        for shift in [1, 29, 54, 55] {
++            let frame = (0b10110101u64 << shift) | (1u64 << 63);
++            let selected = (0b10000100u64 << shift) & frame;
++            assert_eq!(unsafe { selected_ranks(selected, frame) }, 0b10010);
++        }
++    }
++}

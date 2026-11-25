@@ -1,0 +1,141 @@
+diff --git a/src/checker/infer.rs b/src/checker/infer.rs
+index 2e6bcd8..db81833 100644
+--- a/src/checker/infer.rs
++++ b/src/checker/infer.rs
+@@ -19,6 +19,102 @@ pub(crate) enum CheckScope {
+     Under(LevelsId),
+ }
+ 
++#[cfg(test)]
++mod prefix_reuse_tests {
++    use super::*;
++    use crate::checker::cache::TcCache;
++    use crate::checker::context::TcCtx;
++    use crate::checker::env::EnvLimit;
++    use crate::checker::value::EMPTY_CTX;
++    use crate::config::{AxiomPolicy, Config};
++    use crate::frontend::parser::parse_export_mapped;
++    use crate::outcome::Rejection;
++    use std::panic::{catch_unwind, AssertUnwindSafe};
++
++    const SOURCE: &str = r#"{"in":1,"str":{"pre":0,"str":"A"}}
++{"il":1,"succ":0}
++{"ie":0,"sort":1}
++{"axiom":{"name":1,"type":0,"levelParams":[],"isUnsafe":false}}
++{"ie":1,"const":{"name":1,"us":[]}}
++{"ie":2,"forallE":{"type":1,"body":1}}
++{"ie":3,"forallE":{"type":1,"body":2}}
++{"in":2,"str":{"pre":0,"str":"f"}}
++{"axiom":{"name":2,"type":3,"levelParams":[],"isUnsafe":false}}
++{"in":3,"str":{"pre":0,"str":"a"}}
++{"axiom":{"name":3,"type":1,"levelParams":[],"isUnsafe":false}}
++{"in":4,"str":{"pre":0,"str":"B"}}
++{"axiom":{"name":4,"type":0,"levelParams":[],"isUnsafe":false}}
++"#;
++
++    fn with_checker(f: impl FnOnce(&mut TypeChecker<'_, '_>)) {
++        let export = parse_export_mapped(SOURCE.as_bytes(), Config {
++            axiom_policy: AxiomPolicy::AllowAll, ..Config::default()
++        }).unwrap();
++        let arena = bumpalo::Bump::new();
++        let mut context = TcCtx::new(&export, &arena);
++        let mut cache = TcCache::new();
++        context.with_tc(EnvLimit::ByIndex(export.declars.len()), &mut cache, f);
++    }
++
++    fn constant(tc: &mut TypeChecker<'_, '_>, name: &'static str) -> ExprId {
++        let name = tc.ctx.str1(name);
++        let levels = tc.ctx.alloc_levels(&[]);
++        tc.ctx.mk_const(name, levels)
++    }
++
++    #[test]
++    fn checked_prefix_accepts_its_remaining_argument() {
++        with_checker(|tc| {
++            let f = constant(tc, "f"); let a = constant(tc, "a");
++            let prefix = tc.ctx.mk_app(f, a);
++            tc.infer_value(Check, 0, EMPTY_ENV, EMPTY_CTX, prefix);
++            let application = tc.ctx.mk_app(prefix, a);
++            let result = tc.infer_value(Check, 0, EMPTY_ENV, EMPTY_CTX, application);
++            let a_type = constant(tc, "A");
++            let expected = tc.eval(0, EMPTY_ENV, a_type);
++            assert!(tc.conv_types_at(0, result, expected));
++        });
++    }
++
++    #[test]
++    fn unchecked_prefix_does_not_authorize_skipping_argument_checks() {
++        let result = catch_unwind(AssertUnwindSafe(|| with_checker(|tc| {
++            let f = constant(tc, "f"); let a = constant(tc, "a");
++            let zero = tc.ctx.zero(); let prop = tc.ctx.mk_sort(zero);
++            let bad_prefix = tc.ctx.mk_app(f, prop);
++            tc.infer_value(InferOnly, 0, EMPTY_ENV, EMPTY_CTX, bad_prefix);
++            let application = tc.ctx.mk_app(bad_prefix, a);
++            tc.infer_value(Check, 0, EMPTY_ENV, EMPTY_CTX, application);
++        })));
++        assert!(result.is_err_and(|error| error.is::<Rejection>()));
++    }
++
++    #[test]
++    fn prefix_from_another_variable_context_does_not_authorize_reuse() {
++        let result = catch_unwind(AssertUnwindSafe(|| with_checker(|tc| {
++            let a_type = constant(tc, "A"); let b_type = constant(tc, "B");
++            let a_tail = tc.ctx.mk_pi(a_type, a_type);
++            let a_function = tc.ctx.mk_pi(a_type, a_tail);
++            let b_tail = tc.ctx.mk_pi(b_type, b_type);
++            let b_function = tc.ctx.mk_pi(b_type, b_tail);
++            let a_function = tc.eval(0, EMPTY_ENV, a_function);
++            let b_function = tc.eval(0, EMPTY_ENV, b_function);
++            let fa = tc.mk_bvar_hc(0, a_function);
++            let fb = tc.mk_bvar_hc(0, b_function);
++            let env_a = tc.env_extend(EMPTY_ENV, fa);
++            let env_b = tc.env_extend(EMPTY_ENV, fb);
++            let context_a = tc.ctx_extend(EMPTY_CTX, a_function);
++            let context_b = tc.ctx_extend(EMPTY_CTX, b_function);
++            let variable = tc.ctx.mk_var(0); let a = constant(tc, "a");
++            let prefix = tc.ctx.mk_app(variable, a);
++            tc.infer_value(Check, 1, env_a, context_a, prefix);
++            let application = tc.ctx.mk_app(prefix, a);
++            tc.infer_value(Check, 1, env_b, context_b, application);
++        })));
++        assert!(result.is_err_and(|error| error.is::<Rejection>()));
++    }
++}
++
+ #[derive(Debug, Clone, Copy)]
+ pub(crate) struct CachedType {
+     pub(crate) result: V,
+@@ -268,15 +364,31 @@ impl TypeChecker<'_, '_> {
+     }
+ 
+     fn infer_app_v(&mut self, flag: InferFlag, depth: u32, env: E, ctx: C, e: ExprId) -> V {
++        let App { fun, arg } = self.ctx.ex(e) else { unreachable!() };
++        let one_argument = [arg];
++        // MathGraph experiment: an application prefix can already carry a
++        // completed typing judgment. Reuse exactly the ordinary cache key and
++        // checking scope, then check the newly supplied argument normally.
++        // Temporary inductive environments retain their existing path.
++        let cached_prefix = if !self.env.has_temp_ext() && matches!(self.ctx.ex(fun), App { .. }) {
++            let mask = self.ctx.mask(fun);
++            let key = (self.prune_env(env, mask), fun);
++            let scope = self.uparam_scope();
++            self.tc_cache.type_cache.get(&key).and_then(|cached| {
++                (flag == InferOnly || cached.checked_under == scope).then_some(cached.result)
++            })
++        } else { None };
+         let mut buf = [MaybeUninit::uninit(); SPINE];
+         let spilled;
+-        let (head, rev_args) = if let Some(peeled) = self.ctx.peel_apps(e, &mut buf) {
++        let (head, rev_args) = if cached_prefix.is_some() {
++            (fun, &one_argument[..])
++        } else if let Some(peeled) = self.ctx.peel_apps(e, &mut buf) {
+             peeled
+         } else {
+             spilled = self.ctx.unfold_apps_rev(e);
+             (spilled.0, &spilled.1[..])
+         };
+-        let mut fty = self.infer_value(flag, depth, env, ctx, head);
++        let mut fty = cached_prefix.unwrap_or_else(|| self.infer_value(flag, depth, env, ctx, head));
+         let mut telescope: Option<(E, ExprId)> = None;
+         for &arg in rev_args.iter().rev() {
+             if let Some((tenv, t)) = telescope

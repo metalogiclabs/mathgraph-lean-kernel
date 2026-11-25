@@ -1,0 +1,17 @@
+{
+  "compiler": "rustc 1.99.1 (58cf8f9c3 2026-10-13), LLVM 23.1.1",
+  "generate_flags": "-C target-cpu=native -C profile-generate=/tmp/flash-reconciled-pgo-data -C llvm-args=-instrprof-atomic-counter-update-all",
+  "training_argv": [
+    "--stdin",
+    "--threads",
+    "1 or 2",
+    "--nat-extension",
+    "--string-extension",
+    "--axiom-allow-all"
+  ],
+  "merge": "Matching rustup llvm-profdata merge -sparse ALL 13 .profraw files into training.profdata",
+  "use_flags": "-C target-cpu=native -C profile-use=/tmp/flash-reconciled-pgo-data/training.profdata -C llvm-args=-pgo-warn-missing-function",
+  "cargo": "cargo build --release --locked; separate clean target dirs; no --target argument",
+  "raw_profile_provenance": "13 raw files include two explicit checker training executions and may include Cargo build-script/proc-macro executions, because flags were not target-isolated. No claim all 13 are checker-only.",
+  "decision": "CANDIDATE_COMPILER_TRAINING_ONLY; 1.97% lower instructions on the same prefix used for training; no independent holdout, full Mathlib, portable qualification, or Arena score. Excluded from submission."
+}
