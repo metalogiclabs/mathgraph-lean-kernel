@@ -1040,6 +1040,7 @@ pub struct NameCache<'p> {
 
 pub(crate) const PRUNE_DM_LEN: usize = 1 << 10;
 pub(crate) const PRUNE_DM_SHIFT: u32 = 64 - 10;
+pub(crate) const EARLY_EVAL_LEN: usize = 1 << 10;
 
 pub struct TcCache<'a, 't> {
     pub(crate) unfold_const_cache: FxHashMap<(NamePtr<'t>, LevelsPtr<'t>), V<'a>>,
@@ -1061,6 +1062,7 @@ pub struct TcCache<'a, 't> {
     pub(crate) lam_domain_cache: FxHashMap<usize, V<'a>>,
     pub(crate) global_value_cache: FxHashMap<(usize, u32), Result<(u128, bool), u8>>,
     pub(crate) open_eval_cache: FxHashMap<(usize, ExprPtr<'t>), V<'a>>,
+    pub(crate) early_eval: Box<[Option<(usize, ExprPtr<'t>, V<'a>)>; EARLY_EVAL_LEN]>,
     pub(crate) open_eval_seen: FxHashSet<ExprPtr<'t>>,
     pub(crate) bvar_hc: FxHashMap<(u32, usize), V<'a>>,
     pub(crate) spine_hc: FxHashMap<(usize, u64), S<'a>>,
@@ -1113,6 +1115,7 @@ impl<'a, 't> TcCache<'a, 't> {
             lam_domain_cache: session_small_fx_hash_map(),
             global_value_cache: session_fx_hash_map(),
             open_eval_cache: session_fx_hash_map(),
+            early_eval: vec![None; EARLY_EVAL_LEN].into_boxed_slice().try_into().expect("early evaluation table size"),
             open_eval_seen: small_fx_hash_set(),
             bvar_hc: session_small_fx_hash_map(),
             spine_hc: session_fx_hash_map(),
@@ -1167,6 +1170,7 @@ impl<'a, 't> TcCache<'a, 't> {
         self.thunk_hc.clear();
         self.quote_cache.clear();
         self.open_eval_cache.clear();
+        self.early_eval.fill(None);
         self.open_eval_seen.clear();
         self.bvar_hc.clear();
         self.spine_hc.clear();
@@ -1214,6 +1218,7 @@ impl<'a, 't> TcCache<'a, 't> {
         shrink_map(&mut self.thunk_hc);
         shrink_map(&mut self.quote_cache);
         shrink_map(&mut self.open_eval_cache);
+        self.early_eval.fill(None);
         shrink_set(&mut self.open_eval_seen);
         shrink_map(&mut self.bvar_hc);
         shrink_map(&mut self.spine_hc);

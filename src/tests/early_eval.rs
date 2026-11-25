@@ -96,3 +96,33 @@ fn early_evaluation_is_invalidated_with_existing_cache() -> Result<(), Box<dyn E
         assert!(projections() > before, "session reset retained an evaluation result");
     }))
 }
+
+// Overfill the bounded table with different expressions and environments. Every
+// result is checked against the captured universe, including after replacement.
+#[test]
+fn early_evaluation_collisions_preserve_captured_results() -> Result<(), Box<dyn Error>> {
+    test_export_file(None, |export| export.with_tc(EnvLimit::Empty, |tc| {
+        let zero = tc.ctx.zero();
+        let one = tc.ctx.succ(zero);
+        let x = value::mk_sort(tc.arena, zero);
+        let y = value::mk_sort(tc.arena, one);
+        let ex = tc.env_extend(tc.empty_env(), x);
+        let ey = tc.env_extend(tc.empty_env(), y);
+        let outer = tc.ctx.mk_var(1);
+        let mut level = zero;
+        let mut requests = Vec::new();
+        for i in 0..2049 {
+            level = tc.ctx.succ(level);
+            let domain = tc.ctx.mk_sort(level);
+            let expression = tc.ctx.mk_lambda(domain, outer);
+            let (environment, expected_level) = if i % 2 == 0 { (ex, zero) } else { (ey, one) };
+            requests.push((environment, expression, expected_level, domain));
+        }
+        for &(environment, expression, expected_level, expected_domain) in requests.iter().chain(requests.iter().rev()) {
+            let closure = tc.eval(1, environment, expression);
+            assert!(matches!(closure, Value::Lam { binder_type, .. } if *binder_type == expected_domain));
+            let result = tc.apply(1, closure, x);
+            assert!(matches!(result, Value::Sort { level, .. } if *level == expected_level));
+        }
+    }))
+}

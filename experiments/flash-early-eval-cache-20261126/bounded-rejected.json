@@ -1,0 +1,24 @@
+{
+  "boundary": "Raw process status; software guest instructions are not an official Arena score.",
+  "geomean_ratio": 1.0169888907620324,
+  "observations": 10,
+  "passes_1_percent_gate": false,
+  "ratios": {
+    "init-prelude": 1.0113695414253605,
+    "perf/fueled-chain": 1.006771881588631,
+    "perf/grind-ring-5": 1.014481151031908,
+    "perf/magma-list-deep-n21": 1.0284083587700588,
+    "perf/magma-list-pair-n7": 1.0240720578582179
+  },
+  "wrong_or_unavailable": [],
+  "status": "REJECTED_AS_PERFORMANCE_GAIN",
+  "baseline_commit": "819d59c34db3fd8f7b790a83f5728f255f75f33e",
+  "unit_tests": 51,
+  "source_sha256": {
+    "src/eval.rs": "9828fe96c0981a8166f7a7d9709b8d64ca9514b4fdbad026fb5e2472e67fcae3",
+    "src/util.rs": "8aa3a096369dbdff69ab8a834a16df9ec6ee7242a96042f580d27d77848fb0c5",
+    "Cargo.toml": "bdabce2f5b75dbca04115c7512f39faac9c6641c69bc21d15bfb41fc1e7bd284",
+    "Cargo.lock": "caeadd75fc2d9d26d0fe1a3c17b31185ba788e25eabf08b9d194f31b0cd3d64a"
+  },
+  "validation_boundary": "51 library tests and one unconfigured integration test pass; five hash-matched performance cases accept. Full 240-case qualification not warranted."
+}

@@ -1,0 +1,72 @@
+{
+  "status": "WARRANTED_BOUNDED_DIAGNOSTIC",
+  "source_commit": "492480f59fbdfebaa80180ead495ff4fe143d4c6",
+  "instrumentation": "instrument_census.py",
+  "binary_sha256": "47ab6468c3f7f486b6592233b17a6fbe1e6dca021d33ca77e41ce69a0c9a867e",
+  "scope": "One worker, five source-hash-matched portable cases. Counters include instrumentation overhead; no timing or Arena score claim.",
+  "rows": [
+    {
+      "case": "init-prelude",
+      "raw_exit": 0,
+      "requests": 203893,
+      "exact_original_hits": 31624,
+      "projected_environment_hits": 20549,
+      "computed_misses": 151720,
+      "extra_alias_insertions": 151096,
+      "unprojected_insertions": 21173,
+      "exact_original_hit_fraction": 0.155100959817159,
+      "input_sha256": "4772efbd23270de11b206ed63c5bbe6783363acc83757d37c5e6884a2549074b"
+    },
+    {
+      "case": "perf/grind-ring-5",
+      "raw_exit": 0,
+      "requests": 2135455,
+      "exact_original_hits": 334408,
+      "projected_environment_hits": 430146,
+      "computed_misses": 1370901,
+      "extra_alias_insertions": 1555523,
+      "unprojected_insertions": 245524,
+      "exact_original_hit_fraction": 0.15659800838697138,
+      "input_sha256": "19331af9652c84013b934a26ebf2bf25eba19abc8b9246baa4014c08850fb2e3"
+    },
+    {
+      "case": "perf/magma-list-deep-n21",
+      "raw_exit": 0,
+      "requests": 2890478,
+      "exact_original_hits": 149566,
+      "projected_environment_hits": 1015749,
+      "computed_misses": 1725163,
+      "extra_alias_insertions": 2587361,
+      "unprojected_insertions": 153551,
+      "exact_original_hit_fraction": 0.05174438276298937,
+      "input_sha256": "5d470c0b68949e393ea61469dccb0aac6185433c56f06bfc15202e2644a5a5ff"
+    },
+    {
+      "case": "perf/magma-list-pair-n7",
+      "raw_exit": 0,
+      "requests": 3751587,
+      "exact_original_hits": 83098,
+      "projected_environment_hits": 442279,
+      "computed_misses": 3226210,
+      "extra_alias_insertions": 3147823,
+      "unprojected_insertions": 520666,
+      "exact_original_hit_fraction": 0.02215009274741596,
+      "input_sha256": "41333e6e8c06623d8064583e040d2983148ca7d2c6e98b6604c0fc98ef8b7102"
+    },
+    {
+      "case": "perf/fueled-chain",
+      "raw_exit": 0,
+      "requests": 166528,
+      "exact_original_hits": 67716,
+      "projected_environment_hits": 28438,
+      "computed_misses": 70374,
+      "extra_alias_insertions": 89269,
+      "unprojected_insertions": 9543,
+      "exact_original_hit_fraction": 0.40663431975403536,
+      "input_sha256": "48b8b93fbc50c84528f275dca393c09c0f1301031b518fa33601926c64c6b46d"
+    }
+  ],
+  "executed_local_commit": "b4e37ad14fedae8d7b2516ba7aaa4d50a7d700b1",
+  "source_tree": "76577b5831cf9a45005dd3c6670d419b8aa2cb09",
+  "source_identity": "Published commit has the exact same Git root tree as the executed local alias commit."
+}

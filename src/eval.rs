@@ -624,31 +624,28 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
             self.ctx.read_expr_ref(e),
             Expr::App { .. } | Expr::Proj { .. } | Expr::Let { .. } | Expr::Pi { .. } | Expr::Lambda { .. }
         ) {
-            // An exact original-environment hit needs no support projection.
-            // Env identity includes its universe substitution. These aliases use
-            // the existing session-owned map and expire with its ordinary keys.
+            // Probe exact identities before projecting the environment. A full
+            // key comparison authorizes a hit; collisions only discard reuse.
+            // Env identity includes its universe substitution, and both cache
+            // reset paths clear these session-owned entries.
             let original_key = (env as *const value::Env<'t> as usize, e);
-            if let Some(v) = self.tc_cache.open_eval_cache.get(&original_key) {
-                return v;
+            let slot = crate::hash64!(original_key.0, e) as usize & (crate::util::EARLY_EVAL_LEN - 1);
+            if let Some((saved_env, saved_expression, v)) = self.tc_cache.early_eval[slot] {
+                if saved_env == original_key.0 && saved_expression == e {
+                    return v;
+                }
             }
             let te = self.key_env(env, e);
             let key = (te as *const value::Env<'t> as usize, e);
-            let cached = if key == original_key {
-                None // The exact same key was just probed above.
-            } else {
-                self.tc_cache.open_eval_cache.get(&key).copied()
-            };
-            let v = match cached {
-                Some(v) => v,
+            let v = match self.tc_cache.open_eval_cache.get(&key) {
+                Some(v) => *v,
                 None => {
                     let v = self.eval_no_cache(depth, te, e);
                     self.tc_cache.open_eval_cache.insert(key, v);
                     v
                 }
             };
-            if original_key != key {
-                self.tc_cache.open_eval_cache.insert(original_key, v);
-            }
+            self.tc_cache.early_eval[slot] = Some((original_key.0, e, v));
             return v;
         }
         self.eval_no_cache(depth, env, e)

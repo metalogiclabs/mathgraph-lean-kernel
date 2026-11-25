@@ -1,0 +1,27 @@
+{
+  "status": "UNKNOWN_FULL_PORTABLE_QUALIFICATION",
+  "cases_attempted": 230,
+  "strict_correct": {
+    "baseline": 228,
+    "candidate": 228
+  },
+  "incorrect_decisive": {
+    "baseline": 0,
+    "candidate": 0
+  },
+  "unavailable": [
+    {
+      "name": "perf/magma-list-deep-n36",
+      "baseline": -9,
+      "candidate": -9,
+      "cause": "SIGKILL observed; underlying cause not established"
+    },
+    {
+      "name": "perf/magma-list-pair-n21",
+      "baseline": -9,
+      "candidate": -9,
+      "cause": "SIGKILL observed; underlying cause not established"
+    }
+  ],
+  "note": "Both arms were killed on the same two cases. Do not relabel those as semantic rejection or complete qualification."
+}
