@@ -1,0 +1,89 @@
+name: Flash source-environment recursor rule qualification
+on:
+  push:
+    branches: [research/flash-arena-restored-rule-typing-20261125]
+    paths:
+      - .github/workflows/flash-arena-restored-rule-typing.yml
+      - src/inductive.rs
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  restored-rules:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    env:
+      RUSTFLAGS: -C target-cpu=native
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: 0
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build exact baseline and candidate
+        run: |
+          set -euxo pipefail
+          OUT="$RUNNER_TEMP/rule-evidence"
+          mkdir -p "$OUT"
+          git rev-parse HEAD | tee "$OUT/commit.txt"
+          git worktree add --detach "$RUNNER_TEMP/six-guard" 6c2889330be236b3bc063b3415de6e9af65ecfe1
+          git diff --stat 6c2889330be236b3bc063b3415de6e9af65ecfe1 -- src | tee "$OUT/kernel-diff.txt"
+          rustc -Vv | tee "$OUT/compiler.txt"
+          cargo build --release --locked
+          cargo build --release --locked --manifest-path "$RUNNER_TEMP/six-guard/Cargo.toml"
+          sha256sum target/release/sokonanoda "$RUNNER_TEMP/six-guard/target/release/sokonanoda" | tee "$OUT/binaries.sha256"
+      - name: Exact independent negative and authentic positive rule tests
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY'
+          import importlib.util
+          import json
+          import os
+          from pathlib import Path
+          spec = importlib.util.spec_from_file_location("recovery", Path("experiments/flash-current-arena-20261125/recovery.py"))
+          m = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(m)
+          out = Path(os.environ["RUNNER_TEMP"]) / "rule-evidence"
+          tests = m.source_manifest(out)
+          fixtures = m.unpack_portable(out, tests)
+          cfg = m.config(out)
+          logs = out / "logs"
+          logs.mkdir()
+          cmds = {"baseline": [str(Path(os.environ["RUNNER_TEMP"]) / "six-guard/target/release/sokonanoda"), str(cfg)],
+                  "candidate": [str(Path("target/release/sokonanoda").resolve()), str(cfg)]}
+          targets = ["bugs/rec-rule-proof-irrel", "bugs/rec-rule-proof-irrel-nested"]
+          assert all(n in fixtures and tests[n]["outcome"] == "reject" for n in targets)
+          controls = [n for n in fixtures if n == "init-prelude" or n.startswith("tutorial/") and ("Rec" in n or "Ind" in n)]
+          order = targets + sorted(controls) + sorted(set(fixtures) - set(targets) - set(controls))
+          rows = []
+          for name in order:
+              pair = {}
+              for arm, cmd in cmds.items():
+                  row = m.run_one(cmd, fixtures[name], int(tests[name].get("timeout") or 120), arm, logs, name)
+                  row["expected"] = tests[name]["outcome"]
+                  row["input_sha256"] = tests[name]["sha256"]
+                  pair[arm] = row
+              rows.append({"name": name, **pair})
+              m.dump(out / "paired-rows.json", rows)
+              print("RULE_PAIR", json.dumps({"name":name, "before":pair["baseline"]["raw_exit"], "after":pair["candidate"]["raw_exit"], "expected":tests[name]["outcome"], "candidate_diagnostic":pair["candidate"]["stderr_tail"]}), flush=True)
+              if len(rows) == 2:
+                  m.dump(out / "target.json", rows)
+          target_rows = {r["name"]:r for r in rows if r["name"] in targets}
+          corrected = [n for n in targets if target_rows[n]["baseline"]["raw_exit"] == 0 and target_rows[n]["candidate"]["raw_exit"] == 1]
+          regressions = [r["name"] for r in rows if r["name"] not in targets and r["baseline"]["arena_outcome"] == r["baseline"]["expected"] and r["candidate"]["arena_outcome"] != r["candidate"]["expected"]]
+          status = "BOUNDED_RULE_REPAIR" if len(corrected) == 2 and not regressions else "NOT_QUALIFIED"
+          m.dump(out / "summary.json", {"status":status,"test_count":len(rows),"target_corrected":corrected,"new_wrong_or_missing":regressions,"full_mathlib":"UNKNOWN"})
+          print("RULE_SUMMARY", (out / "summary.json").read_text(), flush=True)
+          assert len(corrected) == 2 and not regressions
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-source-environment-rule-evidence
+          path: |
+            ${{ runner.temp }}/rule-evidence/*.json
+            ${{ runner.temp }}/rule-evidence/*.txt
+            ${{ runner.temp }}/rule-evidence/*.sha256
+            ${{ runner.temp }}/rule-evidence/logs/
+          if-no-files-found: error
