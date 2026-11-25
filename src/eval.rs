@@ -622,7 +622,10 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
             self.ctx.read_expr_ref(e),
             Expr::App { .. } | Expr::Proj { .. } | Expr::Let { .. } | Expr::Pi { .. } | Expr::Lambda { .. }
         ) {
-            let te = self.key_env(env, e);
+            // Full capture is an exact cache key. Retaining unused bindings
+            // trades cross-environment reuse for avoiding a pruning pass here.
+            // Closure construction keeps its independent support projection.
+            let te = env;
             let key = (te as *const value::Env<'t> as usize, e);
             if let Some(v) = self.tc_cache.open_eval_cache.get(&key) {
                 return v;

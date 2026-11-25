@@ -1,0 +1,114 @@
+diff --git a/src/eval.rs b/src/eval.rs
+index 2e4c877..d980c38 100644
+--- a/src/eval.rs
++++ b/src/eval.rs
+@@ -596,10 +596,7 @@ pub(crate) fn plain_unfold_neutral_path(nat_extension: bool, is_nat_red: bool) -
+ 
+ #[inline(always)]
+ pub(crate) fn eval_direct_var_index(e: ExprPtr<'_>) -> Option<u16> {
+-    match e.as_ref() {
+-        Expr::Var { dbj_idx, .. } => Some(*dbj_idx),
+-        _ => None,
+-    }
++    e.direct_var_index()
+ }
+ 
+ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
+@@ -2249,6 +2246,36 @@ mod qckn_eval_var_fast_tests {
+     use crate::util::ExprPtr;
+     use stumpalo::Arena;
+ 
++    #[test]
++    fn variable_dispatch_needs_no_expression_node_read() {
++        let mut arena = Arena::new();
++        arena.with_scope(|scope| {
++            for index in [0u16, 1, 63, 64, 4096, u16::MAX - 1] {
++                let node = scope.alloc(Expr::Var { dbj_idx: index, hash: hash64!(crate::expr::VAR_HASH, index) });
++                for pointer in [ExprPtr::local(node), ExprPtr::global(node, index + 1)] {
++                    let before = crate::util::EXPR_NODE_READS.with(std::cell::Cell::get);
++                    assert_eq!(eval_direct_var_index(pointer), Some(index));
++                    assert_eq!(crate::util::EXPR_NODE_READS.with(std::cell::Cell::get), before,
++                               "variable dispatch loaded the expression payload");
++                }
++            }
++        });
++    }
++
++    #[test]
++    fn nonvariable_with_the_same_free_variable_count_is_not_a_variable() {
++        let mut arena = Arena::new();
++        arena.with_scope(|scope| {
++            let node = scope.alloc(Expr::Var { dbj_idx: 7, hash: hash64!(crate::expr::VAR_HASH, 7u16) });
++            let variable = ExprPtr::local(node);
++            let node = scope.alloc(Expr::App { fun: variable, arg: variable, fv_mask: 1 << 7, hash: 0 });
++            for application in [ExprPtr::local(node), ExprPtr::global(node, 8)] {
++                assert_eq!(application.num_loose_bvars(), variable.num_loose_bvars());
++                assert_eq!(eval_direct_var_index(application), None);
++            }
++        });
++    }
++
+     #[test]
+     fn direct_var_dispatch_matches_only_variables() {
+         let mut arena = Arena::new();
+diff --git a/src/util.rs b/src/util.rs
+index a3396b9..7c2c84c 100644
+--- a/src/util.rs
++++ b/src/util.rs
+@@ -163,8 +163,14 @@ tagged_ptr!(BigUintPtr, BigUint);
+ 
+ const EXPR_ADDR_MASK: u64 = 0x0000_ffff_ffff_fff8;
+ const EXPR_LOCAL_BIT: u64 = 1;
++const EXPR_VARIABLE_BIT: u64 = 2;
+ const EXPR_BVAR_SHIFT: u32 = 48;
+ 
++#[cfg(test)]
++thread_local! {
++    pub(crate) static EXPR_NODE_READS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
++}
++
+ pub struct ExprPtr<'a> {
+     bits: std::num::NonZeroU64,
+     _ph: PhantomData<&'a Expr<'a>>,
+@@ -184,7 +190,8 @@ impl<'a> ExprPtr<'a> {
+         let addr = r as *const Expr<'a> as usize as u64;
+         debug_assert!(addr & !EXPR_ADDR_MASK == 0);
+         let derived = u64::from(r.num_loose_bvars()) << EXPR_BVAR_SHIFT;
+-        Self { bits: unsafe { std::num::NonZeroU64::new_unchecked(addr | tag | derived) }, _ph: PhantomData }
++        let kind = if matches!(r, Expr::Var { .. }) { EXPR_VARIABLE_BIT } else { 0 };
++        Self { bits: unsafe { std::num::NonZeroU64::new_unchecked(addr | tag | kind | derived) }, _ph: PhantomData }
+     }
+ 
+     #[inline]
+@@ -192,7 +199,8 @@ impl<'a> ExprPtr<'a> {
+         let addr = r as *const Expr<'a> as usize as u64;
+         debug_assert!(addr & !EXPR_ADDR_MASK == 0);
+         debug_assert_eq!(num_loose_bvars, r.num_loose_bvars());
+-        let bits = addr | (u64::from(num_loose_bvars) << EXPR_BVAR_SHIFT);
++        let kind = if matches!(r, Expr::Var { .. }) { EXPR_VARIABLE_BIT } else { 0 };
++        let bits = addr | kind | (u64::from(num_loose_bvars) << EXPR_BVAR_SHIFT);
+         Self { bits: unsafe { std::num::NonZeroU64::new_unchecked(bits) }, _ph: PhantomData }
+     }
+ 
+@@ -205,8 +213,21 @@ impl<'a> ExprPtr<'a> {
+     #[inline]
+     pub(crate) fn num_loose_bvars(self) -> u16 { (self.bits.get() >> EXPR_BVAR_SHIFT) as u16 }
+ 
++    /// Variable nodes have exactly index + 1 loose variables. The kind bit is
++    /// derived from the node at construction, never from export metadata.
++    #[inline(always)]
++    pub(crate) fn direct_var_index(self) -> Option<u16> {
++        if self.bits.get() & EXPR_VARIABLE_BIT == 0 {
++            None
++        } else {
++            Some(self.num_loose_bvars() - 1)
++        }
++    }
++
+     #[inline]
+     pub(crate) fn as_ref(self) -> &'a Expr<'a> {
++        #[cfg(test)]
++        EXPR_NODE_READS.with(|n| n.set(n.get() + 1));
+         unsafe { &*((self.bits.get() & EXPR_ADDR_MASK) as usize as *const Expr<'a>) }
+     }
+ }

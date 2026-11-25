@@ -1,0 +1,18 @@
+{
+  "status": "REJECTED_FOR_PERFORMANCE_PROMOTION",
+  "baseline": "819d59c34db3fd8f7b790a83f5728f255f75f33e",
+  "mechanism": "Skip evaluating the argument of a syntactic lambda only when existing structural support analysis proves the complete body ignores its binder; infer_app_v remains unchanged.",
+  "red_control": "unused_lambda_argument_is_not_forced failed before the change and passed after it.",
+  "unit_suite": {
+    "library_pass": 51,
+    "integration_pass": 1,
+    "ignored_doctests": 4
+  },
+  "performance": "Five-case geometric mean candidate/baseline guest Ir 1.0025919275261084: +0.2592%. One observation per arm, not Arena hardware instructions.",
+  "portable_boundary": "227 strict correct results out of 228 attempted. gf3-matrix-product was SIGKILLed; cause UNKNOWN. Two earlier common SIGKILL cases were not retried. No complete qualification.",
+  "source_sha256": {
+    "src/eval.rs": "21f75f3e362973e0df2be30ebb3379a8ee8857cf96ca0aafdd8983fef242cd66",
+    "src/tests/util.rs": "65e27e3cd505d191c2b7ebff868c83293ec089a8b966cad9720bdcda902bd4bd"
+  },
+  "authorship": "Independently authored change to Flash. No competitor code copied."
+}

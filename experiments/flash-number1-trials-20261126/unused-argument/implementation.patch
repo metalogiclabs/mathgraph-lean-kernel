@@ -1,0 +1,126 @@
+diff --git a/src/eval.rs b/src/eval.rs
+index 2e4c877..7cfdd09 100644
+--- a/src/eval.rs
++++ b/src/eval.rs
+@@ -637,6 +637,22 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
+     fn eval_no_cache(&mut self, depth: u32, env: E<'t>, e: ExprPtr<'t>) -> V<'t> {
+         let first = *self.ctx.read_expr_ref(e);
+         if let Expr::App { fun, arg, .. } = first {
++            // Beta reduction need not evaluate an argument absent from the
++            // complete body (including binder types). Argument type checking
++            // remains in infer_app_v; this only changes evaluation demand.
++            if let &Expr::Lambda { body, .. } = self.ctx.read_expr_ref(fun) {
++                if crate::expr::ignores_binder(body) {
++                    let body_env = if body.num_loose_bvars() == 0 {
++                        env
++                    } else {
++                        // Preserve outer de Bruijn indices. This slot cannot
++                        // be observed by a body that ignores its binder.
++                        let unused = value::mk_sort(self.arena, self.ctx.zero());
++                        self.env_extend(env, unused)
++                    };
++                    return self.eval(depth, body_env, body);
++                }
++            }
+             if let &Expr::App { fun: f2, arg: a2, .. } = self.ctx.read_expr_ref(arg) {
+                 let first_fun = fun;
+                 let mut all_same = fun == f2;
+diff --git a/src/tests/util.rs b/src/tests/util.rs
+index 65a4652..e584f6a 100644
+--- a/src/tests/util.rs
++++ b/src/tests/util.rs
+@@ -73,6 +73,94 @@ fn check_empty() -> Result<(), Box<dyn Error>> {
+     })
+ }
+ 
++#[test]
++fn unused_lambda_argument_is_not_forced() -> Result<(), Box<dyn Error>> {
++    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        let prop = tc.ctx.prop();
++        let one = tc.ctx.succ(tc.ctx.zero());
++        let domain = tc.ctx.mk_sort(one);
++        let function = tc.ctx.mk_lambda(domain, prop);
++        let argument = tc.ctx.mk_var(0);
++        let application = tc.ctx.mk_app(function, argument);
++        let delayed = crate::value::mk_thunk(tc.arena, tc.empty_env(), prop);
++        let env = tc.env_extend(tc.empty_env(), delayed);
++        let result = tc.eval(1, env, application);
++        assert!(matches!(result, crate::value::Value::Sort { level, .. } if *level == tc.ctx.zero()));
++        match delayed {
++            crate::value::Value::Thunk { forced, .. } => assert!(forced.get().is_none(), "unused argument was evaluated"),
++            _ => unreachable!(),
++        }
++    }))
++}
++
++#[test]
++fn used_lambda_argument_still_forces_and_preserves_result() -> Result<(), Box<dyn Error>> {
++    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        let prop = tc.ctx.prop();
++        let one = tc.ctx.succ(tc.ctx.zero());
++        let domain = tc.ctx.mk_sort(one);
++        let bound = tc.ctx.mk_var(0);
++        let function = tc.ctx.mk_lambda(domain, bound);
++        let application = tc.ctx.mk_app(function, bound);
++        let delayed = crate::value::mk_thunk(tc.arena, tc.empty_env(), prop);
++        let env = tc.env_extend(tc.empty_env(), delayed);
++        let result = tc.eval(1, env, application);
++        assert!(matches!(result, crate::value::Value::Sort { level, .. } if *level == tc.ctx.zero()));
++        match delayed {
++            crate::value::Value::Thunk { forced, .. } => assert!(forced.get().is_some()),
++            _ => unreachable!(),
++        }
++    }))
++}
++
++#[test]
++fn unused_lambda_binder_preserves_outer_variables() -> Result<(), Box<dyn Error>> {
++    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        let prop = tc.ctx.prop();
++        let one = tc.ctx.succ(tc.ctx.zero());
++        let domain = tc.ctx.mk_sort(one);
++        let body = tc.ctx.mk_var(1);
++        let function = tc.ctx.mk_lambda(domain, body);
++        let application = tc.ctx.mk_app(function, prop);
++        let expected = crate::value::mk_sort(tc.arena, one);
++        let env = tc.env_extend(tc.empty_env(), expected);
++        assert!(std::ptr::eq(tc.eval(1, env, application), expected));
++    }))
++}
++
++#[test]
++fn lambda_argument_used_in_nested_binder_type_is_forced() -> Result<(), Box<dyn Error>> {
++    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        let prop = tc.ctx.prop();
++        let one = tc.ctx.succ(tc.ctx.zero());
++        let domain = tc.ctx.mk_sort(one);
++        let variable = tc.ctx.mk_var(0);
++        let dependent_body = tc.ctx.mk_lambda(variable, variable);
++        let function = tc.ctx.mk_lambda(domain, dependent_body);
++        let application = tc.ctx.mk_app(function, variable);
++        let delayed = crate::value::mk_thunk(tc.arena, tc.empty_env(), prop);
++        let env = tc.env_extend(tc.empty_env(), delayed);
++        let result = tc.eval(1, env, application);
++        assert!(matches!(result, crate::value::Value::Lam { .. }));
++        match delayed {
++            crate::value::Value::Thunk { forced, .. } => assert!(forced.get().is_some(), "binder type lost its argument"),
++            _ => unreachable!(),
++        }
++    }))
++}
++
++#[test]
++#[should_panic(expected = "expected a pi type")]
++fn unused_lambda_argument_still_requires_type_checking() {
++    test_export_file_should_panic(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        let prop = tc.ctx.prop();
++        let malformed = tc.ctx.mk_app(prop, prop);
++        let function = tc.ctx.mk_lambda(prop, prop);
++        let application = tc.ctx.mk_app(function, malformed);
++        tc.infer_value(crate::tc::InferFlag::Check, 0, tc.empty_env(), tc.empty_ctx(), application);
++    }));
++}
++
+ /// The export format assigns each name/level/expression an explicit index. Those
+ /// indices need not be dense or in increasing order — the exporter only guarantees
+ /// that an item is emitted after the items it references. `LevelIndexOutOfOrder`

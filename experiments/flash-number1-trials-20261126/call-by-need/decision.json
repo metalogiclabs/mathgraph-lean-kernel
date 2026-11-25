@@ -1,0 +1,28 @@
+{
+  "status": "REJECTED_FOR_PERFORMANCE_PROMOTION",
+  "baseline": "819d59c34db3fd8f7b790a83f5728f255f75f33e",
+  "local_commit": "47139571c67963b290e1183a9e6e37762c62fea9",
+  "source_tree": "f5c8de0c6d4ddf53439de958b2f760ea3a9cb866",
+  "patch_base_published": "ca69e6ab8a3c7b795716128372fdaf67c697b68e",
+  "patch_sha256": "385848e7062e7b4200d15ed2da5fc1dcb664bbc884240f89013fc77fe81ed6c4",
+  "mechanism": "Own existing Value::Thunk and thunk_hc delay compound application arguments outside temporary declaration environments. Force transitive thunk heads and only demanded spine arguments. Inference and argument checking unchanged.",
+  "unit_library_pass": 54,
+  "integration_note": "One integration test passed without a configured Arena tree; not corpus evidence. Four ignored doctests.",
+  "red_control": "Baseline unused_lambda_argument_is_not_forced failed before production changes.",
+  "performance": {
+    "boundary": "Raw process status; software guest instructions are not an official Arena score.",
+    "geomean_ratio": 1.0633533435544547,
+    "observations": 10,
+    "passes_1_percent_gate": false,
+    "ratios": {
+      "init-prelude": 1.0346116192598247,
+      "perf/fueled-chain": 1.099641508537907,
+      "perf/grind-ring-5": 1.0620334078724387,
+      "perf/magma-list-deep-n21": 1.0807426533671474,
+      "perf/magma-list-pair-n7": 1.041115849817213
+    },
+    "wrong_or_unavailable": []
+  },
+  "qualification": "Five positive cases accepted. No broad portable or full-Mathlib run: stopped at failed cost gate. No release promotion.",
+  "authorship": "Independently authored; no competitor implementation copied."
+}

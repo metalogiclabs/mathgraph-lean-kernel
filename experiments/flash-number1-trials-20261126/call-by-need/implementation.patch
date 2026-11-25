@@ -1,0 +1,301 @@
+diff --git a/src/eval.rs b/src/eval.rs
+index 2e4c877..e192eed 100644
+--- a/src/eval.rs
++++ b/src/eval.rs
+@@ -634,9 +634,44 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
+         self.eval_no_cache(depth, env, e)
+     }
+ 
++    // Delay compound arguments with the same captured environment used by the
++    // evaluator's exact cache. Variables can forward an existing suspension.
++    fn delay_arg(&mut self, depth: u32, env: E<'t>, e: ExprPtr<'t>) -> V<'t> {
++        match self.ctx.read_expr_ref(e) {
++            Expr::Var { dbj_idx, .. } => return env.lookup(*dbj_idx).expect("delay_arg: loose bvar"),
++            Expr::Sort { .. } | Expr::Const { .. } | Expr::NatLit { .. } | Expr::StringLit { .. } => {
++                return self.eval(depth, env, e);
++            }
++            _ => {}
++        }
++        if e.num_loose_bvars() == 0 && env.lsub().is_none() {
++            if let Some(v) = self.tc_cache.closed_eval_cache.get(&e) {
++                return v;
++            }
++        }
++        let captured = self.key_env(env, e);
++        let key = (captured as *const value::Env<'t> as usize, e);
++        if let Some(v) = self.tc_cache.open_eval_cache.get(&key) {
++            return v;
++        }
++        if let Some(v) = self.tc_cache.thunk_hc.get(&key) {
++            return v;
++        }
++        let v = value::mk_thunk(self.arena, captured, e);
++        self.tc_cache.thunk_hc.insert(key, v);
++        v
++    }
++
+     fn eval_no_cache(&mut self, depth: u32, env: E<'t>, e: ExprPtr<'t>) -> V<'t> {
+         let first = *self.ctx.read_expr_ref(e);
+         if let Expr::App { fun, arg, .. } = first {
++            // Temporary inductive declarations retain their original eager
++            // evaluation boundary; a suspension must not outlive that lookup.
++            if !self.env.has_temp_ext() {
++                let f = self.eval(depth, env, fun);
++                let a = self.delay_arg(depth, env, arg);
++                return self.apply(depth, f, a);
++            }
+             if let &Expr::App { fun: f2, arg: a2, .. } = self.ctx.read_expr_ref(arg) {
+                 let first_fun = fun;
+                 let mut all_same = fun == f2;
+@@ -872,15 +907,24 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
+ 
+     #[inline]
+     pub(crate) fn force_thunk(&mut self, depth: u32, v: V<'t>) -> V<'t> {
+-        if let Value::Thunk { env, expr, forced, .. } = v {
+-            if let Some(r) = forced.get() {
+-                return r;
++        if !matches!(v, Value::Thunk { .. }) {
++            return v;
++        }
++        let mut pending = smallvec::SmallVec::<[&OnceCell<V<'t>>; 8]>::new();
++        let mut cur = v;
++        while let Value::Thunk { env, expr, forced, .. } = cur {
++            match forced.get() {
++                Some(r) => cur = r,
++                None => {
++                    pending.push(forced);
++                    cur = self.eval(depth, env, *expr);
++                }
+             }
+-            let r = self.eval(depth, env, *expr);
+-            let _ = forced.set(r);
+-            return r;
+         }
+-        v
++        for cell in pending {
++            let _ = cell.set(cur);
++        }
++        cur
+     }
+ 
+     pub(crate) fn lam_domain(&mut self, depth: u32, v: V<'t>) -> V<'t> {
+@@ -952,6 +996,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
+ 
+     #[inline]
+     pub(crate) fn apply(&mut self, depth: u32, f: V<'t>, a: V<'t>) -> V<'t> {
++        let f = self.force_thunk(depth, f);
+         match f {
+             Value::Lam { body: clo, .. } => {
+                 let clo_env = clo.env;
+@@ -996,6 +1041,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
+         let mut f = f0;
+         let mut i = 0usize;
+         while i < args.len() {
++            f = self.force_thunk(depth, f);
+             let Value::Lam { body: clo, .. } = f else {
+                 f = self.apply(depth, f, args[i]);
+                 i += 1;
+@@ -1734,12 +1780,12 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
+         Some(v)
+     }
+ 
+-    pub(crate) fn spine_apps(&mut self, depth: u32, spine: S<'t>) -> Option<SpineArgs<'t>> {
++    pub(crate) fn spine_apps(&mut self, _depth: u32, spine: S<'t>) -> Option<SpineArgs<'t>> {
+         let mut out = SpineArgs::with_capacity(spine.len() as usize);
+         let mut cur: &Spine<'t> = spine;
+         while let Spine::Snoc { prev, elim, .. } = cur {
+             match elim.view() {
+-                ElimView::App(a) => out.push(self.force_thunk(depth, a)),
++                ElimView::App(a) => out.push(a),
+                 ElimView::Proj { .. } => return None,
+             }
+             cur = prev;
+@@ -2266,3 +2312,79 @@ mod qckn_eval_var_fast_tests {
+         });
+     }
+ }
++
++#[cfg(test)]
++mod call_by_need_tests {
++    use crate::tests::util::test_export_file;
++    use crate::value::{self, Value};
++    use std::error::Error;
++
++    #[test]
++    fn forced_thunk_chains_reach_the_actual_head() -> Result<(), Box<dyn Error>> {
++        test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++            let prop = tc.ctx.prop();
++            let head = value::mk_sort(tc.arena, tc.ctx.zero());
++            let mut previous = head;
++            for _ in 0..10_000 {
++                let next = value::mk_thunk(tc.arena, tc.empty_env(), prop);
++                let Value::Thunk { forced, .. } = next else { unreachable!() };
++                forced.set(previous).unwrap();
++                previous = next;
++            }
++            assert!(std::ptr::eq(tc.force_thunk(0, previous), head));
++        }))
++    }
++
++    #[test]
++    fn delayed_arguments_capture_values_and_share_only_exact_keys() -> Result<(), Box<dyn Error>> {
++        test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++            let prop = tc.ctx.prop();
++            let variable = tc.ctx.mk_var(0);
++            let identity = tc.ctx.mk_lambda(prop, variable);
++            let expression = tc.ctx.mk_app(identity, variable);
++            let one = tc.ctx.succ(tc.ctx.zero());
++            let v0 = value::mk_sort(tc.arena, tc.ctx.zero());
++            let v1 = value::mk_sort(tc.arena, one);
++            let env0 = tc.env_extend(tc.empty_env(), v0);
++            let env1 = tc.env_extend(tc.empty_env(), v1);
++            let a = tc.delay_arg(1, env0, expression);
++            assert!(matches!(a, Value::Thunk { forced, .. } if forced.get().is_none()));
++            assert!(std::ptr::eq(a, tc.delay_arg(1, env0, expression)));
++            let b = tc.delay_arg(1, env1, expression);
++            assert!(!std::ptr::eq(a, b));
++            assert!(std::ptr::eq(tc.force_thunk(1, a), v0));
++            assert!(std::ptr::eq(tc.force_thunk(1, b), v1));
++            assert!(std::ptr::eq(tc.delay_arg(1, env0, expression), v0));
++            tc.tc_cache.clear();
++            assert!(tc.tc_cache.thunk_hc.is_empty());
++            let fresh = tc.delay_arg(1, env0, expression);
++            assert!(!std::ptr::eq(a, fresh));
++            assert!(std::ptr::eq(tc.force_thunk(1, fresh), v0));
++        }))
++    }
++
++    #[test]
++    fn delayed_arguments_preserve_universe_substitutions() -> Result<(), Box<dyn Error>> {
++        test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++            let u = tc.ctx.param_quick("u");
++            let zero = tc.ctx.zero();
++            let one = tc.ctx.succ(zero);
++            let sort_u = tc.ctx.mk_sort(u);
++            let variable = tc.ctx.mk_var(0);
++            let identity = tc.ctx.mk_lambda(sort_u, variable);
++            let expression = tc.ctx.mk_app(identity, sort_u);
++            let ks = tc.ctx.alloc_levels_slice(&[u]);
++            let vs0 = tc.ctx.alloc_levels_slice(&[zero]);
++            let vs1 = tc.ctx.alloc_levels_slice(&[one]);
++            let ls0 = tc.arena.alloc(value::LevelSub { ks, vs: vs0 });
++            let ls1 = tc.arena.alloc(value::LevelSub { ks, vs: vs1 });
++            let env0 = tc.lsub_base(Some(ls0));
++            let env1 = tc.lsub_base(Some(ls1));
++            let a = tc.delay_arg(0, env0, expression);
++            let b = tc.delay_arg(0, env1, expression);
++            assert!(!std::ptr::eq(a, b));
++            assert!(matches!(tc.force_thunk(0, a), Value::Sort { level, .. } if *level == zero));
++            assert!(matches!(tc.force_thunk(0, b), Value::Sort { level, .. } if *level == one));
++        }))
++    }
++}
+diff --git a/src/tests.rs b/src/tests.rs
+index 2ddc112..0ef1bbe 100644
+--- a/src/tests.rs
++++ b/src/tests.rs
+@@ -1,3 +1,3 @@
+ mod level;
+ mod natlit;
+-mod util;
++pub(crate) mod util;
+diff --git a/src/tests/util.rs b/src/tests/util.rs
+index 65a4652..15c3084 100644
+--- a/src/tests/util.rs
++++ b/src/tests/util.rs
+@@ -73,6 +73,95 @@ fn check_empty() -> Result<(), Box<dyn Error>> {
+     })
+ }
+ 
++#[test]
++fn unused_lambda_argument_is_not_forced() -> Result<(), Box<dyn Error>> {
++    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        let prop = tc.ctx.prop();
++        let one = tc.ctx.succ(tc.ctx.zero());
++        let domain = tc.ctx.mk_sort(one);
++        let function = tc.ctx.mk_lambda(domain, prop);
++        let argument = tc.ctx.mk_var(0);
++        let application = tc.ctx.mk_app(function, argument);
++        let delayed = crate::value::mk_thunk(tc.arena, tc.empty_env(), prop);
++        let env = tc.env_extend(tc.empty_env(), delayed);
++        let result = tc.eval(1, env, application);
++        assert!(matches!(result, crate::value::Value::Sort { level, .. } if *level == tc.ctx.zero()));
++        match delayed {
++            crate::value::Value::Thunk { forced, .. } => assert!(forced.get().is_none(), "unused argument was evaluated"),
++            _ => unreachable!(),
++        }
++    }))
++}
++
++#[test]
++fn used_lambda_argument_still_forces_and_preserves_result() -> Result<(), Box<dyn Error>> {
++    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        let prop = tc.ctx.prop();
++        let one = tc.ctx.succ(tc.ctx.zero());
++        let domain = tc.ctx.mk_sort(one);
++        let bound = tc.ctx.mk_var(0);
++        let function = tc.ctx.mk_lambda(domain, bound);
++        let application = tc.ctx.mk_app(function, bound);
++        let delayed = crate::value::mk_thunk(tc.arena, tc.empty_env(), prop);
++        let env = tc.env_extend(tc.empty_env(), delayed);
++        let result = tc.eval(1, env, application);
++        assert!(matches!(result, crate::value::Value::Sort { level, .. } if *level == tc.ctx.zero()));
++        match delayed {
++            crate::value::Value::Thunk { forced, .. } => assert!(forced.get().is_some()),
++            _ => unreachable!(),
++        }
++    }))
++}
++
++#[test]
++fn unused_lambda_binder_preserves_outer_variables() -> Result<(), Box<dyn Error>> {
++    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        let prop = tc.ctx.prop();
++        let one = tc.ctx.succ(tc.ctx.zero());
++        let domain = tc.ctx.mk_sort(one);
++        let body = tc.ctx.mk_var(1);
++        let function = tc.ctx.mk_lambda(domain, body);
++        let application = tc.ctx.mk_app(function, prop);
++        let expected = crate::value::mk_sort(tc.arena, one);
++        let env = tc.env_extend(tc.empty_env(), expected);
++        assert!(std::ptr::eq(tc.eval(1, env, application), expected));
++    }))
++}
++
++#[test]
++fn lambda_argument_used_in_nested_binder_type_is_forced_on_demand() -> Result<(), Box<dyn Error>> {
++    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        let prop = tc.ctx.prop();
++        let one = tc.ctx.succ(tc.ctx.zero());
++        let domain = tc.ctx.mk_sort(one);
++        let variable = tc.ctx.mk_var(0);
++        let dependent_body = tc.ctx.mk_lambda(variable, variable);
++        let function = tc.ctx.mk_lambda(domain, dependent_body);
++        let application = tc.ctx.mk_app(function, variable);
++        let delayed = crate::value::mk_thunk(tc.arena, tc.empty_env(), prop);
++        let env = tc.env_extend(tc.empty_env(), delayed);
++        let result = tc.eval(1, env, application);
++        assert!(matches!(result, crate::value::Value::Lam { .. }));
++        assert!(matches!(tc.lam_domain(1, result), crate::value::Value::Sort { level, .. } if *level == tc.ctx.zero()));
++        match delayed {
++            crate::value::Value::Thunk { forced, .. } => assert!(forced.get().is_some(), "binder type lost its argument"),
++            _ => unreachable!(),
++        }
++    }))
++}
++
++#[test]
++#[should_panic(expected = "expected a pi type")]
++fn unused_lambda_argument_still_requires_type_checking() {
++    test_export_file_should_panic(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        let prop = tc.ctx.prop();
++        let malformed = tc.ctx.mk_app(prop, prop);
++        let function = tc.ctx.mk_lambda(prop, prop);
++        let application = tc.ctx.mk_app(function, malformed);
++        tc.infer_value(crate::tc::InferFlag::Check, 0, tc.empty_env(), tc.empty_ctx(), application);
++    }));
++}
++
+ /// The export format assigns each name/level/expression an explicit index. Those
+ /// indices need not be dense or in increasing order — the exporter only guarantees
+ /// that an item is emitted after the items it references. `LevelIndexOutOfOrder`

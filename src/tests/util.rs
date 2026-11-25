@@ -73,6 +73,24 @@ fn check_empty() -> Result<(), Box<dyn Error>> {
     })
 }
 
+#[test]
+fn evaluating_an_open_application_needs_no_pruned_cache_frame() -> Result<(), Box<dyn Error>> {
+    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
+        let prop = tc.ctx.prop();
+        let variable = tc.ctx.mk_var(0);
+        let identity = tc.ctx.mk_lambda(prop, variable);
+        let function = tc.eval(0, tc.empty_env(), identity);
+        let argument = crate::value::mk_sort(tc.arena, tc.ctx.zero());
+        let args = tc.env_extend(tc.empty_env(), argument);
+        let env = tc.env_extend(args, function);
+        let outer_argument = tc.ctx.mk_var(1);
+        let expression = tc.ctx.mk_app(variable, outer_argument);
+        assert!(tc.tc_cache.frames.is_empty());
+        assert!(std::ptr::eq(tc.eval(2, env, expression), argument));
+        assert!(tc.tc_cache.frames.is_empty(), "cache lookup pruned the environment");
+    }))
+}
+
 /// The export format assigns each name/level/expression an explicit index. Those
 /// indices need not be dense or in increasing order — the exporter only guarantees
 /// that an item is emitted after the items it references. `LevelIndexOutOfOrder`

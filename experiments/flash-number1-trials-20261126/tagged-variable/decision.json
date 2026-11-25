@@ -1,0 +1,27 @@
+{
+  "status": "BOUNDED_CORRECTNESS; BELOW_MATERIAL_PERFORMANCE_GATE",
+  "baseline": "819d59c34db3fd8f7b790a83f5728f255f75f33e",
+  "mechanism": "Derive a variable bit from the real Expr variant in both pointer constructors; use existing loose-bvar count to recover index without reading the Expr node.",
+  "red_control": "variable_dispatch_needs_no_expression_node_read failed with one payload read before the change; zero afterward.",
+  "unit_suite": {
+    "library": 48,
+    "integration": 1,
+    "ignored_docs": 4
+  },
+  "portable": "228/228 strict correct; two previously SIGKILLed cases not retried. No 240-case qualification.",
+  "score_boundary": "Five generic-x86-64 one-worker software guest-instruction observations per arm. Not official Arena hardware instructions.",
+  "candidate_over_original": 0.9989501683779531,
+  "candidate_over_metadata_only": 0.9988260789937722,
+  "causal_ratios": {
+    "init-prelude": 0.9993043371453303,
+    "perf/grind-ring-5": 0.9981841401522308,
+    "perf/magma-list-deep-n21": 0.99915422161482,
+    "perf/magma-list-pair-n7": 0.9986334232368418,
+    "perf/fueled-chain": 0.9988546665379543
+  },
+  "authorship": "Independently authored from Flash pointer representation; no competitor code copied.",
+  "source_sha256": {
+    "src/eval.rs": "e1f7a49c2b1425c5392a4fee28ba58b0e47d92e0e144fce28d477598df8df6c0",
+    "src/util.rs": "a23adc0684b097dfc54d49bb4b7a44d4577b9ed0e23ef95b0c5921795cec9eb0"
+  }
+}
