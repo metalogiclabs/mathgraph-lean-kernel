@@ -72,7 +72,7 @@
       "declarations": 129845
     }
   },
-  "promotion": "Pinned bc704eeb candidate submitted in draft Arena PR398. Old public release819d59c and rank5 unchanged; no speculative candidate promoted.",
+  "promotion": "Pinned bc704eeb candidate in ready-for-review Arena PR398; all official PR gates passed. Old public release819d59c and rank5 unchanged; full Mathlib retired-instruction score pending integration. No speculative candidate promoted.",
   "prior_no_open_memo_checkpoint": {
     "qualified_release": "819d59c34db3fd8f7b790a83f5728f255f75f33e",
     "candidate_src_tree": "6b5f867d4b371dcf0d7cdfc38d14e4507ba621e1",
@@ -133,8 +133,11 @@
     "source_commit": "bc704eebed4e009bc66af1a849f18315c11f1926",
     "source_branch": "release-candidate/flash-20261126",
     "run": 45722992953,
-    "state": "DRAFT; BUILD_PASSED; PORTABLE_CHECKS_RUNNING",
-    "full_score_boundary": "PR workflow excludes large tests; full Mathlib retired-instruction score requires merged master or a maintainer-run full workflow. No published rank claim."
+    "state": "READY_FOR_REVIEW; COMPLETE_OFFICIAL_PR_WORKFLOW_PASSED; ALL_231_PRESCRIBED_OUTCOMES_CORRECT",
+    "full_score_boundary": "PR workflow excludes large tests; full Mathlib retired-instruction score requires merged master or a maintainer-run full workflow. No published rank claim.",
+    "portable_result_artifact": 15072279691,
+    "portable_result_archive_sha256": "11004c4cfc01d1739abda85a00a151feb0207db828aa9573bea8f6fbc34fa841",
+    "unscored_corner_timeouts": 2
   },
   "next_decisive_experiment": "Complete official PR portable qualification, then master full-Mathlib retired-instruction measurement. Parallel eval-dispatch inlining trial remains separately unpromoted."
 }
