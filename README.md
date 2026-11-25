@@ -37,9 +37,12 @@ basic-block application instructions: **43.41% fewer**. Its three analytical
 loop controls pass. This is a software measurement, with different REP-string
 accounting from Cachegrind, and is not official hardware scoring.
 
-Current prescribed compatibility is **239/240**: all230 portable cases and
-nine complete large inputs pass. Navier–Stokes–Euler remains building; the
-30 policy cases are outside this count. The earlier local killed processes are
+Current prescribed compatibility is **240/240**: all 230 portable cases and
+all ten complete large inputs pass, including Navier–Stokes–Euler.
+The [final joined qualification](https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/45717594082)
+verifies the exact source, input identities and raw verdicts. Its downloaded
+archive SHA256 and CRC, all 663 retained text-entry digests, and every input/verdict
+join were independently checked. The 30 policy cases are outside this count. The earlier local killed processes are
 preserved in lineage and superseded for these compatibility cases by successful
 CI replays. See the [raw qualification capsule](experiments/flash-upstream-repair-20261126/qualification-capsule.json)
 and [successful native workflow](https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/45711005244).

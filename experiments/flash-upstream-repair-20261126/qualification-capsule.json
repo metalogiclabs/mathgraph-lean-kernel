@@ -1,5 +1,5 @@
 {
-  "state": "WARRANTED_BOUNDED_FULL_MATHLIB_AND_239_PRESCRIBED",
+  "state": "WARRANTED_BOUNDED_ALL_240_AND_COMPLETE_MATHLIB",
   "checker_commit": "bc704eebed4e009bc66af1a849f18315c11f1926",
   "source_tree": "06c257f0f2ff1f64711cfa54620b650e6dd59b7e",
   "review_pr": "https://github.com/metalogiclabs/mathgraph-lean-kernel/pull/128",
@@ -20,11 +20,9 @@
     "wall_s": 0.3026430880395512,
     "max_rss_kb": 0.2540309787108084
   },
-  "prescribed_confirmed": 239,
+  "prescribed_confirmed": 240,
   "prescribed_total": 240,
-  "pending_prescribed": [
-    "navier-stokes-euler"
-  ],
+  "pending_prescribed": [],
   "prescribed_observations": {
     "bugs/closure-level-subst": {
       "raw_exit": 1,
@@ -1220,9 +1218,20 @@
       "raw_exit": 0,
       "input_sha256": "f749dfd084fc0727d107c7aaded7d492cebfc0b517cfaa7337d8a7578a6c0dec",
       "source": "ci-full/mathlib/rows.json"
+    },
+    "navier-stokes-euler": {
+      "raw_exit": 0,
+      "input_sha256": "632943fca6795d48bc13e703aabfaef39931f9445f1275d2150a44f4de7b55e6",
+      "source": "ci-large/flash-reconciled-large-navier-stokes-euler/verdict.json",
+      "archive": {
+        "artifact_id": 15072847646,
+        "run_id": 45711718821,
+        "head_sha": "7974c692adc5d8fc82bd6a4ecebe0dbd9542cfdd",
+        "archive_sha256": "6c1837f6a0bd6a4aa87a5ee4602875c4ee4a03f135b9ea0cfd25c8f597b8b7a2"
+      }
     }
   },
-  "boundary": "Two-worker native complete-input CPU/RSS experiment, 230 exact portable cases and nine complete large inputs. Thirty policy cases are outside the prescribed count. Software instruction diagnostics, official Arena retired instructions, universal soundness and any new rank are separate boundaries.",
+  "boundary": "All 240 byte-exact prescribed verdicts; two-worker matched native Mathlib CPU/RSS and separate one-worker software instruction diagnostic. Thirty policy cases, universal soundness, official hardware scoring and any new rank remain separate boundaries.",
   "raw_text_entries": {
     "ci-full/binary-identities.json": {
       "sha256": "c9648fffa64a2d61447c1b909d33b9fb818a540032c65a95470cc0b204c64a06",
@@ -3831,6 +3840,50 @@
     "ci-fast/verified-archive.json": {
       "sha256": "4e4b0b432923ea4d99052d6ae572061cad6907450dd16a02ee5d072c5f4a26b0",
       "utf8": "{\n  \"artifact_id\": 15069518161,\n  \"run_id\": 45712976230,\n  \"head_sha\": \"2ba65451f90ce79b48a76cb5a33d0af3950e2fa1\",\n  \"archive_sha256\": \"1a24ca4c7161e0ad47e58bb0d4d3d11c3345c6d249cd6d42a9e7e3976d8ef9b5\",\n  \"independently_verified_binaries\": {\n    \"baseline\": \"1e3687168122c4fdf034dca129bdd22c7ac75a5b95168ced08bf7bf7a81ff148\",\n    \"strict\": \"09fe7ecf7421be7ad7f7c57596c214bcd6e7c0d912d6d555cb5749b17202bd5b\"\n  }\n}\n"
+    },
+    "ci-large/flash-reconciled-large-navier-stokes-euler/build-flags.txt": {
+      "sha256": "437c1e9080cf94953aafddd7a43765a8f56c23bfc8fbbe868d9b4f6fbe5d0647",
+      "utf8": "-C target-cpu=x86-64 -C target-feature=-avx,-avx2,-avx512f,-fma\n"
+    },
+    "ci-large/flash-reconciled-large-navier-stokes-euler/commit.txt": {
+      "sha256": "15322bb3f2974700db1f05b879cdf00c9949064b35f54b437f6daa20221ba1b3",
+      "utf8": "7974c692adc5d8fc82bd6a4ecebe0dbd9542cfdd\n"
+    },
+    "ci-large/flash-reconciled-large-navier-stokes-euler/binary.txt": {
+      "sha256": "0486a5e804ae5254949ca13ac109b74ddefcde0b0f107a35b5310ea8752860d6",
+      "utf8": "c2f83b1074ee799955754c880748ad562eb23a8989b4f93471c59b7ac8072e24  target/release/sokonanoda\n"
+    },
+    "ci-large/flash-reconciled-large-navier-stokes-euler/compiler.txt": {
+      "sha256": "f22d5e4e9ced367e774ce5bc140d9e6b1235c1882fec80d011044851f3ae6369",
+      "utf8": "rustc 1.99.1 (58cf8f9c3 2026-10-13)\nbinary: rustc\ncommit-hash: 58cf8f9c35b355199727627d07ae34a4e2846d67\ncommit-date: 2026-10-13\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.1\nLLVM version: 23.1.1\n"
+    },
+    "ci-large/flash-reconciled-large-navier-stokes-euler/export.log": {
+      "sha256": "f2fa74e1a72b8c8cc4967680cb26d64ae13dd02c52c8e7bf6f4c003ed8de0c9f",
+      "utf8": "Creating test: navier-stokes-euler (type: module)\n  Fetching https://github.com/openai/NavierStokesAndEuler/ at f9e8bc5b38b6e212696e8a30e3e91517af887bbd...\n  Running pre-build: lake exe cache get\n# The declarations of interest live in two separate modules, so we join them\n# into one module (below the `NavierStokes.+` library glob) to export.\nprintf 'import NavierStokes.ComparatorSolution\\nimport Euler.Solution\\n' > NavierStokes/Arena.lean\n\n  Building module NavierStokes.Arena...\n  Exporting module NavierStokes.Arena (NavierStokes.Comparator.navier_stokes_breakdown_R3, NavierStokes.Comparator.navier_stokes_breakdown_periodic, Euler.euler_breakdown_R3, Euler.exists_compact_smooth_euler_singularity)...\n  Cloning lean4export for toolchain leanprover/lean4:v4.34.0-rc2...\n  Building lean4export with toolchain leanprover/lean4:v4.34.0-rc2...\n  Created /home/runner/work/_temp/arena-source/_build/tests/navier-stokes-euler.ndjson (1.5\u202fGB, 28.6\u202fM lines)\n\nResults: 1 succeeded, 0 failed\n"
+    },
+    "ci-large/flash-reconciled-large-navier-stokes-euler/input.json": {
+      "sha256": "9fc0a53a8c392ce39107a0bff031fef82ea18add1699cbc40f3f4ea0813451e0",
+      "utf8": "{\n  \"name\": \"navier-stokes-euler\",\n  \"size\": 1559685706,\n  \"sha256\": \"632943fca6795d48bc13e703aabfaef39931f9445f1275d2150a44f4de7b55e6\"\n}\n"
+    },
+    "ci-large/flash-reconciled-large-navier-stokes-euler/resources.txt": {
+      "sha256": "9b2fc49fd00d462e9f677e52e56777b47f65f36df37baab83df896cd605b76ad",
+      "utf8": "\tCommand being timed: \"/home/runner/work/mathgraph-lean-kernel/mathgraph-lean-kernel/target/release/sokonanoda --stdin --threads 2 --nat-extension --string-extension --axiom-allow-all\"\n\tUser time (seconds): 36.55\n\tSystem time (seconds): 1.03\n\tPercent of CPU this job got: 156%\n\tElapsed (wall clock) time (h:mm:ss or m:ss): 0:24.03\n\tAverage shared text size (kbytes): 0\n\tAverage unshared data size (kbytes): 0\n\tAverage stack size (kbytes): 0\n\tAverage total size (kbytes): 0\n\tMaximum resident set size (kbytes): 1317808\n\tAverage resident set size (kbytes): 0\n\tMajor (requiring I/O) page faults: 3\n\tMinor (reclaiming a frame) page faults: 79677\n\tVoluntary context switches: 381\n\tInvoluntary context switches: 202\n\tSwaps: 0\n\tFile system inputs: 48\n\tFile system outputs: 0\n\tSocket messages sent: 0\n\tSocket messages received: 0\n\tSignals delivered: 0\n\tPage size (bytes): 4096\n\tExit status: 0\n"
+    },
+    "ci-large/flash-reconciled-large-navier-stokes-euler/source-tree.txt": {
+      "sha256": "8a33a176cd6f20240c2fb8d14e369201c756f75cfe4e66cb85047e4a9ab410ba",
+      "utf8": "06c257f0f2ff1f64711cfa54620b650e6dd59b7e\n"
+    },
+    "ci-large/flash-reconciled-large-navier-stokes-euler/stderr.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "utf8": ""
+    },
+    "ci-large/flash-reconciled-large-navier-stokes-euler/stdout.txt": {
+      "sha256": "aac09313008ac5a46e6a1159aab853b41959f674184c44cd3b9dd38bf10b0f8f",
+      "utf8": "checked 129845 declarations in 24.016s\n"
+    },
+    "ci-large/flash-reconciled-large-navier-stokes-euler/verdict.json": {
+      "sha256": "842288673fe50c450b75b5693029ee12190bc37f9295e38989afba13274a0f45",
+      "utf8": "{\n  \"name\": \"navier-stokes-euler\",\n  \"input_sha256\": \"632943fca6795d48bc13e703aabfaef39931f9445f1275d2150a44f4de7b55e6\",\n  \"binary_sha256\": \"c2f83b1074ee799955754c880748ad562eb23a8989b4f93471c59b7ac8072e24\",\n  \"threads\": 2,\n  \"raw_exit\": 0,\n  \"elapsed_s\": 24.03724301799957,\n  \"checked_declarations\": 129845,\n  \"boundary\": \"Exact complete input compatibility; native resources are not an Arena instruction score.\"\n}\n"
     }
   },
   "raw_text_note": "Exact UTF-8 artifact entries and their individual SHA256 values. Original archive identities are included in the entries. Executables are excluded from this text capsule; their independently verified distinct SHA256 values are retained.",
