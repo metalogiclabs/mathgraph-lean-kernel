@@ -1,0 +1,95 @@
+name: Flash arbitrary-count zero shift exact regression
+on:
+  push:
+    branches: [research/flash-arena-shift-repair-20261125]
+    paths:
+      - .github/workflows/flash-arena-shift-repair.yml
+      - src/util.rs
+      - src/tests/natlit.rs
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  exact-shift:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    env:
+      RUSTFLAGS: -C target-cpu=native
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: 0
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Exact source identities and native shift tests
+        run: |
+          set -euxo pipefail
+          OUT="$RUNNER_TEMP/shift-evidence"
+          mkdir -p "$OUT"
+          git rev-parse HEAD | tee "$OUT/commit.txt"
+          git worktree add --detach "$RUNNER_TEMP/six-guard" 6c2889330be236b3bc063b3415de6e9af65ecfe1
+          git diff --stat 6c2889330be236b3bc063b3415de6e9af65ecfe1 -- src | tee "$OUT/kernel-diff.txt"
+          rustc -Vv | tee "$OUT/compiler.txt"
+          cargo test --release --locked nat_shift_huge_exact_identities -- --nocapture | tee "$OUT/target-native.log"
+          grep -q '1 passed; 0 failed' "$OUT/target-native.log"
+          cargo test --release --locked nat_sh -- --nocapture | tee "$OUT/ordinary-shifts.log"
+          grep -q '2 passed; 0 failed\|3 passed; 0 failed' "$OUT/ordinary-shifts.log"
+          cargo build --release --locked
+          cargo build --release --locked --manifest-path "$RUNNER_TEMP/six-guard/Cargo.toml"
+          sha256sum target/release/sokonanoda "$RUNNER_TEMP/six-guard/target/release/sokonanoda" | tee "$OUT/binaries.sha256"
+      - name: Exact official huge-shift before and after and all other portable controls
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY'
+          import importlib.util
+          import json
+          import os
+          from pathlib import Path
+          p = Path("experiments/flash-current-arena-20261125/recovery.py")
+          spec = importlib.util.spec_from_file_location("recovery", p)
+          m = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(m)
+          out = Path(os.environ["RUNNER_TEMP"]) / "shift-evidence"
+          tests = m.source_manifest(out)
+          fixtures = m.unpack_portable(out, tests)
+          cfg = m.config(out)
+          logs = out / "logs"
+          logs.mkdir()
+          cmds = {"baseline": [str(Path(os.environ["RUNNER_TEMP"]) / "six-guard/target/release/sokonanoda"), str(cfg)],
+                  "candidate": [str(Path("target/release/sokonanoda").resolve()), str(cfg)]}
+          target = "bugs/nat-shift-huge"
+          assert target in fixtures and tests[target]["outcome"] == "accept"
+          rows = []
+          for name in [target] + sorted(set(fixtures) - {target}):
+              pair = {}
+              for arm, cmd in cmds.items():
+                  row = m.run_one(cmd, fixtures[name], int(tests[name].get("timeout") or 120), arm, logs, name)
+                  row["expected"] = tests[name]["outcome"]
+                  row["input_sha256"] = tests[name]["sha256"]
+                  pair[arm] = row
+              rows.append({"name": name, **pair})
+              m.dump(out / "paired-rows.json", rows)
+              print("SHIFT_PAIR", json.dumps({"name":name, "before":pair["baseline"]["raw_exit"], "after":pair["candidate"]["raw_exit"], "expected":tests[name]["outcome"]}), flush=True)
+              if name == target:
+                  print("SHIFT_TARGET", json.dumps(pair), flush=True)
+                  m.dump(out / "target.json", pair)
+          target_row = rows[0]
+          corrections = target_row["baseline"]["raw_exit"] != 0 and target_row["candidate"]["raw_exit"] == 0
+          regressions = [r["name"] for r in rows[1:] if r["baseline"]["arena_outcome"] != r["candidate"]["arena_outcome"]]
+          status = "BOUNDED_SHIFT_REPAIR" if corrections and not regressions else "NOT_QUALIFIED"
+          m.dump(out / "summary.json", {"status":status, "test_count":len(rows), "target_corrected":corrections, "other_verdict_changes":regressions, "full_mathlib":"UNKNOWN"})
+          print("SHIFT_SUMMARY", (out / "summary.json").read_text(), flush=True)
+          assert corrections and not regressions
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-shift-repair-evidence
+          path: |
+            ${{ runner.temp }}/shift-evidence/*.json
+            ${{ runner.temp }}/shift-evidence/*.txt
+            ${{ runner.temp }}/shift-evidence/*.log
+            ${{ runner.temp }}/shift-evidence/*.sha256
+            ${{ runner.temp }}/shift-evidence/logs/
+          if-no-files-found: error
