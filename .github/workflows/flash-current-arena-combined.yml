@@ -1,0 +1,98 @@
+name: Flash combined final current-round qualification
+on:
+  push:
+    branches: [research/flash-current-arena-combined-20261125]
+    paths:
+      - .github/workflows/flash-current-arena-combined.yml
+      - experiments/flash-current-arena-20261125/combined.py
+      - src/inductive.rs
+      - src/util.rs
+      - src/tests/natlit.rs
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [portable, mathlib]
+    env:
+      CARGO_INCREMENTAL: 0
+      RUSTFLAGS: -C target-cpu=native
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify composition and build exact arms
+        run: |
+          set -euxo pipefail
+          OUT="$RUNNER_TEMP/combined-evidence"
+          mkdir -p "$OUT"
+          git rev-parse HEAD > "$OUT/commit.txt"
+          git rev-parse HEAD:src > "$OUT/source-tree.txt"
+          git diff --exit-code 65f2f483b54fc3a6dc6832d218e3e6a7d3c688da -- src/inductive.rs
+          git diff --exit-code c69ec141ac4d9b76b1169fea9d6ab02743ee3f26 -- src/util.rs src/tests/natlit.rs
+          git diff --stat 6c2889330be236b3bc063b3415de6e9af65ecfe1 -- src | tee "$OUT/diff-stat.txt"
+          git worktree add --detach "$RUNNER_TEMP/six-guard" 6c2889330be236b3bc063b3415de6e9af65ecfe1
+          cargo test --release --locked nat_shift_huge_exact_identities -- --nocapture | tee "$OUT/native-shift.log"
+          grep -q '1 passed; 0 failed' "$OUT/native-shift.log"
+          cargo build --release --locked
+          cargo build --release --locked --manifest-path "$RUNNER_TEMP/six-guard/Cargo.toml"
+          sha256sum target/release/sokonanoda "$RUNNER_TEMP/six-guard/target/release/sokonanoda" | tee "$OUT/binaries.txt"
+      - name: Strict current portable qualification
+        if: matrix.mode == 'portable'
+        run: |
+          set -euxo pipefail
+          python3 experiments/flash-current-arena-20261125/combined.py portable \
+            --out "$RUNNER_TEMP/combined-evidence" \
+            --before "$RUNNER_TEMP/six-guard/target/release/sokonanoda" \
+            --candidate "$PWD/target/release/sokonanoda"
+      - name: Prepare pinned current Mathlib source
+        if: matrix.mode == 'mathlib'
+        run: |
+          set -euxo pipefail
+          A="$RUNNER_TEMP/arena-source"
+          git init "$A"
+          git -C "$A" remote add origin https://github.com/leanprover/lean-kernel-arena.git
+          git -C "$A" fetch --depth 1 origin 99195b6b009bc3df2c946ddbcfa4a2ab1eb40350
+          git -C "$A" checkout --detach FETCH_HEAD
+          test "$(git -C "$A" rev-parse HEAD)" = 99195b6b009bc3df2c946ddbcfa4a2ab1eb40350
+          cp "$A/tests/mathlib.yaml" "$RUNNER_TEMP/combined-evidence/mathlib-recipe.yaml"
+          python3 -m venv "$RUNNER_TEMP/arena-venv"
+          "$RUNNER_TEMP/arena-venv/bin/pip" install jinja2 jsonschema markdown pyyaml
+          curl -fsSL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - name: Regenerate exact current Mathlib export
+        if: matrix.mode == 'mathlib'
+        run: |
+          set -euxo pipefail
+          cd "$RUNNER_TEMP/arena-source"
+          "$RUNNER_TEMP/arena-venv/bin/python" lka.py build-test mathlib 2>&1 | tee "$RUNNER_TEMP/combined-evidence/export.log"
+          test -s _build/tests/mathlib.ndjson
+          cp _build/tests/mathlib.stats.json "$RUNNER_TEMP/combined-evidence/regenerated-mathlib.stats.json"
+      - name: Full current Mathlib composition A/B/B/A
+        if: matrix.mode == 'mathlib'
+        run: |
+          set -euxo pipefail
+          python3 experiments/flash-current-arena-20261125/combined.py mathlib \
+            --out "$RUNNER_TEMP/combined-evidence" \
+            --before "$RUNNER_TEMP/six-guard/target/release/sokonanoda" \
+            --candidate "$PWD/target/release/sokonanoda" \
+            --mathlib "$RUNNER_TEMP/arena-source/_build/tests/mathlib.ndjson"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-combined-${{ matrix.mode }}-evidence
+          path: |
+            ${{ runner.temp }}/combined-evidence/*.json
+            ${{ runner.temp }}/combined-evidence/*.txt
+            ${{ runner.temp }}/combined-evidence/*.yaml
+            ${{ runner.temp }}/combined-evidence/*.log
+            ${{ runner.temp }}/combined-evidence/logs/
+          if-no-files-found: error
+          retention-days: 30
