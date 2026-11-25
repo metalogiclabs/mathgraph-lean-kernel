@@ -48,6 +48,103 @@ pub(crate) fn test_ctx<'p, A>(path: Option<&Path>, f: impl FnOnce(&mut TcCtx) ->
     test_export_file(path, |export_file| export_file.with_ctx(|ctx, _cache, _arena| f(ctx)))
 }
 
+#[test]
+fn check_against_dependent_identity_type() -> Result<(), Box<dyn Error>> {
+    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
+        // (fun (A : Type) (x : A) => x) : (A : Type) -> A -> A.
+        let one = tc.ctx.succ(tc.ctx.zero());
+        let universe = tc.ctx.mk_sort(one);
+        let var0 = tc.ctx.mk_var(0);
+        let var1 = tc.ctx.mk_var(1);
+        let inner = tc.ctx.mk_lambda(var0, var0);
+        let term = tc.ctx.mk_lambda(universe, inner);
+        let inner_type = tc.ctx.mk_pi(var0, var1);
+        let ty = tc.ctx.mk_pi(universe, inner_type);
+        let expected = tc.eval(0, tc.empty_env(), ty);
+        tc.check_against(0, tc.empty_env(), tc.empty_ctx(), term, expected);
+    }))
+}
+
+#[test]
+fn check_against_lambda_argument_to_identity() -> Result<(), Box<dyn Error>> {
+    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
+        let one = tc.ctx.succ(tc.ctx.zero());
+        let universe = tc.ctx.mk_sort(one);
+        let var0 = tc.ctx.mk_var(0);
+        let fn_type = tc.ctx.mk_pi(universe, universe);
+        let higher_identity = tc.ctx.mk_lambda(fn_type, var0);
+        let identity = tc.ctx.mk_lambda(universe, var0);
+        let term = tc.ctx.mk_app(higher_identity, identity);
+        let expected = tc.eval(0, tc.empty_env(), fn_type);
+        tc.check_against(0, tc.empty_env(), tc.empty_ctx(), term, expected);
+    }))
+}
+
+#[test]
+#[should_panic(expected = "def_eq failed")]
+fn check_against_rejects_wrong_lambda_domain() {
+    test_export_file_should_panic(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
+        let prop = tc.ctx.prop();
+        let one = tc.ctx.succ(tc.ctx.zero());
+        let universe = tc.ctx.mk_sort(one);
+        let var0 = tc.ctx.mk_var(0);
+        let term = tc.ctx.mk_lambda(prop, var0);
+        let ty = tc.ctx.mk_pi(universe, universe);
+        let expected = tc.eval(0, tc.empty_env(), ty);
+        tc.check_against(0, tc.empty_env(), tc.empty_ctx(), term, expected);
+    }));
+}
+
+#[test]
+#[should_panic(expected = "def_eq failed")]
+fn check_against_rejects_wrong_lambda_body() {
+    test_export_file_should_panic(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
+        let one = tc.ctx.succ(tc.ctx.zero());
+        let universe = tc.ctx.mk_sort(one);
+        let term = tc.ctx.mk_lambda(universe, universe);
+        let ty = tc.ctx.mk_pi(universe, universe);
+        let expected = tc.eval(0, tc.empty_env(), ty);
+        tc.check_against(0, tc.empty_env(), tc.empty_ctx(), term, expected);
+    }));
+}
+
+#[test]
+#[should_panic(expected = "expected a sort")]
+fn check_against_rejects_malformed_lambda_annotation() {
+    test_export_file_should_panic(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
+        // p : Prop is a proposition, but h : p is not itself a type.
+        let prop = tc.ctx.prop();
+        let prop_v = tc.eval(0, tc.empty_env(), prop);
+        let p = tc.mk_bvar_hc(0, prop_v);
+        let h = tc.mk_bvar_hc(1, p);
+        let env1 = tc.env_extend(tc.empty_env(), p);
+        let env2 = tc.env_extend(env1, h);
+        let ctx1 = crate::value::ctx_extend(tc.arena, tc.empty_ctx(), prop_v);
+        let ctx2 = crate::value::ctx_extend(tc.arena, ctx1, p);
+        let var0 = tc.ctx.mk_var(0);
+        let term = tc.ctx.mk_lambda(var0, var0);
+        let ty = tc.ctx.mk_pi(prop, prop);
+        let expected = tc.eval(2, env2, ty);
+        tc.check_against(2, env2, ctx2, term, expected);
+    }));
+}
+
+#[test]
+#[should_panic(expected = "def_eq failed")]
+fn check_against_rejects_application_with_bad_lambda_argument() {
+    test_export_file_should_panic(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
+        let one = tc.ctx.succ(tc.ctx.zero());
+        let universe = tc.ctx.mk_sort(one);
+        let var0 = tc.ctx.mk_var(0);
+        let fn_type = tc.ctx.mk_pi(universe, universe);
+        let higher_identity = tc.ctx.mk_lambda(fn_type, var0);
+        let invalid = tc.ctx.mk_lambda(universe, universe);
+        let term = tc.ctx.mk_app(higher_identity, invalid);
+        let expected = tc.eval(0, tc.empty_env(), fn_type);
+        tc.check_against(0, tc.empty_env(), tc.empty_ctx(), term, expected);
+    }));
+}
+
 impl<'t, 'p: 't> TcCtx<'t, 'p> {
     #[cfg(test)]
     pub(crate) fn level_n(&mut self, mut l: LevelPtr<'t>, n: u64) -> LevelPtr<'t> {
@@ -71,24 +168,6 @@ fn check_empty() -> Result<(), Box<dyn Error>> {
             export.check_declar(declar);
         }
     })
-}
-
-#[test]
-fn evaluating_an_open_application_needs_no_pruned_cache_frame() -> Result<(), Box<dyn Error>> {
-    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
-        let prop = tc.ctx.prop();
-        let variable = tc.ctx.mk_var(0);
-        let identity = tc.ctx.mk_lambda(prop, variable);
-        let function = tc.eval(0, tc.empty_env(), identity);
-        let argument = crate::value::mk_sort(tc.arena, tc.ctx.zero());
-        let args = tc.env_extend(tc.empty_env(), argument);
-        let env = tc.env_extend(args, function);
-        let outer_argument = tc.ctx.mk_var(1);
-        let expression = tc.ctx.mk_app(variable, outer_argument);
-        assert!(tc.tc_cache.frames.is_empty());
-        assert!(std::ptr::eq(tc.eval(2, env, expression), argument));
-        assert!(tc.tc_cache.frames.is_empty(), "cache lookup pruned the environment");
-    }))
 }
 
 /// The export format assigns each name/level/expression an explicit index. Those

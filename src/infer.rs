@@ -39,6 +39,34 @@ fn has_deep_bvar_prefix(mut env: E<'_>) -> bool {
 }
 
 impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
+    // Check lambda bodies against an already well-formed expected type. The
+    // annotation and every body are still checked; only construction of an
+    // intermediate inferred Pi and its later conversion are avoided.
+    pub(crate) fn check_against(
+        &mut self,
+        depth: u32,
+        env: E<'t>,
+        ctx: C<'t>,
+        e: ExprPtr<'t>,
+        expected: V<'t>,
+    ) {
+        if let Lambda { binder_type, body, .. } = *e.as_ref() {
+            if let Value::Pi { domain, body: expected_body, .. } = self.force_all(depth, expected) {
+                self.infer_sort_of_v(Check, depth, env, ctx, binder_type);
+                let annotated = self.arg_value(depth, env, binder_type);
+                assert!(self.conv_types_at(depth, domain, annotated), "lambda domain def_eq failed");
+                let fresh = self.mk_bvar_hc(depth, annotated);
+                let body_expected = self.apply_closure(depth + 1, expected_body, fresh, Some(domain));
+                let env2 = self.env_extend(env, fresh);
+                let ctx2 = value::ctx_extend(self.arena, ctx, annotated);
+                self.check_against(depth + 1, env2, ctx2, body, body_expected);
+                return;
+            }
+        }
+        let actual = self.infer_value(Check, depth, env, ctx, e);
+        assert!(self.conv_types_at(depth, actual, expected), "def_eq failed");
+    }
+
     fn uparam_scope(&self) -> CheckScope<'t> {
         match self.declar_info {
             Some(info) => CheckScope::Under(info.uparams),
@@ -188,8 +216,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
                 _ => panic!("expected a pi type"),
             };
             if flag == Check {
-                let arg_ty = self.infer_value(flag, depth, env, ctx, arg);
-                assert!(self.conv_types_at(depth, domain, arg_ty), "app arg def_eq failed");
+                self.check_against(depth, env, ctx, arg, domain);
             }
             if body.ctx.is_none() && self.ctx.num_loose_bvars(body.body) == 0 {
                 fty = self.eval(depth, body.env, body.body);
@@ -276,8 +303,12 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
         self.check_declar_info_v(d);
         let empty_env = self.empty_env();
         let empty_ctx = self.empty_ctx();
-        let val_ty = self.infer_value(Check, 0, empty_env, empty_ctx, val);
         let declared = self.eval(0, empty_env, d.info().ty);
-        assert!(self.def_eq_at(0, val_ty, declared), "def_eq failed");
+        if matches!(val.as_ref(), Lambda { .. }) {
+            self.check_against(0, empty_env, empty_ctx, val, declared);
+        } else {
+            let val_ty = self.infer_value(Check, 0, empty_env, empty_ctx, val);
+            assert!(self.def_eq_at(0, val_ty, declared), "def_eq failed");
+        }
     }
 }

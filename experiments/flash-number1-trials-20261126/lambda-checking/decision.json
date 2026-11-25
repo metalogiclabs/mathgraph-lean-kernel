@@ -1,0 +1,20 @@
+{
+  "state": "CANDIDATE_NOT_PROMOTED",
+  "initial": {
+    "src_tree": "89045c44330a0811199216deec6a2ff8128e2715",
+    "cost_ratio": 1.0185845145222536,
+    "local_portable": "228/228 attempted; two explicit exclusions"
+  },
+  "current": {
+    "src_tree": "90a9410a07bceebaa597e7c9a50ad245204890a9",
+    "local_code_commit": "dffe845",
+    "library_tests": 52,
+    "cost_ratio": 0.9962566293967579,
+    "predeclared_1_percent_small_gate_passed": false,
+    "local_portable": "227/228 correct; GF3 process SIGKILL, cause UNKNOWN; same two explicit exclusions"
+  },
+  "full_experiment_reason": "These portable microcases do not represent the complete scoring workload. Measure exact full Mathlib once before any performance promotion; preserve a deterministic source-derived 128 MiB prefix for future decisive local work.",
+  "all_230_remote": "PENDING",
+  "full_mathlib": "PENDING",
+  "rank": "UNCHANGED; no source promotion"
+}

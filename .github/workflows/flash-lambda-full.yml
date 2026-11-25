@@ -1,0 +1,263 @@
+name: Flash lambda checking on exact full Mathlib
+on:
+  push:
+    branches: [research/flash-lambda-checking-20261126]
+    paths:
+      - .github/workflows/flash-lambda-full.yml
+      - experiments/flash-number1-trials-20261126/lambda-checking/**
+      - src/**
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CARGO_INCREMENTAL: 0
+      RUSTFLAGS: -C target-cpu=x86-64 -C target-feature=-avx,-avx2,-avx512f,-fma -C debuginfo=1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.99.1'
+      - name: Reconstruct independent source arms
+        run: |
+          set -euo pipefail
+          ROOT="$RUNNER_TEMP/lambda-sources"
+          OUT="$RUNNER_TEMP/lambda-arms"
+          mkdir -p "$ROOT" "$OUT"
+          git worktree add --detach "$ROOT/baseline" ca69e6ab8a3c7b795716128372fdaf67c697b68e
+          git worktree add --detach "$ROOT/retained_types" ca69e6ab8a3c7b795716128372fdaf67c697b68e
+          git worktree add --detach "$ROOT/bidirectional" ca69e6ab8a3c7b795716128372fdaf67c697b68e
+          git -C "$ROOT/retained_types" apply "$GITHUB_WORKSPACE/experiments/flash-number1-trials-20261126/retained-inferred-types/implementation.patch"
+          git -C "$ROOT/bidirectional" apply "$GITHUB_WORKSPACE/experiments/flash-number1-trials-20261126/lambda-checking/implementation.patch"
+          python3 - <<'PY'
+          import json,os,subprocess
+          from pathlib import Path
+          protocol=json.loads(Path('experiments/flash-number1-trials-20261126/lambda-checking/protocol.json').read_text())
+          root=Path(os.environ['RUNNER_TEMP'])/'lambda-sources'
+          rows=[]
+          for arm in protocol['arms']:
+              path=root/arm['name']
+              subprocess.run(['git','add','src'],cwd=path,check=True)
+              tree=subprocess.check_output(['git','write-tree'],cwd=path,text=True).strip()
+              src=subprocess.check_output(['git','rev-parse',tree+':src'],cwd=path,text=True).strip()
+              assert src==arm['src_tree'],(arm,src)
+              rows.append(dict(arm,root_tree=tree))
+          current=subprocess.check_output(['git','rev-parse','HEAD:src'],text=True).strip()
+          assert current==protocol['src_tree']
+          (Path(os.environ['RUNNER_TEMP'])/'lambda-arms'/'source-identities.json').write_text(json.dumps(rows,indent=2)+'\n')
+          PY
+          git rev-parse HEAD > "$OUT/commit.txt"
+          rustc -Vv > "$OUT/compiler.txt"
+          lscpu > "$OUT/build-cpu.txt"
+          printf '%s\n' "$RUSTFLAGS" > "$OUT/build-flags.txt"
+          for arm in baseline retained_types bidirectional; do
+            ARM_TARGET="$RUNNER_TEMP/lambda-target-$arm"
+            cargo test --locked --manifest-path "$ROOT/$arm/Cargo.toml" --target-dir "$ARM_TARGET" 2>&1 | tee "$OUT/$arm-tests.log"
+            cargo build --release --locked --manifest-path "$ROOT/$arm/Cargo.toml" --target-dir "$ARM_TARGET" 2>&1 | tee "$OUT/$arm-build.log"
+            cp "$ARM_TARGET/release/sokonanoda" "$OUT/$arm.bin"
+            rm -rf "$ARM_TARGET"
+          done
+          python3 - <<'PY'
+          import hashlib,json,os,re
+          from pathlib import Path
+          out=Path(os.environ['RUNNER_TEMP'])/'lambda-arms'
+          protocol=json.loads(Path('experiments/flash-number1-trials-20261126/lambda-checking/protocol.json').read_text())
+          rows=[]
+          for arm in protocol['arms']:
+              name=arm['name']
+              log=re.sub(r'\x1b\[[0-9;]*m','',(out/(name+'-tests.log')).read_text())
+              counts=[int(x) for x in re.findall(r'test result: ok\. (\d+) passed; 0 failed',log)]
+              assert counts and counts[0]==arm['library_tests'],(arm,counts)
+              rows.append(dict(arm,binary_sha256=hashlib.sha256((out/(name+'.bin')).read_bytes()).hexdigest()))
+          assert len({r['binary_sha256'] for r in rows})==len(rows),'Shared executable invalidates comparison'
+          (out/'validated-builds.json').write_text(json.dumps(rows,indent=2)+'\n')
+          print(json.dumps(rows))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-lambda-validated-builds
+          path: ${{ runner.temp }}/lambda-arms/
+          if-no-files-found: error
+          retention-days: 30
+  portable:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        arm: [retained_types, bidirectional]
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: flash-lambda-validated-builds
+          path: ${{ runner.temp }}/lambda-arms
+      - name: Validate executable and exact portable inputs
+        env:
+          ARM: ${{ matrix.arm }}
+        run: |
+          set -euo pipefail
+          chmod +x "$RUNNER_TEMP/lambda-arms/"*.bin
+          python3 - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP'])/'lambda-arms'
+          row=next(r for r in json.loads((root/'validated-builds.json').read_text()) if r['name']==os.environ['ARM'])
+          assert hashlib.sha256((root/(row['name']+'.bin')).read_bytes()).hexdigest()==row['binary_sha256']
+          PY
+          python3 experiments/flash-number1-trials-20261126/lambda-checking/prepare_portable.py
+      - name: All 230 prescribed statuses with official timeouts
+        env:
+          ARM: ${{ matrix.arm }}
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/lambda-portable-evidence"
+          mkdir -p "$OUT"
+          cp "$RUNNER_TEMP/lambda-arms/validated-builds.json" "$OUT/validated-builds.json"
+          cp "$RUNNER_TEMP/lambda-arms/commit.txt" "$OUT/commit.txt"
+          python3 experiments/flash-number1-trials-20261126/portable_variants.py \
+            --results experiments/flash-number1-trials-20261126/portable-manifest.json \
+            --fixtures "$RUNNER_TEMP/lambda-portable-inputs/fixtures" \
+            --arm "$ARM=$RUNNER_TEMP/lambda-arms/$ARM.bin" \
+            --out "$OUT" --threads 2 --official-timeouts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-lambda-portable-${{ matrix.arm }}
+          path: ${{ runner.temp }}/lambda-portable-evidence/
+          if-no-files-found: error
+          retention-days: 30
+  mathlib:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 130
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: flash-lambda-validated-builds
+          path: ${{ runner.temp }}/lambda-arms
+      - name: Preserve verified executable identities before comparison
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/lambda-mathlib-evidence"
+          chmod +x "$RUNNER_TEMP/lambda-arms/"*.bin
+          cp "$RUNNER_TEMP/lambda-arms/"*.json "$RUNNER_TEMP/lambda-arms/"*.txt "$RUNNER_TEMP/lambda-mathlib-evidence/"
+          python3 - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP'])/'lambda-arms'
+          for row in json.loads((root/'validated-builds.json').read_text()):
+              assert hashlib.sha256((root/(row['name']+'.bin')).read_bytes()).hexdigest()==row['binary_sha256']
+          PY
+          lscpu > "$RUNNER_TEMP/lambda-mathlib-evidence/measurement-cpu.txt"
+      - uses: actions/cache/restore@v4
+        id: mathlib_input
+        with:
+          path: ${{ runner.temp }}/lambda-input/mathlib.ndjson
+          key: flash-lambda-exact-mathlib-f749dfd084fc0727d107c7aaded7d492cebfc0b517cfaa7337d8a7578a6c0dec
+      - name: Regenerate pinned official export if needed
+        if: steps.mathlib_input.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          A="$RUNNER_TEMP/arena-source"
+          git init "$A"
+          git -C "$A" remote add origin https://github.com/leanprover/lean-kernel-arena.git
+          git -C "$A" fetch --depth 1 origin cb0665b7b0f34d53fa8d62584535c27c86dfa982
+          git -C "$A" checkout --detach FETCH_HEAD
+          test "$(git -C "$A" rev-parse HEAD)" = cb0665b7b0f34d53fa8d62584535c27c86dfa982
+          python3 -m venv "$RUNNER_TEMP/arena-venv"
+          "$RUNNER_TEMP/arena-venv/bin/pip" install jinja2 jsonschema markdown pyyaml
+          curl -fsSL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none
+          export PATH="$HOME/.elan/bin:$PATH"
+          cd "$A"
+          "$RUNNER_TEMP/arena-venv/bin/python" lka.py build-test mathlib 2>&1 | tee "$RUNNER_TEMP/lambda-mathlib-evidence/export.log"
+          cp _build/tests/mathlib.stats.json "$RUNNER_TEMP/lambda-mathlib-evidence/exporter-stats.json"
+          mkdir -p "$RUNNER_TEMP/lambda-input"
+          mv _build/tests/mathlib.ndjson "$RUNNER_TEMP/lambda-input/mathlib.ndjson"
+      - name: Verify full input before saving cache
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          p=Path(os.environ['RUNNER_TEMP'])/'lambda-input/mathlib.ndjson'
+          h=hashlib.sha256()
+          with p.open('rb') as f:
+              for block in iter(lambda:f.read(1024*1024),b''):h.update(block)
+          row={'size':p.stat().st_size,'sha256':h.hexdigest()}
+          assert row=={'size':6326141213,'sha256':'f749dfd084fc0727d107c7aaded7d492cebfc0b517cfaa7337d8a7578a6c0dec'}
+          (Path(os.environ['RUNNER_TEMP'])/'lambda-mathlib-evidence/verified-input.json').write_text(json.dumps(row,indent=2)+'\n')
+          print(json.dumps(row))
+          PY
+      - name: Produce a reusable source-derived Mathlib prefix
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,os,re,subprocess
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP'])
+          out=root/'lambda-mathlib-prefix'
+          out.mkdir()
+          prefix=out/'mathlib-prefix-128m.ndjson'
+          threshold=128*1024*1024
+          size=lines=0
+          with (root/'lambda-input/mathlib.ndjson').open('rb') as source,prefix.open('wb') as target:
+              for line in source:
+                  target.write(line);size+=len(line);lines+=1
+                  if size>=threshold and line.startswith((b'{"def":',b'{"thm":',b'{"opaque":')):
+                      break
+          assert size>=threshold
+          cfg=out/'config.json'
+          cfg.write_text(json.dumps({'use_stdin':True,'num_threads':1,'parse_only':False,
+              'nat_extension':True,'string_extension':True,'unsafe_permit_all_axioms':True,
+              'unpermitted_axiom_hard_error':False,'print_success_message':True,'print_axioms':False}))
+          with prefix.open('rb') as inp:
+              p=subprocess.run([str(root/'lambda-arms/baseline.bin'),str(cfg)],stdin=inp,capture_output=True,timeout=120)
+          (out/'baseline.stdout').write_bytes(p.stdout);(out/'baseline.stderr').write_bytes(p.stderr)
+          receipt={'state':'SOURCE_DERIVED_PREFIX_NOT_OFFICIAL_TEST','source_sha256':'f749dfd084fc0727d107c7aaded7d492cebfc0b517cfaa7337d8a7578a6c0dec',
+              'recipe':'Exact first lines through the first def/thm/opaque declaration at or beyond 128 MiB; no line rewritten',
+              'size':size,'lines':lines,'sha256':hashlib.sha256(prefix.read_bytes()).hexdigest(),
+              'baseline_raw_exit':p.returncode,'baseline_success':re.fullmatch(rb'Checked \d+ declarations with no errors\s*',p.stdout) is not None,
+              'baseline_binary_sha256':hashlib.sha256((root/'lambda-arms/baseline.bin').read_bytes()).hexdigest(),
+              'boundary':'Reusable native diagnostic input, never a full Mathlib or prescribed Arena score claim.'}
+          (out/'receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          print(json.dumps(receipt))
+          assert receipt['baseline_raw_exit']==0 and receipt['baseline_success']
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flash-mathlib-prefix-128m
+          path: ${{ runner.temp }}/lambda-mathlib-prefix/
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/cache/save@v4
+        if: steps.mathlib_input.outputs.cache-hit != 'true'
+        with:
+          path: ${{ runner.temp }}/lambda-input/mathlib.ndjson
+          key: flash-lambda-exact-mathlib-f749dfd084fc0727d107c7aaded7d492cebfc0b517cfaa7337d8a7578a6c0dec
+      - name: Matched native measurements and gated instruction profile
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y valgrind time
+          valgrind --version > "$RUNNER_TEMP/lambda-mathlib-evidence/valgrind.txt"
+          python3 experiments/flash-number1-trials-20261126/lambda-checking/native_mathlib.py \
+            --fixture "$RUNNER_TEMP/lambda-input/mathlib.ndjson" \
+            --binaries "$RUNNER_TEMP/lambda-arms" \
+            --out "$RUNNER_TEMP/lambda-mathlib-evidence/comparison" --rounds 2 --profile
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-lambda-mathlib
+          path: ${{ runner.temp }}/lambda-mathlib-evidence/
+          if-no-files-found: error
+          retention-days: 30

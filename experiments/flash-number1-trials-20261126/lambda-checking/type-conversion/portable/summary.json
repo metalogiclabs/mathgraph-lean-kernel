@@ -1,0 +1,24 @@
+{
+  "bidirectional_conv": {
+    "attempted": 228,
+    "correct": 227,
+    "excluded_unknown": [
+      "perf/magma-list-deep-n36",
+      "perf/magma-list-pair-n21"
+    ],
+    "wrong_or_unavailable": [
+      {
+        "arm": "bidirectional_conv",
+        "elapsed_s": 5.0038,
+        "expected_exit": 0,
+        "input_sha256": "9826fe188e0b5d8b77e41cad188870f25fb07270ec55c65d3b8ff0c41c82a9bc",
+        "name": "perf/gf3-matrix-product",
+        "raw_exit": -9,
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr_tail": "",
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ]
+  },
+  "boundary": "Raw status on attempted portable inputs. Explicit exclusions remain unknown. No ten-large-input qualification."
+}

@@ -618,8 +618,19 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
             self.tc_cache.closed_eval_cache.insert(e, v);
             return v;
         }
-        // Diagnostic ablation: retain closed evaluation and value interning,
-        // but compute open expressions without their additional memo table.
+        if matches!(
+            self.ctx.read_expr_ref(e),
+            Expr::App { .. } | Expr::Proj { .. } | Expr::Let { .. } | Expr::Pi { .. } | Expr::Lambda { .. }
+        ) {
+            let te = self.key_env(env, e);
+            let key = (te as *const value::Env<'t> as usize, e);
+            if let Some(v) = self.tc_cache.open_eval_cache.get(&key) {
+                return v;
+            }
+            let v = self.eval_no_cache(depth, te, e);
+            self.tc_cache.open_eval_cache.insert(key, v);
+            return v;
+        }
         self.eval_no_cache(depth, env, e)
     }
 

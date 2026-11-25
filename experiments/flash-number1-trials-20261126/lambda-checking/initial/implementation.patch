@@ -1,0 +1,167 @@
+diff --git a/src/infer.rs b/src/infer.rs
+index bcdd0b6..a743b0b 100644
+--- a/src/infer.rs
++++ b/src/infer.rs
+@@ -39,6 +39,34 @@ fn has_deep_bvar_prefix(mut env: E<'_>) -> bool {
+ }
+ 
+ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
++    // Check lambda bodies against an already well-formed expected type. The
++    // annotation and every body are still checked; only construction of an
++    // intermediate inferred Pi and its later conversion are avoided.
++    pub(crate) fn check_against(
++        &mut self,
++        depth: u32,
++        env: E<'t>,
++        ctx: C<'t>,
++        e: ExprPtr<'t>,
++        expected: V<'t>,
++    ) {
++        if let Lambda { binder_type, body, .. } = *e.as_ref() {
++            if let Value::Pi { domain, body: expected_body, .. } = self.force_all(depth, expected) {
++                self.infer_sort_of_v(Check, depth, env, ctx, binder_type);
++                let annotated = self.arg_value(depth, env, binder_type);
++                assert!(self.conv_types_at(depth, domain, annotated), "lambda domain def_eq failed");
++                let fresh = self.mk_bvar_hc(depth, annotated);
++                let body_expected = self.apply_closure(depth + 1, expected_body, fresh, Some(domain));
++                let env2 = self.env_extend(env, fresh);
++                let ctx2 = value::ctx_extend(self.arena, ctx, annotated);
++                self.check_against(depth + 1, env2, ctx2, body, body_expected);
++                return;
++            }
++        }
++        let actual = self.infer_value(Check, depth, env, ctx, e);
++        assert!(self.def_eq_at(depth, actual, expected), "def_eq failed");
++    }
++
+     fn uparam_scope(&self) -> CheckScope<'t> {
+         match self.declar_info {
+             Some(info) => CheckScope::Under(info.uparams),
+@@ -188,8 +216,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
+                 _ => panic!("expected a pi type"),
+             };
+             if flag == Check {
+-                let arg_ty = self.infer_value(flag, depth, env, ctx, arg);
+-                assert!(self.conv_types_at(depth, domain, arg_ty), "app arg def_eq failed");
++                self.check_against(depth, env, ctx, arg, domain);
+             }
+             if body.ctx.is_none() && self.ctx.num_loose_bvars(body.body) == 0 {
+                 fty = self.eval(depth, body.env, body.body);
+@@ -276,8 +303,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
+         self.check_declar_info_v(d);
+         let empty_env = self.empty_env();
+         let empty_ctx = self.empty_ctx();
+-        let val_ty = self.infer_value(Check, 0, empty_env, empty_ctx, val);
+         let declared = self.eval(0, empty_env, d.info().ty);
+-        assert!(self.def_eq_at(0, val_ty, declared), "def_eq failed");
++        self.check_against(0, empty_env, empty_ctx, val, declared);
+     }
+ }
+diff --git a/src/tests/util.rs b/src/tests/util.rs
+index 65a4652..b101d47 100644
+--- a/src/tests/util.rs
++++ b/src/tests/util.rs
+@@ -48,6 +48,103 @@ pub(crate) fn test_ctx<'p, A>(path: Option<&Path>, f: impl FnOnce(&mut TcCtx) ->
+     test_export_file(path, |export_file| export_file.with_ctx(|ctx, _cache, _arena| f(ctx)))
+ }
+ 
++#[test]
++fn check_against_dependent_identity_type() -> Result<(), Box<dyn Error>> {
++    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        // (fun (A : Type) (x : A) => x) : (A : Type) -> A -> A.
++        let one = tc.ctx.succ(tc.ctx.zero());
++        let universe = tc.ctx.mk_sort(one);
++        let var0 = tc.ctx.mk_var(0);
++        let var1 = tc.ctx.mk_var(1);
++        let inner = tc.ctx.mk_lambda(var0, var0);
++        let term = tc.ctx.mk_lambda(universe, inner);
++        let inner_type = tc.ctx.mk_pi(var0, var1);
++        let ty = tc.ctx.mk_pi(universe, inner_type);
++        let expected = tc.eval(0, tc.empty_env(), ty);
++        tc.check_against(0, tc.empty_env(), tc.empty_ctx(), term, expected);
++    }))
++}
++
++#[test]
++fn check_against_lambda_argument_to_identity() -> Result<(), Box<dyn Error>> {
++    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        let one = tc.ctx.succ(tc.ctx.zero());
++        let universe = tc.ctx.mk_sort(one);
++        let var0 = tc.ctx.mk_var(0);
++        let fn_type = tc.ctx.mk_pi(universe, universe);
++        let higher_identity = tc.ctx.mk_lambda(fn_type, var0);
++        let identity = tc.ctx.mk_lambda(universe, var0);
++        let term = tc.ctx.mk_app(higher_identity, identity);
++        let expected = tc.eval(0, tc.empty_env(), fn_type);
++        tc.check_against(0, tc.empty_env(), tc.empty_ctx(), term, expected);
++    }))
++}
++
++#[test]
++#[should_panic(expected = "def_eq failed")]
++fn check_against_rejects_wrong_lambda_domain() {
++    test_export_file_should_panic(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        let prop = tc.ctx.prop();
++        let one = tc.ctx.succ(tc.ctx.zero());
++        let universe = tc.ctx.mk_sort(one);
++        let var0 = tc.ctx.mk_var(0);
++        let term = tc.ctx.mk_lambda(prop, var0);
++        let ty = tc.ctx.mk_pi(universe, universe);
++        let expected = tc.eval(0, tc.empty_env(), ty);
++        tc.check_against(0, tc.empty_env(), tc.empty_ctx(), term, expected);
++    }));
++}
++
++#[test]
++#[should_panic(expected = "def_eq failed")]
++fn check_against_rejects_wrong_lambda_body() {
++    test_export_file_should_panic(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        let one = tc.ctx.succ(tc.ctx.zero());
++        let universe = tc.ctx.mk_sort(one);
++        let term = tc.ctx.mk_lambda(universe, universe);
++        let ty = tc.ctx.mk_pi(universe, universe);
++        let expected = tc.eval(0, tc.empty_env(), ty);
++        tc.check_against(0, tc.empty_env(), tc.empty_ctx(), term, expected);
++    }));
++}
++
++#[test]
++#[should_panic(expected = "expected a sort")]
++fn check_against_rejects_malformed_lambda_annotation() {
++    test_export_file_should_panic(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        // p : Prop is a proposition, but h : p is not itself a type.
++        let prop = tc.ctx.prop();
++        let prop_v = tc.eval(0, tc.empty_env(), prop);
++        let p = tc.mk_bvar_hc(0, prop_v);
++        let h = tc.mk_bvar_hc(1, p);
++        let env1 = tc.env_extend(tc.empty_env(), p);
++        let env2 = tc.env_extend(env1, h);
++        let ctx1 = crate::value::ctx_extend(tc.arena, tc.empty_ctx(), prop_v);
++        let ctx2 = crate::value::ctx_extend(tc.arena, ctx1, p);
++        let var0 = tc.ctx.mk_var(0);
++        let term = tc.ctx.mk_lambda(var0, var0);
++        let ty = tc.ctx.mk_pi(prop, prop);
++        let expected = tc.eval(2, env2, ty);
++        tc.check_against(2, env2, ctx2, term, expected);
++    }));
++}
++
++#[test]
++#[should_panic(expected = "def_eq failed")]
++fn check_against_rejects_application_with_bad_lambda_argument() {
++    test_export_file_should_panic(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        let one = tc.ctx.succ(tc.ctx.zero());
++        let universe = tc.ctx.mk_sort(one);
++        let var0 = tc.ctx.mk_var(0);
++        let fn_type = tc.ctx.mk_pi(universe, universe);
++        let higher_identity = tc.ctx.mk_lambda(fn_type, var0);
++        let invalid = tc.ctx.mk_lambda(universe, universe);
++        let term = tc.ctx.mk_app(higher_identity, invalid);
++        let expected = tc.eval(0, tc.empty_env(), fn_type);
++        tc.check_against(0, tc.empty_env(), tc.empty_ctx(), term, expected);
++    }));
++}
++
+ impl<'t, 'p: 't> TcCtx<'t, 'p> {
+     #[cfg(test)]
+     pub(crate) fn level_n(&mut self, mut l: LevelPtr<'t>, n: u64) -> LevelPtr<'t> {

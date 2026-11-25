@@ -1,0 +1,32 @@
+{
+  "status": "CANDIDATE",
+  "src_tree": "90a9410a07bceebaa597e7c9a50ad245204890a9",
+  "fixture_base": "ca69e6ab8a3c7b795716128372fdaf67c697b68e",
+  "arms": [
+    {
+      "name": "baseline",
+      "src_tree": "623a8575bbe54541e0be6217394336f4c2727994",
+      "library_tests": 46
+    },
+    {
+      "name": "retained_types",
+      "src_tree": "dce20a3d1e32b871e80f3a77ecf3aa75420733bf",
+      "library_tests": 52
+    },
+    {
+      "name": "bidirectional",
+      "src_tree": "90a9410a07bceebaa597e7c9a50ad245204890a9",
+      "library_tests": 52
+    }
+  ],
+  "full_mathlib": "6,326,141,213 bytes; f749dfd084fc0727d107c7aaded7d492cebfc0b517cfaa7337d8a7578a6c0dec",
+  "native_diagnostic": {
+    "rounds": 2,
+    "threads": 2,
+    "max_seconds_per_process": 360,
+    "max_process_tree_rss_kb": 11534336
+  },
+  "counter_profile_gate": "Only if both native observations accept and geometric CPU ratio <=0.95. Profile candidate with one worker and generic x86-64, Valgrind guest Ir; compare explicitly historical same-source/compiler/flags/input baseline 1,022,208,383,890, not an official score.",
+  "not_promoted": "No performance/rank claim before measurements; no release update without complete qualification.",
+  "reusable_input": "First complete declaration at or after 128 MiB of official Mathlib bytes; baseline validates it; not an official Arena test."
+}
