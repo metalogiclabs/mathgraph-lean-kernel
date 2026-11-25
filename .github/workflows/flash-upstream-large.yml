@@ -1,0 +1,114 @@
+name: Flash reconciled nine remaining large inputs
+on:
+  push:
+    branches: [research/flash-upstream-reconciliation-20261126]
+    paths: ['.github/workflows/flash-upstream-large.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  large:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include:
+          - id: cedar
+            test: cedar
+          - id: con-leche
+            test: con-leche
+          - id: cslib
+            test: cslib
+          - id: init
+            test: init
+          - id: navier-stokes-euler
+            test: navier-stokes-euler
+          - id: magma-string-n4
+            test: perf/magma-string-n4
+          - id: magma-string-pair-n9
+            test: perf/magma-string-pair-n9
+          - id: reachability
+            test: reachability
+          - id: std
+            test: std
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: 0
+      RUSTFLAGS: -C target-cpu=x86-64 -C target-feature=-avx,-avx2,-avx512f,-fma
+      CASE: ${{ matrix.test }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.99.1'
+      - name: Verify unchanged qualified checker source and build
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/large-evidence"
+          mkdir -p "$OUT"
+          git diff --exit-code bc704eebed4e009bc66af1a849f18315c11f1926 -- src Cargo.toml Cargo.lock tests test_resources
+          git rev-parse HEAD > "$OUT/commit.txt"
+          git rev-parse HEAD:src > "$OUT/source-tree.txt"
+          rustc -Vv > "$OUT/compiler.txt"
+          printf '%s\n' "$RUSTFLAGS" > "$OUT/build-flags.txt"
+          python3 - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          expected=json.loads(Path('experiments/flash-upstream-repair-20261126/source-identity.json').read_text())
+          for name,digest in expected.items():
+              assert hashlib.sha256(Path(name).read_bytes()).hexdigest()==digest,name
+          PY
+          cargo build --locked --release
+          sha256sum target/release/sokonanoda > "$OUT/binary.txt"
+      - uses: actions/cache/restore@v4
+        id: input
+        with:
+          path: ${{ runner.temp }}/large-input/test.ndjson
+          key: flash-reconciled-current-large-${{ matrix.id }}-cb0665b7
+      - name: Regenerate pinned original export if absent
+        if: steps.input.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          A="$RUNNER_TEMP/arena-source"
+          git init "$A"
+          git -C "$A" remote add origin https://github.com/leanprover/lean-kernel-arena.git
+          git -C "$A" fetch --depth 1 origin cb0665b7b0f34d53fa8d62584535c27c86dfa982
+          git -C "$A" checkout --detach FETCH_HEAD
+          if [ "$CASE" = cedar ]; then
+            python3 - "$A/tests/cedar.yaml" <<'PY'
+          import json,re,shlex,sys
+          from pathlib import Path
+          p=Path(sys.argv[1])
+          text,n=re.subn(r'(?m)^pre-build: (shopt[^\n]+)$',
+              lambda m:'pre-build: '+json.dumps('bash -c '+shlex.quote(m.group(1))),p.read_text())
+          assert n==1,'Cedar recipe changed'
+          p.write_text(text)
+          PY
+            git -C "$A" diff -- tests/cedar.yaml > "$RUNNER_TEMP/large-evidence/cedar-shell-repair.txt"
+          fi
+          python3 -m venv "$RUNNER_TEMP/arena-venv"
+          "$RUNNER_TEMP/arena-venv/bin/pip" install jinja2 jsonschema markdown pyyaml
+          curl -fsSL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none
+          export PATH="$HOME/.elan/bin:$PATH"
+          cd "$A"
+          "$RUNNER_TEMP/arena-venv/bin/python" lka.py build-test "$CASE" 2>&1 | tee "$RUNNER_TEMP/large-evidence/export.log"
+          mkdir -p "$RUNNER_TEMP/large-input"
+          mv "_build/tests/$CASE.ndjson" "$RUNNER_TEMP/large-input/test.ndjson"
+      - name: Require exact input bytes and complete ACCEPT
+        run: python3 experiments/flash-upstream-repair-20261126/large_input.py
+      - uses: actions/cache/save@v4
+        if: success() && steps.input.outputs.cache-hit != 'true'
+        with:
+          path: ${{ runner.temp }}/large-input/test.ndjson
+          key: flash-reconciled-current-large-${{ matrix.id }}-cb0665b7
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-reconciled-large-${{ matrix.id }}
+          path: ${{ runner.temp }}/large-evidence/
+          retention-days: 30
