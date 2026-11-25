@@ -108,6 +108,20 @@ fn nat_shl_eq() {
 }
 
 #[test]
+fn nat_shift_huge_exact_identities() {
+    use crate::util::{nat_shl, nat_shr};
+    // 2^64 and a still larger count, with bounded mathematical outputs.
+    for count in [BigUint::one() << 64usize, BigUint::one() << 256usize] {
+        assert_eq!(nat_shl(BigUint::zero(), count.clone()), BigUint::zero());
+        assert_eq!(nat_shr(BigUint::from(42u8), count.clone()), BigUint::zero());
+        assert_eq!(nat_shr(BigUint::zero(), count), BigUint::zero());
+    }
+    // Preserve the nonzero ordinary-shift behavior.
+    assert_eq!(nat_shl(BigUint::from(3u8), BigUint::from(5u8)), BigUint::from(96u8));
+    assert_eq!(nat_shr(BigUint::from(96u8), BigUint::from(5u8)), BigUint::from(3u8));
+}
+
+#[test]
 fn nat_gcd_eq() {
     use crate::util::nat_gcd;
     assert_eq!(nat_gcd(&BigUint::from(10u8), &BigUint::from(15u8)), BigUint::from(5u8));
