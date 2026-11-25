@@ -1,0 +1,110 @@
+name: Flash final Cedar exact source shell recovery
+on:
+  push:
+    branches: [research/flash-current-arena-open-shift-20261125]
+    paths: [.github/workflows/flash-final-cedar.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  large:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include:
+          - id: cedar
+            test: cedar
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: 0
+      RUSTFLAGS: -C target-cpu=native
+      CASE: ${{ matrix.test }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify exact combined candidate and build
+        run: |
+          set -euxo pipefail
+          mkdir -p "$RUNNER_TEMP/large-evidence"
+          git diff --exit-code 3b5a4ba64b4e47f5da06f6d4a3eda35f0ed64968 -- src Cargo.toml Cargo.lock
+          git rev-parse HEAD:src > "$RUNNER_TEMP/large-evidence/source-tree.txt"
+          git rev-parse HEAD > "$RUNNER_TEMP/large-evidence/commit.txt"
+          rustc -Vv > "$RUNNER_TEMP/large-evidence/compiler.txt"
+          cargo build --locked --release
+          sha256sum target/release/sokonanoda > "$RUNNER_TEMP/large-evidence/binary.txt"
+      - name: Retrieve pinned Arena source and prepare exporter
+        run: |
+          set -euxo pipefail
+          A="$RUNNER_TEMP/arena-source"
+          git init "$A"
+          git -C "$A" remote add origin https://github.com/leanprover/lean-kernel-arena.git
+          git -C "$A" fetch --depth 1 origin 99195b6b009bc3df2c946ddbcfa4a2ab1eb40350
+          git -C "$A" checkout --detach FETCH_HEAD
+          test "$(git -C "$A" rev-parse HEAD)" = 99195b6b009bc3df2c946ddbcfa4a2ab1eb40350
+          # Preserve the exact upstream pre-build command while invoking it
+          # in its required Bash shell; official input size and SHA gate remain.
+          python3 - "$A/tests/cedar.yaml" <<'PY'
+          import json, pathlib, shlex, sys
+          p=pathlib.Path(sys.argv[1])
+          s=p.read_text()
+          command="shopt -s dotglob && find . -mindepth 1 -maxdepth 1 ! -name cedar-lean -exec rm -rf {} + && mv cedar-lean/* . && rmdir cedar-lean"
+          old="pre-build: |\n  "+command+"\n"
+          assert s.count(old)==1, "Cedar source recipe changed"
+          p.write_text(s.replace(old,"pre-build: "+json.dumps("bash -c "+shlex.quote(command))+"\n"))
+          PY
+          git -C "$A" diff -- tests/cedar.yaml > "$RUNNER_TEMP/large-evidence/cedar-shell-repair.txt"
+          python3 -m venv "$RUNNER_TEMP/arena-venv"
+          "$RUNNER_TEMP/arena-venv/bin/pip" install jinja2 jsonschema markdown pyyaml
+          curl -fsSL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - name: Regenerate exact official test input
+        run: |
+          set -euxo pipefail
+          cd "$RUNNER_TEMP/arena-source"
+          "$RUNNER_TEMP/arena-venv/bin/python" lka.py build-test "$CASE" 2>&1 | tee "$RUNNER_TEMP/large-evidence/export.log"
+          test -s "_build/tests/$CASE.ndjson"
+      - name: Verify input bytes and require strict ACCEPT
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY'
+          import importlib.util
+          import json
+          import os
+          from pathlib import Path
+          spec = importlib.util.spec_from_file_location("recovery", Path("experiments/flash-current-arena-20261125/recovery.py"))
+          m = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(m)
+          out = Path(os.environ["RUNNER_TEMP"]) / "large-evidence"
+          tests = m.source_manifest(out)
+          name = os.environ["CASE"]
+          meta = tests[name]
+          assert meta["outcome"] == "accept" and meta["size"] > 10 * 1024 * 1024
+          fixture = Path(os.environ["RUNNER_TEMP"]) / "arena-source/_build/tests" / (name + ".ndjson")
+          actual = {"size":fixture.stat().st_size,"sha256":m.sha(fixture)}
+          m.dump(out/"input-identity.json",{"name":name,"actual":actual,"expected_size":meta["size"],"expected_sha256":meta["sha256"]})
+          assert actual == {"size":meta["size"],"sha256":meta["sha256"]}
+          logs=out/"logs"
+          logs.mkdir()
+          binary=Path("target/release/sokonanoda").resolve()
+          row=m.run_one([str(binary),str(m.config(out))],fixture,int(meta["timeout"]), "candidate",logs,name)
+          row.update({"expected":"accept","input_sha256":actual["sha256"],"binary_sha256":m.sha(binary)})
+          m.dump(out/"large-verdict.json",row)
+          print("LARGE_VERDICT",json.dumps(row),flush=True)
+          assert row["raw_exit"] == 0
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-final-cedar-recovery
+          path: |
+            ${{ runner.temp }}/large-evidence/*.json
+            ${{ runner.temp }}/large-evidence/*.txt
+            ${{ runner.temp }}/large-evidence/*.log
+            ${{ runner.temp }}/large-evidence/logs/
+          if-no-files-found: error
+          retention-days: 30
