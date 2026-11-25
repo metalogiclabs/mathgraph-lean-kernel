@@ -1,0 +1,13 @@
+{
+  "status": "INVALID_EXPERIMENT; SAME_BASELINE_BINARY_IN_ALL_ARMS",
+  "run": 45686409325,
+  "head": "dd3982d500513a76b150d3f67ff7eef60a32d2bb",
+  "artifact_id": 15058991395,
+  "archive_sha256": "58e207cd86f316194b92dc5a0ad8824907b91e1187edf9321e7507f26b83482f",
+  "finding": "All three source trees were reconstructed correctly, but shared Cargo target directories reused the baseline executable and baseline test executable. All three binary hashes are 56bde091330940b7b31a2fff8229331267f643506f16b74ff752959caabca783. All library runs executed 46 tests.",
+  "consequence": "No full-Mathlib performance or remote unit-suite claim for either variant is warranted. Preserve all raw observations as invalid comparison data.",
+  "correction": "Fresh target directory per arm, expected library-count checks, and distinct executable SHA-256 required before profiling.",
+  "second_affected_run": 45691028748,
+  "second_boundary": "Its separate portable job is valid and passed 230/230. Its shared-target Mathlib job is superseded.",
+  "reuse_boundary": "The six identical-executable native observations provide a bounded timing-variability control. They cannot measure a variant effect or Arena instruction cost."
+}

@@ -1,5 +1,5 @@
 {
-  "status": "CANDIDATE; REPEATED_SMALL_COST_GATE_AND_BOUNDED_PORTABLE_PASSED",
+  "status": "CANDIDATE_PERFORMANCE; WARRANTED_BOUNDED_PORTABLE_230",
   "baseline": "819d59c34db3fd8f7b790a83f5728f255f75f33e",
   "local_commit": "bc339d2548d1f20d78cc7a7a989fb3e90cec27aa",
   "src_tree": "6b5f867d4b371dcf0d7cdfc38d14e4507ba621e1",
@@ -53,5 +53,18 @@
       "wrong_or_unavailable": []
     }
   },
-  "promotion_boundary": "Full all-230 native two-worker and exact full-Mathlib comparison pending. Two locally excluded common SIGKILL cases remain unknown here. No release promotion."
+  "promotion_boundary": "Full Mathlib performance remains UNKNOWN. Shared-target full diagnostics are invalidated; no release promotion.",
+  "remote_portable": {
+    "status": "WARRANTED_BOUNDED_PORTABLE_230",
+    "run": 45691028748,
+    "commit": "930179e44b770d018e48d70b975bbd0f206bb2ab",
+    "source_tree": "6b5f867d4b371dcf0d7cdfc38d14e4507ba621e1",
+    "artifact_id": 15057949600,
+    "archive_sha256": "73f9d0911c797eb22ae7d9126b4bd6dbc48c67bd0b46d1eed25eed3d432aa76e",
+    "binary_sha256": "03094b8c9deadce2382330d36a4fef89830f8406ff109d870f2c52bec2f027cd",
+    "correct": 230,
+    "total": 230,
+    "threads": 2,
+    "scope": "Portable job only. Its isolated candidate build is valid. The later shared-target Mathlib job is invalid and superseded."
+  }
 }
