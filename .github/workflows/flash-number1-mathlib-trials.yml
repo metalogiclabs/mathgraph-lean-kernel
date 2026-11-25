@@ -9,77 +9,65 @@ on:
 permissions:
   contents: read
 jobs:
-  portable:
+  stop-superseded:
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    permissions:
+      actions: write
+    steps:
+      - name: Stop the superseded shared-target Mathlib diagnostic
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PYCODE'
+          import os, urllib.request, urllib.error
+          old=45691028748
+          assert str(old)!=os.environ['GITHUB_RUN_ID']
+          req=urllib.request.Request(f'https://api.github.com/repos/metalogiclabs/mathgraph-lean-kernel/actions/runs/{old}/cancel',method='POST',headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json'})
+          try:
+              with urllib.request.urlopen(req) as response: print('Superseded diagnostic cancellation:',response.status)
+          except urllib.error.HTTPError as error:
+              if error.code!=409: raise
+              print('Superseded diagnostic already finished.')
+          PYCODE
+  portable:
+    name: Reverify valid 230-case receipt for identical source
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
     env:
-      CARGO_INCREMENTAL: 0
-      RUSTFLAGS: -C target-cpu=native
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: '1.99.1'
-      - name: Verify exact candidate source and build
+          fetch-depth: 0
+      - name: Verify artifact digest, source, binary identity and every prescribed status
         run: |
-          set -euxo pipefail
-          OUT="$RUNNER_TEMP/no-memo-portable"
-          mkdir -p "$OUT"
-          python3 - <<'PY'
-          import json, subprocess
+          set -euo pipefail
+          gh api repos/metalogiclabs/mathgraph-lean-kernel/actions/artifacts/15057949600/zip > "$RUNNER_TEMP/portable-qualified.zip"
+          python3 - <<'PYCODE'
+          import hashlib,json,os,subprocess,zipfile
           from pathlib import Path
-          d=json.loads(Path('experiments/flash-number1-trials-20261126/no-open-memo/decision.json').read_text())
-          actual=subprocess.check_output(['git','rev-parse','HEAD:src'],text=True).strip()
-          assert actual==d['src_tree'],(actual,d['src_tree'])
-          PY
-          git rev-parse HEAD > "$OUT/commit.txt"
-          rustc -Vv > "$OUT/compiler.txt"
-          cargo build --release --locked
-          sha256sum target/release/sokonanoda > "$OUT/binary.sha256"
-      - name: Retrieve portable fixtures and enforce pinned bytes
-        run: |
-          set -euxo pipefail
-          curl -fsSL https://arena.lean-lang.org/lean-arena-tests.tar.gz -o "$RUNNER_TEMP/portable.tar.gz"
-          python3 - <<'PY'
-          import hashlib, json, os, tarfile
-          from pathlib import Path
-          root=Path(os.environ['RUNNER_TEMP'])
-          manifest=json.loads(Path('experiments/flash-number1-trials-20261126/portable-manifest.json').read_text())
-          tests={t['name']:t for t in manifest['tests']}
-          assert len(tests)==230
-          found=set()
-          with tarfile.open(root/'portable.tar.gz','r:gz') as archive:
-              for member in archive:
-                  if not member.isfile(): continue
-                  parts=Path(member.name).parts
-                  assert len(parts)>=2 and parts[0] in ('good','bad')
-                  assert not any(x in ('..','') for x in parts)
-                  assert member.name.endswith('.ndjson')
-                  name='/'.join(parts[1:])[:-7]
-                  assert name in tests and name not in found
-                  meta=tests[name]
-                  assert meta['outcome']==('accept' if parts[0]=='good' else 'reject')
-                  data=archive.extractfile(member).read()
-                  assert len(data)==meta['size'] and hashlib.sha256(data).hexdigest()==meta['sha256'],name
-                  dest=root/'portable-fixtures'/(name+'.ndjson');dest.parent.mkdir(parents=True,exist_ok=True);dest.write_bytes(data)
-                  found.add(name)
-          assert found==tests.keys()
-          PY
-      - name: Require all 230 prescribed portable statuses with two workers
-        run: |
-          set -euxo pipefail
-          python3 experiments/flash-number1-trials-20261126/portable_variants.py \
-            --results experiments/flash-number1-trials-20261126/portable-manifest.json \
-            --fixtures "$RUNNER_TEMP/portable-fixtures" \
-            --arm "no_open_memo=$PWD/target/release/sokonanoda" \
-            --out "$RUNNER_TEMP/no-memo-portable" --threads 2 --official-timeouts
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: flash-no-open-memo-portable-230
-          path: ${{ runner.temp }}/no-memo-portable/
-          if-no-files-found: error
-          retention-days: 30
+          archive=Path(os.environ['RUNNER_TEMP'])/'portable-qualified.zip'
+          assert hashlib.sha256(archive.read_bytes()).hexdigest()=='73f9d0911c797eb22ae7d9126b4bd6dbc48c67bd0b46d1eed25eed3d432aa76e'
+          previous='930179e44b770d018e48d70b975bbd0f206bb2ab'
+          source=subprocess.check_output(['git','rev-parse',previous+':src'],text=True).strip()
+          current=subprocess.check_output(['git','rev-parse','HEAD:src'],text=True).strip()
+          assert current==source=='6b5f867d4b371dcf0d7cdfc38d14e4507ba621e1'
+          tests={t['name']:t for t in json.loads(Path('experiments/flash-number1-trials-20261126/portable-manifest.json').read_text())['tests']}
+          with zipfile.ZipFile(archive) as z:
+              assert z.read('commit.txt').decode().strip()==previous
+              rows=json.loads(z.read('rows.json'));identity=json.loads(z.read('identity.json'));config=json.loads(z.read('config.json'))
+              assert len(rows)==230 and {r['name'] for r in rows}==tests.keys()
+              for r in rows:
+                  t=tests[r['name']]
+                  assert r['input_sha256']==t['sha256']
+                  assert r['raw_exit']==r['expected_exit']==(0 if t['outcome']=='accept' else 1)
+              assert identity['threads']==2 and identity['official_timeouts'] and not identity['excluded_unknown']
+              assert config['num_threads']==2 and config['parse_only'] is False
+              assert identity['binaries']['no_open_memo']==z.read('binary.sha256').decode().split()[0]
+          print('Reverified 230/230 prescribed portable statuses from run 45691028748 for identical source',source)
+          PYCODE
   matched-mathlib:
     needs: portable
     runs-on: ubuntu-24.04
@@ -128,12 +116,28 @@ jobs:
           lscpu > "$OUT/cpu.txt"
           printf '%s\n' "$RUSTFLAGS" > "$OUT/build-flags.txt"
           for arm in baseline no_open_memo; do
-            cargo test --locked --manifest-path "$ROOT/$arm/Cargo.toml" --target-dir "$RUNNER_TEMP/shared-test-target" 2>&1 | tee "$OUT/$arm-tests.log"
-            cargo build --release --locked --manifest-path "$ROOT/$arm/Cargo.toml" --target-dir "$RUNNER_TEMP/shared-build-target" 2>&1 | tee "$OUT/$arm-build.log"
-            cp "$RUNNER_TEMP/shared-build-target/release/sokonanoda" "$ROOT/$arm.bin"
+            ARM_TARGET="$RUNNER_TEMP/isolated-target-$arm"
+            cargo test --locked --manifest-path "$ROOT/$arm/Cargo.toml" --target-dir "$ARM_TARGET" 2>&1 | tee "$OUT/$arm-tests.log"
+            cargo build --release --locked --manifest-path "$ROOT/$arm/Cargo.toml" --target-dir "$ARM_TARGET" 2>&1 | tee "$OUT/$arm-build.log"
+            cp "$ARM_TARGET/release/sokonanoda" "$ROOT/$arm.bin"
+            rm -rf "$ARM_TARGET"
           done
-          rm -rf "$RUNNER_TEMP/shared-test-target" "$RUNNER_TEMP/shared-build-target"
           sha256sum "$ROOT/"*.bin > "$OUT/binaries.sha256"
+          python3 - <<'PY'
+          import hashlib,json,os,re
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP'])/'mathlib-trial-arms'
+          out=Path(os.environ['RUNNER_TEMP'])/'mathlib-trial-evidence'
+          rows=[]
+          for arm,count in [('baseline',46),('no_open_memo',47)]:
+              log=re.sub(r'\x1b\[[0-9;]*m','',(out/(arm+'-tests.log')).read_text())
+              counts=[int(x) for x in re.findall(r'test result: ok\. (\d+) passed; 0 failed',log)]
+              assert counts and counts[0]==count,(arm,counts,count)
+              digest=hashlib.sha256((root/(arm+'.bin')).read_bytes()).hexdigest()
+              rows.append({'arm':arm,'library_tests':count,'binary_sha256':digest})
+          assert len({r['binary_sha256'] for r in rows})==len(rows),'Executable reuse invalidates comparison'
+          (out/'validated-builds.json').write_text(json.dumps(rows,indent=2)+'\n')
+          PY
       - uses: actions/cache@v4
         id: mathlib_input
         with:

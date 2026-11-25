@@ -51,7 +51,9 @@ def main():
     assert arms[0] == "baseline" and len(arms) > 1 and len(set(arms)) == len(arms)
     assert a.process_timeout > 0
     bins = {arm: (a.binaries / (arm + ".bin")).resolve() for arm in arms}
-    save(a.out / "binaries.json", {arm: sha(b) for arm, b in bins.items()})
+    hashes = {arm: sha(b) for arm, b in bins.items()}
+    save(a.out / "binaries.json", hashes)
+    assert len(set(hashes.values())) == len(arms), "Distinct source variants reused the same executable"
     config = (a.out / "config.json").resolve()
     assert a.threads > 0
     save(config, {"use_stdin": True, "num_threads": a.threads, "nat_extension": True,
