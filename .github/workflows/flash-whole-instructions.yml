@@ -1,0 +1,61 @@
+name: Flash exact whole-workload instruction diagnostics
+on:
+  push:
+    branches: [research/flash-lambda-checking-20261126]
+    paths:
+      - .github/workflows/flash-whole-instructions.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  count:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    strategy:
+      fail-fast: false
+      matrix:
+        arm: [baseline, retained_types, bidirectional]
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Recover immutable independently validated builds
+        run: |
+          set -euo pipefail
+          gh api repos/metalogiclabs/mathgraph-lean-kernel/actions/artifacts/15064215588/zip > "$RUNNER_TEMP/lambda-builds.zip"
+          python3 - <<'PY'
+          import hashlib,os,zipfile
+          from pathlib import Path
+          p=Path(os.environ['RUNNER_TEMP'])/'lambda-builds.zip'
+          assert hashlib.sha256(p.read_bytes()).hexdigest()=='b2e10535d5f224482dfb3aace54f236ad41e3acc41a8f8ce7b0d6461e86d46aa'
+          with zipfile.ZipFile(p) as z:z.extractall(Path(os.environ['RUNNER_TEMP'])/'lambda-arms')
+          PY
+          chmod +x "$RUNNER_TEMP/lambda-arms/"*.bin
+      - uses: actions/cache/restore@v4
+        id: mathlib_input
+        with:
+          path: ${{ runner.temp }}/lambda-input/mathlib.ndjson
+          key: flash-lambda-exact-mathlib-f749dfd084fc0727d107c7aaded7d492cebfc0b517cfaa7337d8a7578a6c0dec
+          fail-on-cache-miss: true
+      - name: Count exact full-input software guest instructions
+        env:
+          ARM: ${{ matrix.arm }}
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y valgrind
+          OUT="$RUNNER_TEMP/whole-instructions"
+          mkdir -p "$OUT"
+          lscpu > "$OUT/cpu.txt"
+          git rev-parse HEAD > "$OUT/harness-commit.txt"
+          python3 experiments/flash-number1-trials-20261126/lambda-checking/whole_instructions.py \
+            --arm "$ARM" --fixture "$RUNNER_TEMP/lambda-input/mathlib.ndjson" \
+            --binaries "$RUNNER_TEMP/lambda-arms" --out "$OUT"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-whole-instructions-${{ matrix.arm }}
+          path: ${{ runner.temp }}/whole-instructions/
+          if-no-files-found: error
+          retention-days: 30

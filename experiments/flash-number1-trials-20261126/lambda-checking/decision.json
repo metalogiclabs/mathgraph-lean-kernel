@@ -14,7 +14,7 @@
     "local_portable": "227/228 correct; GF3 process SIGKILL, cause UNKNOWN; same two explicit exclusions"
   },
   "full_experiment_reason": "These portable microcases do not represent the complete scoring workload. Measure exact full Mathlib once before any performance promotion; preserve a deterministic source-derived 128 MiB prefix for future decisive local work.",
-  "all_230_remote": "PENDING",
-  "full_mathlib": "PENDING",
+  "all_230_remote": "WARRANTED_BOUNDED: both retained_types and bidirectional; run 45700995014; independent archive/hash/row checks in remote-portable/",
+  "full_mathlib": "Native comparison active; exact input verified and saved before measurement",
   "rank": "UNCHANGED; no source promotion"
 }

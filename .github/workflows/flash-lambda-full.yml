@@ -3,8 +3,6 @@ on:
   push:
     branches: [research/flash-lambda-checking-20261126]
     paths:
-      - .github/workflows/flash-lambda-full.yml
-      - experiments/flash-number1-trials-20261126/lambda-checking/**
       - src/**
   workflow_dispatch:
 permissions:
