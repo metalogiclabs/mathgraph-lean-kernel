@@ -1,0 +1,27 @@
+{
+  "status": "REJECTED_FOR_PERFORMANCE_PROMOTION",
+  "baseline": "819d59c34db3fd8f7b790a83f5728f255f75f33e",
+  "local_commit": "2eb74cdbc9267e14ee00e43fafce7229478404a5",
+  "src_tree": "7866ecead51c033b709e0061f177b1f1632a1b2b",
+  "patch_base_published": "ca69e6ab8a3c7b795716128372fdaf67c697b68e",
+  "patch_sha256": "9d6e5e058fed7073a5e5852b32f8102d5259a771de8e6e711eba06c113221768",
+  "red_control": "Baseline evaluation allocated a pruned frame; the new focused cost control allocates none.",
+  "unit_library_pass": 47,
+  "integration_note": "Unconfigured integration test is not corpus evidence. Four existing ignored doctests.",
+  "cost": {
+    "boundary": "Raw process status; software guest instructions are not an official Arena score.",
+    "geomean_ratio": 1.0473829324791475,
+    "observations": 10,
+    "passes_1_percent_gate": false,
+    "ratios": {
+      "init-prelude": 1.0096826144744804,
+      "perf/fueled-chain": 1.0855002576498731,
+      "perf/grind-ring-5": 0.9923956420960013,
+      "perf/magma-list-deep-n21": 1.267576917055044,
+      "perf/magma-list-pair-n7": 0.914225821720213
+    },
+    "wrong_or_unavailable": []
+  },
+  "qualification": "All five positive comparison cases accepted; no broad portable or full-Mathlib qualification.",
+  "authorship": "Independent full-environment key experiment; no competitor code copied."
+}

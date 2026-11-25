@@ -1,0 +1,100 @@
+name: Flash independent architecture trials on exact Mathlib
+on:
+  push:
+    branches: [research/flash-number1-trials-20261126]
+    paths:
+      - .github/workflows/flash-number1-mathlib-trials.yml
+      - experiments/flash-number1-trials-20261126/whole_mathlib.py
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  matched-mathlib:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    env:
+      CARGO_INCREMENTAL: 0
+      RUSTFLAGS: -C target-cpu=native
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.99.1'
+      - name: Reconstruct independent arms and require exact source identities
+        run: |
+          set -euxo pipefail
+          ROOT="$RUNNER_TEMP/mathlib-trial-arms"
+          OUT="$RUNNER_TEMP/mathlib-trial-evidence"
+          mkdir -p "$ROOT" "$OUT"
+          git worktree add --detach "$ROOT/baseline" ca69e6ab8a3c7b795716128372fdaf67c697b68e
+          git worktree add --detach "$ROOT/call_by_need" ca69e6ab8a3c7b795716128372fdaf67c697b68e
+          git worktree add --detach "$ROOT/full_environment" ca69e6ab8a3c7b795716128372fdaf67c697b68e
+          git -C "$ROOT/call_by_need" apply "$GITHUB_WORKSPACE/experiments/flash-number1-trials-20261126/call-by-need/implementation.patch"
+          git -C "$ROOT/full_environment" apply "$GITHUB_WORKSPACE/experiments/flash-number1-trials-20261126/raw-environment/implementation.patch"
+          python3 - <<'PY'
+          import json, os, subprocess
+          from pathlib import Path
+          root = Path(os.environ['RUNNER_TEMP']) / 'mathlib-trial-arms'
+          out = Path(os.environ['RUNNER_TEMP']) / 'mathlib-trial-evidence'
+          rows = []
+          for arm, directory in [('baseline', None), ('call_by_need', 'call-by-need'), ('full_environment', 'raw-environment')]:
+              worktree = root / arm
+              subprocess.run(['git','add','src'],cwd=worktree,check=True)
+              tree = subprocess.check_output(['git','write-tree'],cwd=worktree,text=True).strip()
+              src = subprocess.check_output(['git','rev-parse',tree+':src'],cwd=worktree,text=True).strip()
+              if directory:
+                  d = json.loads((Path('experiments/flash-number1-trials-20261126')/directory/'decision.json').read_text())
+                  assert src == d.get('src_tree', d.get('source_tree')), (arm,src,d)
+              else:
+                  expected = subprocess.check_output(['git','rev-parse','819d59c34db3fd8f7b790a83f5728f255f75f33e:src'],text=True).strip()
+                  assert src == expected
+              rows.append({'arm':arm,'src_tree':src,'root_tree':tree})
+          (out/'source-identities.json').write_text(json.dumps(rows,indent=2)+'\n')
+          PY
+          git rev-parse HEAD > "$OUT/research-commit.txt"
+          rustc -Vv > "$OUT/compiler.txt"
+          lscpu > "$OUT/cpu.txt"
+          printf '%s\n' "$RUSTFLAGS" > "$OUT/build-flags.txt"
+          for arm in baseline call_by_need full_environment; do
+            cargo test --locked --manifest-path "$ROOT/$arm/Cargo.toml" --target-dir "$RUNNER_TEMP/shared-test-target" 2>&1 | tee "$OUT/$arm-tests.log"
+            cargo build --release --locked --manifest-path "$ROOT/$arm/Cargo.toml" --target-dir "$RUNNER_TEMP/shared-build-target" 2>&1 | tee "$OUT/$arm-build.log"
+            cp "$RUNNER_TEMP/shared-build-target/release/sokonanoda" "$ROOT/$arm.bin"
+          done
+          rm -rf "$RUNNER_TEMP/shared-test-target" "$RUNNER_TEMP/shared-build-target"
+          sha256sum "$ROOT/"*.bin > "$OUT/binaries.sha256"
+      - name: Prepare pinned official export recipe
+        run: |
+          set -euxo pipefail
+          A="$RUNNER_TEMP/arena-source"
+          git init "$A"
+          git -C "$A" remote add origin https://github.com/leanprover/lean-kernel-arena.git
+          git -C "$A" fetch --depth 1 origin cb0665b7b0f34d53fa8d62584535c27c86dfa982
+          git -C "$A" checkout --detach FETCH_HEAD
+          test "$(git -C "$A" rev-parse HEAD)" = cb0665b7b0f34d53fa8d62584535c27c86dfa982
+          python3 -m venv "$RUNNER_TEMP/arena-venv"
+          "$RUNNER_TEMP/arena-venv/bin/pip" install jinja2 jsonschema markdown pyyaml
+          curl -fsSL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - name: Regenerate exact full Mathlib
+        run: |
+          set -euxo pipefail
+          cd "$RUNNER_TEMP/arena-source"
+          "$RUNNER_TEMP/arena-venv/bin/python" lka.py build-test mathlib 2>&1 | tee "$RUNNER_TEMP/mathlib-trial-evidence/mathlib-export.log"
+          cp _build/tests/mathlib.stats.json "$RUNNER_TEMP/mathlib-trial-evidence/exporter-stats.json"
+      - name: Compare all three native arms with alternating order
+        run: |
+          set -euxo pipefail
+          python3 experiments/flash-number1-trials-20261126/whole_mathlib.py \
+            --fixture "$RUNNER_TEMP/arena-source/_build/tests/mathlib.ndjson" \
+            --binaries "$RUNNER_TEMP/mathlib-trial-arms" \
+            --out "$RUNNER_TEMP/mathlib-trial-evidence/comparison" \
+            --rounds 2
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-number1-native-mathlib-trials
+          path: ${{ runner.temp }}/mathlib-trial-evidence/
+          if-no-files-found: error
+          retention-days: 30
