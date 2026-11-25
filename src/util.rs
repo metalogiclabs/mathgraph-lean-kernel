@@ -561,6 +561,11 @@ pub(crate) fn nat_xor(x: &BigUint, y: &BigUint) -> BigUint { x ^ y }
 fn shift_amount(y: &BigUint) -> Option<u64> { u64::try_from(y).ok() }
 
 pub(crate) fn nat_shl(x: BigUint, y: BigUint) -> BigUint {
+    // Zero shifted by any natural count is zero, including counts outside u64.
+    // Decide this exact identity before narrowing the shift amount.
+    if x.is_zero() {
+        return x;
+    }
     let sh = shift_amount(&y).expect("Nat.shiftLeft: shift does not fit in a machine word");
     x << sh
 }
