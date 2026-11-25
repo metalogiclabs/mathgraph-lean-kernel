@@ -1,0 +1,62 @@
+name: Flash frozen-core whole instruction attribution
+on:
+  push:
+    branches: [research/flash-upstream-reconciliation-20261126]
+    paths: ['.github/workflows/flash-whole-profile.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  profile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Recover frozen executable without rebuilding checker source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/whole-profile"
+          mkdir -p "$OUT"
+          git diff --exit-code bc704eebed4e009bc66af1a849f18315c11f1926 -- src Cargo.toml Cargo.lock
+          git rev-parse HEAD > "$OUT/harness-commit.txt"
+          git rev-parse HEAD:src > "$OUT/source-tree.txt"
+          gh run download 45712976230 --name flash-complete-fast-instructions --dir "$RUNNER_TEMP/frozen-count"
+          cp "$RUNNER_TEMP/frozen-count/builds/strict.bin" "$OUT/strict.bin"
+          chmod +x "$OUT/strict.bin"
+          cp "$RUNNER_TEMP/frozen-count/counts/identity.json" "$OUT/predecessor-count-identity.json"
+          cp "$RUNNER_TEMP/frozen-count/build-flags.txt" "$OUT/build-flags.txt"
+          cp "$RUNNER_TEMP/frozen-count/compiler.txt" "$OUT/compiler.txt"
+          sha256sum "$OUT/strict.bin" > "$OUT/binary.txt"
+          python3 experiments/flash-upstream-repair-20261126/build_counter.py
+          cp "$RUNNER_TEMP/flash-dynamorio/identity.json" "$OUT/sdk-counter-identity.json"
+          python3 experiments/flash-whole-profile-20261126/prepare.py \
+            --sdk "$RUNNER_TEMP/flash-dynamorio/DynamoRIO-Linux-11.92.20777" \
+            --binary "$OUT/strict.bin" --out "$OUT/prepared"
+          cp experiments/flash-whole-profile-20261126/profile_counter.c "$OUT/profile_counter.c"
+          cp experiments/flash-whole-profile-20261126/prepare.py "$OUT/prepare.py"
+          cp experiments/flash-whole-profile-20261126/run.py "$OUT/run.py"
+      - uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/reconciled-input/mathlib.ndjson
+          key: flash-upstream-exact-mathlib-f749dfd084fc0727d107c7aaded7d492cebfc0b517cfaa7337d8a7578a6c0dec
+          fail-on-cache-miss: true
+      - name: Attribute the complete unchanged execution after exact calibration
+        run: |
+          set -euo pipefail
+          python3 experiments/flash-whole-profile-20261126/run.py \
+            --drrun "$RUNNER_TEMP/flash-dynamorio/DynamoRIO-Linux-11.92.20777/bin64/drrun" \
+            --prepared "$RUNNER_TEMP/whole-profile/prepared" \
+            --binary "$RUNNER_TEMP/whole-profile/strict.bin" \
+            --fixture "$RUNNER_TEMP/reconciled-input/mathlib.ndjson" \
+            --out "$RUNNER_TEMP/whole-profile/measurements" --whole
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-frozen-core-whole-instruction-profile
+          path: ${{ runner.temp }}/whole-profile/
+          retention-days: 30

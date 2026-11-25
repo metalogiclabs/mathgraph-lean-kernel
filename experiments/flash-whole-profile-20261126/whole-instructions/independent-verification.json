@@ -1,0 +1,16 @@
+{
+  "state": "WARRANTED_BOUNDED_SOFTWARE_INSTRUCTION_DIAGNOSTIC",
+  "run": 45712976230,
+  "artifact": 15069518161,
+  "archive_sha256": "1a24ca4c7161e0ad47e58bb0d4d3d11c3345c6d249cd6d42a9e7e3976d8ef9b5",
+  "dynamic_instructions": {
+    "baseline": 964868458684,
+    "strict": 545995448357
+  },
+  "candidate_to_baseline_ratio": 0.5658755278431343,
+  "reduction_percent": 43.41244721568657,
+  "observations": 2,
+  "calibration_cases": 3,
+  "boundary": "Dynamic basic-block application instruction estimate, including libraries. REP-string and asynchronous interruption accounting differs from other tools. Calibration covers straight-line loops, not all x86 or hardware semantics. This is not an official Arena instruction score.",
+  "authority_boundary": "Archive and execution records verified. The full multi-gigabyte input and compiled instrumentation client are not bundled in this archive. No official Arena instruction/rank claim."
+}
