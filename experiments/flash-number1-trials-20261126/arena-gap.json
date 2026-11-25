@@ -1,0 +1,99 @@
+{
+  "authority": {
+    "timestamp": "2026-11-25 09:22:55 UTC",
+    "git_revision": "cb0665b7b0f34d53fa8d62584535c27c86dfa982",
+    "git_revision_short": "cb0665b7",
+    "github_url": "https://github.com/leanprover/lean-kernel-arena/commit/cb0665b7b0f34d53fa8d62584535c27c86dfa982",
+    "github_action_url": "https://github.com/leanprover/lean-kernel-arena/actions/runs/45581042122",
+    "round": null,
+    "doi": null,
+    "zenodo_deposition": null,
+    "github_run_id": "45581042122"
+  },
+  "results_artifact": {
+    "id": 15008691149,
+    "sha256": "ffdc922ba7b971f503ee1001c05f94478aafa675d0ca4663596ac7d723aa05bd"
+  },
+  "mathgraph": {
+    "checker": "mathgraph",
+    "wrong_accepts": 0,
+    "wrong_rejects": 0,
+    "mathlib_instructions": 931656523742,
+    "mathlib_virtual_s": 155.27608729033332,
+    "declines": 2,
+    "rank_in_artifact": 5
+  },
+  "leader": {
+    "checker": "nano-lean",
+    "wrong_accepts": 0,
+    "wrong_rejects": 0,
+    "mathlib_instructions": 394884600833,
+    "mathlib_virtual_s": 65.81410013883334,
+    "declines": 3,
+    "rank_in_artifact": 1
+  },
+  "required_instruction_reduction_to_tie": 0.5761478712702559,
+  "boundary": "Recomputed from official raw artifact using published scoring rules, not the still-stale public leaderboard.",
+  "leading_rows": [
+    {
+      "checker": "nano-lean",
+      "wrong_accepts": 0,
+      "wrong_rejects": 0,
+      "mathlib_instructions": 394884600833,
+      "mathlib_virtual_s": 65.81410013883334,
+      "declines": 3,
+      "rank_in_artifact": 1
+    },
+    {
+      "checker": "gruszka",
+      "wrong_accepts": 0,
+      "wrong_rejects": 0,
+      "mathlib_instructions": 460835688008,
+      "mathlib_virtual_s": 76.80594800133333,
+      "declines": 0,
+      "rank_in_artifact": 2
+    },
+    {
+      "checker": "sokonanoda",
+      "wrong_accepts": 0,
+      "wrong_rejects": 0,
+      "mathlib_instructions": 527406147961,
+      "mathlib_virtual_s": 87.90102466016667,
+      "declines": 6,
+      "rank_in_artifact": 3
+    },
+    {
+      "checker": "rpylean",
+      "wrong_accepts": 0,
+      "wrong_rejects": 0,
+      "mathlib_instructions": 578087692456,
+      "mathlib_virtual_s": 96.34794874266667,
+      "declines": 4,
+      "rank_in_artifact": 4
+    },
+    {
+      "checker": "mathgraph",
+      "wrong_accepts": 0,
+      "wrong_rejects": 0,
+      "mathlib_instructions": 931656523742,
+      "mathlib_virtual_s": 155.27608729033332,
+      "declines": 2,
+      "rank_in_artifact": 5
+    },
+    {
+      "checker": "pestka",
+      "wrong_accepts": 0,
+      "wrong_rejects": 0,
+      "mathlib_instructions": 1475325110184,
+      "mathlib_virtual_s": 245.887518364,
+      "declines": 0,
+      "rank_in_artifact": 6
+    }
+  ],
+  "mathgraph_prescribed_qualification": {
+    "correct": 240,
+    "total": 240,
+    "incorrect": 0,
+    "scope": "This official artifact only. Not qualification of any new trial."
+  }
+}

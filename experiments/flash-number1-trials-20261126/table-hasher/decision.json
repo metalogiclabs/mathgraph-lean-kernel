@@ -1,0 +1,30 @@
+{
+  "status": "BELOW_MATERIAL_GATE; NO_DEMONSTRATED_IMPROVEMENT",
+  "mechanism": "Use licensed rustc-hash 2.1.3 dependency for table bucket selection only. Preserve rustc-hash 1.1.0 for all structural digests. No checker code copied.",
+  "local_commit": "6ca338f9857254095eb9c9fcbfa6e5edd30e4446",
+  "src_tree": "eba916e1a02d7f8fc56f86572a7b2f23f871359d",
+  "patch_base_published": "ca69e6ab8a3c7b795716128372fdaf67c697b68e",
+  "patch_sha256": "846ff9b2eb9e36548353966df957d6fc65da1e66f96f305d08a317fadb14a6c3",
+  "source_sha256": {
+    "Cargo.toml": "92b382034e4ba50b32c4319179003f47228da87b11846a146b1576b52bacb710",
+    "Cargo.lock": "1eec33ff00953fb4b3ccd6672e1458998ac3a9712337f2fbbcff6d2658e1a9ed",
+    "src/util.rs": "2ef4bab1f6e9a71d736e4695e921470fc07d40c2c65fb60c0e7e587d72379f36"
+  },
+  "unit_library_pass": 46,
+  "integration_note": "Unconfigured integration test, not corpus evidence. Four ignored doctests.",
+  "performance": {
+    "boundary": "Raw process status; software guest instructions are not an official Arena score.",
+    "geomean_ratio": 1.000451567263996,
+    "observations": 10,
+    "passes_1_percent_gate": false,
+    "ratios": {
+      "init-prelude": 1.0004317902463995,
+      "perf/fueled-chain": 1.000522691931603,
+      "perf/grind-ring-5": 1.000563403386843,
+      "perf/magma-list-deep-n21": 1.0005170378645039,
+      "perf/magma-list-pair-n7": 1.0002229501317992
+    },
+    "wrong_or_unavailable": []
+  },
+  "boundary": "Five matched positive inputs accepted; no broad portable or full-Mathlib qualification. Difference is submaterial and does not establish a statistically meaningful slowdown."
+}

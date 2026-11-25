@@ -1,0 +1,59 @@
+diff --git a/Cargo.lock b/Cargo.lock
+index 32f3b6e..bdd6aea 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -234,6 +234,12 @@ version = "1.1.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
+ 
++[[package]]
++name = "rustc-hash"
++version = "2.1.3"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "6b1e7f9a428571be2dc5bc0505c13fb6bf936822b894ec87abf8a08a4e51742d"
++
+ [[package]]
+ name = "rustc_version"
+ version = "0.4.1"
+@@ -323,7 +329,8 @@ dependencies = [
+  "num-integer",
+  "num-traits",
+  "rand",
+- "rustc-hash",
++ "rustc-hash 1.1.0",
++ "rustc-hash 2.1.3",
+  "semver",
+  "serde",
+  "serde_json",
+diff --git a/Cargo.toml b/Cargo.toml
+index 55d962b..b571422 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -25,6 +25,7 @@ num-bigint = { version = "0.4.4", features = ["rand", "serde"] }
+ [dependencies]
+ indexmap = "2.13.0"
+ rustc-hash = "1.1.0"
++rustc-hash-table = { package = "rustc-hash", version = "=2.1.3" }
+ num-bigint = { version = "0.4.4", features = ["serde"] }
+ num-integer = "0.1.46"
+ num-traits = "0.2.17"
+diff --git a/src/util.rs b/src/util.rs
+index a3396b9..47e2a71 100644
+--- a/src/util.rs
++++ b/src/util.rs
+@@ -41,9 +41,12 @@ impl Error for Decline {}
+ 
+ pub(crate) fn decline<A>(msg: impl Into<String>) -> Result<A, Box<dyn Error>> { Err(Box::new(Decline(msg.into()))) }
+ 
+-pub(crate) type FxIndexMap<K, V> = IndexMap<K, V, BuildHasherDefault<FxHasher>>;
+-pub(crate) type FxHashMap<K, V> = HashMap<K, V, BuildHasherDefault<FxHasher>>;
+-pub(crate) type FxHashSet<K> = HashSet<K, BuildHasherDefault<FxHasher>>;
++// Keep structural hashes stable; only table bucket selection uses the newer
++// dependency. Equality checks and all kernel digest construction are unchanged.
++type TableHasher = BuildHasherDefault<rustc_hash_table::FxHasher>;
++pub(crate) type FxIndexMap<K, V> = IndexMap<K, V, TableHasher>;
++pub(crate) type FxHashMap<K, V> = HashMap<K, V, TableHasher>;
++pub(crate) type FxHashSet<K> = HashSet<K, TableHasher>;
+ 
+ pub(crate) type CowStr<'a> = Cow<'a, str>;
+ 

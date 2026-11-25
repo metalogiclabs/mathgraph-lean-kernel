@@ -1,0 +1,102 @@
+[
+  {
+    "arm": "baseline",
+    "elapsed_s": 5.832,
+    "expected": 0,
+    "guest_Ir": 694946221,
+    "input_sha256": "4772efbd23270de11b206ed63c5bbe6783363acc83757d37c5e6884a2549074b",
+    "name": "init-prelude",
+    "raw_exit": 0,
+    "round": 0
+  },
+  {
+    "arm": "candidate",
+    "elapsed_s": 5.882,
+    "expected": 0,
+    "guest_Ir": 695246292,
+    "input_sha256": "4772efbd23270de11b206ed63c5bbe6783363acc83757d37c5e6884a2549074b",
+    "name": "init-prelude",
+    "raw_exit": 0,
+    "round": 0
+  },
+  {
+    "arm": "baseline",
+    "elapsed_s": 12.3084,
+    "expected": 0,
+    "guest_Ir": 2762727446,
+    "input_sha256": "19331af9652c84013b934a26ebf2bf25eba19abc8b9246baa4014c08850fb2e3",
+    "name": "perf/grind-ring-5",
+    "raw_exit": 0,
+    "round": 0
+  },
+  {
+    "arm": "candidate",
+    "elapsed_s": 11.8563,
+    "expected": 0,
+    "guest_Ir": 2764283976,
+    "input_sha256": "19331af9652c84013b934a26ebf2bf25eba19abc8b9246baa4014c08850fb2e3",
+    "name": "perf/grind-ring-5",
+    "raw_exit": 0,
+    "round": 0
+  },
+  {
+    "arm": "baseline",
+    "elapsed_s": 11.1134,
+    "expected": 0,
+    "guest_Ir": 2771414046,
+    "input_sha256": "5d470c0b68949e393ea61469dccb0aac6185433c56f06bfc15202e2644a5a5ff",
+    "name": "perf/magma-list-deep-n21",
+    "raw_exit": 0,
+    "round": 0
+  },
+  {
+    "arm": "candidate",
+    "elapsed_s": 10.8436,
+    "expected": 0,
+    "guest_Ir": 2772846972,
+    "input_sha256": "5d470c0b68949e393ea61469dccb0aac6185433c56f06bfc15202e2644a5a5ff",
+    "name": "perf/magma-list-deep-n21",
+    "raw_exit": 0,
+    "round": 0
+  },
+  {
+    "arm": "baseline",
+    "elapsed_s": 14.4515,
+    "expected": 0,
+    "guest_Ir": 3873570260,
+    "input_sha256": "41333e6e8c06623d8064583e040d2983148ca7d2c6e98b6604c0fc98ef8b7102",
+    "name": "perf/magma-list-pair-n7",
+    "raw_exit": 0,
+    "round": 0
+  },
+  {
+    "arm": "candidate",
+    "elapsed_s": 13.8118,
+    "expected": 0,
+    "guest_Ir": 3874433873,
+    "input_sha256": "41333e6e8c06623d8064583e040d2983148ca7d2c6e98b6604c0fc98ef8b7102",
+    "name": "perf/magma-list-pair-n7",
+    "raw_exit": 0,
+    "round": 0
+  },
+  {
+    "arm": "baseline",
+    "elapsed_s": 1.822,
+    "expected": 0,
+    "guest_Ir": 231970292,
+    "input_sha256": "48b8b93fbc50c84528f275dca393c09c0f1301031b518fa33601926c64c6b46d",
+    "name": "perf/fueled-chain",
+    "raw_exit": 0,
+    "round": 0
+  },
+  {
+    "arm": "candidate",
+    "elapsed_s": 1.8207,
+    "expected": 0,
+    "guest_Ir": 232091541,
+    "input_sha256": "48b8b93fbc50c84528f275dca393c09c0f1301031b518fa33601926c64c6b46d",
+    "name": "perf/fueled-chain",
+    "raw_exit": 0,
+    "round": 0
+  }
+]
