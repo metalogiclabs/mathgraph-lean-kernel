@@ -306,6 +306,8 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
 
     #[inline(always)]
     pub(crate) fn key_env(&mut self, env: E<'t>, e: ExprPtr<'t>) -> E<'t> {
+        #[cfg(test)]
+        crate::tests::early_eval::record_environment_projection();
         let k = e.num_loose_bvars();
         if k == 0 {
             return self.lsub_base(env.lsub());
@@ -622,13 +624,31 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
             self.ctx.read_expr_ref(e),
             Expr::App { .. } | Expr::Proj { .. } | Expr::Let { .. } | Expr::Pi { .. } | Expr::Lambda { .. }
         ) {
-            let te = self.key_env(env, e);
-            let key = (te as *const value::Env<'t> as usize, e);
-            if let Some(v) = self.tc_cache.open_eval_cache.get(&key) {
+            // An exact original-environment hit needs no support projection.
+            // Env identity includes its universe substitution. These aliases use
+            // the existing session-owned map and expire with its ordinary keys.
+            let original_key = (env as *const value::Env<'t> as usize, e);
+            if let Some(v) = self.tc_cache.open_eval_cache.get(&original_key) {
                 return v;
             }
-            let v = self.eval_no_cache(depth, te, e);
-            self.tc_cache.open_eval_cache.insert(key, v);
+            let te = self.key_env(env, e);
+            let key = (te as *const value::Env<'t> as usize, e);
+            let cached = if key == original_key {
+                None // The exact same key was just probed above.
+            } else {
+                self.tc_cache.open_eval_cache.get(&key).copied()
+            };
+            let v = match cached {
+                Some(v) => v,
+                None => {
+                    let v = self.eval_no_cache(depth, te, e);
+                    self.tc_cache.open_eval_cache.insert(key, v);
+                    v
+                }
+            };
+            if original_key != key {
+                self.tc_cache.open_eval_cache.insert(original_key, v);
+            }
             return v;
         }
         self.eval_no_cache(depth, env, e)

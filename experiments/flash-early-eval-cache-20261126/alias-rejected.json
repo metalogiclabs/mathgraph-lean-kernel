@@ -1,0 +1,113 @@
+{
+  "status": "REJECTED_AS_PERFORMANCE_GAIN",
+  "baseline_commit": "819d59c34db3fd8f7b790a83f5728f255f75f33e",
+  "intervention": "Exact original-environment aliases in Flash existing open_eval_cache",
+  "compiler": "rustc 1.99.1 (58cf8f9c3 2026-10-13)",
+  "flags": "-C target-cpu=x86-64 -C target-feature=-avx,-avx2,-avx512f,-fma",
+  "observations": [
+    {
+      "case": "init-prelude",
+      "arm": "baseline",
+      "raw_exit": 0,
+      "guest_Ir": 695053163,
+      "elapsed_s": 6.005,
+      "binary_sha256": "0415d82568447e6a5040f58286b55c3431cc794d567f3667494bd5abd874d2a7"
+    },
+    {
+      "case": "init-prelude",
+      "arm": "candidate",
+      "raw_exit": 0,
+      "guest_Ir": 719752983,
+      "elapsed_s": 6.066,
+      "binary_sha256": "21532da89b3b51795978517adc4e23468b22d9aef6b775f53e32cbba6cb1b81a"
+    },
+    {
+      "case": "perf/grind-ring-5",
+      "arm": "baseline",
+      "raw_exit": 0,
+      "guest_Ir": 2763421210,
+      "elapsed_s": 12.843,
+      "binary_sha256": "0415d82568447e6a5040f58286b55c3431cc794d567f3667494bd5abd874d2a7"
+    },
+    {
+      "case": "perf/grind-ring-5",
+      "arm": "candidate",
+      "raw_exit": 0,
+      "guest_Ir": 3108100820,
+      "elapsed_s": 14.641,
+      "binary_sha256": "21532da89b3b51795978517adc4e23468b22d9aef6b775f53e32cbba6cb1b81a"
+    },
+    {
+      "case": "perf/magma-list-deep-n21",
+      "arm": "baseline",
+      "raw_exit": 0,
+      "guest_Ir": 2771376874,
+      "elapsed_s": 12.406,
+      "binary_sha256": "0415d82568447e6a5040f58286b55c3431cc794d567f3667494bd5abd874d2a7"
+    },
+    {
+      "case": "perf/magma-list-deep-n21",
+      "arm": "candidate",
+      "raw_exit": 0,
+      "guest_Ir": 3378516838,
+      "elapsed_s": 15.28,
+      "binary_sha256": "21532da89b3b51795978517adc4e23468b22d9aef6b775f53e32cbba6cb1b81a"
+    },
+    {
+      "case": "perf/magma-list-pair-n7",
+      "arm": "baseline",
+      "raw_exit": 0,
+      "guest_Ir": 3872818867,
+      "elapsed_s": 14.838,
+      "binary_sha256": "0415d82568447e6a5040f58286b55c3431cc794d567f3667494bd5abd874d2a7"
+    },
+    {
+      "case": "perf/magma-list-pair-n7",
+      "arm": "candidate",
+      "raw_exit": 0,
+      "guest_Ir": 4518899183,
+      "elapsed_s": 16.209,
+      "binary_sha256": "21532da89b3b51795978517adc4e23468b22d9aef6b775f53e32cbba6cb1b81a"
+    },
+    {
+      "case": "perf/fueled-chain",
+      "arm": "baseline",
+      "raw_exit": 0,
+      "guest_Ir": 232001098,
+      "elapsed_s": 1.798,
+      "binary_sha256": "0415d82568447e6a5040f58286b55c3431cc794d567f3667494bd5abd874d2a7"
+    },
+    {
+      "case": "perf/fueled-chain",
+      "arm": "candidate",
+      "raw_exit": 0,
+      "guest_Ir": 250686801,
+      "elapsed_s": 1.92,
+      "binary_sha256": "21532da89b3b51795978517adc4e23468b22d9aef6b775f53e32cbba6cb1b81a"
+    }
+  ],
+  "cost": {
+    "metric": "single-worker generic-x86-64 Callgrind guest Ir; not Arena hardware instructions",
+    "ratios": {
+      "init-prelude": 1.035536591033397,
+      "perf/grind-ring-5": 1.1247293061053114,
+      "perf/magma-list-deep-n21": 1.219075207596612,
+      "perf/magma-list-pair-n7": 1.1668243050314597,
+      "perf/fueled-chain": 1.0805414420926578
+    },
+    "geomean_ratio": 1.123513178579935,
+    "passes_1_percent_gate": false
+  },
+  "unit_tests": {
+    "baseline_restored_fixtures": 46,
+    "candidate": 50,
+    "four_ignored_doctests": true
+  },
+  "verification_boundary": "Single observation per arm and case, generic-x86-64 one-worker software guest instructions. Not official Arena instructions, not full Mathlib qualification. Portable suite still pending when this receipt was made.",
+  "red_control": {
+    "test": "repeated_open_evaluation_avoids_environment_reprojection",
+    "baseline": "FAILED: environment projections grew from 2 to 3",
+    "candidate": "PASSED: no additional projection"
+  },
+  "authorship": "New cache lookup control flow was authored for Flash. No competitor source was copied. Conceptual comparison: nano-lean v0.4.2; existing sokonanoda attribution is retained."
+}
