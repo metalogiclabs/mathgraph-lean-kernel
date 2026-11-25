@@ -1,0 +1,47 @@
+name: Flash ephemeral runner instruction-counter probe
+on:
+  push:
+    branches: [research/flash-lambda-checking-20261126]
+    paths:
+      - .github/workflows/flash-pmu-access-probe.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Distinguish unavailable PMU from unprivileged access policy
+        run: |
+          python3 - <<'PY'
+          import json,os,shutil,subprocess
+          from pathlib import Path
+          out=Path(os.environ['RUNNER_TEMP'])/'pmu-probe'
+          out.mkdir()
+          def call(cmd):
+              p=subprocess.run(cmd,capture_output=True,text=True,timeout=30)
+              return {'command':cmd,'raw_exit':p.returncode,'stdout':p.stdout,'stderr':p.stderr}
+          rows=[]
+          rows.append(call(['sysctl','-n','kernel.perf_event_paranoid']))
+          perf=shutil.which('perf')
+          if perf:
+              rows.append(call([perf,'--version']))
+              rows.append(call([perf,'stat','-x,','-e','instructions:u','--','/bin/true']))
+              # This setting changes only this disposable, dedicated CI VM.
+              # Checker processes remain unprivileged in later measurements.
+              rows.append(call(['sudo','sysctl','kernel.perf_event_paranoid=1']))
+              rows.append(call([perf,'stat','-x,','-e','instructions:u','--','/bin/true']))
+              rows.append(call(['sudo',perf,'stat','-x,','-e','instructions:u','--','/bin/true']))
+          (out/'probe.json').write_text(json.dumps({'perf_found':perf,'observations':rows,
+              'boundary':'Capability and access probe only; no checker measurement or rank claim.'},indent=2)+'\n')
+          subprocess.run(['lscpu'],stdout=(out/'cpu.txt').open('w'),check=True)
+          print(json.dumps(rows),flush=True)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-pmu-access-probe
+          path: ${{ runner.temp }}/pmu-probe/
+          if-no-files-found: error
+          retention-days: 30
