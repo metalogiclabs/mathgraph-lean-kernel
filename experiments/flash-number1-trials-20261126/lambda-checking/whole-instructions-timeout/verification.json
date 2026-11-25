@@ -1,0 +1,24 @@
+{
+  "state": "WARRANTED_RESOURCE_STOP; INSTRUCTION_COMPARISON_UNKNOWN",
+  "run": 45702828718,
+  "head": "8b2156f2f66313212c8878c14896ebec27281812",
+  "verified": "All three archives SHA256/CRC verified. Each process has raw_exit=-9, diagnostic_stop=UNKNOWN_TIME_DIAGNOSTIC_BUDGET, elapsed near 2700 seconds, empty stdout, no complete guest_Ir. Native acceptance from run 45700995014 remains distinct.",
+  "artifacts": [
+    {
+      "id": 15066128884,
+      "arm": "baseline",
+      "sha256": "d8f8904ee329c1db0ffc56648ea934053a005e07d84c27bda03b75b4763857e7"
+    },
+    {
+      "id": 15067087719,
+      "arm": "retained_types",
+      "sha256": "d78585d76e97d0fb37eaf40bcd198242a447171b420fa47e0fd13343687184e3"
+    },
+    {
+      "id": 15066777785,
+      "arm": "bidirectional",
+      "sha256": "6984da2072e80f995076e870f942f6d0a76232e31d8ec982eefcd3dd1f914d4e"
+    }
+  ],
+  "decision": "Do not infer speed, acceptance, rejection or decline from resource stops. No source promotion or rank change. Native diagnostics failed the material speedup gate; no blind counter-budget rerun."
+}

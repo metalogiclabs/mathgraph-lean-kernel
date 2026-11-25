@@ -1,0 +1,66 @@
+name: Flash full Mathlib declaration cost census
+on:
+  push:
+    branches: [research/flash-lambda-checking-20261126]
+    paths: [.github/workflows/flash-declaration-costs.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CARGO_INCREMENTAL: 0
+      RUSTFLAGS: -C target-cpu=x86-64 -C target-feature=-avx,-avx2,-avx512f,-fma -C debuginfo=1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.99.1'
+      - name: Reconstruct and validate instrumented baseline
+        run: |
+          set -euo pipefail
+          SOURCE="$RUNNER_TEMP/declaration-cost-source"
+          OUT="$RUNNER_TEMP/declaration-cost-evidence"
+          mkdir -p "$OUT"
+          git worktree add --detach "$SOURCE" ca69e6ab8a3c7b795716128372fdaf67c697b68e
+          git -C "$SOURCE" apply "$GITHUB_WORKSPACE/experiments/flash-number1-trials-20261126/declaration-cost-census/implementation.patch"
+          git -C "$SOURCE" add Cargo.toml src
+          git -C "$SOURCE" write-tree > "$OUT/root-tree.txt"
+          python3 - <<'PY'
+          import hashlib,json,os,subprocess
+          from pathlib import Path
+          root=Path(os.environ["RUNNER_TEMP"]);out=root/"declaration-cost-evidence"
+          p=Path("experiments/flash-number1-trials-20261126/declaration-cost-census")
+          protocol=json.loads((p/"protocol.json").read_text())
+          assert hashlib.sha256((p/"implementation.patch").read_bytes()).hexdigest()==protocol["patch_sha256"]
+          tree=(out/"root-tree.txt").read_text().strip()
+          src=subprocess.check_output(["git","rev-parse",tree+":src"],cwd=root/"declaration-cost-source",text=True).strip()
+          assert src==protocol["diagnostic_src_tree"]
+          (out/"protocol.json").write_text(json.dumps(protocol,indent=2)+"\n")
+          (out/"source-tree.txt").write_text(src+"\n")
+          PY
+          cargo test --locked --features declaration-costs --manifest-path "$SOURCE/Cargo.toml" --target-dir "$RUNNER_TEMP/census-target" -- --test-threads=1 > "$OUT/library-tests.log" 2>&1
+          cargo build --release --locked --features declaration-costs --manifest-path "$SOURCE/Cargo.toml" --target-dir "$RUNNER_TEMP/census-target" > "$OUT/build.log" 2>&1
+          cp "$RUNNER_TEMP/census-target/release/sokonanoda" "$RUNNER_TEMP/declaration-cost.bin"
+          rm -rf "$RUNNER_TEMP/census-target"
+          git rev-parse HEAD > "$OUT/harness-commit.txt"
+          rustc -Vv > "$OUT/compiler.txt"
+          lscpu > "$OUT/cpu.txt"
+      - uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/lambda-input/mathlib.ndjson
+          key: flash-lambda-exact-mathlib-f749dfd084fc0727d107c7aaded7d492cebfc0b517cfaa7337d8a7578a6c0dec
+          fail-on-cache-miss: true
+      - name: Two bounded full Mathlib censuses
+        run: python3 experiments/flash-number1-trials-20261126/declaration-cost-census/run.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-declaration-cost-census
+          path: ${{ runner.temp }}/declaration-cost-evidence/
+          if-no-files-found: error
+          retention-days: 30

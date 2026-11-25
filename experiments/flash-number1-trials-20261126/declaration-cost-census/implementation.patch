@@ -1,0 +1,93 @@
+diff --git a/Cargo.toml b/Cargo.toml
+index 55d962b..c188cb9 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -40,6 +40,7 @@ memmap2 = "0.9.11"
+ 
+ [features]
+ top-byte-ignore = []
++declaration-costs = []
+ 
+ [[bin]]
+ name = "sokonanoda"
+diff --git a/src/tc.rs b/src/tc.rs
+index 4fc3302..234fc31 100644
+--- a/src/tc.rs
++++ b/src/tc.rs
+@@ -10,6 +10,9 @@ const SESSION_BUDGET: usize = 16 * 1024 * 1024;
+ 
+ const CHUNK_SIZE: usize = 64;
+ 
++#[cfg(feature = "declaration-costs")]
++static DECLARATION_COSTS: std::sync::Mutex<Vec<(usize, u64)>> = std::sync::Mutex::new(Vec::new());
++
+ /// An enum for type safety and convenience; used during nat literal reduction, and also for testing.
+ #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+ pub(crate) enum NatBinOp {
+@@ -152,7 +155,14 @@ impl<'p> ExportFile<'p> {
+                 while i < end {
+                     let (_, d) = self.declars.get_index(i).expect("declaration index out of range");
+                     i += 1;
++                    #[cfg(feature = "declaration-costs")]
++                    let started = std::time::Instant::now();
+                     self.check_declar_with(tctx, cache, sbump.get(), d);
++                    #[cfg(feature = "declaration-costs")]
++                    {
++                        let elapsed = u64::try_from(started.elapsed().as_nanos()).expect("declaration timer overflow");
++                        DECLARATION_COSTS.lock().unwrap().push((i - 1, elapsed));
++                    }
+                     if sbump.allocated_bytes() > SESSION_BUDGET {
+                         pending = Some((i, end));
+                         return false
+@@ -218,11 +228,51 @@ impl<'p> ExportFile<'p> {
+     /// Check all of the declarations in this export file on the specified number
+     /// of threads (checking will be serial on the main thread is num_threads <= 1).
+     pub fn check_all_declars(&self) {
++        #[cfg(feature = "declaration-costs")]
++        DECLARATION_COSTS.lock().unwrap().clear();
+         if self.config.num_threads > 1 {
+             self.check_all_declars_par(self.config.num_threads)
+         } else {
+             self.check_all_declars_serial()
+         }
++        #[cfg(feature = "declaration-costs")]
++        self.report_declaration_costs();
++    }
++
++    #[cfg(feature = "declaration-costs")]
++    fn report_declaration_costs(&self) {
++        let mut rows = std::mem::take(&mut *DECLARATION_COSTS.lock().unwrap());
++        assert_eq!(rows.len(), self.declars.len(), "incomplete diagnostic census");
++        let mut seen = vec![false; rows.len()];
++        for &(index, _) in &rows {
++            assert!(!seen[index], "duplicate diagnostic declaration");
++            seen[index] = true;
++        }
++        rows.sort_unstable_by_key(|&(_, elapsed)| std::cmp::Reverse(elapsed));
++        let total_ns: u64 = rows.iter().map(|&(_, ns)| ns).sum();
++        let cumulative: Vec<_> = [1usize, 10, 100, 1000, 10000].into_iter().map(|n| {
++            let elapsed_ns: u64 = rows.iter().take(n).map(|&(_, ns)| ns).sum();
++            serde_json::json!({"top_n": n.min(rows.len()), "elapsed_ns": elapsed_ns})
++        }).collect();
++        let top = self.with_ctx(|ctx, _, _| {
++            rows.iter().take(100).map(|&(index, elapsed_ns)| {
++                let (_, d) = self.declars.get_index(index).unwrap();
++                let kind = match d {
++                    Declar::Inductive(..) => "inductive", Declar::Recursor(..) => "recursor",
++                    Declar::Constructor(..) => "constructor", Declar::Definition { .. } => "definition",
++                    Declar::Theorem { .. } => "theorem", Declar::Opaque { .. } => "opaque",
++                    Declar::Axiom { .. } => "axiom", Declar::Quot { .. } => "quotient",
++                };
++                serde_json::json!({"index": index, "name": format!("{:?}", ctx.debug_print(d.info().name)),
++                    "kind": kind, "elapsed_ns": elapsed_ns})
++            }).collect::<Vec<_>>()
++        });
++        eprintln!("FLASH_DECLARATION_COSTS {}", serde_json::json!({
++            "declarations": rows.len(), "threads": self.config.num_threads,
++            "total_declaration_elapsed_ns": total_ns, "cumulative": cumulative, "top": top,
++            "rows": rows,
++            "boundary": "Instrumented per-declaration elapsed time; includes descendants of each check, excludes parsing and session maintenance. Not an Arena instruction score or an uninstrumented timing comparison."
++        }));
+     }
+ }
+ 

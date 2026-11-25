@@ -26,8 +26,13 @@
   "full_instruction_comparison": {
     "run": 45702828718,
     "head": "8b2156f2f66313212c8878c14896ebec27281812",
-    "state": "UNKNOWN_RUNNING",
-    "method": "Matched Cachegrind 3.22.0, generic x86-64, one worker; not official score"
+    "state": "UNKNOWN_TIME_DIAGNOSTIC_BUDGET; all three processes stopped at 2700 seconds without complete counters",
+    "method": "Matched Cachegrind 3.22.0, generic x86-64, one worker; not official score",
+    "artifacts": [
+      15066128884,
+      15067087719,
+      15066777785
+    ]
   },
   "reusable_input": {
     "artifact": 15063957079,
@@ -38,9 +43,10 @@
   "next_candidate": {
     "name": "rule_syntax",
     "source": "136bed4a3151e4ddf117980dcb05e242da9c0cbf",
-    "state": "CANDIDATE; 47 library tests and local recovery qualified, remote full qualification pending",
+    "state": "WARRANTED_BOUNDED_PORTABLE_230_AND_FULL_MATHLIB_ACCEPTANCE; native material speedup gate REJECTED; instruction result UNKNOWN_RUNNING",
     "prefix_instruction_ratio": 0.9713166699309577,
-    "decision": "Only exact complete syntax identity permits reusing independently checked imported rule typing; all domains, universe and metadata checks remain. No checker code copied."
+    "decision": "Only exact complete syntax identity permits reusing independently checked imported rule typing; all domains, universe and metadata checks remain. No checker code copied.",
+    "full_mathlib_cpu_ratio": 1.0234337644147726
   },
   "promotion": "None; official release unchanged",
   "prior_no_open_memo_checkpoint": {
@@ -64,5 +70,27 @@
     "tree": "d39a912d2036ba7ca40934502b4c020b0e496651",
     "state": "EXACT_FOREIGN_TREE_RECONSTRUCTION",
     "decision": "Preserved complete native-full receipts and richer existing decision; removed own duplicate full-native copy."
+  },
+  "table_cost_trials": {
+    "wide_prune_bounded": {
+      "src_tree": "bef5b58dd51729719b47a10033f53deeced2df68",
+      "library_tests": 47,
+      "prefix_instruction_ratio": 0.9986709246318024,
+      "gate": "REJECTED_BELOW_1_PERCENT_GAIN"
+    },
+    "retained_capacity": {
+      "src_tree": "68959a2a3764f1ea04eb110f7011d5628653b240",
+      "library_tests": 46,
+      "prefix_instruction_ratio": 1.037211454248556,
+      "gate": "REJECTED_3_72_PERCENT_MORE_INSTRUCTIONS"
+    },
+    "boundary": "One paired source-derived prefix observation per candidate. Neither promoted or run on full Mathlib."
+  },
+  "next_experiment": {
+    "name": "declaration-cost-census",
+    "state": "LOCAL_PREFIX_AND_46_TESTS_VERIFIED; COMPLETE_INPUT_TWO_RUN_CENSUS_TO_LAUNCH",
+    "src_tree": "deb3a3356a3b7ec6dd00c607dc56ecdc419ab4e1",
+    "workflow": ".github/workflows/flash-declaration-costs.yml",
+    "question": "Which declarations dominate complete-Mathlib checking? Instrumentation only; elapsed timing is not an Arena score."
   }
 }

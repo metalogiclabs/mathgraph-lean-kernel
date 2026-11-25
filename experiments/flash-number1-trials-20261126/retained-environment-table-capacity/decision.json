@@ -1,0 +1,19 @@
+{
+  "state": "CANDIDATE",
+  "base_src_tree": "623a8575bbe54541e0be6217394336f4c2727994",
+  "patch_sha256": "0aae888e0651e5d6c5d502bd41e985afe5409cfbba2d4893c13c98bdeffd7248",
+  "mechanism": "Clear env_hc and wide_prune at unchanged barriers while retaining their allocated capacity; all prior entries invalidated",
+  "library_tests": 46,
+  "candidate_binary_sha256": "8fc523dcdef09cce6b47df860e879f12e9325f05528b936b589ae59b4d33426d",
+  "baseline_binary_sha256": "f06f6426cdab534129d23bde5a5ed3b7d045f93e3652369ac4f1cdb252912b0c",
+  "first_gate": "One complete matched Cachegrind prefix acceptance and at least 1 percent fewer guest instructions before portable/full qualification",
+  "memory_tradeoff": "Potentially higher retained table memory; measure before promotion",
+  "prefix_sha256": "c3d1e08032bbfe2dbfc4c8a84fd711ba83296a47d7468d9ce15988efa4acfa3a",
+  "full_mathlib": "UNKNOWN_NOT_RUN",
+  "official_rank": "UNCHANGED",
+  "src_tree": "68959a2a3764f1ea04eb110f7011d5628653b240",
+  "prefix_ratio": 1.037211454248556,
+  "decision": "REJECTED_FOR_1_PERCENT_PREFIX_SPEEDUP_GATE",
+  "portable_230": "NOT_RUN_AFTER_COST_GATE_REJECTION",
+  "boundary": "One paired observation on the source-derived 25131-declaration prefix, not full Mathlib, general correctness or Arena rank."
+}

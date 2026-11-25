@@ -1,0 +1,630 @@
+{
+  "boundary": "Instrumented per-declaration elapsed time; includes descendants of each check, excludes parsing and session maintenance. Not an Arena instruction score or an uninstrumented timing comparison.",
+  "cumulative": [
+    {
+      "elapsed_ns": 61512834,
+      "top_n": 1
+    },
+    {
+      "elapsed_ns": 259145338,
+      "top_n": 10
+    },
+    {
+      "elapsed_ns": 715163024,
+      "top_n": 100
+    },
+    {
+      "elapsed_ns": 1268415292,
+      "top_n": 1000
+    },
+    {
+      "elapsed_ns": 1914494490,
+      "top_n": 10000
+    }
+  ],
+  "declarations": 25131,
+  "threads": 1,
+  "top": [
+    {
+      "elapsed_ns": 61512834,
+      "index": 24883,
+      "kind": "theorem",
+      "name": "_private.Init.Data.Array.Extract.0.Array.extract_append._proof_1_1"
+    },
+    {
+      "elapsed_ns": 37204635,
+      "index": 24482,
+      "kind": "theorem",
+      "name": "_private.Init.Data.Array.Extract.0.Array.extract_append_extract._proof_1_1"
+    },
+    {
+      "elapsed_ns": 30881459,
+      "index": 24886,
+      "kind": "theorem",
+      "name": "_private.Init.Data.Array.Extract.0.Array.extract_append._proof_1_4"
+    },
+    {
+      "elapsed_ns": 24747797,
+      "index": 19089,
+      "kind": "theorem",
+      "name": "_private.Mathlib.Analysis.Complex.Trigonometric.0.Real.sin_pos_of_pos_of_le_one._proof_1_3"
+    },
+    {
+      "elapsed_ns": 21584066,
+      "index": 24873,
+      "kind": "theorem",
+      "name": "_private.Init.Data.Array.Extract.0.Array.extract_extract._proof_1_1"
+    },
+    {
+      "elapsed_ns": 21582584,
+      "index": 24490,
+      "kind": "theorem",
+      "name": "_private.Init.Data.Array.Extract.0.Array.extract_append_extract._proof_1_3"
+    },
+    {
+      "elapsed_ns": 17487727,
+      "index": 20384,
+      "kind": "theorem",
+      "name": "Std.DTreeMap.Internal.Impl.balance!_eq_balance\u2098"
+    },
+    {
+      "elapsed_ns": 15880449,
+      "index": 20409,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Balancing.0.Std.DTreeMap.Internal.Impl.balanced_doubleL._proof_1_1"
+    },
+    {
+      "elapsed_ns": 15300220,
+      "index": 22554,
+      "kind": "inductive",
+      "name": "Std.DHashMap.Raw.WF"
+    },
+    {
+      "elapsed_ns": 12963567,
+      "index": 20427,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Balancing.0.Std.DTreeMap.Internal.Impl.balanced_doubleR._proof_1_2"
+    },
+    {
+      "elapsed_ns": 11562468,
+      "index": 20411,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Balancing.0.Std.DTreeMap.Internal.Impl.balanced_doubleL._proof_1_3"
+    },
+    {
+      "elapsed_ns": 11219403,
+      "index": 19092,
+      "kind": "theorem",
+      "name": "_private.Mathlib.Analysis.Complex.Trigonometric.0.Complex.sin_bound._proof_1_4"
+    },
+    {
+      "elapsed_ns": 11207917,
+      "index": 11003,
+      "kind": "theorem",
+      "name": "_private.Mathlib.Algebra.Order.Group.MinMax.0.max_sub_max_le_max._proof_1_1"
+    },
+    {
+      "elapsed_ns": 11001837,
+      "index": 24885,
+      "kind": "theorem",
+      "name": "_private.Init.Data.Array.Extract.0.Array.extract_append._proof_1_3"
+    },
+    {
+      "elapsed_ns": 10858743,
+      "index": 21287,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Model.0.Std.DTreeMap.Internal.Impl.updateCell._proof_30"
+    },
+    {
+      "elapsed_ns": 10795999,
+      "index": 20952,
+      "kind": "inductive",
+      "name": "Std.DTreeMap.Internal.Impl.WF"
+    },
+    {
+      "elapsed_ns": 10615759,
+      "index": 24884,
+      "kind": "theorem",
+      "name": "_private.Init.Data.Array.Extract.0.Array.extract_append._proof_1_2"
+    },
+    {
+      "elapsed_ns": 10457502,
+      "index": 24489,
+      "kind": "theorem",
+      "name": "_private.Init.Data.Array.Extract.0.Array.extract_append_extract._proof_1_2"
+    },
+    {
+      "elapsed_ns": 9756431,
+      "index": 20404,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Balancing.0.Std.DTreeMap.Internal.Impl.balanced_singleL._proof_1_1"
+    },
+    {
+      "elapsed_ns": 9253337,
+      "index": 21469,
+      "kind": "theorem",
+      "name": "Std.DTreeMap.Internal.Impl.link2._unary.eq_def"
+    },
+    {
+      "elapsed_ns": 9165785,
+      "index": 20428,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Balancing.0.Std.DTreeMap.Internal.Impl.balanced_doubleR._proof_1_3"
+    },
+    {
+      "elapsed_ns": 8410825,
+      "index": 20421,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Balancing.0.Std.DTreeMap.Internal.Impl.balanced_singleR._proof_1_1"
+    },
+    {
+      "elapsed_ns": 8295071,
+      "index": 20686,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Balancing.0.Std.DTreeMap.Internal.Impl.BalancedAtRoot.adjust_left._proof_1_1"
+    },
+    {
+      "elapsed_ns": 8006248,
+      "index": 20497,
+      "kind": "theorem",
+      "name": "Std.DTreeMap.Internal.Impl.balanceR!_eq_balance!"
+    },
+    {
+      "elapsed_ns": 7634762,
+      "index": 20426,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Balancing.0.Std.DTreeMap.Internal.Impl.balanced_doubleR._proof_1_1"
+    },
+    {
+      "elapsed_ns": 7430035,
+      "index": 23940,
+      "kind": "theorem",
+      "name": "_private.Init.Data.Nat.Bitwise.Lemmas.0.Nat.two_pow_succ_sub_succ_div_two._proof_1_1"
+    },
+    {
+      "elapsed_ns": 7393229,
+      "index": 20914,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Operations.0.Std.DTreeMap.Internal.Impl.link._proof_29"
+    },
+    {
+      "elapsed_ns": 7340611,
+      "index": 21474,
+      "kind": "theorem",
+      "name": "Std.DTreeMap.Internal.Impl.toListModel_link2._unary"
+    },
+    {
+      "elapsed_ns": 7145399,
+      "index": 20410,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Balancing.0.Std.DTreeMap.Internal.Impl.balanced_doubleL._proof_1_2"
+    },
+    {
+      "elapsed_ns": 7007101,
+      "index": 21316,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Model.0.Std.DTreeMap.Internal.Impl.updateCell._proof_59"
+    },
+    {
+      "elapsed_ns": 6980831,
+      "index": 20902,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Operations.0.Std.DTreeMap.Internal.Impl.link._proof_19"
+    },
+    {
+      "elapsed_ns": 6563436,
+      "index": 20405,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Balancing.0.Std.DTreeMap.Internal.Impl.balanced_singleL._proof_1_2"
+    },
+    {
+      "elapsed_ns": 6531969,
+      "index": 20248,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Balancing.0.Std.DTreeMap.Internal.Impl.BalanceLPrecond.erase._proof_1_1"
+    },
+    {
+      "elapsed_ns": 6443696,
+      "index": 18940,
+      "kind": "theorem",
+      "name": "_private.Mathlib.Analysis.Complex.Trigonometric.0.Complex.cos_bound._proof_1_3"
+    },
+    {
+      "elapsed_ns": 6425479,
+      "index": 20823,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Operations.0.Std.DTreeMap.Internal.Impl.link2._proof_24"
+    },
+    {
+      "elapsed_ns": 6192871,
+      "index": 21478,
+      "kind": "theorem",
+      "name": "Std.DTreeMap.Internal.Impl.link._unary.eq_def"
+    },
+    {
+      "elapsed_ns": 6059411,
+      "index": 20842,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Operations.0.Std.DTreeMap.Internal.Impl.link2._proof_40"
+    },
+    {
+      "elapsed_ns": 6014373,
+      "index": 21501,
+      "kind": "theorem",
+      "name": "Std.DTreeMap.Internal.Impl.toListModel_link._unary"
+    },
+    {
+      "elapsed_ns": 5960392,
+      "index": 20306,
+      "kind": "theorem",
+      "name": "Std.DTreeMap.Internal.Impl.balance!.fun_cases_unfolding"
+    },
+    {
+      "elapsed_ns": 5887334,
+      "index": 16649,
+      "kind": "theorem",
+      "name": "_private.Mathlib.Algebra.Order.Field.Basic.0.mul_self_inj_of_nonneg._proof_1_1"
+    },
+    {
+      "elapsed_ns": 5864328,
+      "index": 20587,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Balancing.0.Std.DTreeMap.Internal.Impl.BalancedAtRoot.erase_left._proof_1_1"
+    },
+    {
+      "elapsed_ns": 5739140,
+      "index": 20545,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Operations.0.Std.DTreeMap.Internal.Impl.erase._proof_11"
+    },
+    {
+      "elapsed_ns": 5400763,
+      "index": 20314,
+      "kind": "theorem",
+      "name": "Std.DTreeMap.Internal.Impl.balanceL!_eq_balance!"
+    },
+    {
+      "elapsed_ns": 5297689,
+      "index": 24441,
+      "kind": "theorem",
+      "name": "_private.Init.Data.BitVec.Lemmas.0.BitVec.extractLsb'_append_eq_ite._proof_1_6"
+    },
+    {
+      "elapsed_ns": 5220974,
+      "index": 20225,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Balancing.0.Std.DTreeMap.Internal.Impl.balanceL._proof_15"
+    },
+    {
+      "elapsed_ns": 5196287,
+      "index": 20375,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Balancing.0.Std.DTreeMap.Internal.Impl.balance!_eq_balance\u2098._proof_1_41"
+    },
+    {
+      "elapsed_ns": 5099648,
+      "index": 19094,
+      "kind": "theorem",
+      "name": "Complex.sin_bound"
+    },
+    {
+      "elapsed_ns": 4910129,
+      "index": 20233,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Operations.0.Std.DTreeMap.Internal.Impl.insert._proof_11"
+    },
+    {
+      "elapsed_ns": 4569808,
+      "index": 20222,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Balancing.0.Std.DTreeMap.Internal.Impl.balanceL._proof_12"
+    },
+    {
+      "elapsed_ns": 4558591,
+      "index": 20452,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Balancing.0.Std.DTreeMap.Internal.Impl.balanceR._proof_3"
+    },
+    {
+      "elapsed_ns": 4555617,
+      "index": 20355,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Balancing.0.Std.DTreeMap.Internal.Impl.balance!_eq_balance\u2098._proof_1_32"
+    },
+    {
+      "elapsed_ns": 4360740,
+      "index": 20267,
+      "kind": "theorem",
+      "name": "Std.DTreeMap.Internal.Impl.balanceL.fun_cases_unfolding"
+    },
+    {
+      "elapsed_ns": 4359202,
+      "index": 20216,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Balancing.0.Std.DTreeMap.Internal.Impl.balanceL._proof_9"
+    },
+    {
+      "elapsed_ns": 4140985,
+      "index": 19128,
+      "kind": "theorem",
+      "name": "Real.sin_pi_div_two"
+    },
+    {
+      "elapsed_ns": 4116058,
+      "index": 3457,
+      "kind": "theorem",
+      "name": "_private.Mathlib.Data.List.Perm.Lattice.0.List.Perm.bagInter_right._proof_1_3"
+    },
+    {
+      "elapsed_ns": 4026133,
+      "index": 20459,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Operations.0.Std.DTreeMap.Internal.Impl.insert._proof_22"
+    },
+    {
+      "elapsed_ns": 3991422,
+      "index": 23938,
+      "kind": "theorem",
+      "name": "_private.Init.Data.Nat.Bitwise.Lemmas.0.Nat.testBit_two_pow_sub_succ._proof_1_3"
+    },
+    {
+      "elapsed_ns": 3779594,
+      "index": 19332,
+      "kind": "theorem",
+      "name": "sdiff_sdiff_right"
+    },
+    {
+      "elapsed_ns": 3761076,
+      "index": 20477,
+      "kind": "theorem",
+      "name": "Std.DTreeMap.Internal.Impl.balanceR.fun_cases_unfolding"
+    },
+    {
+      "elapsed_ns": 3732594,
+      "index": 20311,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Balancing.0.Std.DTreeMap.Internal.Impl.balanceL!_eq_balance!._proof_1_5"
+    },
+    {
+      "elapsed_ns": 3730820,
+      "index": 20690,
+      "kind": "theorem",
+      "name": "Std.DTreeMap.Internal.Impl.balance_eq_balance!"
+    },
+    {
+      "elapsed_ns": 3637050,
+      "index": 20336,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Balancing.0.Std.DTreeMap.Internal.Impl.balance!_eq_balance\u2098._proof_1_13"
+    },
+    {
+      "elapsed_ns": 3555238,
+      "index": 20309,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Balancing.0.Std.DTreeMap.Internal.Impl.balanceL!_eq_balance!._proof_1_3"
+    },
+    {
+      "elapsed_ns": 3490231,
+      "index": 18110,
+      "kind": "inductive",
+      "name": "RCLike"
+    },
+    {
+      "elapsed_ns": 3475869,
+      "index": 20493,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Balancing.0.Std.DTreeMap.Internal.Impl.balanceR!_eq_balance!._proof_1_4"
+    },
+    {
+      "elapsed_ns": 3473786,
+      "index": 20330,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Balancing.0.Std.DTreeMap.Internal.Impl.balance!_eq_balance\u2098._proof_1_7"
+    },
+    {
+      "elapsed_ns": 3408608,
+      "index": 20308,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Balancing.0.Std.DTreeMap.Internal.Impl.balanceL!_eq_balance!._proof_1_2"
+    },
+    {
+      "elapsed_ns": 3327336,
+      "index": 20494,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Balancing.0.Std.DTreeMap.Internal.Impl.balanceR!_eq_balance!._proof_1_5"
+    },
+    {
+      "elapsed_ns": 3290121,
+      "index": 20241,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Balancing.0.Std.DTreeMap.Internal.Impl.balanceLErase._proof_9"
+    },
+    {
+      "elapsed_ns": 3219024,
+      "index": 20373,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Balancing.0.Std.DTreeMap.Internal.Impl.balance!_eq_balance\u2098._proof_1_39"
+    },
+    {
+      "elapsed_ns": 3216500,
+      "index": 25046,
+      "kind": "definition",
+      "name": "_private.Init.Data.String.Decode.0.UInt8.isUTF8FirstByte_getElem_utf8EncodeChar.match_1_5"
+    },
+    {
+      "elapsed_ns": 3161228,
+      "index": 24444,
+      "kind": "theorem",
+      "name": "_private.Init.Data.BitVec.Lemmas.0.BitVec.extractLsb'_append_eq_ite._proof_1_8"
+    },
+    {
+      "elapsed_ns": 3134267,
+      "index": 22501,
+      "kind": "theorem",
+      "name": "Array.foldlM_toList.aux._unary"
+    },
+    {
+      "elapsed_ns": 3131283,
+      "index": 17585,
+      "kind": "theorem",
+      "name": "_private.Mathlib.Order.Interval.Finset.Nat.0.Nat.instLocallyFiniteOrder._proof_2"
+    },
+    {
+      "elapsed_ns": 3129890,
+      "index": 24394,
+      "kind": "theorem",
+      "name": "_private.Init.Data.String.Decode.0.String.utf8EncodeChar_eq_utf8EncodeCharFast._proof_1_5"
+    },
+    {
+      "elapsed_ns": 3071323,
+      "index": 20310,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Balancing.0.Std.DTreeMap.Internal.Impl.balanceL!_eq_balance!._proof_1_4"
+    },
+    {
+      "elapsed_ns": 3053717,
+      "index": 11499,
+      "kind": "inductive",
+      "name": "PseudoMetricSpace"
+    },
+    {
+      "elapsed_ns": 2961508,
+      "index": 20334,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Balancing.0.Std.DTreeMap.Internal.Impl.balance!_eq_balance\u2098._proof_1_11"
+    },
+    {
+      "elapsed_ns": 2910942,
+      "index": 20865,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Operations.0.Std.DTreeMap.Internal.Impl.insertMin._proof_10"
+    },
+    {
+      "elapsed_ns": 2853076,
+      "index": 24795,
+      "kind": "theorem",
+      "name": "_private.Init.Data.Array.Extract.0.Array.extract_eq_self_iff._proof_1_1"
+    },
+    {
+      "elapsed_ns": 2821137,
+      "index": 24334,
+      "kind": "definition",
+      "name": "_private.Init.Data.String.Decode.0.String.toByteArray_utf8EncodeChar_of_utf8DecodeChar?_eq_some.match_1_1"
+    },
+    {
+      "elapsed_ns": 2819235,
+      "index": 17603,
+      "kind": "theorem",
+      "name": "_private.Mathlib.Order.Interval.Finset.Nat.0.Nat.instLocallyFiniteOrder._proof_8"
+    },
+    {
+      "elapsed_ns": 2753256,
+      "index": 20422,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Balancing.0.Std.DTreeMap.Internal.Impl.balanced_singleR._proof_1_2"
+    },
+    {
+      "elapsed_ns": 2746145,
+      "index": 20290,
+      "kind": "theorem",
+      "name": "Std.DTreeMap.Internal.Impl.balanceLErase_eq_balanceL!"
+    },
+    {
+      "elapsed_ns": 2744052,
+      "index": 20491,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Balancing.0.Std.DTreeMap.Internal.Impl.balanceR!_eq_balance!._proof_1_2"
+    },
+    {
+      "elapsed_ns": 2682651,
+      "index": 20749,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Operations.0.Std.DTreeMap.Internal.Impl.Const.alter._proof_25"
+    },
+    {
+      "elapsed_ns": 2680617,
+      "index": 20463,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Balancing.0.Std.DTreeMap.Internal.Impl.balanceRErase._proof_3"
+    },
+    {
+      "elapsed_ns": 2644663,
+      "index": 20455,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Balancing.0.Std.DTreeMap.Internal.Impl.balanceR._proof_6"
+    },
+    {
+      "elapsed_ns": 2571103,
+      "index": 20901,
+      "kind": "theorem",
+      "name": "Std.DTreeMap.Internal.Impl.link._unary._proof_1"
+    },
+    {
+      "elapsed_ns": 2524323,
+      "index": 21292,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Model.0.Std.DTreeMap.Internal.Impl.updateCell._proof_35"
+    },
+    {
+      "elapsed_ns": 2502210,
+      "index": 20268,
+      "kind": "theorem",
+      "name": "Std.DTreeMap.Internal.Impl.balanceL_eq_balanceLErase"
+    },
+    {
+      "elapsed_ns": 2492835,
+      "index": 9248,
+      "kind": "theorem",
+      "name": "_private.Init.Data.Nat.Div.Lemmas.0.Nat.div_le_iff_le_mul._proof_1_1"
+    },
+    {
+      "elapsed_ns": 2453937,
+      "index": 20643,
+      "kind": "theorem",
+      "name": "Std.DTreeMap.Internal.Impl.balanced_glue"
+    },
+    {
+      "elapsed_ns": 2409901,
+      "index": 24881,
+      "kind": "theorem",
+      "name": "_private.Init.Data.String.Basic.0.ByteArray.utf8Decode?go_eq_utf8Decode?go_extract._unary"
+    },
+    {
+      "elapsed_ns": 2328499,
+      "index": 21417,
+      "kind": "theorem",
+      "name": "Std.DTreeMap.Internal.Impl.Const.alter_eq_alter\u2098"
+    },
+    {
+      "elapsed_ns": 2294629,
+      "index": 17642,
+      "kind": "theorem",
+      "name": "cauchy_product"
+    },
+    {
+      "elapsed_ns": 2273327,
+      "index": 16699,
+      "kind": "theorem",
+      "name": "_private.Init.Data.List.Nat.Range.0.List.pairwise_lt_range'._proof_1_4"
+    },
+    {
+      "elapsed_ns": 2269631,
+      "index": 24315,
+      "kind": "theorem",
+      "name": "_private.Init.Data.String.Decode.0.ByteArray.utf8DecodeChar?.toBitVec_assemble\u2083Unchecked"
+    },
+    {
+      "elapsed_ns": 2239736,
+      "index": 20379,
+      "kind": "theorem",
+      "name": "_private.Std.Data.DTreeMap.Internal.Balancing.0.Std.DTreeMap.Internal.Impl.balance._proof_20"
+    },
+    {
+      "elapsed_ns": 2234950,
+      "index": 21372,
+      "kind": "theorem",
+      "name": "Std.DTreeMap.Internal.Impl.toListModel_updateCell"
+    }
+  ],
+  "total_declaration_elapsed_ns": 2020571947
+}

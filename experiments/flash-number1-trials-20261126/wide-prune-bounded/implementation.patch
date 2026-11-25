@@ -1,0 +1,139 @@
+diff --git a/src/tests/util.rs b/src/tests/util.rs
+index 65a4652..e805fc9 100644
+--- a/src/tests/util.rs
++++ b/src/tests/util.rs
+@@ -73,6 +73,43 @@ fn check_empty() -> Result<(), Box<dyn Error>> {
+     })
+ }
+ 
++#[test]
++fn wide_prune_memo_requires_both_keys_and_clears_evictions() -> Result<(), Box<dyn Error>> {
++    test_ctx(None, |ctx| {
++        let e0 = ctx.mk_var(0);
++        let e1 = ctx.mk_var(1);
++        let arena = bumpalo::Bump::new();
++        let first = crate::value::env_empty(&arena);
++        let second = crate::value::env_empty(&arena);
++        let mut memo = crate::util::WidePruneMemo::new();
++        memo.insert((1, e0), first);
++        assert!(std::ptr::eq(memo.get(&(1, e0)).unwrap(), first));
++        assert!(memo.get(&(1, e1)).is_none());
++        assert!(memo.get(&(2, e0)).is_none());
++        // More keys than slots force actual collisions. Every returned value
++        // must belong to its complete key; eviction may only produce a miss.
++        for key in 1..=40_000 {
++            memo.insert((key, e0), if key % 2 == 0 { first } else { second });
++        }
++        let mut hits = 0;
++        for key in 1..=40_000 {
++            if let Some(result) = memo.get(&(key, e0)) {
++                hits += 1;
++                assert!(std::ptr::eq(result, if key % 2 == 0 { first } else { second }));
++            }
++            assert!(memo.get(&(key, e1)).is_none());
++        }
++        assert!(hits > 0 && hits < 40_000);
++        memo.clear();
++        for key in 1..=40_000 {
++            assert!(memo.get(&(key, e0)).is_none());
++        }
++        memo.insert((1, e1), second);
++        assert!(memo.get(&(1, e0)).is_none());
++        assert!(std::ptr::eq(memo.get(&(1, e1)).unwrap(), second));
++    })
++}
++
+ /// The export format assigns each name/level/expression an explicit index. Those
+ /// indices need not be dense or in increasing order — the exporter only guarantees
+ /// that an item is emitted after the items it references. `LevelIndexOutOfOrder`
+diff --git a/src/util.rs b/src/util.rs
+index a3396b9..64c7bdb 100644
+--- a/src/util.rs
++++ b/src/util.rs
+@@ -1041,6 +1041,59 @@ pub struct NameCache<'p> {
+ pub(crate) const PRUNE_DM_LEN: usize = 1 << 10;
+ pub(crate) const PRUNE_DM_SHIFT: u32 = 64 - 10;
+ 
++/// A bounded exact-key memo for support projections with more than 64 binders.
++/// Collisions evict an entry and cause ordinary recomputation. An environment
++/// address or expression alone never authorizes reuse. The entire memo is
++/// invalidated at the same namespace and allocation-lifetime barriers as before.
++pub(crate) struct WidePruneMemo<'a, 't> {
++    slots: Box<[(usize, Option<ExprPtr<'t>>, Option<E<'a>>)]>,
++    touched: Vec<usize>,
++}
++
++impl<'a, 't> WidePruneMemo<'a, 't> {
++    const BITS: u32 = 14;
++
++    pub(crate) fn new() -> Self {
++        Self {
++            slots: vec![(0, None, None); 1 << Self::BITS].into_boxed_slice(),
++            touched: Vec::new(),
++        }
++    }
++
++    #[inline]
++    fn slot(key: &(usize, ExprPtr<'t>)) -> usize {
++        let address = key.1.as_ref() as *const Expr<'t> as usize as u64;
++        let mixed = (key.0 as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15)
++            ^ address.wrapping_mul(0xD6E8_FEB8_6659_FD93);
++        (mixed >> (64 - Self::BITS)) as usize
++    }
++
++    #[inline]
++    pub(crate) fn get(&self, key: &(usize, ExprPtr<'t>)) -> Option<E<'a>> {
++        let entry = self.slots[Self::slot(key)];
++        if entry.0 == key.0 && entry.1 == Some(key.1) {
++            entry.2
++        } else {
++            None
++        }
++    }
++
++    #[inline]
++    pub(crate) fn insert(&mut self, key: (usize, ExprPtr<'t>), result: E<'a>) {
++        let index = Self::slot(&key);
++        if self.slots[index].2.is_none() {
++            self.touched.push(index);
++        }
++        self.slots[index] = (key.0, Some(key.1), Some(result));
++    }
++
++    pub(crate) fn clear(&mut self) {
++        for index in self.touched.drain(..) {
++            self.slots[index] = (0, None, None);
++        }
++    }
++}
++
+ pub struct TcCache<'a, 't> {
+     pub(crate) unfold_const_cache: FxHashMap<(NamePtr<'t>, LevelsPtr<'t>), V<'a>>,
+     pub(crate) rec_rule_cache: FxHashMap<(ExprPtr<'t>, LevelsPtr<'t>), V<'a>>,
+@@ -1076,7 +1129,7 @@ pub struct TcCache<'a, 't> {
+     pub(crate) level_subs: FxHashMap<(LevelsPtr<'t>, LevelsPtr<'t>), &'a crate::value::LevelSub<'a>>,
+     pub(crate) prune_dm: Box<[(usize, u64, Option<E<'a>>); PRUNE_DM_LEN]>,
+     pub(crate) wide_fvars: FxHashMap<ExprPtr<'t>, &'a [u16]>,
+-    pub(crate) wide_prune: FxHashMap<(usize, ExprPtr<'t>), E<'a>>,
++    pub(crate) wide_prune: WidePruneMemo<'a, 't>,
+     pub(crate) rigid_hc: FxHashMap<(u8, u64, u64, usize), V<'a>>,
+     pub(crate) unfold_hc: FxHashMap<(usize, usize), V<'a>>,
+     pub(crate) iota_stuck: FxHashSet<usize>,
+@@ -1132,7 +1185,7 @@ impl<'a, 't> TcCache<'a, 't> {
+             level_subs: small_fx_hash_map(),
+             prune_dm: Box::new([(0, 0, None); PRUNE_DM_LEN]),
+             wide_fvars: small_fx_hash_map(),
+-            wide_prune: small_fx_hash_map(),
++            wide_prune: WidePruneMemo::new(),
+             rigid_hc: session_fx_hash_map(),
+             unfold_hc: session_fx_hash_map(),
+             iota_stuck: session_small_fx_hash_set(),
+@@ -1209,7 +1262,7 @@ impl<'a, 't> TcCache<'a, 't> {
+         shrink_map(&mut self.level_subs);
+         self.prune_dm.fill((0, 0, None));
+         shrink_map(&mut self.wide_fvars);
+-        shrink_map(&mut self.wide_prune);
++        self.wide_prune.clear();
+         shrink_map(&mut self.type_cache);
+         shrink_map(&mut self.thunk_hc);
+         shrink_map(&mut self.quote_cache);

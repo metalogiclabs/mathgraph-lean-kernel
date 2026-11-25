@@ -1,0 +1,22 @@
+diff --git a/src/util.rs b/src/util.rs
+index a3396b9..c929de1 100644
+--- a/src/util.rs
++++ b/src/util.rs
+@@ -1209,7 +1209,7 @@ impl<'a, 't> TcCache<'a, 't> {
+         shrink_map(&mut self.level_subs);
+         self.prune_dm.fill((0, 0, None));
+         shrink_map(&mut self.wide_fvars);
+-        shrink_map(&mut self.wide_prune);
++        self.wide_prune.clear();
+         shrink_map(&mut self.type_cache);
+         shrink_map(&mut self.thunk_hc);
+         shrink_map(&mut self.quote_cache);
+@@ -1218,7 +1218,7 @@ impl<'a, 't> TcCache<'a, 't> {
+         shrink_map(&mut self.bvar_hc);
+         shrink_map(&mut self.spine_hc);
+         shrink_map(&mut self.app_hc);
+-        shrink_map(&mut self.env_hc);
++        self.env_hc.clear();
+         shrink_map(&mut self.lam_hc);
+         shrink_map(&mut self.pi_hc);
+         shrink_map(&mut self.rigid_hc);

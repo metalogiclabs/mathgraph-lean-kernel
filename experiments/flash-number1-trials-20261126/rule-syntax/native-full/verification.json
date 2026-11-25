@@ -1,0 +1,21 @@
+{
+  "state": "WARRANTED_BOUNDED_PORTABLE_AND_FULL_MATHLIB_ACCEPTANCE",
+  "run": 45707415544,
+  "head": "6d01fda18dd28a0ad29369eef7efcc879f740425",
+  "native_artifact": 15065379819,
+  "native_archive_sha256": "75aaa1a9105284d51f734f1b2251bdbcbaa1a70496848fd00acaecb054316370",
+  "build_artifact": 15065773109,
+  "build_archive_sha256": "491e7fa85b8c2dbbcff4aba5bf972e11ecc059c3473d85755190aaa2e69c6e98",
+  "portable_artifact": 15065753100,
+  "portable_archive_sha256": "7fb929d2d9893b10983dbeb79d009750a58f4fb99a60845e4e70421248754099",
+  "checks": [
+    "All three ZIP SHA256 digests match GitHub metadata; all ZIP CRCs pass",
+    "230/230 raw prescribed portable statuses, no exclusions; build identity matches",
+    "Both arms accept 739167 declarations twice on pinned full input",
+    "Raw exits, resource-stop fields, complete stdout and distinct executable hashes checked",
+    "Geometric CPU ratio independently recomputed from raw process observations"
+  ],
+  "full_mathlib_cpu_ratio": 1.0234337644147726,
+  "decision": "Native 5 percent speedup gate REJECTED; complete-Mathlib instruction result remains UNKNOWN_RUNNING; no source or rank promotion",
+  "scope": "Matched generic x86-64 native CPU diagnostics, not hardware Arena instructions or ten-large-input candidate qualification"
+}
