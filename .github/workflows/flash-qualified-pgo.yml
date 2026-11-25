@@ -1,0 +1,152 @@
+name: Flash final-source PGO and champion matched holdout
+on:
+  push:
+    branches: [research/flash-qualified-pgo-20261125]
+    paths:
+      - .github/workflows/flash-qualified-pgo.yml
+      - experiments/flash-current-arena-20261125/pgo_benchmark.py
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  pgo:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: 0
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.99.1'
+          components: llvm-tools-preview
+      - name: Record source identity and build unchanged final kernel
+        run: |
+          set -euxo pipefail
+          ROOT="$RUNNER_TEMP/pgo-arms"
+          OUT="$RUNNER_TEMP/pgo-evidence"
+          mkdir -p "$ROOT" "$OUT"
+          git diff --exit-code 3b5a4ba64b4e47f5da06f6d4a3eda35f0ed64968 -- src Cargo.toml Cargo.lock
+          git rev-parse HEAD > "$OUT/commit.txt"
+          git rev-parse HEAD:src > "$OUT/source-tree.txt"
+          rustc -Vv > "$OUT/compiler.txt"
+          lscpu > "$OUT/cpu.txt"
+          RUSTFLAGS="-C target-cpu=native" cargo build --release --locked
+          cp target/release/sokonanoda "$ROOT/baseline"
+          sha256sum "$ROOT/baseline" > "$OUT/baseline.sha256"
+      - name: Prepare exact Arena export recipe
+        run: |
+          set -euxo pipefail
+          A="$RUNNER_TEMP/arena-source"
+          git init "$A"
+          git -C "$A" remote add origin https://github.com/leanprover/lean-kernel-arena.git
+          git -C "$A" fetch --depth 1 origin 99195b6b009bc3df2c946ddbcfa4a2ab1eb40350
+          git -C "$A" checkout --detach FETCH_HEAD
+          test "$(git -C "$A" rev-parse HEAD)" = 99195b6b009bc3df2c946ddbcfa4a2ab1eb40350
+          python3 -m venv "$RUNNER_TEMP/arena-venv"
+          "$RUNNER_TEMP/arena-venv/bin/pip" install jinja2 jsonschema markdown pyyaml
+          curl -fsSL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - name: Generate and verify Init training data
+        run: |
+          set -euxo pipefail
+          A="$RUNNER_TEMP/arena-source"
+          OUT="$RUNNER_TEMP/pgo-evidence"
+          (cd "$A" && "$RUNNER_TEMP/arena-venv/bin/python" lka.py build-test init) 2>&1 | tee "$OUT/init-export.log"
+          python3 experiments/flash-current-arena-20261125/pgo_benchmark.py identity --name init --out "$OUT" --fixture "$A/_build/tests/init.ndjson"
+      - name: Train compiler profile using only exact Init
+        run: |
+          set -euxo pipefail
+          ROOT="$RUNNER_TEMP/pgo-arms"
+          OUT="$RUNNER_TEMP/pgo-evidence"
+          mkdir -p "$ROOT/profiles"
+          printf '%s\n' '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":2}' > "$ROOT/train.json"
+          RUSTFLAGS="-C target-cpu=native -C profile-generate=$ROOT/profiles" cargo build --release --locked
+          LLVM_PROFILE_FILE="$ROOT/profiles/%p-%m.profraw" target/release/sokonanoda "$ROOT/train.json" < "$RUNNER_TEMP/arena-source/_build/tests/init.ndjson" 2>&1 | tee "$OUT/train.log"
+          HOST="$(rustc -vV | sed -n 's/^host: //p')"
+          PROF="$(rustc --print sysroot)/lib/rustlib/$HOST/bin/llvm-profdata"
+          test -x "$PROF"
+          "$PROF" merge -o "$ROOT/merged.profdata" "$ROOT/profiles"
+          test -s "$ROOT/merged.profdata"
+          sha256sum "$ROOT/merged.profdata" > "$OUT/profile.sha256"
+          "$PROF" show "$ROOT/merged.profdata" > "$OUT/profile-summary.txt"
+          RUSTFLAGS="-C target-cpu=native -C profile-use=$ROOT/merged.profdata" cargo build --release --locked
+          cp target/release/sokonanoda "$ROOT/pgo"
+          sha256sum "$ROOT/pgo" > "$OUT/pgo.sha256"
+      - name: Build pinned nano-lean champion by its published recipe
+        run: |
+          set -euxo pipefail
+          ROOT="$RUNNER_TEMP/pgo-arms"
+          git init "$ROOT/nano"
+          git -C "$ROOT/nano" remote add origin https://github.com/sdiehl/nano-lean.git
+          git -C "$ROOT/nano" fetch --depth 1 origin 5cd4a25de7cdd8a5fadde3fec53e41a6a8693138
+          git -C "$ROOT/nano" checkout --detach FETCH_HEAD
+          test "$(git -C "$ROOT/nano" rev-parse HEAD)" = 5cd4a25de7cdd8a5fadde3fec53e41a6a8693138
+          (cd "$ROOT/nano" && sh scripts/pgo.sh) 2>&1 | tee "$RUNNER_TEMP/pgo-evidence/nano-build.log"
+          sha256sum "$ROOT/nano/target/release/nl-fast" > "$RUNNER_TEMP/pgo-evidence/nano.sha256"
+      - name: Regenerate full holdout Mathlib with no training on it
+        run: |
+          set -euxo pipefail
+          A="$RUNNER_TEMP/arena-source"
+          (cd "$A" && "$RUNNER_TEMP/arena-venv/bin/python" lka.py build-test mathlib) 2>&1 | tee "$RUNNER_TEMP/pgo-evidence/mathlib-export.log"
+      - name: Matched complete Mathlib acceptance and PGO and thread ablation
+        run: |
+          set -euxo pipefail
+          python3 experiments/flash-current-arena-20261125/pgo_benchmark.py measure --out "$RUNNER_TEMP/pgo-evidence" --root "$RUNNER_TEMP/pgo-arms" --name mathlib --fixture "$RUNNER_TEMP/arena-source/_build/tests/mathlib.ndjson"
+      - name: Require full portable parity for both PGO thread configurations
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY'
+          import importlib.util,json,os
+          from pathlib import Path
+          spec=importlib.util.spec_from_file_location("pgo",Path("experiments/flash-current-arena-20261125/pgo_benchmark.py"))
+          p=importlib.util.module_from_spec(spec);spec.loader.exec_module(p)
+          m=p.m;out=Path(os.environ["RUNNER_TEMP"])/"pgo-evidence"
+          root=Path(os.environ["RUNNER_TEMP"])/"pgo-arms"
+          tests=m.source_manifest(out);fixtures=m.unpack_portable(out,tests)
+          assert len(fixtures)==230
+          logs=out/"pgo-portable";logs.mkdir()
+          rows=[]
+          for name,fixture in sorted(fixtures.items()):
+              t=tests[name]
+              expected=0 if t["outcome"]=="accept" else 1
+              for threads in (2,4):
+                  r=p.execute([str(root/"pgo"),str(m.config(out,threads))],fixture,logs,name.replace("/","_")+f"-{threads}",int(t.get("timeout") or 120),False)
+                  r.update({"name":name,"threads":threads,"expected_exit":expected,"input_sha256":t["sha256"]})
+                  rows.append(r)
+                  m.dump(out/"pgo-portable-rows.json",rows)
+                  print("PGO_PORTABLE",json.dumps({k:r[k] for k in ("name","threads","exit","expected_exit")}),flush=True)
+          wrong=[r for r in rows if r["exit"]!=r["expected_exit"]]
+          m.dump(out/"pgo-portable-summary.json",{"tested":len(rows),"wrong_or_nondecisive":wrong})
+          assert len(rows)==460 and not wrong
+          PY
+      - name: Collect function-level guest instructions on exact Init
+        continue-on-error: true
+        run: |
+          set -euxo pipefail
+          OUT="$RUNNER_TEMP/pgo-evidence"
+          ROOT="$RUNNER_TEMP/pgo-arms"
+          sudo apt-get update
+          sudo apt-get install -y valgrind
+          printf '%s\n' '{"use_stdin":true,"nat_extension":true,"string_extension":true,"unpermitted_axiom_hard_error":false,"unsafe_permit_all_axioms":true,"num_threads":1}' > "$ROOT/profile.json"
+          for arm in baseline pgo; do
+            timeout 360 valgrind --tool=callgrind --callgrind-out-file="$OUT/$arm.callgrind" "$ROOT/$arm" "$ROOT/profile.json" < "$RUNNER_TEMP/arena-source/_build/tests/init.ndjson" 2> "$OUT/$arm.callgrind.log"
+            callgrind_annotate --inclusive=no --threshold=99 "$OUT/$arm.callgrind" > "$OUT/$arm.hotspots.txt"
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-pgo-matched-mathlib
+          path: |
+            ${{ runner.temp }}/pgo-evidence/*.json
+            ${{ runner.temp }}/pgo-evidence/*.txt
+            ${{ runner.temp }}/pgo-evidence/*.log
+            ${{ runner.temp }}/pgo-evidence/*.sha256
+            ${{ runner.temp }}/pgo-evidence/measurements/
+            ${{ runner.temp }}/pgo-evidence/pgo-portable/
+          if-no-files-found: error
+          retention-days: 30
