@@ -1,0 +1,104 @@
+name: Flash matched work profile (Valgrind-compatible ISA)
+on:
+  push:
+    branches: [research/flash-matched-work-profile-20261125]
+    paths:
+      - .github/workflows/flash-matched-work-profile.yml
+      - experiments/flash-current-arena-20261125/matched_work_profile.py
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  discriminator:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: 0
+      RUSTFLAGS: "-C target-cpu=x86-64 -C target-feature=-avx,-avx2,-avx512f,-fma -C debuginfo=1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.99.1'
+      - name: Build three exact source arms with same supported ISA
+        run: |
+          set -euxo pipefail
+          ROOT="$RUNNER_TEMP/work-profile-arms"
+          OUT="$RUNNER_TEMP/work-profile-evidence"
+          mkdir -p "$ROOT" "$OUT"
+          git diff --exit-code 3b5a4ba64b4e47f5da06f6d4a3eda35f0ed64968 -- src Cargo.toml Cargo.lock
+          git rev-parse HEAD:src > "$OUT/source-tree.txt"
+          rustc -Vv > "$OUT/compiler.txt"
+          lscpu > "$OUT/cpu.txt"
+          printf '%s\n' "$RUSTFLAGS" > "$OUT/build-flags.txt"
+          sudo apt-get update
+          sudo apt-get install -y valgrind
+          valgrind --version > "$OUT/valgrind.txt"
+          cargo build --locked --release
+          cp target/release/sokonanoda "$ROOT/flash.bin"
+          rm -rf target
+          for arm in soko nano; do
+            git init "$ROOT/$arm"
+            if [ "$arm" = soko ]; then
+              url=https://github.com/intgrah/sokonanoda.git
+              rev=9a021b66f804a1d1df68a981337c67413ef72f6b
+              bin=sokonanoda
+            else
+              url=https://github.com/sdiehl/nano-lean.git
+              rev=5cd4a25de7cdd8a5fadde3fec53e41a6a8693138
+              bin=nl-fast
+            fi
+            git -C "$ROOT/$arm" remote add origin "$url"
+            git -C "$ROOT/$arm" fetch --depth 1 origin "$rev"
+            git -C "$ROOT/$arm" checkout --detach FETCH_HEAD
+            test "$(git -C "$ROOT/$arm" rev-parse HEAD)" = "$rev"
+            (cd "$ROOT/$arm" && cargo build --locked --release --bin "$bin") 2>&1 | tee "$OUT/$arm-build.log"
+            cp "$ROOT/$arm/target/release/$bin" "$ROOT/$arm.bin"
+            rm -rf "$ROOT/$arm/target"
+          done
+          sha256sum "$ROOT/"*.bin > "$OUT/binaries.sha256"
+          printf '%s\n' 'flash 3b5a4ba64b4e47f5da06f6d4a3eda35f0ed64968' 'soko 9a021b66f804a1d1df68a981337c67413ef72f6b' 'nano 5cd4a25de7cdd8a5fadde3fec53e41a6a8693138' > "$OUT/arms.txt"
+      - name: Prepare official source export recipe
+        run: |
+          set -euxo pipefail
+          A="$RUNNER_TEMP/arena-source"
+          git init "$A"
+          git -C "$A" remote add origin https://github.com/leanprover/lean-kernel-arena.git
+          git -C "$A" fetch --depth 1 origin 99195b6b009bc3df2c946ddbcfa4a2ab1eb40350
+          git -C "$A" checkout --detach FETCH_HEAD
+          test "$(git -C "$A" rev-parse HEAD)" = 99195b6b009bc3df2c946ddbcfa4a2ab1eb40350
+          python3 -m venv "$RUNNER_TEMP/arena-venv"
+          "$RUNNER_TEMP/arena-venv/bin/pip" install jinja2 jsonschema markdown pyyaml
+          curl -fsSL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - name: Regenerate and verify exact Init
+        run: |
+          set -euxo pipefail
+          A="$RUNNER_TEMP/arena-source"
+          (cd "$A" && "$RUNNER_TEMP/arena-venv/bin/python" lka.py build-test init) 2>&1 | tee "$RUNNER_TEMP/work-profile-evidence/init-export.log"
+      - name: Compare complete work across three arms on Init
+        run: |
+          set -euxo pipefail
+          python3 experiments/flash-current-arena-20261125/matched_work_profile.py --fixture "$RUNNER_TEMP/arena-source/_build/tests/init.ndjson" --test init --out "$RUNNER_TEMP/work-profile-evidence/init" --root "$RUNNER_TEMP/work-profile-arms" --arms flash soko nano --timeout 1800
+      - name: Regenerate exact held-out Mathlib
+        run: |
+          set -euxo pipefail
+          A="$RUNNER_TEMP/arena-source"
+          (cd "$A" && "$RUNNER_TEMP/arena-venv/bin/python" lka.py build-test mathlib) 2>&1 | tee "$RUNNER_TEMP/work-profile-evidence/mathlib-export.log"
+      - name: Complete Flash Mathlib profile only after Init discriminator passes
+        timeout-minutes: 100
+        run: |
+          set -euxo pipefail
+          python3 experiments/flash-current-arena-20261125/matched_work_profile.py --fixture "$RUNNER_TEMP/arena-source/_build/tests/mathlib.ndjson" --test mathlib --out "$RUNNER_TEMP/work-profile-evidence/mathlib" --root "$RUNNER_TEMP/work-profile-arms" --arms flash --timeout 5000
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-matched-work-profile
+          path: |
+            ${{ runner.temp }}/work-profile-evidence/
+          if-no-files-found: error
+          retention-days: 30
