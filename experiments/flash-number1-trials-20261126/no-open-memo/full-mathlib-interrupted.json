@@ -1,0 +1,17 @@
+{
+  "status": "UNKNOWN_RUNNER_SHUTDOWN_DURING_CANDIDATE",
+  "run": 45692268504,
+  "head": "ba0a6f99a1bb2be3535ebe61bcf4a9a111dff417",
+  "job": 139480791270,
+  "portable_230": "Valid and preserved; isolated candidate build",
+  "comparison": "Baseline completed. No candidate verdict or full-Mathlib speed result. No artifact upload completed.",
+  "cause": "Runner received shutdown signal; underlying cause UNKNOWN. Do not relabel as a semantic rejection or a measured instruction regression.",
+  "evidence": [
+    "2026-11-25T20:11:09.1300373Z test result: ok. 46 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s",
+    "2026-11-25T20:11:52.2461170Z test result: ok. 47 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s",
+    "2026-11-25T20:20:06.5436398Z {\"arm\": \"baseline\", \"round\": 0, \"raw_exit\": 0, \"expected_exit\": 0, \"elapsed_s\": 98.92389571400003, \"input_sha256\": \"f749dfd084fc0727d107c7aaded7d492cebfc0b517cfaa7337d8a7578a6c0dec\", \"success_message\": true, \"stderr_tail\": \"\", \"wall_s\": 98.89, \"user_s\": 178.93, \"system_s\": 4.27, \"max_rss_kb\": 6522844, \"cpu_s\": 183.20000000000002}",
+    "2026-11-25T20:27:58.2867550Z ##[error]The runner has received a shutdown signal. This can happen when the runner service is stopped, or a manually started runner is canceled.",
+    "2026-11-25T20:27:58.2878286Z ##[error]Process completed with exit code 143."
+  ],
+  "qualified_release": "819d59c34db3fd8f7b790a83f5728f255f75f33e"
+}

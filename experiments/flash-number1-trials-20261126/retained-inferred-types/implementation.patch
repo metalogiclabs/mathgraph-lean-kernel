@@ -1,0 +1,310 @@
+diff --git a/src/eval.rs b/src/eval.rs
+index 2e4c877..3a521a9 100644
+--- a/src/eval.rs
++++ b/src/eval.rs
+@@ -1016,8 +1016,17 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
+     }
+ 
+     pub(crate) fn apply_closure(&mut self, depth: u32, clo: &Closure<'t>, v: V<'t>, binder_ty: Option<V<'t>>) -> V<'t> {
++        let context = match clo.ctx {
++            Some(value::Ctx::InferredResult { result, binder, context }) => {
++                if binder.is_none_or(|b| std::ptr::eq(b, v)) {
++                    return result;
++                }
++                Some(*context)
++            }
++            other => other,
++        };
+         let env = self.env_extend(clo.env, v);
+-        match clo.ctx {
++        match context {
+             None => self.eval(depth, env, clo.body),
+             Some(clo_ctx) => {
+                 let ty = binder_ty.expect("apply_closure: infer closure without a binder type");
+diff --git a/src/infer.rs b/src/infer.rs
+index bcdd0b6..b8b938c 100644
+--- a/src/infer.rs
++++ b/src/infer.rs
+@@ -2,7 +2,7 @@ use crate::env::Declar;
+ use crate::expr::Expr;
+ use crate::tc::{InferFlag, TypeChecker};
+ use crate::util::{ExprPtr, LevelPtr, LevelsPtr, NamePtr};
+-use crate::value::{self, Closure, RigidHead, Value, C, E, V};
++use crate::value::{self, Closure, Ctx, ElimView, RigidHead, Spine, Value, C, E, V};
+ 
+ use Expr::*;
+ use InferFlag::*;
+@@ -38,6 +38,40 @@ fn has_deep_bvar_prefix(mut env: E<'_>) -> bool {
+     true
+ }
+ 
++// Only a successful semantic support check authorizes argument-independent
++// reuse. Closures, suspensions and exhausted checks keep the original path.
++// An outer neutral's type was fixed before the new binder was introduced.
++fn result_uses_only_outer_variables(v: V<'_>, cutoff: u32, fuel: &mut u16) -> bool {
++    if *fuel == 0 {
++        return false;
++    }
++    *fuel -= 1;
++    let mut spine = match v {
++        Value::Sort { .. } | Value::NatLit { .. } | Value::StrLit { .. } => return true,
++        Value::Rigid { head: RigidHead::BVar(level, _), spine, .. } => {
++            if *level >= cutoff {
++                return false;
++            }
++            *spine
++        }
++        Value::Rigid { spine, .. } | Value::Unfold { spine, .. } => *spine,
++        Value::Lam { .. } | Value::Pi { .. } | Value::Thunk { .. } => return false,
++    };
++    while let Spine::Snoc { prev, elim, .. } = spine {
++        if *fuel == 0 {
++            return false;
++        }
++        *fuel -= 1;
++        if let ElimView::App(arg) = elim.view() {
++            if !result_uses_only_outer_variables(arg, cutoff, fuel) {
++                return false;
++            }
++        }
++        spine = prev;
++    }
++    true
++}
++
+ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
+     fn uparam_scope(&self) -> CheckScope<'t> {
+         match self.declar_info {
+@@ -107,7 +141,8 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
+             App { .. } | Lambda { .. } | Pi { .. } | Let { .. } | Proj { .. } => {}
+         }
+ 
+-        let key = (self.key_env(env, e) as *const value::Env<'t> as usize, e);
++        let capture_env = self.key_env(env, e);
++        let key = (capture_env as *const value::Env<'t> as usize, e);
+         let scope = self.uparam_scope();
+         if let Some(cached) = self.tc_cache.type_cache.get(&key).copied() {
+             if flag == InferOnly || cached.checked_under == scope {
+@@ -125,9 +160,9 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
+                     let fresh = self.mk_bvar_hc(depth, dom);
+                     let env2 = self.env_extend(env, fresh);
+                     let ctx2 = value::ctx_extend(self.arena, ctx, dom);
+-                    body_ty = Some(self.infer_value(flag, depth + 1, env2, ctx2, body));
++                    body_ty = Some((self.infer_value(flag, depth + 1, env2, ctx2, body), fresh));
+                 }
+-                let clo = match body_ty.filter(|bt| {
++                let clo = match body_ty.filter(|(bt, _)| {
+                     atomic_type(bt)
+                         && bt.is_closed()
+                         && std::ptr::eq(*bt, dom)
+@@ -135,7 +170,16 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
+                         && has_deep_bvar_prefix(env)
+                 }) {
+                     Some(_) => Closure::mk_eval(self.empty_env(), binder_type),
+-                    None => Closure::mk_infer(self.key_env(env, e), ctx, body),
++                    None => match body_ty {
++                        Some((result, fresh)) => {
++                            let independent = result_uses_only_outer_variables(result, depth, &mut 128);
++                            Closure::mk_inferred_result(
++                                self.arena, capture_env, ctx, body, result,
++                                if independent { None } else { Some(fresh) },
++                            )
++                        }
++                        None => Closure::mk_infer(capture_env, ctx, body),
++                    },
+                 };
+                 value::mk_pi(self.arena, dom, clo)
+             }
+@@ -191,7 +235,9 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
+                 let arg_ty = self.infer_value(flag, depth, env, ctx, arg);
+                 assert!(self.conv_types_at(depth, domain, arg_ty), "app arg def_eq failed");
+             }
+-            if body.ctx.is_none() && self.ctx.num_loose_bvars(body.body) == 0 {
++            if let Some(Ctx::InferredResult { result, binder: None, .. }) = body.ctx {
++                fty = result;
++            } else if body.ctx.is_none() && self.ctx.num_loose_bvars(body.body) == 0 {
+                 fty = self.eval(depth, body.env, body.body);
+             } else if crate::expr::ignores_binder(body.body) {
+                 fty = self.apply_closure(depth, body, domain, Some(domain));
+diff --git a/src/tests/util.rs b/src/tests/util.rs
+index 65a4652..ef78184 100644
+--- a/src/tests/util.rs
++++ b/src/tests/util.rs
+@@ -73,6 +73,110 @@ fn check_empty() -> Result<(), Box<dyn Error>> {
+     })
+ }
+ 
++#[test]
++fn checked_constant_result_type_needs_no_body_reinference() -> Result<(), Box<dyn Error>> {
++    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        let prop = tc.ctx.prop();
++        let one = tc.ctx.succ(tc.ctx.zero());
++        let universe = tc.ctx.mk_sort(one);
++        let term = tc.ctx.mk_lambda(universe, prop);
++        let ty = tc.infer_value(crate::tc::InferFlag::Check, 0, tc.empty_env(), tc.empty_ctx(), term);
++        let crate::value::Value::Pi { body, .. } = ty else { panic!("lambda type was not Pi") };
++        let argument = tc.eval(0, tc.empty_env(), prop);
++        let result = tc.apply_closure(1, body, argument, None);
++        assert!(matches!(result, crate::value::Value::Sort { level, .. } if *level == one));
++    }))
++}
++
++#[test]
++fn retained_result_preserves_the_actual_outer_type_capture() -> Result<(), Box<dyn Error>> {
++    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        let one = tc.ctx.succ(tc.ctx.zero());
++        let two = tc.ctx.succ(one);
++        let variable = tc.ctx.mk_var(0);
++        let identity = tc.ctx.mk_lambda(variable, variable);
++        let mut results = Vec::new();
++        for level in [one, two] {
++            let universe = crate::value::mk_sort(tc.arena, level);
++            let outer = tc.mk_bvar_hc(0, universe);
++            let env = tc.env_extend(tc.empty_env(), outer);
++            let ctx = crate::value::ctx_extend(tc.arena, tc.empty_ctx(), universe);
++            let ty = tc.infer_value(crate::tc::InferFlag::Check, 1, env, ctx, identity);
++            let crate::value::Value::Pi { body, .. } = ty else { panic!("identity type was not Pi") };
++            let argument = tc.mk_bvar_hc(1, outer);
++            let result = tc.apply_closure(2, body, argument, None);
++            assert!(std::ptr::eq(result, outer));
++            results.push(result);
++        }
++        assert!(!std::ptr::eq(results[0], results[1]));
++    }))
++}
++
++#[test]
++fn checked_dependent_result_reuses_the_identical_fresh_argument() -> Result<(), Box<dyn Error>> {
++    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        let one = tc.ctx.succ(tc.ctx.zero());
++        let universe = tc.ctx.mk_sort(one);
++        let variable = tc.ctx.mk_var(0);
++        let inner = tc.ctx.mk_lambda(variable, variable);
++        let term = tc.ctx.mk_lambda(universe, inner);
++        let ty = tc.infer_value(crate::tc::InferFlag::Check, 0, tc.empty_env(), tc.empty_ctx(), term);
++        let crate::value::Value::Pi { domain, body, .. } = ty else { panic!("outer type was not Pi") };
++        let original_fresh = tc.mk_bvar_hc(0, domain);
++        let result = tc.apply_closure(1, body, original_fresh, None);
++        let crate::value::Value::Pi { domain: inner_domain, .. } = result else { panic!("inner type was not Pi") };
++        assert!(std::ptr::eq(*inner_domain, original_fresh));
++    }))
++}
++
++#[test]
++fn dependent_lambda_result_still_substitutes_the_argument() -> Result<(), Box<dyn Error>> {
++    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        let prop = tc.ctx.prop();
++        let one = tc.ctx.succ(tc.ctx.zero());
++        let universe = tc.ctx.mk_sort(one);
++        let variable = tc.ctx.mk_var(0);
++        let inner = tc.ctx.mk_lambda(variable, variable);
++        let term = tc.ctx.mk_lambda(universe, inner);
++        let ty = tc.infer_value(crate::tc::InferFlag::Check, 0, tc.empty_env(), tc.empty_ctx(), term);
++        let crate::value::Value::Pi { domain, body, .. } = ty else { panic!("outer type was not Pi") };
++        let other_type = tc.ctx.mk_pi(prop, prop);
++        for expr in [prop, other_type] {
++            let argument = tc.eval(0, tc.empty_env(), expr);
++            let result = tc.apply_closure(1, body, argument, Some(*domain));
++            let crate::value::Value::Pi { domain: inner_domain, .. } = result else { panic!("inner type was not Pi") };
++            assert!(std::ptr::eq(*inner_domain, argument), "dependent result lost its actual type argument");
++        }
++    }))
++}
++
++#[test]
++#[should_panic(expected = "expected a pi type")]
++fn retained_result_does_not_skip_argument_checking() {
++    test_export_file_should_panic(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        let prop = tc.ctx.prop();
++        let one = tc.ctx.succ(tc.ctx.zero());
++        let universe = tc.ctx.mk_sort(one);
++        let term = tc.ctx.mk_lambda(universe, prop);
++        let malformed = tc.ctx.mk_app(prop, prop);
++        let application = tc.ctx.mk_app(term, malformed);
++        tc.infer_value(crate::tc::InferFlag::Check, 0, tc.empty_env(), tc.empty_ctx(), application);
++    }));
++}
++
++#[test]
++#[should_panic(expected = "expected a pi type")]
++fn retained_result_requires_checking_the_original_body() {
++    test_export_file_should_panic(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        let prop = tc.ctx.prop();
++        let one = tc.ctx.succ(tc.ctx.zero());
++        let universe = tc.ctx.mk_sort(one);
++        let malformed = tc.ctx.mk_app(prop, prop);
++        let term = tc.ctx.mk_lambda(universe, malformed);
++        tc.infer_value(crate::tc::InferFlag::Check, 0, tc.empty_env(), tc.empty_ctx(), term);
++    }));
++}
++
+ /// The export format assigns each name/level/expression an explicit index. Those
+ /// indices need not be dense or in increasing order — the exporter only guarantees
+ /// that an item is emitted after the items it references. `LevelIndexOutOfOrder`
+diff --git a/src/value.rs b/src/value.rs
+index 53b7677..9881228 100644
+--- a/src/value.rs
++++ b/src/value.rs
+@@ -344,6 +344,11 @@ impl<'a> Env<'a> {
+ pub enum Ctx<'a> {
+     Nil,
+     Cons { ty: V<'a>, parent: C<'a> },
++    // A closure-only record for a body already checked under `binder`.
++    // `None` means the result was proved independent of that binder by a
++    // conservative traversal of its semantic variables. This is never an
++    // active variable-lookup context.
++    InferredResult { result: V<'a>, binder: Option<V<'a>>, context: C<'a> },
+ }
+ 
+ #[derive(Debug)]
+@@ -419,19 +424,36 @@ impl<'a> Closure<'a> {
+     pub fn mk_eval(env: E<'a>, body: ExprPtr<'a>) -> Self { Closure { env, ctx: None, body } }
+ 
+     pub fn mk_infer(env: E<'a>, ctx: C<'a>, body: ExprPtr<'a>) -> Self { Closure { env, ctx: Some(ctx), body } }
++
++    pub fn mk_inferred_result(
++        arena: &'a Bump,
++        env: E<'a>,
++        context: C<'a>,
++        body: ExprPtr<'a>,
++        result: V<'a>,
++        binder: Option<V<'a>>,
++    ) -> Self {
++        let ctx = arena.alloc(Ctx::InferredResult { result, binder, context });
++        Closure { env, ctx: Some(ctx), body }
++    }
+ }
+ 
+ impl<'a> Ctx<'a> {
+     pub fn lookup(&self, mut idx: u16) -> Option<V<'a>> {
+         let mut cur = self;
+-        while let Ctx::Cons { ty, parent } = cur {
+-            if idx == 0 {
+-                return Some(*ty);
++        loop {
++            match cur {
++                Ctx::Nil => return None,
++                Ctx::Cons { ty, parent } => {
++                    if idx == 0 {
++                        return Some(*ty);
++                    }
++                    idx -= 1;
++                    cur = parent;
++                }
++                Ctx::InferredResult { .. } => panic!("retained inference result used as a variable context"),
+             }
+-            idx -= 1;
+-            cur = parent;
+         }
+-        None
+     }
+ }
+ 
+@@ -567,6 +589,7 @@ pub fn mk_thunk<'a>(arena: &'a Bump, env: E<'a>, expr: ExprPtr<'a>) -> V<'a> {
+ 
+ const _: () = assert!(std::mem::size_of::<Value<'static>>() == 56);
+ const _: () = assert!(std::mem::size_of::<Spine<'static>>() == 32);
++const _: () = assert!(std::mem::size_of::<Closure<'static>>() == 24);
+ 
+ pub fn forced_of<'a>(v: V<'a>) -> Option<V<'a>> {
+     match v {
