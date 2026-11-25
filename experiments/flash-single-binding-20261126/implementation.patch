@@ -1,0 +1,146 @@
+diff --git a/src/eval.rs b/src/eval.rs
+index 2e4c877..810a716 100644
+--- a/src/eval.rs
++++ b/src/eval.rs
+@@ -316,6 +316,26 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
+         self.prune_env(env, e.as_ref().fv_mask())
+     }
+ 
++    /// A one-slot projection needs only the identity of that slot when there is
++    /// no universe substitution. The expression already determines its index.
++    /// Keep this key disjoint from aligned environment addresses; it is never
++    /// dereferenced. Other projections retain the original canonical frame key.
++    #[inline]
++    pub(crate) fn cache_env_key(&mut self, env: E<'t>, e: ExprPtr<'t>) -> (usize, E<'t>) {
++        const _: () = assert!(std::mem::align_of::<value::Env<'static>>() >= 2);
++        const _: () = assert!(std::mem::align_of::<Value<'static>>() >= 2);
++        if e.num_loose_bvars() <= 64 && env.lsub().is_none() {
++            let mask = e.as_ref().fv_mask();
++            if mask.is_power_of_two() {
++                if let Some(v) = env.lookup(mask.trailing_zeros() as u16) {
++                    return ((v as *const Value<'t> as usize) | 1, env);
++                }
++            }
++        }
++        let projected = self.key_env(env, e);
++        (projected as *const value::Env<'t> as usize, projected)
++    }
++
+     fn wide_fvars(&mut self, e: ExprPtr<'t>) -> &'t [u16] {
+         if let Some(indices) = self.tc_cache.wide_fvars.get(&e) {
+             return indices;
+@@ -622,8 +642,8 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
+             self.ctx.read_expr_ref(e),
+             Expr::App { .. } | Expr::Proj { .. } | Expr::Let { .. } | Expr::Pi { .. } | Expr::Lambda { .. }
+         ) {
+-            let te = self.key_env(env, e);
+-            let key = (te as *const value::Env<'t> as usize, e);
++            let (env_key, te) = self.cache_env_key(env, e);
++            let key = (env_key, e);
+             if let Some(v) = self.tc_cache.open_eval_cache.get(&key) {
+                 return v;
+             }
+diff --git a/src/infer.rs b/src/infer.rs
+index bcdd0b6..d915f9c 100644
+--- a/src/infer.rs
++++ b/src/infer.rs
+@@ -107,7 +107,7 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
+             App { .. } | Lambda { .. } | Pi { .. } | Let { .. } | Proj { .. } => {}
+         }
+ 
+-        let key = (self.key_env(env, e) as *const value::Env<'t> as usize, e);
++        let key = (self.cache_env_key(env, e).0, e);
+         let scope = self.uparam_scope();
+         if let Some(cached) = self.tc_cache.type_cache.get(&key).copied() {
+             if flag == InferOnly || cached.checked_under == scope {
+diff --git a/src/tests/util.rs b/src/tests/util.rs
+index 65a4652..060356d 100644
+--- a/src/tests/util.rs
++++ b/src/tests/util.rs
+@@ -186,6 +186,86 @@ pub(crate) fn rand_string<'t>(rng: &mut ThreadRng, size: usize) -> CowStr<'t> {
+     CowStr::Owned(rand_string)
+ }
+ 
++#[test]
++fn unary_capture_cache_preserves_selected_binding() -> Result<(), Box<dyn Error>> {
++    use crate::value;
++    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        let zero = tc.ctx.zero();
++        let one = tc.ctx.succ(zero);
++        let selected = value::mk_sort(tc.arena, zero);
++        let changed = value::mk_sort(tc.arena, one);
++        let prop = tc.ctx.prop();
++        let outer = tc.ctx.mk_var(2);
++        let fun = tc.ctx.mk_lambda(prop, outer);
++        let expr = tc.ctx.mk_app(fun, prop);
++        let empty = tc.empty_env();
++        let parent = tc.env_extend(empty, selected);
++        let first = tc.env_extend(parent, selected);
++        let irrelevant_change = tc.env_extend(parent, changed);
++        let other_parent = tc.env_extend(empty, changed);
++        let relevant_change = tc.env_extend(other_parent, selected);
++        assert!(std::ptr::eq(tc.eval(2, first, expr), selected));
++        assert!(std::ptr::eq(tc.eval(2, irrelevant_change, expr), selected));
++        assert!(std::ptr::eq(tc.eval(2, relevant_change, expr), changed));
++    }))
++}
++
++#[test]
++fn unary_capture_type_cache_preserves_carrier() -> Result<(), Box<dyn Error>> {
++    use crate::{tc::InferFlag::Check, value::{self, Value}};
++    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        let zero = tc.ctx.zero();
++        let one = tc.ctx.succ(zero);
++        let two = tc.ctx.succ(one);
++        let prop = value::mk_sort(tc.arena, zero);
++        let typ = value::mk_sort(tc.arena, one);
++        let typ1 = value::mk_sort(tc.arena, two);
++        let var = tc.ctx.mk_var(0);
++        let identity = tc.ctx.mk_lambda(var, var);
++        let empty = tc.empty_env();
++        let env0 = tc.env_extend(empty, prop);
++        let env1 = tc.env_extend(empty, typ);
++        let ctx = tc.empty_ctx();
++        let ctx0 = value::ctx_extend(tc.arena, ctx, typ);
++        let ctx1 = value::ctx_extend(tc.arena, ctx, typ1);
++        for (env, ctx, expected) in [(env0, ctx0, zero), (env1, ctx1, one), (env0, ctx0, zero)] {
++            let inferred = tc.infer_value(Check, 1, env, ctx, identity);
++            let Value::Pi { domain: Value::Sort { level, .. }, .. } = inferred else { panic!("expected identity type") };
++            assert_eq!(*level, expected);
++        }
++    }))
++}
++
++#[test]
++fn unary_capture_cache_preserves_universe_substitution() -> Result<(), Box<dyn Error>> {
++    use crate::{tc::InferFlag::Check, value::{self, Value}};
++    test_export_file(None, |export| export.with_tc(crate::env::EnvLimit::Empty, |tc| {
++        let zero = tc.ctx.zero();
++        let one = tc.ctx.succ(zero);
++        let u = tc.ctx.param_quick("unary_cache_u");
++        let ks = tc.ctx.alloc_levels_slice(&[u]);
++        let vs0 = tc.ctx.alloc_levels_slice(&[zero]);
++        let vs1 = tc.ctx.alloc_levels_slice(&[one]);
++        let ls0 = tc.arena.alloc(value::LevelSub { ks, vs: vs0 });
++        let ls1 = tc.arena.alloc(value::LevelSub { ks, vs: vs1 });
++        let base0 = tc.arena.alloc(value::Env::Nil { lsub: Some(ls0), hash: 0 });
++        let base1 = tc.arena.alloc(value::Env::Nil { lsub: Some(ls1), hash: 0 });
++        let selected = value::mk_sort(tc.arena, zero);
++        let typ = value::mk_sort(tc.arena, one);
++        let env0 = tc.env_extend(base0, selected);
++        let env1 = tc.env_extend(base1, selected);
++        let ctx = value::ctx_extend(tc.arena, tc.empty_ctx(), typ);
++        let binder = tc.ctx.mk_sort(u);
++        let outer = tc.ctx.mk_var(1);
++        let expr = tc.ctx.mk_lambda(binder, outer);
++        for (env, expected) in [(env0, zero), (env1, one), (env0, zero)] {
++            let inferred = tc.infer_value(Check, 1, env, ctx, expr);
++            let Value::Pi { domain: Value::Sort { level, .. }, .. } = inferred else { panic!("expected function type") };
++            assert_eq!(*level, expected);
++        }
++    }))
++}
++
+ #[test]
+ fn hash_test0() -> Result<(), Box<dyn Error>> {
+     use crate::hash64;

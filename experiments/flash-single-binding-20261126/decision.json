@@ -1,0 +1,27 @@
+{
+  "state": "REJECTED_FOR_PERFORMANCE_PROMOTION",
+  "baseline": "819d59c34db3fd8f7b790a83f5728f255f75f33e",
+  "mechanism": "Replace canonical frame keys for single-variable expression support and no universe substitution by an exactly selected Value address tagged with a disjoint low bit. Multi-variable and universe-substituted environments retain the original canonical key. All type-checking guards remain.",
+  "unit_tests": {
+    "baseline": 46,
+    "candidate": 49,
+    "ignored": 0
+  },
+  "controls": [
+    "changing an unused binding preserves evaluation",
+    "changing the selected binding changes evaluation",
+    "type-cache carrier changes remain distinct",
+    "universe substitutions remain distinct"
+  ],
+  "gate": "Same-input repeated Mathlib-prefix guest instructions at least 1% lower before broad performance qualification; exact full Mathlib remains required for promotion.",
+  "counter_boundary": "Software guest instructions on a source-derived prefix, not hardware retired instructions or an Arena score.",
+  "authorship": "Independently authored against Flash; no competitor implementation copied.",
+  "prefix_ratio": 1.0275834976993337,
+  "prefix_observations": 2,
+  "prefix": "Both binaries accepted exact 25,131-declaration prefix; candidate uses 2.758% more guest instructions.",
+  "context_controls": {
+    "attempted": 10,
+    "correct": 10
+  },
+  "release_promotion": "None"
+}
