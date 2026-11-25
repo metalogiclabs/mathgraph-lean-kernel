@@ -1,0 +1,90 @@
+{
+  "attempted": 230,
+  "correct": 218,
+  "wrong_or_unavailable": [
+    {
+      "name": "perf/gf3-matrix-product",
+      "expected": 0,
+      "observed": -9,
+      "sha256": "9826fe188e0b5d8b77e41cad188870f25fb07270ec55c65d3b8ff0c41c82a9bc",
+      "elapsed_s": 17.918382528998336
+    },
+    {
+      "name": "perf/ite-taken-branch",
+      "expected": 0,
+      "observed": -9,
+      "sha256": "6e669aef4f85d584bff3e35cb5a9603e859e1a0c6290a46661560883823d6088",
+      "elapsed_s": 1.6660664549999638
+    },
+    {
+      "name": "perf/ite-taken-branch-bad",
+      "expected": 1,
+      "observed": -9,
+      "sha256": "be58b27c935928b4ae40955da0948088994d4f893c3570a10641d03f3361c909",
+      "elapsed_s": 1.9579996219981695
+    },
+    {
+      "name": "perf/magma-list-deep-n36",
+      "expected": 0,
+      "observed": -9,
+      "sha256": "c8e0ad4037e2123eb2e5fce42b8da1c705b9dd52487549d932e00b82eeff93c7",
+      "elapsed_s": 2.227481173002161
+    },
+    {
+      "name": "perf/magma-list-pair-n21",
+      "expected": 0,
+      "observed": -9,
+      "sha256": "36895459051bfb2494aa6a5c8542b36581c74f03a5cbe59282874e2068a47a32",
+      "elapsed_s": 0.9884038170021086
+    },
+    {
+      "name": "perf/magma-list-pair-n7",
+      "expected": 0,
+      "observed": -9,
+      "sha256": "41333e6e8c06623d8064583e040d2983148ca7d2c6e98b6604c0fc98ef8b7102",
+      "elapsed_s": 0.49342189799790503
+    },
+    {
+      "name": "perf/proj-applied-struct-arg-bad",
+      "expected": 1,
+      "observed": -9,
+      "sha256": "b7164a9143aaa62920b541b07202c9581af81083bd793eb3df51f8fbe6d1850d",
+      "elapsed_s": 1.7861930159997428
+    },
+    {
+      "name": "perf/proj-applied-struct-bad",
+      "expected": 1,
+      "observed": -9,
+      "sha256": "2bdad7ce54c48e70a9d15a18ac84cd482ad0a981bb86898dcd58cb147ea14705",
+      "elapsed_s": 14.306575245998829
+    },
+    {
+      "name": "perf/short-circuit-and",
+      "expected": 0,
+      "observed": -9,
+      "sha256": "ab5cb78a88611603f2f2982c5d9a02f8306bcd114cd0329493259e0816793252",
+      "elapsed_s": 5.198748427003011
+    },
+    {
+      "name": "perf/unfold-before-literal",
+      "expected": 0,
+      "observed": -9,
+      "sha256": "ca30fb3a52b7c0b130f318777fd9ac215fe3510aeca6f22b34fa2d08a4940f3c",
+      "elapsed_s": 5.262305067000852
+    },
+    {
+      "name": "perf/unfold-before-literal-bad",
+      "expected": 1,
+      "observed": -9,
+      "sha256": "7541304fe48cb5b2ccdb91d3e14a690ee2b2ea7a5efd20c6a8bd9b581b4d0c5e",
+      "elapsed_s": 25.13714798500223
+    },
+    {
+      "name": "perf/unfold-before-literal-fallback",
+      "expected": 0,
+      "observed": -9,
+      "sha256": "f0ba42ccc7c0f4a08fbc66413976ae0547a2eafcd56f14384c2f76440fe9d017",
+      "elapsed_s": 41.18928906400106
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "url": "https://github.com/leanprover/lean-kernel-arena/blob/master/checkers/mathgraph.yaml",
+  "blob_sha": "06090cd9fc554134d767daa09698dbef769d2389",
+  "release": "819d59c34db3fd8f7b790a83f5728f255f75f33e",
+  "arena_threads": 2,
+  "arena_rustflags": "-C target-cpu=native",
+  "complete_diagnostic_threads": 1,
+  "complete_diagnostic_rustflags": "-C target-cpu=x86-64 -C target-feature=-avx,-avx2,-avx512f,-fma",
+  "boundary": "Full diagnostic ratios are not an official Arena score. Source and worker/compilation settings must accompany any release comparison."
+}

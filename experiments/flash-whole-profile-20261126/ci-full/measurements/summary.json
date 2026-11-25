@@ -1,0 +1,188 @@
+{
+  "state": "WARRANTED_BOUNDED_COMPILED_SYMBOL_DIAGNOSTIC",
+  "total_dynamic_instructions": 546073810215,
+  "active_symbols_or_buckets": 731,
+  "top": [
+    {
+      "symbol_index": 885,
+      "name": "<sokonanoda::checker::tc::TypeChecker>::eval_no_cache",
+      "instructions": 112025443843,
+      "share": 0.20514707306489094
+    },
+    {
+      "symbol_index": 744,
+      "name": "<sokonanoda::checker::tc::TypeChecker>::eval_node",
+      "instructions": 72352108974,
+      "share": 0.13249510894051766
+    },
+    {
+      "symbol_index": 743,
+      "name": "<sokonanoda::checker::tc::TypeChecker>::infer_nonvar",
+      "instructions": 69349500461,
+      "share": 0.12699656926175554
+    },
+    {
+      "symbol_index": 886,
+      "name": "<sokonanoda::checker::tc::TypeChecker>::prune_env_cold",
+      "instructions": 52401380781,
+      "share": 0.0959602526265974
+    },
+    {
+      "symbol_index": 887,
+      "name": "<sokonanoda::checker::value::Vals>::intern_frame",
+      "instructions": 27946911811,
+      "share": 0.051177901756534985
+    },
+    {
+      "symbol_index": 767,
+      "name": "<sokonanoda::checker::value::Vals>::app_new",
+      "instructions": 21288893164,
+      "share": 0.03898537663913628
+    },
+    {
+      "symbol_index": 1011,
+      "name": "<sokonanoda::frontend::parser::Parser>::run_over",
+      "instructions": 18255513225,
+      "share": 0.033430486654931216
+    },
+    {
+      "symbol_index": 753,
+      "name": "<sokonanoda::checker::value::Vals>::intern",
+      "instructions": 14183896168,
+      "share": 0.025974320508825578
+    },
+    {
+      "symbol_index": 755,
+      "name": "<sokonanoda::checker::tc::TypeChecker>::apply_new",
+      "instructions": 13380564396,
+      "share": 0.024503215766256595
+    },
+    {
+      "symbol_index": 806,
+      "name": "<sokonanoda::checker::value::Vals>::env_new",
+      "instructions": 10631086086,
+      "share": 0.019468221854137872
+    },
+    {
+      "symbol_index": 746,
+      "name": "<sokonanoda::checker::tc::TypeChecker>::unify_general::<true>",
+      "instructions": 9187606903,
+      "share": 0.0168248444278671
+    },
+    {
+      "symbol_index": 1036,
+      "name": "<sokonanoda::frontend::parser::Parser>::other_line",
+      "instructions": 8071717068,
+      "share": 0.014781366395912682
+    },
+    {
+      "symbol_index": 749,
+      "name": "<sokonanoda::checker::tc::TypeChecker>::unify_direct::<true>",
+      "instructions": 7814464121,
+      "share": 0.014310270836690175
+    },
+    {
+      "symbol_index": 1039,
+      "name": "<sokonanoda::frontend::parser::Parser>::do_app",
+      "instructions": 7599592382,
+      "share": 0.01391678604584221
+    },
+    {
+      "symbol_index": 805,
+      "name": "<sokonanoda::checker::tc::TypeChecker>::apply_many",
+      "instructions": 7228784275,
+      "share": 0.013237742114301152
+    },
+    {
+      "symbol_index": 760,
+      "name": "<sokonanoda::checker::value::Vals>::spine_split",
+      "instructions": 6273770908,
+      "share": 0.011488869802288986
+    },
+    {
+      "symbol_index": 1862,
+      "name": "[shared libraries / other code]",
+      "instructions": 6020881770,
+      "share": 0.011025765486957634
+    },
+    {
+      "symbol_index": 781,
+      "name": "<sokonanoda::checker::tc::TypeChecker>::unfold_value_go",
+      "instructions": 5800413934,
+      "share": 0.01062203281954918
+    },
+    {
+      "symbol_index": 859,
+      "name": "<sokonanoda::checker::tc::TypeChecker>::unify_spine::<true>",
+      "instructions": 5039220823,
+      "share": 0.009228094680123845
+    },
+    {
+      "symbol_index": 754,
+      "name": "<sokonanoda::checker::tc::TypeChecker>::apply_closure",
+      "instructions": 4068627583,
+      "share": 0.007450691659059975
+    },
+    {
+      "symbol_index": 815,
+      "name": "<sokonanoda::checker::tc::TypeChecker>::const_head_type",
+      "instructions": 3586571917,
+      "share": 0.006567925159399049
+    },
+    {
+      "symbol_index": 813,
+      "name": "<sokonanoda::checker::tc::TypeChecker>::lsub_base",
+      "instructions": 3556233868,
+      "share": 0.006512368477440514
+    },
+    {
+      "symbol_index": 769,
+      "name": "<sokonanoda::term::intern::Interner<sokonanoda::term::expr::ExprNode>>::intern",
+      "instructions": 3019137785,
+      "share": 0.005528808978792273
+    },
+    {
+      "symbol_index": 784,
+      "name": "<sokonanoda::checker::value::Vals>::compute_key",
+      "instructions": 2991931817,
+      "share": 0.005478987933557952
+    },
+    {
+      "symbol_index": 893,
+      "name": "<sokonanoda::checker::context::TcCtx>::subst_levels",
+      "instructions": 2957365481,
+      "share": 0.005415688182950263
+    },
+    {
+      "symbol_index": 864,
+      "name": "<sokonanoda::checker::tc::TypeChecker>::sig_of",
+      "instructions": 2910259300,
+      "share": 0.005329424787565208
+    },
+    {
+      "symbol_index": 758,
+      "name": "<sokonanoda::checker::env::Env>::get_declar",
+      "instructions": 2807915204,
+      "share": 0.005142006724135824
+    },
+    {
+      "symbol_index": 866,
+      "name": "<sokonanoda::checker::tc::TypeChecker>::spine_probe",
+      "instructions": 2729844222,
+      "share": 0.004999038904512206
+    },
+    {
+      "symbol_index": 748,
+      "name": "<sokonanoda::checker::tc::TypeChecker>::conv_nat::<true>",
+      "instructions": 2064306275,
+      "share": 0.0037802696931889886
+    },
+    {
+      "symbol_index": 817,
+      "name": "<sokonanoda::term::intern::Interner<sokonanoda::term::level::Level>>::find::<sokonanoda::term::level::Level>",
+      "instructions": 1828323211,
+      "share": 0.0033481246981615052
+    }
+  ],
+  "boundary": "Same basic-block estimate as the preceding complete diagnostic. Inlined work belongs to its containing compiled symbol; symbol attribution is exclusive, not call-tree time. REP and asynchronous-interruption limitations remain. Not an Arena score or new checker qualification."
+}

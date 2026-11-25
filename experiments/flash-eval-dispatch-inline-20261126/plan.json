@@ -1,0 +1,13 @@
+{
+  "state": "CANDIDATE_PREMEASUREMENT",
+  "base_commit": "bc704eebed4e009bc66af1a849f18315c11f1926",
+  "objective": "Reduce repeated evaluator dispatch call and argument-transfer overhead without changing checking or memoization semantics.",
+  "evidence": "Full-input profiles 45717337815 and 45718077915 agree exactly on all 315 active checker-named symbol totals. eval_node accounts for 72,352,108,974 instructions. Its entry block executes 948,654,362 times, with a common eight-instruction return block at the same frequency. Inlining may reduce some overhead but does not guarantee removal of all spills or a speedup.",
+  "mechanism": "Add inline(always) to eval_node only. No cache key, lookup, traversal, binding, universe, declaration, decision or resource limit changes.",
+  "cost_gate": "Two alternating matched generic-build pairs must ACCEPT the exact 25,131-declaration prefix and each use at least 1% fewer calibrated software-counted instructions.",
+  "if_gate_fails": "Retain source, build identity and raw observations; reject performance promotion without broad qualification.",
+  "if_gate_passes": "Require the unchanged 230 portable outcomes and source controls, then exact full Mathlib native/instruction comparison. Increased code size may affect native CPU differently from instruction counts.",
+  "lineage": "Compact single-binding IDs and depth-gated right-spine memoization both failed their predeclared prefix gates; preserved separately.",
+  "boundary": "Original compiler-hint experiment against the attributed core. Candidate only, not an Arena score or release.",
+  "full_gate": "Two alternating native pairs and two alternating software-instruction pairs on exact full Mathlib. Every process must ACCEPT 739167 declarations. Each instruction pair ratio <=0.99; native median CPU ratio <=1.05; maximum observed RSS ratio <=1.10. Frozen executables copied before Cargo tests. Other nine large inputs and official Arena scoring remain separate obligations."
+}

@@ -1,0 +1,4304 @@
+[
+  {
+    "symbol_index": 885,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::eval_no_cache",
+    "instructions": 1581376062,
+    "share": 0.15475541204536217
+  },
+  {
+    "symbol_index": 743,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::infer_nonvar",
+    "instructions": 1355456033,
+    "share": 0.13264659933639936
+  },
+  {
+    "symbol_index": 744,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::eval_node",
+    "instructions": 1171310970,
+    "share": 0.11462593632937063
+  },
+  {
+    "symbol_index": 886,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::prune_env_cold",
+    "instructions": 998745178,
+    "share": 0.09773843506536435
+  },
+  {
+    "symbol_index": 887,
+    "name": "<sokonanoda::checker::value::Vals>::intern_frame",
+    "instructions": 556199273,
+    "share": 0.054430346924301605
+  },
+  {
+    "symbol_index": 1862,
+    "name": "[shared libraries / other code]",
+    "instructions": 452724060,
+    "share": 0.04430413494405688
+  },
+  {
+    "symbol_index": 1011,
+    "name": "<sokonanoda::frontend::parser::Parser>::run_over",
+    "instructions": 394977708,
+    "share": 0.0386530057075524
+  },
+  {
+    "symbol_index": 767,
+    "name": "<sokonanoda::checker::value::Vals>::app_new",
+    "instructions": 282200772,
+    "share": 0.027616515640907245
+  },
+  {
+    "symbol_index": 753,
+    "name": "<sokonanoda::checker::value::Vals>::intern",
+    "instructions": 275733016,
+    "share": 0.02698357306080838
+  },
+  {
+    "symbol_index": 806,
+    "name": "<sokonanoda::checker::value::Vals>::env_new",
+    "instructions": 230774557,
+    "share": 0.022583882807074462
+  },
+  {
+    "symbol_index": 1036,
+    "name": "<sokonanoda::frontend::parser::Parser>::other_line",
+    "instructions": 227958561,
+    "share": 0.02230830596500001
+  },
+  {
+    "symbol_index": 805,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::apply_many",
+    "instructions": 195011947,
+    "share": 0.01908410967950603
+  },
+  {
+    "symbol_index": 755,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::apply_new",
+    "instructions": 186630460,
+    "share": 0.01826388702317127
+  },
+  {
+    "symbol_index": 746,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::unify_general::<true>",
+    "instructions": 177075108,
+    "share": 0.017328788489980953
+  },
+  {
+    "symbol_index": 1039,
+    "name": "<sokonanoda::frontend::parser::Parser>::do_app",
+    "instructions": 158503689,
+    "share": 0.015511366518905192
+  },
+  {
+    "symbol_index": 760,
+    "name": "<sokonanoda::checker::value::Vals>::spine_split",
+    "instructions": 158367516,
+    "share": 0.015498040461156598
+  },
+  {
+    "symbol_index": 749,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::unify_direct::<true>",
+    "instructions": 145066329,
+    "share": 0.014196369894400913
+  },
+  {
+    "symbol_index": 781,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::unfold_value_go",
+    "instructions": 124879102,
+    "share": 0.012220822959355516
+  },
+  {
+    "symbol_index": 769,
+    "name": "<sokonanoda::term::intern::Interner<sokonanoda::term::expr::ExprNode>>::intern",
+    "instructions": 100752920,
+    "share": 0.009859805029332366
+  },
+  {
+    "symbol_index": 754,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::apply_closure",
+    "instructions": 85451192,
+    "share": 0.00836235905266116
+  },
+  {
+    "symbol_index": 815,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::const_head_type",
+    "instructions": 79976439,
+    "share": 0.007826592971005636
+  },
+  {
+    "symbol_index": 864,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::sig_of",
+    "instructions": 50801481,
+    "share": 0.0049714955939870785
+  },
+  {
+    "symbol_index": 817,
+    "name": "<sokonanoda::term::intern::Interner<sokonanoda::term::level::Level>>::find::<sokonanoda::term::level::Level>",
+    "instructions": 48519410,
+    "share": 0.004748169311005965
+  },
+  {
+    "symbol_index": 859,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::unify_spine::<true>",
+    "instructions": 46435983,
+    "share": 0.0045442825748910525
+  },
+  {
+    "symbol_index": 803,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::fire_recursor",
+    "instructions": 44933349,
+    "share": 0.00439723295816088
+  },
+  {
+    "symbol_index": 758,
+    "name": "<sokonanoda::checker::env::Env>::get_declar",
+    "instructions": 43998509,
+    "share": 0.004305748362641255
+  },
+  {
+    "symbol_index": 788,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::quote",
+    "instructions": 41378796,
+    "share": 0.004049380017060726
+  },
+  {
+    "symbol_index": 748,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::conv_nat::<true>",
+    "instructions": 39929538,
+    "share": 0.003907553841529534
+  },
+  {
+    "symbol_index": 866,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::spine_probe",
+    "instructions": 38136168,
+    "share": 0.00373205244121822
+  },
+  {
+    "symbol_index": 791,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::quote_spine",
+    "instructions": 33875364,
+    "share": 0.0033150849061016254
+  },
+  {
+    "symbol_index": 819,
+    "name": "<sokonanoda::checker::context::TcCtx>::simplify",
+    "instructions": 30447380,
+    "share": 0.0029796181634635867
+  },
+  {
+    "symbol_index": 831,
+    "name": "<sokonanoda::checker::ptrmap::PtrMap<sokonanoda::checker::value::VId, sokonanoda::checker::value::VId>>::grow",
+    "instructions": 29643086,
+    "share": 0.0029009089605316835
+  },
+  {
+    "symbol_index": 813,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::lsub_base",
+    "instructions": 25766425,
+    "share": 0.0025215341332332124
+  },
+  {
+    "symbol_index": 745,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::try_proof_irrel_at",
+    "instructions": 24846881,
+    "share": 0.002431546423141114
+  },
+  {
+    "symbol_index": 900,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::ensure_sort_v",
+    "instructions": 23993183,
+    "share": 0.002348002483829668
+  },
+  {
+    "symbol_index": 784,
+    "name": "<sokonanoda::checker::value::Vals>::compute_key",
+    "instructions": 21513570,
+    "share": 0.0021053444970616625
+  },
+  {
+    "symbol_index": 646,
+    "name": "<rustc_hash::FxBuildHasher as core::hash::BuildHasher>::hash_one::<&sokonanoda::term::expr::ExprNode>",
+    "instructions": 21264973,
+    "share": 0.0020810164879987297
+  },
+  {
+    "symbol_index": 898,
+    "name": "<sokonanoda::checker::context::TcCtx>::all_uparams_defined",
+    "instructions": 20790390,
+    "share": 0.002034573210223399
+  },
+  {
+    "symbol_index": 1073,
+    "name": "<sokonanoda::frontend::parser::Parser>::do_lambda",
+    "instructions": 20560996,
+    "share": 0.002012124430427254
+  },
+  {
+    "symbol_index": 883,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::statically_not_proof",
+    "instructions": 19313606,
+    "share": 0.0018900533063790485
+  },
+  {
+    "symbol_index": 645,
+    "name": "<hashbrown::raw::RawTable<u32>>::reserve_rehash::<<sokonanoda::term::intern::Interner<sokonanoda::term::expr::ExprNode>>::insert_unique::{closure#0}>",
+    "instructions": 17466999,
+    "share": 0.0017093420675802092
+  },
+  {
+    "symbol_index": 893,
+    "name": "<sokonanoda::checker::context::TcCtx>::subst_levels",
+    "instructions": 16759299,
+    "share": 0.0016400856726364347
+  },
+  {
+    "symbol_index": 787,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::global_key",
+    "instructions": 15186641,
+    "share": 0.0014861834208920706
+  },
+  {
+    "symbol_index": 1072,
+    "name": "<sokonanoda::frontend::parser::Parser>::do_pi",
+    "instructions": 14366208,
+    "share": 0.0014058948355128056
+  },
+  {
+    "symbol_index": 636,
+    "name": "<hashbrown::raw::RawTable<(sokonanoda::term::id::ExprId, sokonanoda::term::id::ExprId)>>::reserve_rehash::<hashbrown::map::make_hasher<sokonanoda::term::id::ExprId, sokonanoda::term::id::ExprId, rustc_hash::FxBuildHasher>::{closure#0}>",
+    "instructions": 13899616,
+    "share": 0.0013602335668543267
+  },
+  {
+    "symbol_index": 918,
+    "name": "<sokonanoda::checker::inductive::persist::Promoter>::expr",
+    "instructions": 13592441,
+    "share": 0.0013301730424557766
+  },
+  {
+    "symbol_index": 812,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::eval_inst",
+    "instructions": 13467893,
+    "share": 0.0013179846215465533
+  },
+  {
+    "symbol_index": 795,
+    "name": "<sokonanoda::checker::value::Vals>::spine_to_vec",
+    "instructions": 13151126,
+    "share": 0.0012869854121963279
+  },
+  {
+    "symbol_index": 752,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::lam_domain",
+    "instructions": 12445557,
+    "share": 0.0012179375595411292
+  },
+  {
+    "symbol_index": 816,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::spine_type_with_value",
+    "instructions": 12392828,
+    "share": 0.001212777434560219
+  },
+  {
+    "symbol_index": 959,
+    "name": "<hashbrown::map::HashMap<sokonanoda::term::id::ExprId, bool, rustc_hash::FxBuildHasher>>::insert",
+    "instructions": 12147212,
+    "share": 0.0011887411498343321
+  },
+  {
+    "symbol_index": 762,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::whnf_head_uncached",
+    "instructions": 12020099,
+    "share": 0.0011763017148611965
+  },
+  {
+    "symbol_index": 782,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::iota_value",
+    "instructions": 11883546,
+    "share": 0.0011629384698438768
+  },
+  {
+    "symbol_index": 780,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::store_lookup",
+    "instructions": 11631681,
+    "share": 0.0011382906502698852
+  },
+  {
+    "symbol_index": 938,
+    "name": "<sokonanoda::term::intern::Interner<sokonanoda::term::name::Name>>::insert_unique",
+    "instructions": 11547831,
+    "share": 0.001130084985841405
+  },
+  {
+    "symbol_index": 892,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::fire_saturated",
+    "instructions": 11457426,
+    "share": 0.0011212378410273708
+  },
+  {
+    "symbol_index": 761,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::do_proj",
+    "instructions": 11284153,
+    "share": 0.0011042811315161477
+  },
+  {
+    "symbol_index": 1812,
+    "name": "mi_free",
+    "instructions": 10897088,
+    "share": 0.0010664024731737538
+  },
+  {
+    "symbol_index": 854,
+    "name": "<indexmap::map::IndexMap<sokonanoda::term::id::NameId, sokonanoda::checker::env::Declar, rustc_hash::FxBuildHasher>>::get::<sokonanoda::term::id::NameId>",
+    "instructions": 10828724,
+    "share": 0.0010597122878071633
+  },
+  {
+    "symbol_index": 899,
+    "name": "<sokonanoda::checker::context::TcCtx>::has_loose_bvar",
+    "instructions": 10675159,
+    "share": 0.0010446842274856418
+  },
+  {
+    "symbol_index": 940,
+    "name": "<sokonanoda::checker::context::TcCtx>::find_const_aux::<<sokonanoda::checker::context::ExportFile>::check_inductive_declar::{closure#7}::{closure#1}::{closure#0}::{closure#0}>",
+    "instructions": 10403369,
+    "share": 0.0010180865228342803
+  },
+  {
+    "symbol_index": 872,
+    "name": "<sokonanoda::checker::context::TcCtx>::subst_level",
+    "instructions": 10020833,
+    "share": 0.0009806510780183814
+  },
+  {
+    "symbol_index": 779,
+    "name": "<sokonanoda::term::intern::Interner<alloc::boxed::Box<[sokonanoda::term::id::LevelId]>>>::find::<[sokonanoda::term::id::LevelId]>",
+    "instructions": 9805559,
+    "share": 0.0009595840988391725
+  },
+  {
+    "symbol_index": 792,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::spine_key",
+    "instructions": 9678765,
+    "share": 0.0009471758815995217
+  },
+  {
+    "symbol_index": 852,
+    "name": "<sokonanoda::checker::value::Vals>::env_lookup",
+    "instructions": 8975803,
+    "share": 0.0008783831531800422
+  },
+  {
+    "symbol_index": 939,
+    "name": "<sokonanoda::checker::context::TcCtx>::lift",
+    "instructions": 8742691,
+    "share": 0.0008555705253177656
+  },
+  {
+    "symbol_index": 955,
+    "name": "<sokonanoda::checker::context::TcCtx>::rebuild_expr",
+    "instructions": 8635868,
+    "share": 0.0008451166947722254
+  },
+  {
+    "symbol_index": 860,
+    "name": "<sokonanoda::checker::context::TcCtx>::eq_antisymm_many",
+    "instructions": 8488646,
+    "share": 0.000830709368254757
+  },
+  {
+    "symbol_index": 926,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::replace_all_nested",
+    "instructions": 8094288,
+    "share": 0.0007921170079364907
+  },
+  {
+    "symbol_index": 943,
+    "name": "<sokonanoda::term::intern::Interner<sokonanoda::term::name::Name>>::find::<sokonanoda::term::name::Name>",
+    "instructions": 7921930,
+    "share": 0.0007752498414539147
+  },
+  {
+    "symbol_index": 391,
+    "name": "core::str::converts::from_utf8",
+    "instructions": 7644401,
+    "share": 0.0007480905111835306
+  },
+  {
+    "symbol_index": 1842,
+    "name": "mi_theap_malloc_aligned",
+    "instructions": 7570378,
+    "share": 0.0007408465290965969
+  },
+  {
+    "symbol_index": 942,
+    "name": "<sokonanoda::term::intern::Interner<alloc::boxed::Box<str>>>::find::<str>",
+    "instructions": 7555955,
+    "share": 0.0007394350765259115
+  },
+  {
+    "symbol_index": 1198,
+    "name": "<sokonanoda::frontend::parser::Cur>::u32_array",
+    "instructions": 7292581,
+    "share": 0.0007136609720156365
+  },
+  {
+    "symbol_index": 1046,
+    "name": "<&mut serde_json::de::Deserializer<serde_json::read::StrRead> as serde_core::de::Deserializer>::deserialize_any::<serde::private::de::content::ContentVisitor>",
+    "instructions": 7098761,
+    "share": 0.00069469350773981
+  },
+  {
+    "symbol_index": 923,
+    "name": "sokonanoda::checker::inductive::positivity::check_uniform_inductive_occurrences_at",
+    "instructions": 6815392,
+    "share": 0.0006669626678658204
+  },
+  {
+    "symbol_index": 697,
+    "name": "<alloc::raw_vec::RawVecInner>::finish_grow",
+    "instructions": 6741516,
+    "share": 0.0006597330713802102
+  },
+  {
+    "symbol_index": 783,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::note_whnf",
+    "instructions": 6555335,
+    "share": 0.0006415131690670452
+  },
+  {
+    "symbol_index": 913,
+    "name": "<indexmap::map::IndexMap<sokonanoda::term::id::NameId, sokonanoda::checker::env::Declar, rustc_hash::FxBuildHasher>>::insert_full",
+    "instructions": 6125694,
+    "share": 0.0005994679708474067
+  },
+  {
+    "symbol_index": 1836,
+    "name": "_mi_malloc_generic",
+    "instructions": 6089232,
+    "share": 0.0005958997545517449
+  },
+  {
+    "symbol_index": 1837,
+    "name": "_mi_page_malloc_zero",
+    "instructions": 5950773,
+    "share": 0.0005823499860233852
+  },
+  {
+    "symbol_index": 861,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::head_spine_sig",
+    "instructions": 5925627,
+    "share": 0.0005798891674459426
+  },
+  {
+    "symbol_index": 901,
+    "name": "<sokonanoda::checker::ptrmap::PtrMap<(sokonanoda::checker::value::EnvId, sokonanoda::term::id::ExprId), sokonanoda::checker::infer::CachedType>>::grow",
+    "instructions": 5896624,
+    "share": 0.0005770508980909132
+  },
+  {
+    "symbol_index": 1066,
+    "name": "<sokonanoda::frontend::parser::Parser>::push_name",
+    "instructions": 5832320,
+    "share": 0.0005707580293323086
+  },
+  {
+    "symbol_index": 751,
+    "name": "<sokonanoda::checker::ptrmap::PtrMap<(sokonanoda::checker::value::VId, sokonanoda::checker::value::VId), ()>>::grow",
+    "instructions": 4823265,
+    "share": 0.00047201066236891967
+  },
+  {
+    "symbol_index": 742,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::check_declar_info_v",
+    "instructions": 4374771,
+    "share": 0.00042812048631421686
+  },
+  {
+    "symbol_index": 869,
+    "name": "<sokonanoda::checker::context::TcCtx>::leq",
+    "instructions": 4155921,
+    "share": 0.0004067035553640331
+  },
+  {
+    "symbol_index": 1841,
+    "name": "mi_theap_malloc_zero_aligned_at_generic",
+    "instructions": 3839051,
+    "share": 0.00037569426630675766
+  },
+  {
+    "symbol_index": 1818,
+    "name": "_mi_theap_realloc_zero",
+    "instructions": 3794547,
+    "share": 0.00037133904997133625
+  },
+  {
+    "symbol_index": 750,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::unify_cold::<true>",
+    "instructions": 3779051,
+    "share": 0.00036982259229711165
+  },
+  {
+    "symbol_index": 629,
+    "name": "<serde_json::read::StrRead as serde_json::read::Read>::parse_str",
+    "instructions": 3769527,
+    "share": 0.00036889056190931387
+  },
+  {
+    "symbol_index": 858,
+    "name": "<sokonanoda::checker::ptrmap::PtrMap<(u64, u64, u64), sokonanoda::checker::value::VId>>::grow",
+    "instructions": 3503203,
+    "share": 0.0003428277667602312
+  },
+  {
+    "symbol_index": 713,
+    "name": "<sokonanoda::checker::context::ExportFile>::check_declar_with",
+    "instructions": 3367124,
+    "share": 0.00032951090796758754
+  },
+  {
+    "symbol_index": 790,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::quote_rigid_head",
+    "instructions": 3276536,
+    "share": 0.00032064585454782404
+  },
+  {
+    "symbol_index": 937,
+    "name": "<sokonanoda::term::intern::Interner<alloc::boxed::Box<str>>>::intern_ref::<str>",
+    "instructions": 3186352,
+    "share": 0.00031182033706639214
+  },
+  {
+    "symbol_index": 876,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::level_of_type",
+    "instructions": 3169134,
+    "share": 0.0003101353623480907
+  },
+  {
+    "symbol_index": 890,
+    "name": "<smallvec::SmallVec<[sokonanoda::checker::value::VId; 16]>>::with_capacity",
+    "instructions": 3071803,
+    "share": 0.0003006104306308765
+  },
+  {
+    "symbol_index": 807,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::try_k_reduce",
+    "instructions": 3050749,
+    "share": 0.0002985500602208917
+  },
+  {
+    "symbol_index": 878,
+    "name": "<sokonanoda::checker::context::TcCtx>::is_zero_under",
+    "instructions": 3022726,
+    "share": 0.0002958076948746866
+  },
+  {
+    "symbol_index": 774,
+    "name": "<sokonanoda::term::intern::Interner<num_bigint::biguint::BigUint>>::find::<num_bigint::biguint::BigUint>",
+    "instructions": 2919025,
+    "share": 0.0002856593871001149
+  },
+  {
+    "symbol_index": 1560,
+    "name": "mi_bin",
+    "instructions": 2802289,
+    "share": 0.0002742354581469477
+  },
+  {
+    "symbol_index": 907,
+    "name": "std::sys::backtrace::__rust_begin_short_backtrace::<<sokonanoda::checker::context::ExportFile>::check_inductives::{closure#0}::{closure#0}, ()>",
+    "instructions": 2785592,
+    "share": 0.00027260146913129666
+  },
+  {
+    "symbol_index": 973,
+    "name": "<sokonanoda::checker::context::TcCtx>::find_const_aux::<<sokonanoda::checker::tc::TypeChecker>::is_nested_ind_app::{closure#0}::{closure#0}>",
+    "instructions": 2695559,
+    "share": 0.0002637907286961224
+  },
+  {
+    "symbol_index": 808,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::value_type_uncached",
+    "instructions": 2670728,
+    "share": 0.00026136073640723037
+  },
+  {
+    "symbol_index": 642,
+    "name": "<hashbrown::raw::RawTable<usize>>::reserve_rehash::<indexmap::inner::get_hash<sokonanoda::term::id::NameId, sokonanoda::checker::env::Declar>::{closure#0}>",
+    "instructions": 2595484,
+    "share": 0.00025399726575420033
+  },
+  {
+    "symbol_index": 1843,
+    "name": "mi_malloc_aligned",
+    "instructions": 2583119,
+    "share": 0.0002527872116020458
+  },
+  {
+    "symbol_index": 821,
+    "name": "<sokonanoda::checker::context::TcCtx>::is_always_zero",
+    "instructions": 2582584,
+    "share": 0.00025273485584212645
+  },
+  {
+    "symbol_index": 971,
+    "name": "<sokonanoda::checker::context::TcCtx>::find_const_aux::<sokonanoda::checker::inductive::positivity::has_ind_occ::{closure#0}>",
+    "instructions": 2534788,
+    "share": 0.00024805748032604244
+  },
+  {
+    "symbol_index": 801,
+    "name": "<sokonanoda::checker::value::Vals>::env_slots_key",
+    "instructions": 2529650,
+    "share": 0.0002475546693083498
+  },
+  {
+    "symbol_index": 951,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::restore_replace",
+    "instructions": 2517738,
+    "share": 0.00024638894629496806
+  },
+  {
+    "symbol_index": 921,
+    "name": "<sokonanoda::checker::context::ExportFile>::check_inductive_declar",
+    "instructions": 2492219,
+    "share": 0.00024389162547743212
+  },
+  {
+    "symbol_index": 929,
+    "name": "<alloc::raw_vec::RawVec<sokonanoda::term::id::ExprId>>::grow_one",
+    "instructions": 2469168,
+    "share": 0.0002416358261841596
+  },
+  {
+    "symbol_index": 818,
+    "name": "<sokonanoda::term::intern::Interner<sokonanoda::term::level::Level>>::insert_unique",
+    "instructions": 2442978,
+    "share": 0.00023907284047894914
+  },
+  {
+    "symbol_index": 934,
+    "name": "<sokonanoda::checker::context::ExportFile>::check_inductive_declar::{closure#7}",
+    "instructions": 2421486,
+    "share": 0.00023696960684869395
+  },
+  {
+    "symbol_index": 933,
+    "name": "<sokonanoda::checker::context::ExportFile>::check_inductive_declar::{closure#6}",
+    "instructions": 2360614,
+    "share": 0.0002310125978434411
+  },
+  {
+    "symbol_index": 1071,
+    "name": "<sokonanoda::frontend::parser::Parser>::get_levels",
+    "instructions": 2288687,
+    "share": 0.00022397373290191099
+  },
+  {
+    "symbol_index": 1737,
+    "name": "mi_page_map_set_range_prim",
+    "instructions": 2190853,
+    "share": 0.00021439957698424922
+  },
+  {
+    "symbol_index": 768,
+    "name": "<sokonanoda::term::intern::Interner<alloc::boxed::Box<[sokonanoda::term::id::LevelId]>>>::intern_ref::<[sokonanoda::term::id::LevelId]>",
+    "instructions": 2157184,
+    "share": 0.00021110468711373637
+  },
+  {
+    "symbol_index": 932,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::value_has_ind_occ",
+    "instructions": 2108886,
+    "share": 0.00020637818525843832
+  },
+  {
+    "symbol_index": 1064,
+    "name": "<sokonanoda::frontend::parser::Parser>::add_declar",
+    "instructions": 2072973,
+    "share": 0.00020286369477996472
+  },
+  {
+    "symbol_index": 880,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::const_result_level",
+    "instructions": 2027002,
+    "share": 0.00019836491601500744
+  },
+  {
+    "symbol_index": 648,
+    "name": "<hashbrown::raw::RawTable<u32>>::reserve_rehash::<<sokonanoda::term::intern::Interner<sokonanoda::term::level::Level>>::insert_unique::{closure#0}>",
+    "instructions": 1983835,
+    "share": 0.00019414054014876763
+  },
+  {
+    "symbol_index": 1840,
+    "name": "mi_theap_malloc_zero_aligned_at_overalloc",
+    "instructions": 1957120,
+    "share": 0.00019152617729597277
+  },
+  {
+    "symbol_index": 832,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::value_to_bignum_at",
+    "instructions": 1948630,
+    "share": 0.00019069533542360786
+  },
+  {
+    "symbol_index": 763,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::whnf_head",
+    "instructions": 1905102,
+    "share": 0.00018643563165207669
+  },
+  {
+    "symbol_index": 889,
+    "name": "<sokonanoda::checker::context::TcCtx>::unfold_apps_rev",
+    "instructions": 1894457,
+    "share": 0.000185393898821532
+  },
+  {
+    "symbol_index": 904,
+    "name": "std::sys::backtrace::__rust_begin_short_backtrace::<<sokonanoda::checker::context::ExportFile>::check_all_declars_serial::{closure#0}::{closure#0}, ()>",
+    "instructions": 1885690,
+    "share": 0.00018453594938748922
+  },
+  {
+    "symbol_index": 793,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::closure_key",
+    "instructions": 1857327,
+    "share": 0.00018176031122189604
+  },
+  {
+    "symbol_index": 982,
+    "name": "<sokonanoda::checker::ptrmap::PtrMap<(sokonanoda::term::id::ExprId, sokonanoda::term::id::LevelsId, sokonanoda::term::id::LevelsId), sokonanoda::term::id::ExprId>>::grow",
+    "instructions": 1854498,
+    "share": 0.00018148346179234123
+  },
+  {
+    "symbol_index": 1063,
+    "name": "<sokonanoda::frontend::parser::Parser>::get_uparams",
+    "instructions": 1836258,
+    "share": 0.00017969847289340887
+  },
+  {
+    "symbol_index": 637,
+    "name": "<hashbrown::raw::RawTable<(sokonanoda::term::id::ExprId, ())>>::reserve_rehash::<hashbrown::map::make_hasher<sokonanoda::term::id::ExprId, (), rustc_hash::FxBuildHasher>::{closure#0}>",
+    "instructions": 1788165,
+    "share": 0.00017499203259097713
+  },
+  {
+    "symbol_index": 867,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::unfold_pair",
+    "instructions": 1750541,
+    "share": 0.0001713101015419951
+  },
+  {
+    "symbol_index": 1185,
+    "name": "<serde_json::de::Deserializer<serde_json::read::StrRead>>::parse_integer",
+    "instructions": 1736577,
+    "share": 0.0001699435672774835
+  },
+  {
+    "symbol_index": 1846,
+    "name": "mi_realloc_aligned",
+    "instructions": 1645644,
+    "share": 0.0001610447517321645
+  },
+  {
+    "symbol_index": 802,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::k_pre_reduce",
+    "instructions": 1586320,
+    "share": 0.00015523923191636051
+  },
+  {
+    "symbol_index": 882,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::value_nat_pred",
+    "instructions": 1579956,
+    "share": 0.00015461644302640408
+  },
+  {
+    "symbol_index": 756,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::value_type_opt",
+    "instructions": 1579546,
+    "share": 0.0001545763199206715
+  },
+  {
+    "symbol_index": 936,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::sep_nonrec_rec_ctor_args",
+    "instructions": 1540824,
+    "share": 0.00015078693723731296
+  },
+  {
+    "symbol_index": 1199,
+    "name": "<sokonanoda::frontend::parser::Cur>::skip_u32_array",
+    "instructions": 1530972,
+    "share": 0.0001498228083649291
+  },
+  {
+    "symbol_index": 1048,
+    "name": "core::ptr::drop_glue::<serde_core::private::content::Content>",
+    "instructions": 1510067,
+    "share": 0.00014777701927873492
+  },
+  {
+    "symbol_index": 1195,
+    "name": "<sokonanoda::term::intern::Interner<sokonanoda::term::expr::ExprNode>>::push",
+    "instructions": 1490478,
+    "share": 0.000145860015575819
+  },
+  {
+    "symbol_index": 766,
+    "name": "<sokonanoda::checker::value::Vals>::snoc",
+    "instructions": 1485548,
+    "share": 0.0001453775596946931
+  },
+  {
+    "symbol_index": 757,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::force_reducible",
+    "instructions": 1485079,
+    "share": 0.00014533166277618437
+  },
+  {
+    "symbol_index": 1044,
+    "name": "<serde_json::de::MapAccess<_> as serde_core::de::MapAccess>::next_key_seed::has_next_key::<serde_json::read::StrRead>",
+    "instructions": 1452456,
+    "share": 0.00014213913575590633
+  },
+  {
+    "symbol_index": 1588,
+    "name": "mi_bitmap_setN",
+    "instructions": 1428686,
+    "share": 0.0001398129742357516
+  },
+  {
+    "symbol_index": 1844,
+    "name": "mi_zalloc_aligned",
+    "instructions": 1413695,
+    "share": 0.00013834593648444154
+  },
+  {
+    "symbol_index": 931,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::which_valid_ind_app_v",
+    "instructions": 1370010,
+    "share": 0.0001340708684992518
+  },
+  {
+    "symbol_index": 906,
+    "name": "<sokonanoda::checker::cache::TcCache>::new_small",
+    "instructions": 1239700,
+    "share": 0.00012131857116263563
+  },
+  {
+    "symbol_index": 870,
+    "name": "<sokonanoda::checker::context::TcCtx>::leq_core",
+    "instructions": 1209773,
+    "share": 0.00011838987802785769
+  },
+  {
+    "symbol_index": 1041,
+    "name": "<sokonanoda::frontend::parser::Parser>::go1_general",
+    "instructions": 1100242,
+    "share": 0.00010767103926201544
+  },
+  {
+    "symbol_index": 849,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::bignum_via_force",
+    "instructions": 1098890,
+    "share": 0.00010753873087433142
+  },
+  {
+    "symbol_index": 905,
+    "name": "std::sys::backtrace::__rust_begin_short_backtrace::<<sokonanoda::checker::context::ExportFile>::check_imported_blocks::{closure#0}::{closure#0}, ()>",
+    "instructions": 1065832,
+    "share": 0.00010430363421748347
+  },
+  {
+    "symbol_index": 922,
+    "name": "<sokonanoda::checker::cache::TcCache>::clear",
+    "instructions": 1058684,
+    "share": 0.00010360412212046763
+  },
+  {
+    "symbol_index": 1691,
+    "name": "mi_option_get",
+    "instructions": 1057836,
+    "share": 0.00010352113579446465
+  },
+  {
+    "symbol_index": 829,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::do_nat_red_at",
+    "instructions": 1055658,
+    "share": 0.0001033079940279145
+  },
+  {
+    "symbol_index": 820,
+    "name": "<sokonanoda::checker::context::TcCtx>::combining",
+    "instructions": 1043724,
+    "share": 0.0001021401180673959
+  },
+  {
+    "symbol_index": 1861,
+    "name": "__popcountdi2",
+    "instructions": 1030077,
+    "share": 0.00010080460581390193
+  },
+  {
+    "symbol_index": 1140,
+    "name": "<core::marker::PhantomData<alloc::vec::Vec<sokonanoda::frontend::parser::ImportedRecursor>> as serde_core::de::DeserializeSeed>::deserialize::<serde::private::de::content::ContentDeserializer<serde_json::error::Error>>",
+    "instructions": 952225,
+    "share": 9.318591306391925e-05
+  },
+  {
+    "symbol_index": 1138,
+    "name": "<core::marker::PhantomData<alloc::vec::Vec<sokonanoda::frontend::parser::IndInfo>> as serde_core::de::DeserializeSeed>::deserialize::<serde::private::de::content::ContentDeserializer<serde_json::error::Error>>",
+    "instructions": 921140,
+    "share": 9.014389662075516e-05
+  },
+  {
+    "symbol_index": 1450,
+    "name": "<std::sys::pal::unix::time::Timespec>::sub_timespec",
+    "instructions": 904752,
+    "share": 8.854014672625386e-05
+  },
+  {
+    "symbol_index": 1838,
+    "name": "_mi_theap_malloc_zero",
+    "instructions": 871337,
+    "share": 8.527011360904851e-05
+  },
+  {
+    "symbol_index": 1839,
+    "name": "mi_theap_umalloc",
+    "instructions": 869221,
+    "share": 8.506303923897499e-05
+  },
+  {
+    "symbol_index": 1187,
+    "name": "<serde_json::de::Deserializer<serde_json::read::StrRead>>::parse_number",
+    "instructions": 840999,
+    "share": 8.230119950730451e-05
+  },
+  {
+    "symbol_index": 1040,
+    "name": "<sokonanoda::frontend::parser::Parser>::slow_line",
+    "instructions": 839328,
+    "share": 8.213767338613586e-05
+  },
+  {
+    "symbol_index": 1139,
+    "name": "<core::marker::PhantomData<alloc::vec::Vec<sokonanoda::frontend::parser::Constructor>> as serde_core::de::DeserializeSeed>::deserialize::<serde::private::de::content::ContentDeserializer<serde_json::error::Error>>",
+    "instructions": 836773,
+    "share": 8.188763793455845e-05
+  },
+  {
+    "symbol_index": 863,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::unfold_value_for_conv",
+    "instructions": 816486,
+    "share": 7.990232709066363e-05
+  },
+  {
+    "symbol_index": 1643,
+    "name": "mi_good_size",
+    "instructions": 798748,
+    "share": 7.81664645309453e-05
+  },
+  {
+    "symbol_index": 1776,
+    "name": "_mi_page_retire",
+    "instructions": 788963,
+    "share": 7.720889236120553e-05
+  },
+  {
+    "symbol_index": 1830,
+    "name": "mi_arenas_page_alloc_fresh",
+    "instructions": 763290,
+    "share": 7.46965009137115e-05
+  },
+  {
+    "symbol_index": 881,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::value_is_nat_zero",
+    "instructions": 754506,
+    "share": 7.383688783869933e-05
+  },
+  {
+    "symbol_index": 1201,
+    "name": "<sokonanoda::frontend::parser::Parser>::do_thm",
+    "instructions": 716625,
+    "share": 7.012980645270933e-05
+  },
+  {
+    "symbol_index": 1200,
+    "name": "<sokonanoda::frontend::parser::Cur>::hint",
+    "instructions": 704093,
+    "share": 6.890340947456127e-05
+  },
+  {
+    "symbol_index": 715,
+    "name": "<sokonanoda::report::Reporter>::record",
+    "instructions": 703668,
+    "share": 6.886181845032627e-05
+  },
+  {
+    "symbol_index": 773,
+    "name": "<sokonanoda::checker::context::TcCtx>::alloc_bignum",
+    "instructions": 702550,
+    "share": 6.875240959127987e-05
+  },
+  {
+    "symbol_index": 1655,
+    "name": "mi_bbitmap_try_find_and_clearNX",
+    "instructions": 691201,
+    "share": 6.764178245235533e-05
+  },
+  {
+    "symbol_index": 879,
+    "name": "<sokonanoda::checker::ptrmap::PtrMap<(sokonanoda::term::id::NameId, sokonanoda::term::id::LevelsId), sokonanoda::checker::relevance::Sig>>::grow",
+    "instructions": 684983,
+    "share": 6.703328130248901e-05
+  },
+  {
+    "symbol_index": 1562,
+    "name": "mi_bchunk_xsetNC",
+    "instructions": 659605,
+    "share": 6.454975891887575e-05
+  },
+  {
+    "symbol_index": 1127,
+    "name": "<core::marker::PhantomData<alloc::vec::Vec<u32>> as serde_core::de::DeserializeSeed>::deserialize::<serde::private::de::content::ContentDeserializer<serde_json::error::Error>>",
+    "instructions": 631390,
+    "share": 6.178860421583973e-05
+  },
+  {
+    "symbol_index": 794,
+    "name": "<sokonanoda::checker::ptrmap::PtrMap<(sokonanoda::checker::value::VId, u32), core::result::Result<(u128, bool), u8>>>::grow",
+    "instructions": 607051,
+    "share": 5.940675965382683e-05
+  },
+  {
+    "symbol_index": 1197,
+    "name": "<sokonanoda::frontend::parser::Parser>::intern_str",
+    "instructions": 586985,
+    "share": 5.744307614253422e-05
+  },
+  {
+    "symbol_index": 897,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::lit_inductive_type",
+    "instructions": 546300,
+    "share": 5.346159185782677e-05
+  },
+  {
+    "symbol_index": 1568,
+    "name": "mi_bchunk_try_find_and_clearNC",
+    "instructions": 512251,
+    "share": 5.012951471858616e-05
+  },
+  {
+    "symbol_index": 888,
+    "name": "<smallvec::SmallVec<[sokonanoda::term::id::ExprId; 16]>>::reserve_one_unchecked",
+    "instructions": 507568,
+    "share": 4.967123056213329e-05
+  },
+  {
+    "symbol_index": 850,
+    "name": "<num_bigint::biguint::BigUint as core::ops::arith::Add<u64>>::add",
+    "instructions": 483560,
+    "share": 4.732177806840694e-05
+  },
+  {
+    "symbol_index": 862,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::unify_iota::<true>",
+    "instructions": 478974,
+    "share": 4.6872986451602994e-05
+  },
+  {
+    "symbol_index": 947,
+    "name": "<indexmap::map::IndexMap<sokonanoda::term::id::NameId, sokonanoda::term::id::NameId, rustc_hash::FxBuildHasher>>::get::<sokonanoda::term::id::NameId>",
+    "instructions": 478793,
+    "share": 4.6855273568340566e-05
+  },
+  {
+    "symbol_index": 778,
+    "name": "<alloc::raw_vec::RawVec<sokonanoda::term::expr::ExprNode>>::grow_one",
+    "instructions": 474408,
+    "share": 4.642615205946894e-05
+  },
+  {
+    "symbol_index": 1657,
+    "name": "mi_bbitmap_setN",
+    "instructions": 471720,
+    "share": 4.6163101063836795e-05
+  },
+  {
+    "symbol_index": 1660,
+    "name": "mi_bbitmap_try_find_and_clearNC",
+    "instructions": 471352,
+    "share": 4.612708812991097e-05
+  },
+  {
+    "symbol_index": 1642,
+    "name": "_mi_bin_size",
+    "instructions": 468685,
+    "share": 4.5866092220182206e-05
+  },
+  {
+    "symbol_index": 1069,
+    "name": "<alloc::raw_vec::RawVec<core::option::Option<sokonanoda::term::id::ExprId>>>::grow_one",
+    "instructions": 451896,
+    "share": 4.422309997104976e-05
+  },
+  {
+    "symbol_index": 789,
+    "name": "<sokonanoda::checker::ptrmap::PtrMap<u64, (u128, sokonanoda::term::id::ExprId, sokonanoda::term::id::ExprId)>>::insert",
+    "instructions": 448669,
+    "share": 4.39073017705643e-05
+  },
+  {
+    "symbol_index": 1569,
+    "name": "mi_bchunk_try_find_and_clearNX",
+    "instructions": 445636,
+    "share": 4.36104886493767e-05
+  },
+  {
+    "symbol_index": 1706,
+    "name": "mi_arena_try_alloc_at",
+    "instructions": 435226,
+    "share": 4.259175320870312e-05
+  },
+  {
+    "symbol_index": 1146,
+    "name": "<core::marker::PhantomData<alloc::vec::Vec<sokonanoda::frontend::parser::ImportedRule>> as serde_core::de::DeserializeSeed>::deserialize::<serde::private::de::content::ContentDeserializer<serde_json::error::Error>>",
+    "instructions": 430904,
+    "share": 4.216879695754161e-05
+  },
+  {
+    "symbol_index": 643,
+    "name": "<hashbrown::raw::RawTable<u32>>::reserve_rehash::<<sokonanoda::term::intern::Interner<alloc::boxed::Box<[sokonanoda::term::id::LevelId]>>>::insert_unique::{closure#0}>",
+    "instructions": 426137,
+    "share": 4.1702292457475244e-05
+  },
+  {
+    "symbol_index": 1054,
+    "name": "<core::marker::PhantomData<u32> as serde_core::de::DeserializeSeed>::deserialize::<serde::private::de::content::ContentDeserializer<serde_json::error::Error>>",
+    "instructions": 406775,
+    "share": 3.980750325456248e-05
+  },
+  {
+    "symbol_index": 1070,
+    "name": "<sokonanoda::frontend::parser::Parser>::do_let",
+    "instructions": 396140,
+    "share": 3.8766749036352726e-05
+  },
+  {
+    "symbol_index": 1761,
+    "name": "_mi_arenas_collect",
+    "instructions": 378861,
+    "share": 3.707580478280818e-05
+  },
+  {
+    "symbol_index": 710,
+    "name": "<sokonanoda::checker::context::TcCtx>::new",
+    "instructions": 378000,
+    "share": 3.699154626076976e-05
+  },
+  {
+    "symbol_index": 1047,
+    "name": "<<sokonanoda::frontend::parser::ExportJsonVal as serde_core::de::Deserialize>::deserialize::__Visitor as serde_core::de::Visitor>::visit_enum::<serde::private::de::content::EnumDeserializer<serde_json::error::Error>>",
+    "instructions": 368428,
+    "share": 3.605481853376423e-05
+  },
+  {
+    "symbol_index": 877,
+    "name": "<sokonanoda::checker::ptrmap::PtrMap<sokonanoda::term::id::NameId, sokonanoda::checker::relevance::SigTemplate>>::grow",
+    "instructions": 365092,
+    "share": 3.5728353458827915e-05
+  },
+  {
+    "symbol_index": 963,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::mk_pis_dep",
+    "instructions": 364237,
+    "share": 3.564468210419046e-05
+  },
+  {
+    "symbol_index": 1707,
+    "name": "mi_arenas_try_find_free",
+    "instructions": 359826,
+    "share": 3.521301620324798e-05
+  },
+  {
+    "symbol_index": 1714,
+    "name": "_mi_page_free_collect",
+    "instructions": 357634,
+    "share": 3.4998504379428915e-05
+  },
+  {
+    "symbol_index": 1589,
+    "name": "mi_bitmap_clearN",
+    "instructions": 349737,
+    "share": 3.422569421852601e-05
+  },
+  {
+    "symbol_index": 966,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::mk_lambdas_flat",
+    "instructions": 339350,
+    "share": 3.3209209586222794e-05
+  },
+  {
+    "symbol_index": 730,
+    "name": "<sokonanoda::checker::value::Vals>::new",
+    "instructions": 336680,
+    "share": 3.294792009279355e-05
+  },
+  {
+    "symbol_index": 1078,
+    "name": "<sokonanoda::frontend::parser::Parser>::do_def",
+    "instructions": 331939,
+    "share": 3.248395998479802e-05
+  },
+  {
+    "symbol_index": 1590,
+    "name": "mi_bitmap_popcountN",
+    "instructions": 330085,
+    "share": 3.2302525257899956e-05
+  },
+  {
+    "symbol_index": 1758,
+    "name": "_mi_arenas_free",
+    "instructions": 320578,
+    "share": 3.1372158511071555e-05
+  },
+  {
+    "symbol_index": 1049,
+    "name": "<alloc::raw_vec::RawVec<core::option::Option<(serde_core::private::content::Content, serde_core::private::content::Content)>>>::grow_one",
+    "instructions": 320232,
+    "share": 3.1338298524282595e-05
+  },
+  {
+    "symbol_index": 402,
+    "name": "<core::str::pattern::StrSearcher>::new",
+    "instructions": 318600,
+    "share": 3.117858899122022e-05
+  },
+  {
+    "symbol_index": 1774,
+    "name": "_mi_arenas_page_free",
+    "instructions": 304386,
+    "share": 2.9787589418335087e-05
+  },
+  {
+    "symbol_index": 712,
+    "name": "core::ptr::drop_glue::<sokonanoda::checker::cache::TcCache>",
+    "instructions": 303012,
+    "share": 2.9653128083514195e-05
+  },
+  {
+    "symbol_index": 620,
+    "name": "serde_json::error::make_error",
+    "instructions": 300600,
+    "share": 2.9417086788326424e-05
+  },
+  {
+    "symbol_index": 732,
+    "name": "<alloc::raw_vec::RawVec<sokonanoda::checker::value::VNode>>::grow_one",
+    "instructions": 292464,
+    "share": 2.862088779261843e-05
+  },
+  {
+    "symbol_index": 1781,
+    "name": "_mi_page_init",
+    "instructions": 292325,
+    "share": 2.8607285081162746e-05
+  },
+  {
+    "symbol_index": 868,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::envs_ptr_equal",
+    "instructions": 289051,
+    "share": 2.8286887402703064e-05
+  },
+  {
+    "symbol_index": 957,
+    "name": "<sokonanoda::checker::context::TcCtx>::inst_aux::<true>",
+    "instructions": 282771,
+    "share": 2.7672318856360117e-05
+  },
+  {
+    "symbol_index": 1557,
+    "name": "mi_page_free_list_extend",
+    "instructions": 269549,
+    "share": 2.637839762710113e-05
+  },
+  {
+    "symbol_index": 1810,
+    "name": "mi_free_try_collect_mt",
+    "instructions": 269391,
+    "share": 2.6362935552209063e-05
+  },
+  {
+    "symbol_index": 1129,
+    "name": "<core::marker::PhantomData<u16> as serde_core::de::DeserializeSeed>::deserialize::<serde::private::de::content::ContentDeserializer<serde_json::error::Error>>",
+    "instructions": 259824,
+    "share": 2.542669713137101e-05
+  },
+  {
+    "symbol_index": 1144,
+    "name": "<<sokonanoda::frontend::parser::ImportedRecursor as serde_core::de::Deserialize>::deserialize::__FieldVisitor as serde_core::de::Visitor>::visit_str::<serde_json::error::Error>",
+    "instructions": 255930,
+    "share": 2.5045625488144984e-05
+  },
+  {
+    "symbol_index": 925,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::get_local_params",
+    "instructions": 255731,
+    "share": 2.502615110267966e-05
+  },
+  {
+    "symbol_index": 24,
+    "name": "core::ptr::drop_glue::<sokonanoda::checker::context::ExportFile>",
+    "instructions": 254389,
+    "share": 2.4894821327330575e-05
+  },
+  {
+    "symbol_index": 965,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::mk_lambdas_dep",
+    "instructions": 254284,
+    "share": 2.4884545897813696e-05
+  },
+  {
+    "symbol_index": 1156,
+    "name": "<<sokonanoda::frontend::parser::IndInfo as serde_core::de::Deserialize>::deserialize::__FieldVisitor as serde_core::de::Visitor>::visit_str::<serde_json::error::Error>",
+    "instructions": 251141,
+    "share": 2.457696804094174e-05
+  },
+  {
+    "symbol_index": 846,
+    "name": "sokonanoda::checker::nat::nat_gcd",
+    "instructions": 244429,
+    "share": 2.392012344172934e-05
+  },
+  {
+    "symbol_index": 1652,
+    "name": "__mi_stat_increase",
+    "instructions": 244132,
+    "share": 2.3891058655381593e-05
+  },
+  {
+    "symbol_index": 962,
+    "name": "<sokonanoda::checker::context::TcCtx>::foldl_apps::<alloc::vec::into_iter::IntoIter<sokonanoda::term::id::ExprId>>",
+    "instructions": 240587,
+    "share": 2.354414058264501e-05
+  },
+  {
+    "symbol_index": 1834,
+    "name": "mi_page_fresh_alloc",
+    "instructions": 239469,
+    "share": 2.3434731723598606e-05
+  },
+  {
+    "symbol_index": 1150,
+    "name": "<<sokonanoda::frontend::parser::Constructor as serde_core::de::Deserialize>::deserialize::__FieldVisitor as serde_core::de::Visitor>::visit_str::<serde_json::error::Error>",
+    "instructions": 232638,
+    "share": 2.276624163760041e-05
+  },
+  {
+    "symbol_index": 822,
+    "name": "<sokonanoda::checker::context::TcCtx>::is_always_one",
+    "instructions": 229321,
+    "share": 2.244163592610048e-05
+  },
+  {
+    "symbol_index": 917,
+    "name": "<sokonanoda::checker::inductive::persist::Promoter>::name",
+    "instructions": 225486,
+    "share": 2.2066338095650606e-05
+  },
+  {
+    "symbol_index": 990,
+    "name": "core::ptr::drop_glue::<indexmap::Bucket<sokonanoda::term::id::NameId, sokonanoda::checker::env::Declar>>",
+    "instructions": 224019,
+    "share": 2.192277566611476e-05
+  },
+  {
+    "symbol_index": 1755,
+    "name": "mi_arenas_try_alloc",
+    "instructions": 223754,
+    "share": 2.1896842439238826e-05
+  },
+  {
+    "symbol_index": 842,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::bool_val",
+    "instructions": 211808,
+    "share": 2.0727792143918307e-05
+  },
+  {
+    "symbol_index": 823,
+    "name": "<sokonanoda::checker::context::TcCtx>::imax",
+    "instructions": 206434,
+    "share": 2.0201885875121017e-05
+  },
+  {
+    "symbol_index": 1679,
+    "name": "_mi_prim_clock_now",
+    "instructions": 204855,
+    "share": 2.0047362987433832e-05
+  },
+  {
+    "symbol_index": 1653,
+    "name": "__mi_stat_decrease_mt",
+    "instructions": 204375,
+    "share": 2.0000389595356662e-05
+  },
+  {
+    "symbol_index": 1074,
+    "name": "<sokonanoda::frontend::parser::Parser>::do_proj",
+    "instructions": 201192,
+    "share": 1.9688897289144945e-05
+  },
+  {
+    "symbol_index": 1612,
+    "name": "_mi_strnicmp",
+    "instructions": 200124,
+    "share": 1.9584381491773244e-05
+  },
+  {
+    "symbol_index": 1738,
+    "name": "_mi_page_map_register",
+    "instructions": 194440,
+    "share": 1.9028138240592782e-05
+  },
+  {
+    "symbol_index": 1705,
+    "name": "_mi_os_reuse",
+    "instructions": 189618,
+    "share": 1.855625137268423e-05
+  },
+  {
+    "symbol_index": 1641,
+    "name": "_mi_bin",
+    "instructions": 188396,
+    "share": 1.8436664945354442e-05
+  },
+  {
+    "symbol_index": 935,
+    "name": "<sokonanoda::checker::inductive::InductiveCheckState>::flat_minors",
+    "instructions": 187706,
+    "share": 1.8369140694243514e-05
+  },
+  {
+    "symbol_index": 810,
+    "name": "<sokonanoda::checker::value::Vals>::as_inductive_app",
+    "instructions": 187014,
+    "share": 1.8301420720665595e-05
+  },
+  {
+    "symbol_index": 1778,
+    "name": "_mi_theap_collect_retired",
+    "instructions": 184895,
+    "share": 1.8094052766891598e-05
+  },
+  {
+    "symbol_index": 961,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::param_vars",
+    "instructions": 181399,
+    "share": 1.7751929894596224e-05
+  },
+  {
+    "symbol_index": 599,
+    "name": "serde::private::de::flat_map_take_entry",
+    "instructions": 176374,
+    "share": 1.726017719628837e-05
+  },
+  {
+    "symbol_index": 967,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::mk_pis_flat",
+    "instructions": 175674,
+    "share": 1.7191674332842504e-05
+  },
+  {
+    "symbol_index": 968,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::force_pi",
+    "instructions": 174342,
+    "share": 1.7061323169828363e-05
+  },
+  {
+    "symbol_index": 1803,
+    "name": "_mi_arenas_page_abandon",
+    "instructions": 174125,
+    "share": 1.7040087282160143e-05
+  },
+  {
+    "symbol_index": 1605,
+    "name": "_mi_subproc",
+    "instructions": 166472,
+    "share": 1.6291155262229797e-05
+  },
+  {
+    "symbol_index": 729,
+    "name": "<sokonanoda::checker::value::Vals>::clear",
+    "instructions": 165803,
+    "share": 1.622568609702224e-05
+  },
+  {
+    "symbol_index": 1570,
+    "name": "mi_page_queue_remove",
+    "instructions": 162016,
+    "share": 1.5855085605780087e-05
+  },
+  {
+    "symbol_index": 1800,
+    "name": "_mi_arenas_page_unabandon",
+    "instructions": 150042,
+    "share": 1.4683295195921735e-05
+  },
+  {
+    "symbol_index": 1802,
+    "name": "mi_abandoned_page_try_reclaim",
+    "instructions": 148068,
+    "share": 1.4490117121004381e-05
+  },
+  {
+    "symbol_index": 1766,
+    "name": "_mi_subproc_heap_main",
+    "instructions": 146000,
+    "share": 1.4287740090138583e-05
+  },
+  {
+    "symbol_index": 1806,
+    "name": "_mi_page_abandon",
+    "instructions": 141422,
+    "share": 1.3839731363202594e-05
+  },
+  {
+    "symbol_index": 835,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::mk_natlit_val",
+    "instructions": 140343,
+    "share": 1.373413909226246e-05
+  },
+  {
+    "symbol_index": 1118,
+    "name": "core::ptr::drop_glue::<alloc::vec::into_iter::IntoIter<(serde_core::private::content::Content, serde_core::private::content::Content)>>",
+    "instructions": 140140,
+    "share": 1.3714273261863158e-05
+  },
+  {
+    "symbol_index": 1567,
+    "name": "mi_bchunk_try_clearNC",
+    "instructions": 137582,
+    "share": 1.346394422658525e-05
+  },
+  {
+    "symbol_index": 786,
+    "name": "<sokonanoda::checker::value::Vals>::digest",
+    "instructions": 135312,
+    "share": 1.3241799226553644e-05
+  },
+  {
+    "symbol_index": 80,
+    "name": "alloc::fmt::format::format_inner",
+    "instructions": 134997,
+    "share": 1.3210972938003001e-05
+  },
+  {
+    "symbol_index": 724,
+    "name": "core::ptr::drop_glue::<indexmap::map::IndexMap<sokonanoda::term::id::NameId, sokonanoda::checker::env::Declar, rustc_hash::FxBuildHasher>>",
+    "instructions": 134387,
+    "share": 1.31512775855716e-05
+  },
+  {
+    "symbol_index": 1563,
+    "name": "mi_bbitmap_chunkmap_try_clear.isra.0",
+    "instructions": 133440,
+    "share": 1.3058602997452688e-05
+  },
+  {
+    "symbol_index": 928,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::value_of",
+    "instructions": 131176,
+    "share": 1.2837045164822046e-05
+  },
+  {
+    "symbol_index": 919,
+    "name": "<sokonanoda::checker::inductive::persist::Promoter>::levels",
+    "instructions": 131022,
+    "share": 1.2821974534863955e-05
+  },
+  {
+    "symbol_index": 1601,
+    "name": "mi_bbitmap_try_clearNC",
+    "instructions": 122913,
+    "share": 1.2028417792460298e-05
+  },
+  {
+    "symbol_index": 1832,
+    "name": "mi_arenas_page_singleton_alloc",
+    "instructions": 122067,
+    "share": 1.194562718892429e-05
+  },
+  {
+    "symbol_index": 491,
+    "name": "<num_bigint::big_digit::BigDigits>::normalize",
+    "instructions": 122031,
+    "share": 1.1942104184518502e-05
+  },
+  {
+    "symbol_index": 371,
+    "name": "core::fmt::write",
+    "instructions": 121679,
+    "share": 1.1907657030328579e-05
+  },
+  {
+    "symbol_index": 1739,
+    "name": "_mi_page_map_unregister",
+    "instructions": 121425,
+    "share": 1.1882800277021078e-05
+  },
+  {
+    "symbol_index": 1558,
+    "name": "mi_bchunk_popcountNC",
+    "instructions": 118565,
+    "share": 1.1602917149227952e-05
+  },
+  {
+    "symbol_index": 731,
+    "name": "core::ptr::drop_glue::<sokonanoda::checker::value::Vals>",
+    "instructions": 117821,
+    "share": 1.1530108391508342e-05
+  },
+  {
+    "symbol_index": 1767,
+    "name": "mi_heap_main",
+    "instructions": 116772,
+    "share": 1.1427451957573032e-05
+  },
+  {
+    "symbol_index": 1828,
+    "name": "mi_heap_ensure_arena_pages",
+    "instructions": 116688,
+    "share": 1.1419231613959527e-05
+  },
+  {
+    "symbol_index": 759,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::try_eta_struct_v",
+    "instructions": 116547,
+    "share": 1.140543318003686e-05
+  },
+  {
+    "symbol_index": 1716,
+    "name": "_mi_page_free_collect_partly",
+    "instructions": 116427,
+    "share": 1.1393689832017568e-05
+  },
+  {
+    "symbol_index": 833,
+    "name": "<num_bigint::biguint::BigUint as core::ops::arith::Add<u32>>::add",
+    "instructions": 109912,
+    "share": 1.0756123895803507e-05
+  },
+  {
+    "symbol_index": 958,
+    "name": "<sokonanoda::checker::ptrmap::PtrMap<(sokonanoda::term::id::ExprId, u16), sokonanoda::term::id::ExprId>>::insert",
+    "instructions": 109319,
+    "share": 1.0698092184341505e-05
+  },
+  {
+    "symbol_index": 83,
+    "name": "<alloc::string::String as core::fmt::Write>::write_str",
+    "instructions": 107748,
+    "share": 1.0544352186522275e-05
+  },
+  {
+    "symbol_index": 953,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::inst_params_at",
+    "instructions": 107717,
+    "share": 1.0541318488283956e-05
+  },
+  {
+    "symbol_index": 1863,
+    "name": "[main executable without a sized text symbol]",
+    "instructions": 106225,
+    "share": 1.039530952791076e-05
+  },
+  {
+    "symbol_index": 856,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::strip_head",
+    "instructions": 104267,
+    "share": 1.0203697232729313e-05
+  },
+  {
+    "symbol_index": 524,
+    "name": "<num_bigint::biguint::BigUint as core::ops::arith::SubAssign<u32>>::sub_assign",
+    "instructions": 101946,
+    "share": 9.976561309789507e-06
+  },
+  {
+    "symbol_index": 1057,
+    "name": "<serde_json::de::Deserializer<serde_json::read::StrRead>>::end_map",
+    "instructions": 100589,
+    "share": 9.843763615938013e-06
+  },
+  {
+    "symbol_index": 727,
+    "name": "<sokonanoda::checker::ptrmap::PtrMap<(sokonanoda::term::id::NameId, sokonanoda::term::id::LevelsId), sokonanoda::checker::value::VId> as sokonanoda::checker::cache::Reset>::reset_shrink",
+    "instructions": 99934,
+    "share": 9.779664507999378e-06
+  },
+  {
+    "symbol_index": 1697,
+    "name": "mi_option_get_size",
+    "instructions": 92549,
+    "share": 9.05695929864545e-06
+  },
+  {
+    "symbol_index": 1779,
+    "name": "_mi_is_heap_main",
+    "instructions": 87606,
+    "share": 8.573231221484114e-06
+  },
+  {
+    "symbol_index": 775,
+    "name": "<sokonanoda::term::intern::Interner<num_bigint::biguint::BigUint>>::intern",
+    "instructions": 87114,
+    "share": 8.525083494605017e-06
+  },
+  {
+    "symbol_index": 865,
+    "name": "sokonanoda::checker::relevance::app_prefix_len",
+    "instructions": 84520,
+    "share": 8.271231454921322e-06
+  },
+  {
+    "symbol_index": 509,
+    "name": "<num_bigint::biguint::BigUint as core::ops::arith::AddAssign<&num_bigint::biguint::BigUint>>::add_assign",
+    "instructions": 80055,
+    "share": 7.834281047370165e-06
+  },
+  {
+    "symbol_index": 512,
+    "name": "num_bigint::biguint::shift::biguint_shr2",
+    "instructions": 76865,
+    "share": 7.5221037125239876e-06
+  },
+  {
+    "symbol_index": 1644,
+    "name": "_mi_page_stats_bin",
+    "instructions": 76392,
+    "share": 7.475815349081278e-06
+  },
+  {
+    "symbol_index": 927,
+    "name": "core::ptr::drop_glue::<sokonanoda::checker::inductive::InductiveCheckState>",
+    "instructions": 75130,
+    "share": 7.352314472411724e-06
+  },
+  {
+    "symbol_index": 837,
+    "name": "<num_bigint::biguint::BigUint as core::ops::arith::Add>::add",
+    "instructions": 74480,
+    "share": 7.288704670640559e-06
+  },
+  {
+    "symbol_index": 721,
+    "name": "core::ptr::drop_glue::<sokonanoda::term::intern::Terms>",
+    "instructions": 73847,
+    "share": 7.226758509838794e-06
+  },
+  {
+    "symbol_index": 954,
+    "name": "<sokonanoda::checker::context::TcCtx>::foldl_apps::<core::iter::adapters::skip::Skip<core::iter::adapters::copied::Copied<core::slice::iter::Iter<sokonanoda::term::id::ExprId>>>>",
+    "instructions": 73783,
+    "share": 7.220495390895172e-06
+  },
+  {
+    "symbol_index": 1689,
+    "name": "_mi_prim_getenv",
+    "instructions": 72522,
+    "share": 7.0970923754591115e-06
+  },
+  {
+    "symbol_index": 1611,
+    "name": "_mi_toupper",
+    "instructions": 70632,
+    "share": 6.912134644155263e-06
+  },
+  {
+    "symbol_index": 515,
+    "name": "num_bigint::biguint::division::div_rem_cow",
+    "instructions": 66522,
+    "share": 6.5099249744945125e-06
+  },
+  {
+    "symbol_index": 725,
+    "name": "<alloc::sync::Arc<[sokonanoda::term::id::NameId]>>::drop_slow",
+    "instructions": 66380,
+    "share": 6.49602867933835e-06
+  },
+  {
+    "symbol_index": 720,
+    "name": "core::ptr::drop_glue::<sokonanoda::checker::context::TcCtx>",
+    "instructions": 65627,
+    "share": 6.422339170517293e-06
+  },
+  {
+    "symbol_index": 1637,
+    "name": "_mi_os_good_alloc_size",
+    "instructions": 64268,
+    "share": 6.289345754198811e-06
+  },
+  {
+    "symbol_index": 912,
+    "name": "core::ptr::drop_glue::<alloc::vec::Vec<sokonanoda::checker::env::Declar>>",
+    "instructions": 63172,
+    "share": 6.182089842289278e-06
+  },
+  {
+    "symbol_index": 1835,
+    "name": "mi_page_queue_find_free_ex",
+    "instructions": 61032,
+    "share": 5.972666802611904e-06
+  },
+  {
+    "symbol_index": 804,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::fire_quot",
+    "instructions": 60177,
+    "share": 5.888995447974449e-06
+  },
+  {
+    "symbol_index": 952,
+    "name": "<sokonanoda::checker::context::TcCtx>::unfold_apps",
+    "instructions": 59830,
+    "share": 5.855037599951996e-06
+  },
+  {
+    "symbol_index": 824,
+    "name": "<alloc::raw_vec::RawVec<sokonanoda::term::level::Level>>::grow_one",
+    "instructions": 56616,
+    "share": 5.540511595501959e-06
+  },
+  {
+    "symbol_index": 1741,
+    "name": "_mi_os_purge_ex",
+    "instructions": 55760,
+    "share": 5.456742379631009e-06
+  },
+  {
+    "symbol_index": 956,
+    "name": "<sokonanoda::checker::context::TcCtx>::inst_aux::<false>",
+    "instructions": 53555,
+    "share": 5.240958359776519e-06
+  },
+  {
+    "symbol_index": 950,
+    "name": "<sokonanoda::checker::context::TcCtx>::replace_pfx",
+    "instructions": 52988,
+    "share": 5.185471040385364e-06
+  },
+  {
+    "symbol_index": 970,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::quote_spine_weak",
+    "instructions": 51636,
+    "share": 5.053162652701341e-06
+  },
+  {
+    "symbol_index": 972,
+    "name": "<smallvec::SmallVec<[sokonanoda::checker::value::VId; 8]> as core::ops::index::Index<core::ops::range::RangeFrom<usize>>>::index",
+    "instructions": 51381,
+    "share": 5.028208038160346e-06
+  },
+  {
+    "symbol_index": 1622,
+    "name": "_mi_option_get_fast",
+    "instructions": 51288,
+    "share": 5.019106943445395e-06
+  },
+  {
+    "symbol_index": 841,
+    "name": "<num_bigint::biguint::BigUint as core::cmp::PartialEq>::eq",
+    "instructions": 50997,
+    "share": 4.990629324498612e-06
+  },
+  {
+    "symbol_index": 1833,
+    "name": "_mi_arenas_page_alloc",
+    "instructions": 48570,
+    "share": 4.753120110808431e-06
+  },
+  {
+    "symbol_index": 1743,
+    "name": "mi_arena_try_purge_visitor",
+    "instructions": 45015,
+    "share": 4.405223425736906e-06
+  },
+  {
+    "symbol_index": 511,
+    "name": "<num_bigint::biguint::BigUint as core::ops::arith::Sub<&num_bigint::biguint::BigUint>>::sub",
+    "instructions": 44272,
+    "share": 4.33251252925079e-06
+  },
+  {
+    "symbol_index": 1659,
+    "name": "mi_bbitmap_try_find_and_clear",
+    "instructions": 43074,
+    "share": 4.215274771524858e-06
+  },
+  {
+    "symbol_index": 505,
+    "name": "num_bigint::biguint::shift::biguint_shl2",
+    "instructions": 41937,
+    "share": 4.104006549042067e-06
+  },
+  {
+    "symbol_index": 930,
+    "name": "<alloc::raw_vec::RawVec<alloc::vec::Vec<sokonanoda::term::id::ExprId>>>::grow_one",
+    "instructions": 41904,
+    "share": 4.1007771283367615e-06
+  },
+  {
+    "symbol_index": 1633,
+    "name": "_mi_os_page_size",
+    "instructions": 41301,
+    "share": 4.0417668045398195e-06
+  },
+  {
+    "symbol_index": 838,
+    "name": "sokonanoda::checker::nat::nat_sub",
+    "instructions": 41127,
+    "share": 4.024738949911846e-06
+  },
+  {
+    "symbol_index": 1119,
+    "name": "<serde::private::de::content::MapDeserializer<serde_json::error::Error>>::end",
+    "instructions": 40920,
+    "share": 4.004481674578567e-06
+  },
+  {
+    "symbol_index": 1698,
+    "name": "mi_option_is_enabled",
+    "instructions": 38738,
+    "share": 3.7909484630944413e-06
+  },
+  {
+    "symbol_index": 638,
+    "name": "<hashbrown::raw::RawTable<(sokonanoda::term::id::NameId, (usize, usize))>>::reserve_rehash::<hashbrown::map::make_hasher<sokonanoda::term::id::NameId, (usize, usize), rustc_hash::FxBuildHasher>::{closure#0}>",
+    "instructions": 37162,
+    "share": 3.6367191591077396e-06
+  },
+  {
+    "symbol_index": 980,
+    "name": "<sokonanoda::checker::context::TcCtx>::subst_aux",
+    "instructions": 35884,
+    "share": 3.51165250270228e-06
+  },
+  {
+    "symbol_index": 915,
+    "name": "core::ptr::drop_glue::<alloc::vec::into_iter::IntoIter<sokonanoda::checker::env::Declar>>",
+    "instructions": 33098,
+    "share": 3.239011106187718e-06
+  },
+  {
+    "symbol_index": 1045,
+    "name": "core::ptr::drop_glue::<alloc::vec::Vec<core::option::Option<(serde_core::private::content::Content, serde_core::private::content::Content)>>>",
+    "instructions": 32928,
+    "share": 3.222374696493721e-06
+  },
+  {
+    "symbol_index": 649,
+    "name": "<hashbrown::raw::RawTable<u32>>::reserve_rehash::<<sokonanoda::term::intern::Interner<num_bigint::biguint::BigUint>>::insert_unique::{closure#0}>",
+    "instructions": 32732,
+    "share": 3.2031938947288775e-06
+  },
+  {
+    "symbol_index": 1581,
+    "name": "mi_arena_from_index",
+    "instructions": 32316,
+    "share": 3.1624836215953316e-06
+  },
+  {
+    "symbol_index": 723,
+    "name": "core::ptr::drop_glue::<sokonanoda::checker::cache::ExprCache>",
+    "instructions": 31500,
+    "share": 3.0826288550641463e-06
+  },
+  {
+    "symbol_index": 1610,
+    "name": "_mi_preloading",
+    "instructions": 31368,
+    "share": 3.069711172242925e-06
+  },
+  {
+    "symbol_index": 944,
+    "name": "<sokonanoda::checker::context::TcCtx>::append_index_after",
+    "instructions": 30765,
+    "share": 3.0107008484459827e-06
+  },
+  {
+    "symbol_index": 776,
+    "name": "<hashbrown::raw::RawTableInner>::find_insert_index",
+    "instructions": 30556,
+    "share": 2.990247850645716e-06
+  },
+  {
+    "symbol_index": 969,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::quote_weak",
+    "instructions": 30270,
+    "share": 2.9622595378664034e-06
+  },
+  {
+    "symbol_index": 372,
+    "name": "<core::fmt::Formatter>::pad",
+    "instructions": 30192,
+    "share": 2.9546263616538636e-06
+  },
+  {
+    "symbol_index": 1658,
+    "name": "mi_bbitmap_try_find_and_clear8",
+    "instructions": 29853,
+    "share": 2.921451403499364e-06
+  },
+  {
+    "symbol_index": 875,
+    "name": "<smallvec::SmallVec<[(u32, sokonanoda::checker::value::Elim, sokonanoda::checker::value::Elim); 8]>>::reserve_one_unchecked",
+    "instructions": 29790,
+    "share": 2.9152861457892355e-06
+  },
+  {
+    "symbol_index": 1742,
+    "name": "mi_arena_purge.isra.0",
+    "instructions": 29520,
+    "share": 2.8888636127458283e-06
+  },
+  {
+    "symbol_index": 960,
+    "name": "<sokonanoda::checker::context::TcCtx>::str1",
+    "instructions": 27661,
+    "share": 2.706939579680297e-06
+  },
+  {
+    "symbol_index": 809,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::value_type",
+    "instructions": 27348,
+    "share": 2.6763090135966437e-06
+  },
+  {
+    "symbol_index": 1083,
+    "name": "core::ptr::drop_glue::<alloc::vec::Vec<sokonanoda::frontend::parser::Constructor>>",
+    "instructions": 26986,
+    "share": 2.6408832470717796e-06
+  },
+  {
+    "symbol_index": 527,
+    "name": "<num_bigint::biguint::BigUint as num_traits::Num>::from_str_radix",
+    "instructions": 26012,
+    "share": 2.545566405648526e-06
+  },
+  {
+    "symbol_index": 834,
+    "name": "sokonanoda::checker::nat::nat_div",
+    "instructions": 25152,
+    "share": 2.4614057448436003e-06
+  },
+  {
+    "symbol_index": 1109,
+    "name": "<<sokonanoda::frontend::parser::ExportJsonVal as serde_core::de::Deserialize>::deserialize::__FieldVisitor as serde_core::de::Visitor>::visit_str::<serde_json::error::Error>",
+    "instructions": 25062,
+    "share": 2.452598233829131e-06
+  },
+  {
+    "symbol_index": 1580,
+    "name": "mi_arenas_get_count",
+    "instructions": 24255,
+    "share": 2.3736242183993925e-06
+  },
+  {
+    "symbol_index": 855,
+    "name": "<sokonanoda::checker::value::Vals>::spine_apps",
+    "instructions": 24140,
+    "share": 2.362370176547571e-06
+  },
+  {
+    "symbol_index": 672,
+    "name": "<alloc::raw_vec::RawVecInner<_>>::reserve::do_reserve_and_handle::<alloc::alloc::Global>",
+    "instructions": 24128,
+    "share": 2.361195841745642e-06
+  },
+  {
+    "symbol_index": 1572,
+    "name": "mi_stats_add.part.0",
+    "instructions": 23744,
+    "share": 2.3236171280839075e-06
+  },
+  {
+    "symbol_index": 981,
+    "name": "<sokonanoda::checker::ptrmap::PtrMap<(sokonanoda::term::id::ExprId, sokonanoda::term::id::LevelsId, sokonanoda::term::id::LevelsId), sokonanoda::term::id::ExprId>>::insert",
+    "instructions": 23183,
+    "share": 2.2687169760937176e-06
+  },
+  {
+    "symbol_index": 1775,
+    "name": "_mi_page_free",
+    "instructions": 22552,
+    "share": 2.2069665377589405e-06
+  },
+  {
+    "symbol_index": 1582,
+    "name": "mi_arena_slice_start",
+    "instructions": 22072,
+    "share": 2.1599931456817727e-06
+  },
+  {
+    "symbol_index": 1831,
+    "name": "mi_arenas_page_regular_alloc",
+    "instructions": 22067,
+    "share": 2.159503839514302e-06
+  },
+  {
+    "symbol_index": 839,
+    "name": "<num_bigint::biguint::BigUint as core::ops::arith::Mul>::mul",
+    "instructions": 21843,
+    "share": 2.1375829232116236e-06
+  },
+  {
+    "symbol_index": 1067,
+    "name": "<sokonanoda::frontend::parser::Parser>::push_level",
+    "instructions": 21714,
+    "share": 2.1249588240908846e-06
+  },
+  {
+    "symbol_index": 1085,
+    "name": "<alloc::raw_vec::RawVec<sokonanoda::checker::env::ConstructorData>>::grow_one",
+    "instructions": 21576,
+    "share": 2.111453973868699e-06
+  },
+  {
+    "symbol_index": 964,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::handle_rec_args_aux",
+    "instructions": 20836,
+    "share": 2.0390366610830653e-06
+  },
+  {
+    "symbol_index": 106,
+    "name": "<bumpalo::Bump>::alloc_layout_slow",
+    "instructions": 20352,
+    "share": 1.991671824071921e-06
+  },
+  {
+    "symbol_index": 871,
+    "name": "<sokonanoda::checker::context::TcCtx>::leq_imax_by_cases",
+    "instructions": 20136,
+    "share": 1.970533797637195e-06
+  },
+  {
+    "symbol_index": 1080,
+    "name": "core::ptr::drop_glue::<alloc::vec::into_iter::IntoIter<sokonanoda::frontend::parser::IndInfo>>",
+    "instructions": 19987,
+    "share": 1.955952473846574e-06
+  },
+  {
+    "symbol_index": 1081,
+    "name": "core::ptr::drop_glue::<alloc::vec::into_iter::IntoIter<sokonanoda::frontend::parser::ImportedRecursor>>",
+    "instructions": 19987,
+    "share": 1.955952473846574e-06
+  },
+  {
+    "symbol_index": 1565,
+    "name": "mi_bitmap_chunkmap_try_clear.isra.0",
+    "instructions": 19808,
+    "share": 1.9384353130511303e-06
+  },
+  {
+    "symbol_index": 1591,
+    "name": "mi_bitmap_set",
+    "instructions": 19596,
+    "share": 1.9176887315503814e-06
+  },
+  {
+    "symbol_index": 1681,
+    "name": "_mi_clock_now",
+    "instructions": 19510,
+    "share": 1.9092726654698885e-06
+  },
+  {
+    "symbol_index": 494,
+    "name": "num_bigint::biguint::multiplication::scalar_mul",
+    "instructions": 19210,
+    "share": 1.8799142954216588e-06
+  },
+  {
+    "symbol_index": 1082,
+    "name": "<alloc::vec::Vec<sokonanoda::checker::imported::SourceBlock>>::push_mut",
+    "instructions": 19136,
+    "share": 1.8726725641430953e-06
+  },
+  {
+    "symbol_index": 1650,
+    "name": "__mi_stat_counter_increase",
+    "instructions": 18720,
+    "share": 1.8319622910095498e-06
+  },
+  {
+    "symbol_index": 375,
+    "name": "<core::fmt::Formatter>::pad_integral",
+    "instructions": 18616,
+    "share": 1.8217847227261634e-06
+  },
+  {
+    "symbol_index": 619,
+    "name": "<serde_json::error::Error as serde_core::de::Error>::custom::<core::fmt::Arguments>",
+    "instructions": 18000,
+    "share": 1.7615022028937978e-06
+  },
+  {
+    "symbol_index": 1703,
+    "name": "mi_page_extend_free.isra.0",
+    "instructions": 17828,
+    "share": 1.7446700707328127e-06
+  },
+  {
+    "symbol_index": 1614,
+    "name": "_mi_strlcpy",
+    "instructions": 17586,
+    "share": 1.7209876522272405e-06
+  },
+  {
+    "symbol_index": 1055,
+    "name": "core::ptr::drop_glue::<serde_json::error::Error>",
+    "instructions": 17100,
+    "share": 1.673427092749108e-06
+  },
+  {
+    "symbol_index": 874,
+    "name": "<smallvec::SmallVec<[(sokonanoda::checker::value::VId, sokonanoda::checker::value::VId); 8]>>::reserve_one_unchecked",
+    "instructions": 16568,
+    "share": 1.621364916530247e-06
+  },
+  {
+    "symbol_index": 1559,
+    "name": "mi_bchunk_try_find_and_clear8",
+    "instructions": 15524,
+    "share": 1.5191977887624065e-06
+  },
+  {
+    "symbol_index": 948,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::restore_e",
+    "instructions": 15289,
+    "share": 1.496200398891293e-06
+  },
+  {
+    "symbol_index": 1631,
+    "name": "_mi_os_has_overcommit",
+    "instructions": 14601,
+    "share": 1.4288718702473523e-06
+  },
+  {
+    "symbol_index": 1674,
+    "name": "_mi_prim_reuse",
+    "instructions": 14586,
+    "share": 1.4274039517449408e-06
+  },
+  {
+    "symbol_index": 1592,
+    "name": "mi_bitmap_clear",
+    "instructions": 14571,
+    "share": 1.4259360332425294e-06
+  },
+  {
+    "symbol_index": 827,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::mk_head_hc",
+    "instructions": 14460,
+    "share": 1.4150734363246842e-06
+  },
+  {
+    "symbol_index": 718,
+    "name": "<sokonanoda::checker::cache::TcCache>::clear_session",
+    "instructions": 14238,
+    "share": 1.3933482424889942e-06
+  },
+  {
+    "symbol_index": 975,
+    "name": "<sokonanoda::checker::context::TcCtx>::lower",
+    "instructions": 13852,
+    "share": 1.3555738063602715e-06
+  },
+  {
+    "symbol_index": 945,
+    "name": "<alloc::raw_vec::RawVec<indexmap::Bucket<sokonanoda::term::id::NameId, sokonanoda::term::id::NameId>>>::grow_one",
+    "instructions": 12456,
+    "share": 1.2189595244025082e-06
+  },
+  {
+    "symbol_index": 828,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::conv_types_at",
+    "instructions": 12096,
+    "share": 1.183729480344632e-06
+  },
+  {
+    "symbol_index": 857,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::is_iota_reducible",
+    "instructions": 11843,
+    "share": 1.158970588270625e-06
+  },
+  {
+    "symbol_index": 455,
+    "name": "<u64 as core::fmt::Display>::fmt",
+    "instructions": 11837,
+    "share": 1.1583834208696604e-06
+  },
+  {
+    "symbol_index": 73,
+    "name": "<alloc::raw_vec::RawVecInner>::finish_grow",
+    "instructions": 11646,
+    "share": 1.1396919252722873e-06
+  },
+  {
+    "symbol_index": 991,
+    "name": "<sokonanoda::term::intern::Terms>::find_name",
+    "instructions": 11452,
+    "share": 1.1207068459744319e-06
+  },
+  {
+    "symbol_index": 1013,
+    "name": "<sokonanoda::frontend::parser::Parser>::finish",
+    "instructions": 10884,
+    "share": 1.0651216653497832e-06
+  },
+  {
+    "symbol_index": 72,
+    "name": "<alloc::raw_vec::RawVecInner<_>>::reserve::do_reserve_and_handle::<alloc::alloc::Global>",
+    "instructions": 10800,
+    "share": 1.0569013217362788e-06
+  },
+  {
+    "symbol_index": 671,
+    "name": "std::sys::backtrace::__rust_begin_short_backtrace::<sokonanoda::frontend::parser::parse_export_file<std::io::stdio::Stdin>::{closure#0}, ()>",
+    "instructions": 10585,
+    "share": 1.0358611565350472e-06
+  },
+  {
+    "symbol_index": 1807,
+    "name": "mi_theap_collect_ex",
+    "instructions": 10418,
+    "share": 1.0195183305415327e-06
+  },
+  {
+    "symbol_index": 486,
+    "name": "<num_bigint::big_digit::BigDigits>::extend_from_slice",
+    "instructions": 9570,
+    "share": 9.365320045385358e-07
+  },
+  {
+    "symbol_index": 946,
+    "name": "<core::iter::adapters::map::Map<core::iter::adapters::chain::Chain<alloc::vec::into_iter::IntoIter<sokonanoda::term::id::NameId>, core::iter::adapters::copied::Copied<indexmap::map::iter::Keys<sokonanoda::term::id::NameId, sokonanoda::term::id::NameId>>>, <sokonanoda::checker::tc::TypeChecker>::restore_recursors::{closure#1}> as core::iter::traits::iterator::Iterator>::next",
+    "instructions": 9388,
+    "share": 9.187212600426097e-07
+  },
+  {
+    "symbol_index": 1596,
+    "name": "_mi_bitmap_forall_setc_ranges",
+    "instructions": 9242,
+    "share": 9.044335199524711e-07
+  },
+  {
+    "symbol_index": 811,
+    "name": "<sokonanoda::checker::ptrmap::PtrMap<(sokonanoda::checker::value::VId, sokonanoda::term::id::NameId), core::option::Option<sokonanoda::checker::value::VId>>>::grow",
+    "instructions": 9078,
+    "share": 8.883842776594387e-07
+  },
+  {
+    "symbol_index": 1654,
+    "name": "mi_bbitmap_set_chunk_bin",
+    "instructions": 8863,
+    "share": 8.673441124582072e-07
+  },
+  {
+    "symbol_index": 1068,
+    "name": "<sokonanoda::frontend::parser::Parser>::do_nat_lit",
+    "instructions": 8820,
+    "share": 8.631360794179609e-07
+  },
+  {
+    "symbol_index": 376,
+    "name": "<core::fmt::Formatter>::pad_integral::write_prefix",
+    "instructions": 7518,
+    "share": 7.357207534086429e-07
+  },
+  {
+    "symbol_index": 1616,
+    "name": "_mi_strnlen",
+    "instructions": 7488,
+    "share": 7.327849164038199e-07
+  },
+  {
+    "symbol_index": 1661,
+    "name": "__mi_stat_decrease",
+    "instructions": 7348,
+    "share": 7.190843437146459e-07
+  },
+  {
+    "symbol_index": 896,
+    "name": "<smallvec::SmallVec<[sokonanoda::checker::value::VId; 16]>>::try_grow",
+    "instructions": 7198,
+    "share": 7.04405158690531e-07
+  },
+  {
+    "symbol_index": 977,
+    "name": "<sokonanoda::checker::context::TcCtx>::subst_expr_levels",
+    "instructions": 6654,
+    "share": 6.511686476697406e-07
+  },
+  {
+    "symbol_index": 647,
+    "name": "<hashbrown::raw::RawTable<u32>>::reserve_rehash::<<sokonanoda::term::intern::Interner<sokonanoda::term::name::Name>>::insert_unique::{closure#0}>",
+    "instructions": 6582,
+    "share": 6.441226388581655e-07
+  },
+  {
+    "symbol_index": 1675,
+    "name": "_mi_prim_decommit",
+    "instructions": 6560,
+    "share": 6.419696917212953e-07
+  },
+  {
+    "symbol_index": 47,
+    "name": "<&str as core::fmt::Display>::fmt",
+    "instructions": 6290,
+    "share": 6.155471586778882e-07
+  },
+  {
+    "symbol_index": 1075,
+    "name": "<sokonanoda::frontend::parser::Parser>::do_bvar",
+    "instructions": 6200,
+    "share": 6.067396476634193e-07
+  },
+  {
+    "symbol_index": 836,
+    "name": "sokonanoda::checker::nat::nat_mod",
+    "instructions": 5972,
+    "share": 5.844272864267645e-07
+  },
+  {
+    "symbol_index": 325,
+    "name": "<clap_builder::parser::validator::Validator>::validate",
+    "instructions": 5881,
+    "share": 5.755219141788014e-07
+  },
+  {
+    "symbol_index": 492,
+    "name": "<&num_bigint::biguint::BigUint as core::ops::arith::Mul>::mul",
+    "instructions": 5880,
+    "share": 5.754240529453073e-07
+  },
+  {
+    "symbol_index": 1566,
+    "name": "chacha_block",
+    "instructions": 5835,
+    "share": 5.710202974380728e-07
+  },
+  {
+    "symbol_index": 974,
+    "name": "<sokonanoda::checker::context::TcCtx>::has_loose_bvar_below",
+    "instructions": 5555,
+    "share": 5.436191520597248e-07
+  },
+  {
+    "symbol_index": 785,
+    "name": "<sokonanoda::checker::value::Vals>::is_closed",
+    "instructions": 4920,
+    "share": 4.814772687909714e-07
+  },
+  {
+    "symbol_index": 840,
+    "name": "<num_bigint::biguint::BigUint as num_traits::pow::Pow<num_bigint::biguint::BigUint>>::pow",
+    "instructions": 4814,
+    "share": 4.711039780405968e-07
+  },
+  {
+    "symbol_index": 884,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::is_prop_type",
+    "instructions": 4788,
+    "share": 4.685595859697502e-07
+  },
+  {
+    "symbol_index": 920,
+    "name": "sokonanoda::checker::quot::derive_quot",
+    "instructions": 4747,
+    "share": 4.6454727539649213e-07
+  },
+  {
+    "symbol_index": 674,
+    "name": "<std::sync::mpmc::waker::SyncWaker>::notify",
+    "instructions": 4704,
+    "share": 4.6033924235624587e-07
+  },
+  {
+    "symbol_index": 978,
+    "name": "<sokonanoda::checker::context::TcCtx>::inst_forall_params",
+    "instructions": 4225,
+    "share": 4.13463711512572e-07
+  },
+  {
+    "symbol_index": 728,
+    "name": "<sokonanoda::checker::ptrmap::PtrSet<(sokonanoda::checker::value::VId, sokonanoda::checker::value::VId)> as sokonanoda::checker::cache::Reset>::reset_shrink",
+    "instructions": 4182,
+    "share": 4.092556784723257e-07
+  },
+  {
+    "symbol_index": 673,
+    "name": "<std::sync::mpmc::Sender<core::result::Result<sokonanoda::frontend::parser::Block, core::io::error::Error>>>::send",
+    "instructions": 4091,
+    "share": 4.003503062243626e-07
+  },
+  {
+    "symbol_index": 1649,
+    "name": "__mi_stat_counter_increase_mt",
+    "instructions": 3972,
+    "share": 3.8870481943856475e-07
+  },
+  {
+    "symbol_index": 112,
+    "name": "<alloc::raw_vec::RawVecInner>::finish_grow",
+    "instructions": 3965,
+    "share": 3.8801979080410604e-07
+  },
+  {
+    "symbol_index": 48,
+    "name": "<sokonanoda::Cli as clap_builder::derive::Args>::augment_args",
+    "instructions": 3704,
+    "share": 3.6247800886214595e-07
+  },
+  {
+    "symbol_index": 341,
+    "name": "<clap_builder::parser::parser::Parser>::start_custom_arg",
+    "instructions": 3627,
+    "share": 3.5494269388310025e-07
+  },
+  {
+    "symbol_index": 1009,
+    "name": "<sokonanoda::config::Config>::to_export_file",
+    "instructions": 3590,
+    "share": 3.5132182824381855e-07
+  },
+  {
+    "symbol_index": 1615,
+    "name": "_mi_strlcat",
+    "instructions": 3456,
+    "share": 3.382084229556092e-07
+  },
+  {
+    "symbol_index": 639,
+    "name": "<hashbrown::raw::RawTable<usize>>::reserve_rehash::<indexmap::inner::get_hash<sokonanoda::term::id::NameId, sokonanoda::term::id::NameId>::{closure#0}>",
+    "instructions": 3198,
+    "share": 3.129602247141314e-07
+  },
+  {
+    "symbol_index": 167,
+    "name": "<clap_builder::builder::command::Command>::_build_self",
+    "instructions": 3183,
+    "share": 3.114923062117199e-07
+  },
+  {
+    "symbol_index": 976,
+    "name": "<sokonanoda::checker::context::TcCtx>::concat_name",
+    "instructions": 3024,
+    "share": 2.95932370086158e-07
+  },
+  {
+    "symbol_index": 1594,
+    "name": "mi_bitmap_try_find_and_claim",
+    "instructions": 2934,
+    "share": 2.8712485907168905e-07
+  },
+  {
+    "symbol_index": 1193,
+    "name": "<num_bigint::biguint::BigUint>::parse_bytes",
+    "instructions": 2800,
+    "share": 2.740114537834797e-07
+  },
+  {
+    "symbol_index": 1037,
+    "name": "sokonanoda::frontend::parser::uint_slow",
+    "instructions": 2714,
+    "share": 2.655953877029871e-07
+  },
+  {
+    "symbol_index": 1715,
+    "name": "_mi_theap_page_reclaim",
+    "instructions": 2682,
+    "share": 2.624638282311759e-07
+  },
+  {
+    "symbol_index": 843,
+    "name": "sokonanoda::checker::nat::nat_land",
+    "instructions": 2534,
+    "share": 2.479803656740491e-07
+  },
+  {
+    "symbol_index": 689,
+    "name": "<std::sync::mpmc::array::Channel<core::result::Result<sokonanoda::frontend::parser::Block, core::io::error::Error>>>::send::{closure#0}",
+    "instructions": 2370,
+    "share": 2.319311233810167e-07
+  },
+  {
+    "symbol_index": 1136,
+    "name": "<<<sokonanoda::frontend::parser::ExportJsonVal as serde_core::de::Deserialize>::deserialize::__Visitor as serde_core::de::Visitor>::visit_enum::__FieldVisitor as serde_core::de::Visitor>::visit_str::<serde_json::error::Error>",
+    "instructions": 2369,
+    "share": 2.3183326214752263e-07
+  },
+  {
+    "symbol_index": 1586,
+    "name": "mi_bitmap_init",
+    "instructions": 2133,
+    "share": 2.0873801104291504e-07
+  },
+  {
+    "symbol_index": 726,
+    "name": "<sokonanoda::checker::ptrmap::PtrMap<(sokonanoda::term::id::ExprId, sokonanoda::term::id::LevelsId, sokonanoda::term::id::LevelsId), sokonanoda::term::id::ExprId> as sokonanoda::checker::cache::Reset>::reset_shrink",
+    "instructions": 2132,
+    "share": 2.0864014980942096e-07
+  },
+  {
+    "symbol_index": 644,
+    "name": "<hashbrown::raw::RawTable<u32>>::reserve_rehash::<<sokonanoda::term::intern::Interner<alloc::boxed::Box<str>>>::insert_unique::{closure#0}>",
+    "instructions": 2029,
+    "share": 1.9856044275952866e-07
+  },
+  {
+    "symbol_index": 320,
+    "name": "<clap_builder::parser::arg_matcher::ArgMatcher>::add_val_to",
+    "instructions": 1930,
+    "share": 1.8887218064361276e-07
+  },
+  {
+    "symbol_index": 348,
+    "name": "<clap_builder::parser::parser::Parser>::push_arg_values",
+    "instructions": 1835,
+    "share": 1.7957536346167328e-07
+  },
+  {
+    "symbol_index": 1860,
+    "name": "ceil",
+    "instructions": 1830,
+    "share": 1.7908605729420277e-07
+  },
+  {
+    "symbol_index": 698,
+    "name": "<std::sync::mpmc::waker::SyncWaker>::register",
+    "instructions": 1647,
+    "share": 1.611774515647825e-07
+  },
+  {
+    "symbol_index": 765,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::str_lit_to_ctor_val",
+    "instructions": 1580,
+    "share": 1.546207489206778e-07
+  },
+  {
+    "symbol_index": 289,
+    "name": "<clap_builder::parser::parser::Parser>::get_matches_with",
+    "instructions": 1559,
+    "share": 1.5256566301730172e-07
+  },
+  {
+    "symbol_index": 1651,
+    "name": "__mi_stat_increase_mt",
+    "instructions": 1554,
+    "share": 1.520763568498312e-07
+  },
+  {
+    "symbol_index": 1695,
+    "name": "mi_option_get_clamp",
+    "instructions": 1504,
+    "share": 1.4718329517512622e-07
+  },
+  {
+    "symbol_index": 332,
+    "name": "<clap_builder::parser::validator::Conflicts>::gather_conflicts",
+    "instructions": 1466,
+    "share": 1.4346456830235044e-07
+  },
+  {
+    "symbol_index": 2,
+    "name": "<clap_builder::util::flat_map::FlatMap<clap_builder::util::id::Id, clap_builder::parser::matches::matched_arg::MatchedArg>>::remove_entry::<str>",
+    "instructions": 1392,
+    "share": 1.3622283702378705e-07
+  },
+  {
+    "symbol_index": 328,
+    "name": "clap_builder::parser::validator::gather_direct_conflicts",
+    "instructions": 1344,
+    "share": 1.3152549781607025e-07
+  },
+  {
+    "symbol_index": 306,
+    "name": "<clap_builder::parser::parser::Parser>::react",
+    "instructions": 1255,
+    "share": 1.2281584803509536e-07
+  },
+  {
+    "symbol_index": 719,
+    "name": "<sokonanoda::checker::cache::ExprCache>::clear_session",
+    "instructions": 1230,
+    "share": 1.2036931719774285e-07
+  },
+  {
+    "symbol_index": 3,
+    "name": "<clap_builder::parser::matches::arg_matches::ArgMatches>::try_remove_one::<bool>",
+    "instructions": 1224,
+    "share": 1.1978214979677826e-07
+  },
+  {
+    "symbol_index": 848,
+    "name": "sokonanoda::checker::nat::nat_shr",
+    "instructions": 1158,
+    "share": 1.1332330838616766e-07
+  },
+  {
+    "symbol_index": 36,
+    "name": "sokonanoda::main",
+    "instructions": 1113,
+    "share": 1.0891955287893316e-07
+  },
+  {
+    "symbol_index": 1746,
+    "name": "mi_manage_os_memory_ex2",
+    "instructions": 1065,
+    "share": 1.0422221367121638e-07
+  },
+  {
+    "symbol_index": 169,
+    "name": "<alloc::vec::Vec<clap_builder::builder::possible_value::PossibleValue> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<clap_builder::builder::possible_value::PossibleValue, alloc::boxed::Box<dyn core::iter::traits::iterator::Iterator<Item = clap_builder::builder::possible_value::PossibleValue>>>>::from_iter",
+    "instructions": 972,
+    "share": 9.512111895626509e-08
+  },
+  {
+    "symbol_index": 323,
+    "name": "<clap_builder::parser::parser::Parser>::add_defaults",
+    "instructions": 955,
+    "share": 9.345747798686539e-08
+  },
+  {
+    "symbol_index": 26,
+    "name": "core::ptr::drop_glue::<clap_builder::builder::arg::Arg>",
+    "instructions": 909,
+    "share": 8.89558612461368e-08
+  },
+  {
+    "symbol_index": 356,
+    "name": "<std::ffi::os_str::OsStr as clap_lex::ext::OsStrExt>::split_once",
+    "instructions": 889,
+    "share": 8.699863657625479e-08
+  },
+  {
+    "symbol_index": 613,
+    "name": "<alloc::raw_vec::RawVecInner>::finish_grow",
+    "instructions": 874,
+    "share": 8.55307180738433e-08
+  },
+  {
+    "symbol_index": 911,
+    "name": "<sokonanoda::term::intern::Terms>::mk_name_cache",
+    "instructions": 862,
+    "share": 8.43563832719141e-08
+  },
+  {
+    "symbol_index": 684,
+    "name": "core::ptr::drop_glue::<alloc::vec::drain::Drain<std::sync::mpmc::waker::Entry>>",
+    "instructions": 832,
+    "share": 8.142054626709111e-08
+  },
+  {
+    "symbol_index": 493,
+    "name": "<num_bigint::biguint::BigUint as core::ops::arith::MulAssign<&num_bigint::biguint::BigUint>>::mul_assign",
+    "instructions": 814,
+    "share": 7.96590440641973e-08
+  },
+  {
+    "symbol_index": 316,
+    "name": "<clap_builder::util::flat_map::Entry<clap_builder::util::id::Id, clap_builder::parser::matches::matched_arg::MatchedArg>>::or_insert",
+    "instructions": 772,
+    "share": 7.554887225744511e-08
+  },
+  {
+    "symbol_index": 1763,
+    "name": "mi_random_init_ex",
+    "instructions": 770,
+    "share": 7.535314979045691e-08
+  },
+  {
+    "symbol_index": 1585,
+    "name": "mi_bitmap_size",
+    "instructions": 719,
+    "share": 7.036222688225781e-08
+  },
+  {
+    "symbol_index": 59,
+    "name": "<core::iter::adapters::flatten::FlattenCompat<alloc::vec::into_iter::IntoIter<alloc::vec::Vec<clap_builder::util::any_value::AnyValue>>, alloc::vec::into_iter::IntoIter<clap_builder::util::any_value::AnyValue>> as core::iter::traits::iterator::Iterator>::next",
+    "instructions": 700,
+    "share": 6.850286344586992e-08
+  },
+  {
+    "symbol_index": 711,
+    "name": "<sokonanoda::checker::cache::TcCache>::new",
+    "instructions": 700,
+    "share": 6.850286344586992e-08
+  },
+  {
+    "symbol_index": 1620,
+    "name": "_mi_vsnprintf",
+    "instructions": 696,
+    "share": 6.811141851189352e-08
+  },
+  {
+    "symbol_index": 1222,
+    "name": "<alloc::raw_vec::RawVecInner>::finish_grow",
+    "instructions": 680,
+    "share": 6.654563877598792e-08
+  },
+  {
+    "symbol_index": 1477,
+    "name": "std::sys::pal::unix::stack_overflow::thread_info::set_current_info",
+    "instructions": 679,
+    "share": 6.644777754249382e-08
+  },
+  {
+    "symbol_index": 122,
+    "name": "<alloc::raw_vec::RawVecInner<_>>::reserve::do_reserve_and_handle::<alloc::alloc::Global>",
+    "instructions": 672,
+    "share": 6.576274890803513e-08
+  },
+  {
+    "symbol_index": 336,
+    "name": "<alloc::raw_vec::RawVec<alloc::vec::Vec<std::ffi::os_str::OsString>>>::grow_one",
+    "instructions": 672,
+    "share": 6.576274890803513e-08
+  },
+  {
+    "symbol_index": 612,
+    "name": "<alloc::raw_vec::RawVecInner<_>>::reserve::do_reserve_and_handle::<alloc::alloc::Global>",
+    "instructions": 667,
+    "share": 6.527344274056462e-08
+  },
+  {
+    "symbol_index": 988,
+    "name": "<sokonanoda::checker::inductive::persist::Promoter>::level",
+    "instructions": 666,
+    "share": 6.517558150707052e-08
+  },
+  {
+    "symbol_index": 342,
+    "name": "<clap_builder::parser::arg_matcher::ArgMatcher>::remove",
+    "instructions": 655,
+    "share": 6.409910793863542e-08
+  },
+  {
+    "symbol_index": 317,
+    "name": "<clap_builder::parser::matches::matched_arg::MatchedArg>::new_val_group",
+    "instructions": 628,
+    "share": 6.145685463429473e-08
+  },
+  {
+    "symbol_index": 5,
+    "name": "core::ptr::drop_glue::<core::option::Option<alloc::vec::into_iter::IntoIter<clap_builder::util::any_value::AnyValue>>>",
+    "instructions": 620,
+    "share": 6.067396476634192e-08
+  },
+  {
+    "symbol_index": 1771,
+    "name": "_mi_meta_zalloc",
+    "instructions": 607,
+    "share": 5.940176873091863e-08
+  },
+  {
+    "symbol_index": 1646,
+    "name": "_mi_deferred_free",
+    "instructions": 606,
+    "share": 5.930390749742453e-08
+  },
+  {
+    "symbol_index": 75,
+    "name": "<alloc::raw_vec::RawVec<u8>>::grow_one",
+    "instructions": 600,
+    "share": 5.871674009645993e-08
+  },
+  {
+    "symbol_index": 420,
+    "name": "core::slice::memchr::memrchr_aligned",
+    "instructions": 574,
+    "share": 5.617234802561333e-08
+  },
+  {
+    "symbol_index": 10,
+    "name": "core::ptr::drop_glue::<alloc::vec::Vec<clap_builder::util::any_value::AnyValue>>",
+    "instructions": 558,
+    "share": 5.4606568289707736e-08
+  },
+  {
+    "symbol_index": 1121,
+    "name": "<alloc::string::String as serde_core::de::Deserialize>::deserialize::<serde::private::de::content::ContentDeserializer<serde_json::error::Error>>",
+    "instructions": 556,
+    "share": 5.441084582271953e-08
+  },
+  {
+    "symbol_index": 1690,
+    "name": "_mi_getenv",
+    "instructions": 540,
+    "share": 5.284506608681394e-08
+  },
+  {
+    "symbol_index": 714,
+    "name": "<sokonanoda::term::name::NameDisplay<sokonanoda::term::intern::Terms> as core::fmt::Display>::fmt",
+    "instructions": 502,
+    "share": 4.912633921403814e-08
+  },
+  {
+    "symbol_index": 523,
+    "name": "<num_bigint::biguint::BigUint as core::ops::bit::BitOr<&num_bigint::biguint::BigUint>>::bitor",
+    "instructions": 459,
+    "share": 4.491830617379185e-08
+  },
+  {
+    "symbol_index": 1280,
+    "name": "<alloc::raw_vec::RawVec<alloc::string::String>>::grow_one",
+    "instructions": 459,
+    "share": 4.491830617379185e-08
+  },
+  {
+    "symbol_index": 739,
+    "name": "<alloc::string::String as core::fmt::Write>::write_str",
+    "instructions": 458,
+    "share": 4.482044494029774e-08
+  },
+  {
+    "symbol_index": 1471,
+    "name": "<std::sys::pal::unix::stack_overflow::Handler as core::ops::drop::Drop>::drop",
+    "instructions": 452,
+    "share": 4.4233277539333143e-08
+  },
+  {
+    "symbol_index": 488,
+    "name": "<alloc::raw_vec::RawVecInner>::finish_grow",
+    "instructions": 450,
+    "share": 4.4037555072344946e-08
+  },
+  {
+    "symbol_index": 1468,
+    "name": "std::sys::pal::unix::stack_overflow::imp::make_handler",
+    "instructions": 450,
+    "share": 4.4037555072344946e-08
+  },
+  {
+    "symbol_index": 1583,
+    "name": "mi_arena_page_at_slice",
+    "instructions": 414,
+    "share": 4.051455066655735e-08
+  },
+  {
+    "symbol_index": 181,
+    "name": "<alloc::raw_vec::RawVec<clap_builder::mkeymap::Key>>::grow_one",
+    "instructions": 408,
+    "share": 3.992738326559275e-08
+  },
+  {
+    "symbol_index": 1531,
+    "name": "<std::io::stdio::StdoutLock as core::io::write::Write>::write_all",
+    "instructions": 397,
+    "share": 3.8850909697157656e-08
+  },
+  {
+    "symbol_index": 771,
+    "name": "<sokonanoda::checker::context::TcCtx>::mk_app",
+    "instructions": 372,
+    "share": 3.640437885980515e-08
+  },
+  {
+    "symbol_index": 17,
+    "name": "core::ptr::drop_glue::<core::iter::adapters::flatten::Flatten<alloc::vec::into_iter::IntoIter<alloc::vec::Vec<clap_builder::util::any_value::AnyValue>>>>",
+    "instructions": 370,
+    "share": 3.6208656392816955e-08
+  },
+  {
+    "symbol_index": 145,
+    "name": "<alloc::raw_vec::RawVec<&clap_builder::util::id::Id>>::grow_one",
+    "instructions": 360,
+    "share": 3.523004405787596e-08
+  },
+  {
+    "symbol_index": 1665,
+    "name": "_mi_stats_merge_into",
+    "instructions": 357,
+    "share": 3.493646035739366e-08
+  },
+  {
+    "symbol_index": 847,
+    "name": "sokonanoda::checker::nat::nat_shl",
+    "instructions": 355,
+    "share": 3.474073789040546e-08
+  },
+  {
+    "symbol_index": 844,
+    "name": "sokonanoda::checker::nat::nat_lor",
+    "instructions": 350,
+    "share": 3.425143172293496e-08
+  },
+  {
+    "symbol_index": 1799,
+    "name": "mi_bitmap_clear_once_set",
+    "instructions": 345,
+    "share": 3.376212555546446e-08
+  },
+  {
+    "symbol_index": 1473,
+    "name": "<alloc::collections::btree::node::Handle<alloc::collections::btree::node::NodeRef<alloc::collections::btree::node::marker::Mut, usize, std::sys::pal::unix::stack_overflow::thread_info::ThreadInfo, alloc::collections::btree::node::marker::Leaf>, alloc::collections::btree::node::marker::KV>>::remove_leaf_kv::<<alloc::collections::btree::map::entry::OccupiedEntry<usize, std::sys::pal::unix::stack_overflow::thread_info::ThreadInfo>>::remove_kv::{closure#0}, alloc::alloc::Global>",
+    "instructions": 344,
+    "share": 3.366426432197036e-08
+  },
+  {
+    "symbol_index": 1791,
+    "name": "mi_thread_init",
+    "instructions": 344,
+    "share": 3.366426432197036e-08
+  },
+  {
+    "symbol_index": 146,
+    "name": "<alloc::raw_vec::RawVec<clap_builder::util::id::Id>>::grow_one",
+    "instructions": 336,
+    "share": 3.288137445401756e-08
+  },
+  {
+    "symbol_index": 211,
+    "name": "<core::iter::adapters::map::Map<core::iter::adapters::copied::Copied<core::slice::iter::Iter<&str>>, <clap_builder::builder::possible_value::PossibleValue>::new<&str>> as core::iter::traits::iterator::Iterator>::next",
+    "instructions": 333,
+    "share": 3.258779075353526e-08
+  },
+  {
+    "symbol_index": 308,
+    "name": "<clap_builder::parser::parser::Parser>::resolve_pending",
+    "instructions": 326,
+    "share": 3.190276211907656e-08
+  },
+  {
+    "symbol_index": 489,
+    "name": "<alloc::raw_vec::RawVec<num_bigint::biguint::BigUint>>::grow_one",
+    "instructions": 322,
+    "share": 3.151131718510016e-08
+  },
+  {
+    "symbol_index": 1847,
+    "name": "_mi_thread_done",
+    "instructions": 320,
+    "share": 3.131559471811196e-08
+  },
+  {
+    "symbol_index": 992,
+    "name": "<sokonanoda::checker::context::ExportFile>::check_all_declars",
+    "instructions": 318,
+    "share": 3.1119872251123764e-08
+  },
+  {
+    "symbol_index": 1458,
+    "name": "<std::thread::thread::Thread>::new",
+    "instructions": 313,
+    "share": 3.0630566083653264e-08
+  },
+  {
+    "symbol_index": 1656,
+    "name": "mi_bbitmap_try_find_and_clearN_",
+    "instructions": 311,
+    "share": 3.0434843616665066e-08
+  },
+  {
+    "symbol_index": 797,
+    "name": "<smallvec::SmallVec<[sokonanoda::checker::value::Elim; 16]>>::try_grow",
+    "instructions": 305,
+    "share": 2.984767621570047e-08
+  },
+  {
+    "symbol_index": 1784,
+    "name": "_mi_theap_init",
+    "instructions": 300,
+    "share": 2.9358370048229966e-08
+  },
+  {
+    "symbol_index": 30,
+    "name": "core::ptr::drop_glue::<clap_builder::parser::matches::matched_arg::MatchedArg>",
+    "instructions": 298,
+    "share": 2.9162647581241765e-08
+  },
+  {
+    "symbol_index": 1789,
+    "name": "_mi_theap_default_set",
+    "instructions": 298,
+    "share": 2.9162647581241765e-08
+  },
+  {
+    "symbol_index": 215,
+    "name": "<clap_builder::builder::value_parser::BoolValueParser as clap_builder::builder::value_parser::TypedValueParser>::parse_ref",
+    "instructions": 286,
+    "share": 2.7988312779312566e-08
+  },
+  {
+    "symbol_index": 1010,
+    "name": "<sokonanoda::frontend::parser::Parser>::with_input_len",
+    "instructions": 284,
+    "share": 2.7792590312324365e-08
+  },
+  {
+    "symbol_index": 1466,
+    "name": "<std::sys::thread::unix::Thread>::new::thread_start",
+    "instructions": 281,
+    "share": 2.7499006611842066e-08
+  },
+  {
+    "symbol_index": 448,
+    "name": "core::fmt::float::float_to_decimal_common_exact::<f64>",
+    "instructions": 280,
+    "share": 2.7401145378347967e-08
+  },
+  {
+    "symbol_index": 1759,
+    "name": "_mi_meta_free",
+    "instructions": 280,
+    "share": 2.7401145378347967e-08
+  },
+  {
+    "symbol_index": 207,
+    "name": "<clap_builder::builder::value_parser::BoolValueParser as clap_builder::builder::value_parser::AnyValueParser>::parse_ref_",
+    "instructions": 279,
+    "share": 2.7303284144853868e-08
+  },
+  {
+    "symbol_index": 1584,
+    "name": "mi_arena_try_claim_abandoned",
+    "instructions": 276,
+    "share": 2.7009700444371568e-08
+  },
+  {
+    "symbol_index": 1817,
+    "name": "_mi_theap_free",
+    "instructions": 268,
+    "share": 2.6226810576418768e-08
+  },
+  {
+    "symbol_index": 1052,
+    "name": "<<sokonanoda::frontend::parser::BackRef as serde_core::de::Deserialize>::deserialize::__FieldVisitor as serde_core::de::Visitor>::visit_str::<serde_json::error::Error>",
+    "instructions": 252,
+    "share": 2.466103084051317e-08
+  },
+  {
+    "symbol_index": 1495,
+    "name": "<std::thread::spawnhook::SpawnHooks as core::ops::drop::Drop>::drop",
+    "instructions": 247,
+    "share": 2.417172467304267e-08
+  },
+  {
+    "symbol_index": 1692,
+    "name": "_mi_options_init",
+    "instructions": 247,
+    "share": 2.417172467304267e-08
+  },
+  {
+    "symbol_index": 1730,
+    "name": "_mi_prim_alloc",
+    "instructions": 244,
+    "share": 2.387814097256037e-08
+  },
+  {
+    "symbol_index": 770,
+    "name": "<sokonanoda::checker::context::TcCtx>::mk_const",
+    "instructions": 240,
+    "share": 2.348669603858397e-08
+  },
+  {
+    "symbol_index": 1732,
+    "name": "_mi_os_alloc_aligned",
+    "instructions": 239,
+    "share": 2.3388834805089873e-08
+  },
+  {
+    "symbol_index": 1111,
+    "name": "<core::marker::PhantomData<sokonanoda::frontend::parser::LeanMeta> as serde_core::de::DeserializeSeed>::deserialize::<serde::private::de::content::ContentDeserializer<serde_json::error::Error>>",
+    "instructions": 223,
+    "share": 2.1823055069184275e-08
+  },
+  {
+    "symbol_index": 1464,
+    "name": "<std::sys::thread::unix::Thread>::new",
+    "instructions": 223,
+    "share": 2.1823055069184275e-08
+  },
+  {
+    "symbol_index": 1731,
+    "name": "mi_os_prim_alloc_at.constprop.0",
+    "instructions": 221,
+    "share": 2.1627332602196074e-08
+  },
+  {
+    "symbol_index": 1493,
+    "name": "<std::thread::spawnhook::ChildSpawnHooks>::inherit_and_run",
+    "instructions": 216,
+    "share": 2.1138026434725574e-08
+  },
+  {
+    "symbol_index": 28,
+    "name": "core::ptr::drop_glue::<clap_builder::builder::command::Command>",
+    "instructions": 214,
+    "share": 2.0942303967737376e-08
+  },
+  {
+    "symbol_index": 1112,
+    "name": "<core::marker::PhantomData<sokonanoda::frontend::parser::ExporterMeta> as serde_core::de::DeserializeSeed>::deserialize::<serde::private::de::content::ContentDeserializer<serde_json::error::Error>>",
+    "instructions": 213,
+    "share": 2.0844442734243274e-08
+  },
+  {
+    "symbol_index": 279,
+    "name": "<clap_builder::builder::command::Command>::_do_parse",
+    "instructions": 196,
+    "share": 1.9180801764843578e-08
+  },
+  {
+    "symbol_index": 303,
+    "name": "<clap_builder::parser::parser::Parser>::possible_subcommand",
+    "instructions": 196,
+    "share": 1.9180801764843578e-08
+  },
+  {
+    "symbol_index": 1548,
+    "name": "std::thread::spawnhook::run_spawn_hooks",
+    "instructions": 192,
+    "share": 1.8789356830867176e-08
+  },
+  {
+    "symbol_index": 1597,
+    "name": "_mi_bitmap_forall_setc_rangesn",
+    "instructions": 192,
+    "share": 1.8789356830867176e-08
+  },
+  {
+    "symbol_index": 65,
+    "name": "main",
+    "instructions": 175,
+    "share": 1.712571586146748e-08
+  },
+  {
+    "symbol_index": 144,
+    "name": "<clap_builder::builder::command::Command>::required_graph",
+    "instructions": 175,
+    "share": 1.712571586146748e-08
+  },
+  {
+    "symbol_index": 1648,
+    "name": "_mi_random_next",
+    "instructions": 165,
+    "share": 1.6147103526526482e-08
+  },
+  {
+    "symbol_index": 136,
+    "name": "<alloc::sync::Arc<dyn core::any::Any + core::marker::Send + core::marker::Sync>>::drop_slow",
+    "instructions": 162,
+    "share": 1.5853519826044182e-08
+  },
+  {
+    "symbol_index": 1617,
+    "name": "_mi_strlen",
+    "instructions": 162,
+    "share": 1.5853519826044182e-08
+  },
+  {
+    "symbol_index": 1600,
+    "name": "mi_bbitmap_unsafe_setN",
+    "instructions": 152,
+    "share": 1.4874907491103182e-08
+  },
+  {
+    "symbol_index": 1403,
+    "name": "std::sys::thread_local::destructors::linux_like::register",
+    "instructions": 147,
+    "share": 1.4385601323632683e-08
+  },
+  {
+    "symbol_index": 1478,
+    "name": "<std::sys::sync::once::futex::Once>::call",
+    "instructions": 145,
+    "share": 1.4189878856644482e-08
+  },
+  {
+    "symbol_index": 986,
+    "name": "<sokonanoda::checker::tc::TypeChecker>::assert_def_eq",
+    "instructions": 144,
+    "share": 1.4092017623150384e-08
+  },
+  {
+    "symbol_index": 1785,
+    "name": "_mi_theap_create",
+    "instructions": 144,
+    "share": 1.4092017623150384e-08
+  },
+  {
+    "symbol_index": 294,
+    "name": "core::ptr::drop_glue::<clap_builder::parser::matches::matched_arg::MatchedArg>",
+    "instructions": 140,
+    "share": 1.3700572689173983e-08
+  },
+  {
+    "symbol_index": 993,
+    "name": "core::ptr::drop_glue::<std::thread::lifecycle::Packet<()>>",
+    "instructions": 139,
+    "share": 1.3602711455679883e-08
+  },
+  {
+    "symbol_index": 1114,
+    "name": "<core::marker::PhantomData<sokonanoda::frontend::parser::FormatMeta> as serde_core::de::DeserializeSeed>::deserialize::<serde::private::de::content::ContentDeserializer<serde_json::error::Error>>",
+    "instructions": 137,
+    "share": 1.3406988988691684e-08
+  },
+  {
+    "symbol_index": 1532,
+    "name": "<core::io::write::default_write_fmt::Adapter<std::io::stdio::StdoutLock> as core::fmt::Write>::write_str",
+    "instructions": 136,
+    "share": 1.3309127755197583e-08
+  },
+  {
+    "symbol_index": 1797,
+    "name": "mi_process_init",
+    "instructions": 134,
+    "share": 1.3113405288209384e-08
+  },
+  {
+    "symbol_index": 772,
+    "name": "<alloc::vec::Vec<char> as alloc::vec::spec_from_iter_nested::SpecFromIterNested<char, core::iter::adapters::rev::Rev<core::str::iter::Chars>>>::from_iter",
+    "instructions": 132,
+    "share": 1.2917682821221185e-08
+  },
+  {
+    "symbol_index": 1762,
+    "name": "_mi_prim_random_buf",
+    "instructions": 130,
+    "share": 1.2721960354232985e-08
+  },
+  {
+    "symbol_index": 998,
+    "name": "<std::thread::lifecycle::JoinInner<()>>::join",
+    "instructions": 126,
+    "share": 1.2330515420256585e-08
+  },
+  {
+    "symbol_index": 1374,
+    "name": "<std::path::Components>::parse_next_component_back",
+    "instructions": 124,
+    "share": 1.2134792953268386e-08
+  },
+  {
+    "symbol_index": 1722,
+    "name": "_mi_atomic_once_enter",
+    "instructions": 120,
+    "share": 1.1743348019291986e-08
+  },
+  {
+    "symbol_index": 41,
+    "name": "<alloc::raw_vec::RawVecInner>::finish_grow",
+    "instructions": 117,
+    "share": 1.1449764318809686e-08
+  },
+  {
+    "symbol_index": 209,
+    "name": "<clap_builder::builder::value_parser::BoolValueParser as clap_builder::builder::value_parser::AnyValueParser>::possible_values",
+    "instructions": 117,
+    "share": 1.1449764318809686e-08
+  },
+  {
+    "symbol_index": 1815,
+    "name": "_mi_theap_decref",
+    "instructions": 116,
+    "share": 1.1351903085315586e-08
+  },
+  {
+    "symbol_index": 1368,
+    "name": "std::sys::fs::unix::try_statx",
+    "instructions": 112,
+    "share": 1.0960458151339187e-08
+  },
+  {
+    "symbol_index": 682,
+    "name": "core::ptr::drop_glue::<alloc::vec::Vec<std::sync::mpmc::waker::Entry>>",
+    "instructions": 110,
+    "share": 1.0764735684350988e-08
+  },
+  {
+    "symbol_index": 312,
+    "name": "core::ptr::drop_glue::<clap_builder::parser::parser::ParseResult>",
+    "instructions": 105,
+    "share": 1.0275429516880487e-08
+  },
+  {
+    "symbol_index": 1490,
+    "name": "<alloc::io::buffered::bufwriter::BufWriter<std::io::stdio::StdoutRaw>>::flush_buf",
+    "instructions": 101,
+    "share": 9.883984582904089e-09
+  },
+  {
+    "symbol_index": 1056,
+    "name": "core::ptr::drop_glue::<sokonanoda::frontend::parser::ExportJsonVal>",
+    "instructions": 100,
+    "share": 9.786123349409988e-09
+  },
+  {
+    "symbol_index": 1609,
+    "name": "_mi_is_main_thread",
+    "instructions": 99,
+    "share": 9.688262115915888e-09
+  },
+  {
+    "symbol_index": 32,
+    "name": "<alloc::raw_vec::RawVecInner<_>>::reserve::do_reserve_and_handle::<alloc::alloc::Global>",
+    "instructions": 96,
+    "share": 9.394678415433588e-09
+  },
+  {
+    "symbol_index": 1724,
+    "name": "_mi_prim_mem_init",
+    "instructions": 94,
+    "share": 9.198955948445389e-09
+  },
+  {
+    "symbol_index": 1410,
+    "name": "std::sys::thread_local::guard::key::enable::run",
+    "instructions": 93,
+    "share": 9.101094714951288e-09
+  },
+  {
+    "symbol_index": 1587,
+    "name": "mi_bitmap_unsafe_setN",
+    "instructions": 93,
+    "share": 9.101094714951288e-09
+  },
+  {
+    "symbol_index": 1412,
+    "name": "std::sys::env::unix::getenv::{closure#0}",
+    "instructions": 86,
+    "share": 8.41606608049259e-09
+  },
+  {
+    "symbol_index": 76,
+    "name": "<alloc::ffi::c_str::CString>::_from_vec_unchecked",
+    "instructions": 84,
+    "share": 8.22034361350439e-09
+  },
+  {
+    "symbol_index": 1734,
+    "name": "_mi_page_map_init",
+    "instructions": 83,
+    "share": 8.12248238001029e-09
+  },
+  {
+    "symbol_index": 1411,
+    "name": "<alloc::sync::Arc<std::thread::thread::Inner, std::alloc::System>>::drop_slow",
+    "instructions": 81,
+    "share": 7.926759913022091e-09
+  },
+  {
+    "symbol_index": 1696,
+    "name": "_mi_theap_options_init",
+    "instructions": 80,
+    "share": 7.82889867952799e-09
+  },
+  {
+    "symbol_index": 1740,
+    "name": "_mi_os_minimal_purge_size",
+    "instructions": 80,
+    "share": 7.82889867952799e-09
+  },
+  {
+    "symbol_index": 678,
+    "name": "core::ptr::drop_glue::<std::sync::mpsc::Receiver<sokonanoda::frontend::parser::Block>>",
+    "instructions": 78,
+    "share": 7.633176212539791e-09
+  },
+  {
+    "symbol_index": 1016,
+    "name": "<std::sync::mpmc::array::Channel<core::result::Result<sokonanoda::frontend::parser::Block, core::io::error::Error>>>::recv::{closure#1}",
+    "instructions": 78,
+    "share": 7.633176212539791e-09
+  },
+  {
+    "symbol_index": 1760,
+    "name": "mi_tld_free",
+    "instructions": 76,
+    "share": 7.437453745551591e-09
+  },
+  {
+    "symbol_index": 352,
+    "name": "<clap_builder::parser::matches::matched_arg::MatchedArg>::into_vals_flatten",
+    "instructions": 73,
+    "share": 7.1438700450692914e-09
+  },
+  {
+    "symbol_index": 439,
+    "name": "<core::fmt::Formatter>::write_formatted_parts",
+    "instructions": 73,
+    "share": 7.1438700450692914e-09
+  },
+  {
+    "symbol_index": 172,
+    "name": "<alloc::raw_vec::RawVec<clap_builder::builder::arg::Arg>>::grow_one",
+    "instructions": 72,
+    "share": 7.046008811575192e-09
+  },
+  {
+    "symbol_index": 212,
+    "name": "<core::iter::adapters::map::Map<core::iter::adapters::copied::Copied<core::slice::iter::Iter<&str>>, <clap_builder::builder::possible_value::PossibleValue>::new<&str>> as core::iter::traits::iterator::Iterator>::size_hint",
+    "instructions": 72,
+    "share": 7.046008811575192e-09
+  },
+  {
+    "symbol_index": 300,
+    "name": "<alloc::raw_vec::RawVec<clap_builder::parser::matches::matched_arg::MatchedArg>>::grow_one",
+    "instructions": 72,
+    "share": 7.046008811575192e-09
+  },
+  {
+    "symbol_index": 1076,
+    "name": "<sokonanoda::term::name::NameDisplay<sokonanoda::term::intern::Terms> as alloc::string::SpecToString>::spec_to_string",
+    "instructions": 72,
+    "share": 7.046008811575192e-09
+  },
+  {
+    "symbol_index": 1699,
+    "name": "_mi_verbose_message",
+    "instructions": 72,
+    "share": 7.046008811575192e-09
+  },
+  {
+    "symbol_index": 1747,
+    "name": "mi_reserve_os_memory_ex2",
+    "instructions": 72,
+    "share": 7.046008811575192e-09
+  },
+  {
+    "symbol_index": 1247,
+    "name": "<std::path::Components as core::iter::traits::double_ended::DoubleEndedIterator>::next_back",
+    "instructions": 71,
+    "share": 6.948147578081091e-09
+  },
+  {
+    "symbol_index": 1550,
+    "name": "std::sys::env::unix::getenv",
+    "instructions": 71,
+    "share": 6.948147578081091e-09
+  },
+  {
+    "symbol_index": 1765,
+    "name": "mi_heap_main_init.part.0",
+    "instructions": 71,
+    "share": 6.948147578081091e-09
+  },
+  {
+    "symbol_index": 1494,
+    "name": "std::sys::thread_local::native::eager::destroy::<core::cell::Cell<std::thread::spawnhook::SpawnHooks>>",
+    "instructions": 70,
+    "share": 6.850286344586992e-09
+  },
+  {
+    "symbol_index": 585,
+    "name": "semver::parse::numeric_identifier",
+    "instructions": 68,
+    "share": 6.654563877598792e-09
+  },
+  {
+    "symbol_index": 634,
+    "name": "<serde_json::read::SliceRead>::skip_to_escape_slow",
+    "instructions": 68,
+    "share": 6.654563877598792e-09
+  },
+  {
+    "symbol_index": 1756,
+    "name": "_mi_arenas_alloc_aligned",
+    "instructions": 67,
+    "share": 6.556702644104692e-09
+  },
+  {
+    "symbol_index": 202,
+    "name": "<&str as core::convert::Into<clap_builder::builder::styled_str::StyledStr>>::into",
+    "instructions": 66,
+    "share": 6.458841410610592e-09
+  },
+  {
+    "symbol_index": 584,
+    "name": "<semver::Version>::parse",
+    "instructions": 65,
+    "share": 6.360980177116493e-09
+  },
+  {
+    "symbol_index": 679,
+    "name": "<std::sync::mpmc::waker::SyncWaker>::disconnect",
+    "instructions": 63,
+    "share": 6.165257710128293e-09
+  },
+  {
+    "symbol_index": 735,
+    "name": "<sokonanoda::report::Screen>::emit",
+    "instructions": 61,
+    "share": 5.9695352431400925e-09
+  },
+  {
+    "symbol_index": 1456,
+    "name": "<std::sync::mpmc::context::Context>::new",
+    "instructions": 61,
+    "share": 5.9695352431400925e-09
+  },
+  {
+    "symbol_index": 1667,
+    "name": "_mi_os_get_aligned_hint",
+    "instructions": 61,
+    "share": 5.9695352431400925e-09
+  },
+  {
+    "symbol_index": 995,
+    "name": "<alloc::sync::Arc<std::thread::lifecycle::Packet<()>>>::drop_slow",
+    "instructions": 60,
+    "share": 5.871674009645993e-09
+  },
+  {
+    "symbol_index": 997,
+    "name": "<alloc::sync::Arc<std::thread::scoped::ScopeData>>::drop_slow",
+    "instructions": 60,
+    "share": 5.871674009645993e-09
+  },
+  {
+    "symbol_index": 1486,
+    "name": "<std::sync::once::Once>::call_once::<std::rt::cleanup::{closure#0}>::{closure#0}",
+    "instructions": 60,
+    "share": 5.871674009645993e-09
+  },
+  {
+    "symbol_index": 1638,
+    "name": "_mi_os_secure_guard_page_size",
+    "instructions": 60,
+    "share": 5.871674009645993e-09
+  },
+  {
+    "symbol_index": 1636,
+    "name": "_mi_os_canuse_large_page",
+    "instructions": 58,
+    "share": 5.675951542657793e-09
+  },
+  {
+    "symbol_index": 1018,
+    "name": "core::ptr::drop_glue::<std::sync::mpsc::Receiver<core::result::Result<sokonanoda::frontend::parser::Block, core::io::error::Error>>>",
+    "instructions": 57,
+    "share": 5.578090309163693e-09
+  },
+  {
+    "symbol_index": 170,
+    "name": "<clap_builder::builder::arg::Arg>::help::<&str>",
+    "instructions": 56,
+    "share": 5.4802290756695935e-09
+  },
+  {
+    "symbol_index": 1599,
+    "name": "mi_bbitmap_init",
+    "instructions": 54,
+    "share": 5.2845066086813934e-09
+  },
+  {
+    "symbol_index": 1735,
+    "name": "_mi_os_alloc",
+    "instructions": 54,
+    "share": 5.2845066086813934e-09
+  },
+  {
+    "symbol_index": 688,
+    "name": "<std::sys::thread_local::native::lazy::Storage<core::cell::Cell<core::option::Option<std::sync::mpmc::context::Context>>, ()>>::get_or_init_slow::<<std::sync::mpmc::context::Context>::with::CONTEXT::__rust_std_internal_init_fn>",
+    "instructions": 52,
+    "share": 5.088784141693194e-09
+  },
+  {
+    "symbol_index": 305,
+    "name": "<clap_builder::parser::parser::Parser>::parse_opt_value",
+    "instructions": 50,
+    "share": 4.893061674704994e-09
+  },
+  {
+    "symbol_index": 1028,
+    "name": "<std::thread::lifecycle::spawn_unchecked<sokonanoda::frontend::parser::parse_export_file<std::io::stdio::Stdin>::{closure#0}, ()>::{closure#1} as core::ops::function::FnOnce<()>>::call_once::{shim:vtable#0}",
+    "instructions": 49,
+    "share": 4.7952004412108944e-09
+  },
+  {
+    "symbol_index": 29,
+    "name": "core::ptr::drop_glue::<clap_builder::parser::matches::arg_matches::ArgMatches>",
+    "instructions": 48,
+    "share": 4.697339207716794e-09
+  },
+  {
+    "symbol_index": 1551,
+    "name": "<std::io::stdio::Stdout as core::io::write::Write>::write_fmt",
+    "instructions": 48,
+    "share": 4.697339207716794e-09
+  },
+  {
+    "symbol_index": 440,
+    "name": "<core::num::nonzero::NonZero<usize> as core::str::traits::FromStr>::from_str",
+    "instructions": 46,
+    "share": 4.501616740728595e-09
+  },
+  {
+    "symbol_index": 1788,
+    "name": "_mi_prim_thread_associate_default_theap",
+    "instructions": 46,
+    "share": 4.501616740728595e-09
+  },
+  {
+    "symbol_index": 1857,
+    "name": "mi_process_done",
+    "instructions": 43,
+    "share": 4.208033040246295e-09
+  },
+  {
+    "symbol_index": 737,
+    "name": "<alloc::io::buffered::bufwriter::BufWriter<std::io::stdio::Stdout>>::flush_buf",
+    "instructions": 42,
+    "share": 4.110171806752195e-09
+  },
+  {
+    "symbol_index": 426,
+    "name": "core::num::imp::flt2dec::strategy::grisu::format_exact_opt::possibly_round",
+    "instructions": 41,
+    "share": 4.012310573258095e-09
+  },
+  {
+    "symbol_index": 1007,
+    "name": "<std::thread::lifecycle::spawn_unchecked<<sokonanoda::checker::context::ExportFile>::check_all_declars_serial::{closure#0}::{closure#0}, ()>::{closure#1} as core::ops::function::FnOnce<()>>::call_once::{shim:vtable#0}",
+    "instructions": 40,
+    "share": 3.914449339763995e-09
+  },
+  {
+    "symbol_index": 1813,
+    "name": "_mi_thread_locals_thread_done",
+    "instructions": 40,
+    "share": 3.914449339763995e-09
+  },
+  {
+    "symbol_index": 1034,
+    "name": "<std::thread::lifecycle::spawn_unchecked<<sokonanoda::checker::context::ExportFile>::check_imported_blocks::{closure#0}::{closure#0}, ()>::{closure#1} as core::ops::function::FnOnce<()>>::call_once::{shim:vtable#0}",
+    "instructions": 39,
+    "share": 3.816588106269896e-09
+  },
+  {
+    "symbol_index": 1602,
+    "name": "_mi_thread_id",
+    "instructions": 39,
+    "share": 3.816588106269896e-09
+  },
+  {
+    "symbol_index": 1854,
+    "name": "_mi_auto_process_init",
+    "instructions": 37,
+    "share": 3.6208656392816955e-09
+  },
+  {
+    "symbol_index": 57,
+    "name": "<for<'a> fn(&'a str) -> core::result::Result<core::num::nonzero::NonZero<usize>, core::num::error::ParseIntError> as clap_builder::builder::value_parser::TypedValueParser>::parse_ref",
+    "instructions": 36,
+    "share": 3.523004405787596e-09
+  },
+  {
+    "symbol_index": 208,
+    "name": "<clap_builder::builder::value_parser::BoolValueParser as clap_builder::builder::value_parser::AnyValueParser>::type_id",
+    "instructions": 36,
+    "share": 3.523004405787596e-09
+  },
+  {
+    "symbol_index": 216,
+    "name": "<bool as core::any::Any>::type_id",
+    "instructions": 36,
+    "share": 3.523004405787596e-09
+  },
+  {
+    "symbol_index": 677,
+    "name": "core::ptr::drop_glue::<std::sync::mpsc::SyncSender<core::result::Result<sokonanoda::frontend::parser::Block, core::io::error::Error>>>",
+    "instructions": 35,
+    "share": 3.425143172293496e-09
+  },
+  {
+    "symbol_index": 1035,
+    "name": "<std::thread::lifecycle::spawn_unchecked<<sokonanoda::checker::context::ExportFile>::check_inductives::{closure#0}::{closure#0}, ()>::{closure#1} as core::ops::function::FnOnce<()>>::call_once::{shim:vtable#0}",
+    "instructions": 35,
+    "share": 3.425143172293496e-09
+  },
+  {
+    "symbol_index": 1457,
+    "name": "std::thread::current::init_current",
+    "instructions": 35,
+    "share": 3.425143172293496e-09
+  },
+  {
+    "symbol_index": 1678,
+    "name": "_mi_prim_numa_node_count",
+    "instructions": 35,
+    "share": 3.425143172293496e-09
+  },
+  {
+    "symbol_index": 1805,
+    "name": "_mi_arenas_page_try_reabandon_to_mapped",
+    "instructions": 35,
+    "share": 3.425143172293496e-09
+  },
+  {
+    "symbol_index": 1451,
+    "name": "<std::sys::pal::unix::time::Timespec>::now",
+    "instructions": 34,
+    "share": 3.327281938799396e-09
+  },
+  {
+    "symbol_index": 1598,
+    "name": "mi_bbitmap_size",
+    "instructions": 34,
+    "share": 3.327281938799396e-09
+  },
+  {
+    "symbol_index": 1517,
+    "name": "std::panicking::set_hook",
+    "instructions": 33,
+    "share": 3.229420705305296e-09
+  },
+  {
+    "symbol_index": 1723,
+    "name": "_mi_options_post_init",
+    "instructions": 32,
+    "share": 3.131559471811196e-09
+  },
+  {
+    "symbol_index": 1816,
+    "name": "_mi_theap_cached_set",
+    "instructions": 32,
+    "share": 3.131559471811196e-09
+  },
+  {
+    "symbol_index": 53,
+    "name": "<for<'a> fn(&'a str) -> core::result::Result<core::num::nonzero::NonZero<usize>, core::num::error::ParseIntError> as clap_builder::builder::value_parser::AnyValueParser>::parse_ref_",
+    "instructions": 31,
+    "share": 3.0336982383170965e-09
+  },
+  {
+    "symbol_index": 1745,
+    "name": "_mi_os_numa_node",
+    "instructions": 31,
+    "share": 3.0336982383170965e-09
+  },
+  {
+    "symbol_index": 592,
+    "name": "<semver::identifier::Identifier as core::ops::drop::Drop>::drop",
+    "instructions": 30,
+    "share": 2.9358370048229964e-09
+  },
+  {
+    "symbol_index": 423,
+    "name": "core::num::imp::flt2dec::digits_to_dec_str",
+    "instructions": 29,
+    "share": 2.8379757713288964e-09
+  },
+  {
+    "symbol_index": 1519,
+    "name": "std::panicking::take_hook",
+    "instructions": 29,
+    "share": 2.8379757713288964e-09
+  },
+  {
+    "symbol_index": 1736,
+    "name": "_mi_os_zalloc",
+    "instructions": 29,
+    "share": 2.8379757713288964e-09
+  },
+  {
+    "symbol_index": 292,
+    "name": "<clap_builder::parser::arg_matcher::ArgMatcher>::fill_in_global_values",
+    "instructions": 28,
+    "share": 2.7401145378347968e-09
+  },
+  {
+    "symbol_index": 700,
+    "name": "std::sys::thread_local::native::lazy::destroy::<core::cell::Cell<core::option::Option<std::sync::mpmc::context::Context>>>",
+    "instructions": 28,
+    "share": 2.7401145378347968e-09
+  },
+  {
+    "symbol_index": 1561,
+    "name": "mi_out_num",
+    "instructions": 28,
+    "share": 2.7401145378347968e-09
+  },
+  {
+    "symbol_index": 1452,
+    "name": "<std::time::Instant>::elapsed",
+    "instructions": 26,
+    "share": 2.544392070846597e-09
+  },
+  {
+    "symbol_index": 680,
+    "name": "core::ptr::drop_glue::<std::sync::mpmc::counter::Counter<std::sync::mpmc::list::Channel<sokonanoda::frontend::parser::Block>>>",
+    "instructions": 25,
+    "share": 2.446530837352497e-09
+  },
+  {
+    "symbol_index": 909,
+    "name": "core::ptr::drop_glue::<sokonanoda::checker::inductive::persist::Promoter>",
+    "instructions": 25,
+    "share": 2.446530837352497e-09
+  },
+  {
+    "symbol_index": 1529,
+    "name": "<std::sync::once::Once>::call_once_force::<<std::sync::once_lock::OnceLock<std::sync::poison::mutex::Mutex<alloc::io::buffered::bufreader::BufReader<std::io::stdio::StdinRaw>>>>::initialize<<std::sync::once_lock::OnceLock<std::sync::poison::mutex::Mutex<alloc::io::buffered::bufreader::BufReader<std::io::stdio::StdinRaw>>>>::get_or_init<std::io::stdio::stdin::{closure#0}>::{closure#0}, !>::{closure#0}>::{closure#0}",
+    "instructions": 25,
+    "share": 2.446530837352497e-09
+  },
+  {
+    "symbol_index": 1536,
+    "name": "<std::sync::once::Once>::call_once_force::<<std::sync::once_lock::OnceLock<std::sync::reentrant_lock::ReentrantLock<core::cell::RefCell<alloc::io::buffered::linewriter::LineWriter<std::io::stdio::StdoutRaw>>>>>::initialize<<std::sync::once_lock::OnceLock<std::sync::reentrant_lock::ReentrantLock<core::cell::RefCell<alloc::io::buffered::linewriter::LineWriter<std::io::stdio::StdoutRaw>>>>>::get_or_init<std::io::stdio::stdout::{closure#0}>::{closure#0}, !>::{closure#0}>::{closure#0}",
+    "instructions": 25,
+    "share": 2.446530837352497e-09
+  },
+  {
+    "symbol_index": 183,
+    "name": "<alloc::raw_vec::RawVec<clap_builder::builder::arg_group::ArgGroup>>::grow_one",
+    "instructions": 24,
+    "share": 2.348669603858397e-09
+  },
+  {
+    "symbol_index": 1744,
+    "name": "_mi_os_numa_node_count",
+    "instructions": 24,
+    "share": 2.348669603858397e-09
+  },
+  {
+    "symbol_index": 1809,
+    "name": "mi_theap_collect",
+    "instructions": 24,
+    "share": 2.348669603858397e-09
+  },
+  {
+    "symbol_index": 438,
+    "name": "<core::fmt::Formatter>::pad_formatted_parts",
+    "instructions": 23,
+    "share": 2.2508083703642974e-09
+  },
+  {
+    "symbol_index": 910,
+    "name": "core::ptr::drop_glue::<core::iter::adapters::enumerate::Enumerate<indexmap::map::iter::IntoIter<sokonanoda::term::id::NameId, sokonanoda::checker::env::Declar>>>",
+    "instructions": 23,
+    "share": 2.2508083703642974e-09
+  },
+  {
+    "symbol_index": 1065,
+    "name": "core::ptr::drop_glue::<sokonanoda::frontend::parser::FileMeta>",
+    "instructions": 23,
+    "share": 2.2508083703642974e-09
+  },
+  {
+    "symbol_index": 1621,
+    "name": "_mi_snprintf",
+    "instructions": 23,
+    "share": 2.2508083703642974e-09
+  },
+  {
+    "symbol_index": 1404,
+    "name": "<std::sys::thread_local::key::racy::LazyKey>::lazy_init",
+    "instructions": 22,
+    "share": 2.1529471368701973e-09
+  },
+  {
+    "symbol_index": 1527,
+    "name": "<std::sync::once_lock::OnceLock<std::sync::poison::mutex::Mutex<alloc::io::buffered::bufreader::BufReader<std::io::stdio::StdinRaw>>>>::initialize::<<std::sync::once_lock::OnceLock<std::sync::poison::mutex::Mutex<alloc::io::buffered::bufreader::BufReader<std::io::stdio::StdinRaw>>>>::get_or_init<std::io::stdio::stdin::{closure#0}>::{closure#0}, !>",
+    "instructions": 22,
+    "share": 2.1529471368701973e-09
+  },
+  {
+    "symbol_index": 1530,
+    "name": "<std::sync::once_lock::OnceLock<std::sync::reentrant_lock::ReentrantLock<core::cell::RefCell<alloc::io::buffered::linewriter::LineWriter<std::io::stdio::StdoutRaw>>>>>::initialize::<<std::sync::once_lock::OnceLock<std::sync::reentrant_lock::ReentrantLock<core::cell::RefCell<alloc::io::buffered::linewriter::LineWriter<std::io::stdio::StdoutRaw>>>>>::get_or_init<std::io::stdio::stdout::{closure#0}>::{closure#0}, !>",
+    "instructions": 22,
+    "share": 2.1529471368701973e-09
+  },
+  {
+    "symbol_index": 582,
+    "name": "<semver::Prerelease as core::cmp::Ord>::cmp",
+    "instructions": 21,
+    "share": 2.0550859033760977e-09
+  },
+  {
+    "symbol_index": 598,
+    "name": "<semver::BuildMetadata as core::cmp::Ord>::cmp",
+    "instructions": 21,
+    "share": 2.0550859033760977e-09
+  },
+  {
+    "symbol_index": 686,
+    "name": "core::ptr::drop_glue::<std::sync::mpmc::counter::Counter<std::sync::mpmc::array::Channel<core::result::Result<sokonanoda::frontend::parser::Block, core::io::error::Error>>>>",
+    "instructions": 20,
+    "share": 1.9572246698819976e-09
+  },
+  {
+    "symbol_index": 173,
+    "name": "<clap_builder::mkeymap::MKeyMap>::push",
+    "instructions": 19,
+    "share": 1.8593634363878978e-09
+  },
+  {
+    "symbol_index": 1482,
+    "name": "std::rt::cleanup",
+    "instructions": 18,
+    "share": 1.761502202893798e-09
+  },
+  {
+    "symbol_index": 708,
+    "name": "std::sys::backtrace::__rust_begin_short_backtrace::<std::thread::lifecycle::spawn_unchecked<sokonanoda::frontend::parser::parse_export_file<std::io::stdio::Stdin>::{closure#0}, ()>::{closure#1}::{closure#0}::{closure#0}, ()>",
+    "instructions": 16,
+    "share": 1.565779735905598e-09
+  },
+  {
+    "symbol_index": 1848,
+    "name": "mi_pthread_done",
+    "instructions": 16,
+    "share": 1.565779735905598e-09
+  },
+  {
+    "symbol_index": 1666,
+    "name": "_mi_theap_random_next",
+    "instructions": 15,
+    "share": 1.4679185024114982e-09
+  },
+  {
+    "symbol_index": 1682,
+    "name": "_mi_clock_start",
+    "instructions": 15,
+    "share": 1.4679185024114982e-09
+  },
+  {
+    "symbol_index": 1764,
+    "name": "_mi_random_init",
+    "instructions": 15,
+    "share": 1.4679185024114982e-09
+  },
+  {
+    "symbol_index": 1619,
+    "name": "_mi_atomic_once_release",
+    "instructions": 14,
+    "share": 1.3700572689173984e-09
+  },
+  {
+    "symbol_index": 1814,
+    "name": "_mi_thread_locals_done",
+    "instructions": 14,
+    "share": 1.3700572689173984e-09
+  },
+  {
+    "symbol_index": 1484,
+    "name": "std::sys::exit::unique_thread_exit",
+    "instructions": 13,
+    "share": 1.2721960354232985e-09
+  },
+  {
+    "symbol_index": 0,
+    "name": "_start",
+    "instructions": 12,
+    "share": 1.1743348019291985e-09
+  },
+  {
+    "symbol_index": 1077,
+    "name": "<sokonanoda::config::AxiomPolicy>::decision",
+    "instructions": 12,
+    "share": 1.1743348019291985e-09
+  },
+  {
+    "symbol_index": 1577,
+    "name": "_mi_arena_id_none",
+    "instructions": 12,
+    "share": 1.1743348019291985e-09
+  },
+  {
+    "symbol_index": 1790,
+    "name": "_mi_prim_thread_is_in_threadpool",
+    "instructions": 12,
+    "share": 1.1743348019291985e-09
+  },
+  {
+    "symbol_index": 1808,
+    "name": "_mi_theap_collect_abandon",
+    "instructions": 12,
+    "share": 1.1743348019291985e-09
+  },
+  {
+    "symbol_index": 722,
+    "name": "<alloc::sync::Arc<indexmap::map::IndexMap<sokonanoda::term::id::NameId, sokonanoda::checker::env::Declar, rustc_hash::FxBuildHasher>>>::drop_slow",
+    "instructions": 11,
+    "share": 1.0764735684350987e-09
+  },
+  {
+    "symbol_index": 450,
+    "name": "<f64 as core::fmt::Display>::fmt",
+    "instructions": 10,
+    "share": 9.786123349409988e-10
+  },
+  {
+    "symbol_index": 1772,
+    "name": "mi_heap_stats_merge_to_subproc",
+    "instructions": 9,
+    "share": 8.80751101446899e-10
+  },
+  {
+    "symbol_index": 45,
+    "name": "<core::num::nonzero::NonZero<usize> as core::any::Any>::type_id",
+    "instructions": 8,
+    "share": 7.82889867952799e-10
+  },
+  {
+    "symbol_index": 1481,
+    "name": "std::process::exit",
+    "instructions": 8,
+    "share": 7.82889867952799e-10
+  },
+  {
+    "symbol_index": 1483,
+    "name": "std::sys::exit::exit",
+    "instructions": 8,
+    "share": 7.82889867952799e-10
+  },
+  {
+    "symbol_index": 1603,
+    "name": "_mi_theap_guarded_init",
+    "instructions": 8,
+    "share": 7.82889867952799e-10
+  },
+  {
+    "symbol_index": 1640,
+    "name": "_mi_os_secure_guard_page_set_before",
+    "instructions": 8,
+    "share": 7.82889867952799e-10
+  },
+  {
+    "symbol_index": 1683,
+    "name": "_mi_stats_init",
+    "instructions": 8,
+    "share": 7.82889867952799e-10
+  },
+  {
+    "symbol_index": 1858,
+    "name": "_mi_auto_process_done",
+    "instructions": 8,
+    "share": 7.82889867952799e-10
+  },
+  {
+    "symbol_index": 1663,
+    "name": "__mi_stat_adjust_decrease_mt",
+    "instructions": 7,
+    "share": 6.850286344586992e-10
+  },
+  {
+    "symbol_index": 1664,
+    "name": "__mi_stat_adjust_decrease",
+    "instructions": 6,
+    "share": 5.871674009645992e-10
+  },
+  {
+    "symbol_index": 1671,
+    "name": "_mi_thread_locals_init",
+    "instructions": 6,
+    "share": 5.871674009645992e-10
+  },
+  {
+    "symbol_index": 1787,
+    "name": "_mi_prim_thread_done_auto_done",
+    "instructions": 6,
+    "share": 5.871674009645992e-10
+  },
+  {
+    "symbol_index": 1853,
+    "name": "_mi_allocator_init",
+    "instructions": 6,
+    "share": 5.871674009645992e-10
+  },
+  {
+    "symbol_index": 1578,
+    "name": "mi_arena_id_from_arena",
+    "instructions": 5,
+    "share": 4.893061674704994e-10
+  },
+  {
+    "symbol_index": 233,
+    "name": "<clap_builder::builder::value_parser::StringValueParser as clap_builder::builder::value_parser::AnyValueParser>::possible_values",
+    "instructions": 4,
+    "share": 3.914449339763995e-10
+  },
+  {
+    "symbol_index": 1424,
+    "name": "std::sys::args::unix::imp::ARGV_INIT_ARRAY::init_wrapper",
+    "instructions": 4,
+    "share": 3.914449339763995e-10
+  },
+  {
+    "symbol_index": 1783,
+    "name": "_mi_random_reinit_if_weak",
+    "instructions": 4,
+    "share": 3.914449339763995e-10
+  },
+  {
+    "symbol_index": 1786,
+    "name": "_mi_prim_thread_init_auto_done",
+    "instructions": 4,
+    "share": 3.914449339763995e-10
+  },
+  {
+    "symbol_index": 1632,
+    "name": "_mi_os_has_virtual_reserve",
+    "instructions": 3,
+    "share": 2.935837004822996e-10
+  },
+  {
+    "symbol_index": 1635,
+    "name": "_mi_os_virtual_address_bits",
+    "instructions": 3,
+    "share": 2.935837004822996e-10
+  },
+  {
+    "symbol_index": 1639,
+    "name": "_mi_os_secure_guard_page_set_at",
+    "instructions": 3,
+    "share": 2.935837004822996e-10
+  },
+  {
+    "symbol_index": 1725,
+    "name": "_mi_os_init",
+    "instructions": 3,
+    "share": 2.935837004822996e-10
+  },
+  {
+    "symbol_index": 1852,
+    "name": "_mi_is_redirected",
+    "instructions": 3,
+    "share": 2.935837004822996e-10
+  },
+  {
+    "symbol_index": 31,
+    "name": "std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>",
+    "instructions": 2,
+    "share": 1.9572246698819976e-10
+  },
+  {
+    "symbol_index": 54,
+    "name": "<for<'a> fn(&'a str) -> core::result::Result<core::num::nonzero::NonZero<usize>, core::num::error::ParseIntError> as clap_builder::builder::value_parser::AnyValueParser>::possible_values",
+    "instructions": 2,
+    "share": 1.9572246698819976e-10
+  },
+  {
+    "symbol_index": 1855,
+    "name": "mi_process_attach",
+    "instructions": 2,
+    "share": 1.9572246698819976e-10
+  },
+  {
+    "symbol_index": 1856,
+    "name": "_mi_allocator_done",
+    "instructions": 2,
+    "share": 1.9572246698819976e-10
+  },
+  {
+    "symbol_index": 1859,
+    "name": "mi_process_detach",
+    "instructions": 2,
+    "share": 1.9572246698819976e-10
+  }
+]

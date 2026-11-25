@@ -1,0 +1,31 @@
+{
+  "binary_sha256": "09fe7ecf7421be7ad7f7c57596c214bcd6e7c0d912d6d555cb5749b17202bd5b",
+  "source_sha256": "792dbc19d2feb6309bd3aad51ed5f4d7bd497aa63561d736010ddaed119ad486",
+  "symbol_map_sha256": "14cf0b6c30d4332c9ef67e843498c71f690cd1c80d05f8ab3202175c94d1e308",
+  "client_sha256": "3fd352e216d0cc9c18f7f62a0093d951862f627845d058e379ad731bd9aeedbc",
+  "sized_text_symbols": 1862,
+  "image_base": 0,
+  "compiler_command": [
+    "gcc",
+    "-shared",
+    "-fPIC",
+    "-O3",
+    "-fno-stack-protector",
+    "-DX86_64",
+    "-DLINUX",
+    "-I/home/runner/work/_temp/flash-dynamorio/DynamoRIO-Linux-11.92.20777/include",
+    "-I/home/runner/work/_temp/flash-dynamorio/DynamoRIO-Linux-11.92.20777/ext/include",
+    "-I/home/runner/work/_temp/whole-profile/prepared",
+    "/home/runner/work/mathgraph-lean-kernel/mathgraph-lean-kernel/experiments/flash-whole-profile-20261126/profile_counter.c",
+    "-L/home/runner/work/_temp/flash-dynamorio/DynamoRIO-Linux-11.92.20777/lib64/release",
+    "-Wl,-rpath,/home/runner/work/_temp/flash-dynamorio/DynamoRIO-Linux-11.92.20777/lib64/release",
+    "-L/home/runner/work/_temp/flash-dynamorio/DynamoRIO-Linux-11.92.20777/ext/lib64/release",
+    "-Wl,-rpath,/home/runner/work/_temp/flash-dynamorio/DynamoRIO-Linux-11.92.20777/ext/lib64/release",
+    "-ldrx",
+    "-ldrreg",
+    "-ldrmgr",
+    "-ldynamorio",
+    "-o",
+    "/home/runner/work/_temp/whole-profile/prepared/profile-counter.so"
+  ]
+}

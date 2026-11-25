@@ -1,0 +1,7 @@
+{
+  "state": "INVALIDATED_AS_EXECUTABLE_QUALIFICATION",
+  "reason": "Cargo test changed the target/release executable during the portable run. Per-row executable identity was not frozen. Do not count the 226 apparent matching outcomes as a qualification of one binary.",
+  "initial_binary_sha256": "7d705f1c54acec33def2a0160940dbc5d95df806b0ada4f5749a3fceb8d5d687",
+  "measured_prefix_binary_sha256": "7d705f1c54acec33def2a0160940dbc5d95df806b0ada4f5749a3fceb8d5d687",
+  "recovery": "Exact measured executable recovered by hash from retained cargo artifact, copied to read-only eval-inline-frozen.bin; rerun all 230 cases without concurrent compilation."
+}

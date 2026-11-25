@@ -1,0 +1,14 @@
+{
+  "state": "CANDIDATE_PREMEASUREMENT",
+  "base_commit": "bc704eebed4e009bc66af1a849f18315c11f1926",
+  "objective": "Keep ordinary subexpression memoization on shallow right application trees while retaining iterative protection for deep chains.",
+  "evidence": "Frozen full-input instruction profile 45717337815 attributes 20.5147% of counted application instructions to eval_no_cache and 13.2495% to eval_node. This motivates an experiment, not a speedup claim.",
+  "hypothesis": "The existing special path directly evaluates all right-chain applications and bypasses their ordinary expression-cache entries even when the chain is shallow. Restricting it to deep chains may reduce repeated DAG evaluation.",
+  "mechanism": "Compute saturated right-application depth in existing ExprNode padding. The node must remain 32 bytes. Non-application roots have depth zero; application depth is one plus its argument's depth. Use the existing iterative right-chain evaluator only at depth >=64. Other cases use the existing ordinary application evaluator, with all cache context/universe guards unchanged.",
+  "controls": "Existing kernel tests plus a typed identity chain at shallow/deep cutoff boundaries and beyond u16 saturation; evaluation must preserve its value without deep recursive stack growth.",
+  "cost_gate": "Two alternating matched generic-build pairs must ACCEPT the exact 25,131-declaration prefix and each save at least 1% of calibrated software-counted application instructions before broad qualification.",
+  "if_gate_fails": "Preserve source, tests and raw counts; reject performance promotion without a full Mathlib run.",
+  "if_gate_passes": "Require unchanged 230 portable outcomes, source-correspondence controls and complete Mathlib before promotion. Official Arena two-worker native compilation remains a separate measurement boundary.",
+  "lineage": "Independent original experiment against attributed upstream core. The prior compact single-binding ID candidate failed its prefix gate at ratio 1.0006015075 and is retained separately.",
+  "boundary": "Candidate only; no new kernel soundness theorem, full qualification, release or official rank."
+}

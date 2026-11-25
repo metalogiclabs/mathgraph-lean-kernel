@@ -1,0 +1,114 @@
+name: Flash eval-dispatch inline full qualification
+on:
+  push:
+    branches: [research/flash-lambda-checking-20261126]
+    paths: ['.github/workflows/flash-eval-inline-full.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_BUILD_JOBS: 1
+      CARGO_INCREMENTAL: 0
+      RUSTFLAGS: -C target-cpu=x86-64 -C target-feature=-avx,-avx2,-avx512f,-fma
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.99.1'
+      - name: Build exact isolated candidate and freeze both executable identities
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/eval-inline-full"
+          INLINE_SRC="$RUNNER_TEMP/inline-source"
+          mkdir -p "$OUT/builds"
+          git rev-parse HEAD > "$OUT/harness-commit.txt"
+          gh api repos/metalogiclabs/mathgraph-lean-kernel/actions/artifacts/15069518161/zip > "$OUT/frozen.zip"
+          python3 - <<'PY'
+          import hashlib,os,zipfile
+          from pathlib import Path
+          out=Path(os.environ['RUNNER_TEMP'])/'eval-inline-full'
+          archive=out/'frozen.zip'
+          assert hashlib.sha256(archive.read_bytes()).hexdigest()=='1a24ca4c7161e0ad47e58bb0d4d3d11c3345c6d249cd6d42a9e7e3976d8ef9b5'
+          with zipfile.ZipFile(archive) as z:
+              assert z.testzip() is None
+              binary=z.read('builds/strict.bin')
+              assert hashlib.sha256(binary).hexdigest()=='09fe7ecf7421be7ad7f7c57596c214bcd6e7c0d912d6d555cb5749b17202bd5b'
+              (out/'builds/baseline.bin').write_bytes(binary)
+              (out/'baseline-build-flags.txt').write_bytes(z.read('build-flags.txt'))
+              (out/'baseline-compiler.txt').write_bytes(z.read('compiler.txt'))
+          archive.unlink()
+          PY
+          git fetch origin bc704eebed4e009bc66af1a849f18315c11f1926
+          git worktree add --detach "$INLINE_SRC" bc704eebed4e009bc66af1a849f18315c11f1926
+          git -C "$INLINE_SRC" apply --check "$GITHUB_WORKSPACE/experiments/flash-eval-dispatch-inline-20261126/prototype.patch"
+          git -C "$INLINE_SRC" apply "$GITHUB_WORKSPACE/experiments/flash-eval-dispatch-inline-20261126/prototype.patch"
+          git -C "$INLINE_SRC" add src
+          INLINE_TREE=$(git -C "$INLINE_SRC" write-tree)
+          git -C "$INLINE_SRC" rev-parse "$INLINE_TREE:src" > "$OUT/candidate-source-tree.txt"
+          test "$(cat "$OUT/candidate-source-tree.txt")" = de6696fcecbe99e6fcab5bb68c5974e1e9a04e49
+          git -C "$INLINE_SRC" diff --cached > "$OUT/candidate.patch"
+          rustc -Vv > "$OUT/candidate-compiler.txt"
+          printf '%s\n' "$RUSTFLAGS" > "$OUT/candidate-build-flags.txt"
+          cargo build --release --locked --manifest-path "$INLINE_SRC/Cargo.toml" --target-dir "$RUNNER_TEMP/inline-target"
+          cp "$RUNNER_TEMP/inline-target/release/sokonanoda" "$OUT/builds/candidate.bin"
+          chmod 555 "$OUT/builds/baseline.bin" "$OUT/builds/candidate.bin"
+          sha256sum "$OUT/builds/"*.bin > "$OUT/frozen-executables.sha256"
+      - name: Run source tests and all exact portable inputs sequentially
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/eval-inline-full"
+          INLINE_SRC="$RUNNER_TEMP/inline-source"
+          (cd "$INLINE_SRC" && cargo test --release --locked --target-dir "$RUNNER_TEMP/inline-target") > "$OUT/source-tests.log" 2>&1
+          (cd "$INLINE_SRC" && python3 experiments/flash-upstream-repair-20261126/prepare_portable.py) > "$OUT/prepare-portable.log" 2>&1
+          (cd "$INLINE_SRC" && python3 experiments/flash-upstream-repair-20261126/verify.py portable \
+            --binary "$OUT/builds/candidate.bin" --out "$OUT/portable" \
+            --results experiments/flash-upstream-repair-20261126/official-inputs.json \
+            --fixtures "$RUNNER_TEMP/lambda-portable-inputs/fixtures")
+          (cd "$INLINE_SRC" && python3 experiments/flash-upstream-repair-20261126/metadata_controls.py \
+            --binary "$OUT/builds/candidate.bin" --out "$OUT/source-controls")
+          sha256sum --check "$OUT/frozen-executables.sha256"
+      - name: Prepare pinned diagnostic SDK and audited private-cache counter
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/eval-inline-full"
+          git worktree add --detach "$RUNNER_TEMP/inline-measurement-authority" 2ba65451f90ce79b48a76cb5a33d0af3950e2fa1
+          (cd "$RUNNER_TEMP/inline-measurement-authority" && python3 experiments/flash-upstream-repair-20261126/build_counter.py)
+          SDK="$RUNNER_TEMP/flash-dynamorio/DynamoRIO-Linux-11.92.20777"
+          cc -std=c11 -O2 -shared -fPIC -DLINUX -DX86_64 \
+            -I "$SDK/include" -I "$SDK/ext/include" \
+            experiments/flash-number1-trials-20261126/instruction-counter/profile.c \
+            -L "$SDK/ext/lib64/release" -L "$SDK/lib64/release" \
+            -Wl,-rpath,"$SDK/ext/lib64/release" -Wl,-rpath,"$SDK/lib64/release" \
+            -ldrmgr -ldrx -ldrreg -ldynamorio -o "$OUT/profile.so"
+          cp experiments/flash-number1-trials-20261126/instruction-counter/profile.c "$OUT/"
+          cp "$RUNNER_TEMP/flash-dynamorio/identity.json" "$OUT/sdk-identity.json"
+      - uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/lambda-input/mathlib.ndjson
+          key: flash-lambda-exact-mathlib-f749dfd084fc0727d107c7aaded7d492cebfc0b517cfaa7337d8a7578a6c0dec
+          fail-on-cache-miss: true
+      - name: Run alternating full Mathlib native and instruction gates
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/eval-inline-full"
+          python3 experiments/flash-eval-dispatch-inline-20261126/full_mathlib.py \
+            --baseline "$OUT/builds/baseline.bin" --candidate "$OUT/builds/candidate.bin" \
+            --candidate-source-tree "$OUT/candidate-source-tree.txt" \
+            --fixture "$RUNNER_TEMP/lambda-input/mathlib.ndjson" \
+            --drrun "$RUNNER_TEMP/flash-dynamorio/DynamoRIO-Linux-11.92.20777/bin64/drrun" \
+            --client "$OUT/profile.so" --out "$OUT/comparison"
+          sha256sum --check "$OUT/frozen-executables.sha256"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-eval-inline-full-qualification
+          path: ${{ runner.temp }}/eval-inline-full/
+          retention-days: 90

@@ -1,0 +1,124 @@
+diff --git a/src/checker/eval.rs b/src/checker/eval.rs
+index 6c0225f..39ab2e1 100644
+--- a/src/checker/eval.rs
++++ b/src/checker/eval.rs
+@@ -14,6 +14,37 @@ mod environment;
+ mod reduction;
+ mod whnf_cache;
+ 
++#[cfg(test)]
++mod right_spine_tests {
++    use crate::checker::env::EnvLimit;
++    use crate::checker::value::EMPTY_ENV;
++    use crate::config::Config;
++    use crate::frontend::parser::parse_export_mapped;
++    use crate::term::id::ZERO;
++
++    #[test]
++    fn typed_identity_right_spines_preserve_values_across_cutoff_and_saturation() {
++        let export = parse_export_mapped(b"{\"ie\":0,\"sort\":0}\n", Config::default()).unwrap();
++        export.with_ctx(|ctx, cache, _| {
++            ctx.with_tc(EnvLimit::ByIndex(0), cache, |tc| {
++                let one = tc.ctx.succ(ZERO);
++                let domain = tc.ctx.mk_sort(one);
++                let var = tc.ctx.mk_var(0);
++                let identity = tc.ctx.mk_lambda(domain, var);
++                // Prop : Sort 1, so each identity application has the same valid type.
++                let mut chain = tc.ctx.mk_sort(ZERO);
++                let expected = tc.mk_sort_hc(ZERO);
++                for n in 1..=65537 {
++                    chain = tc.ctx.mk_app(identity, chain);
++                    if matches!(n, 1 | 2 | 63 | 64 | 65 | 4096 | 65535 | 65536 | 65537) {
++                        assert_eq!(tc.eval(0, EMPTY_ENV, chain), expected, "right chain of {n}");
++                    }
++                }
++            });
++        });
++    }
++}
++
+ #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+ enum ConstKind {
+     Unfoldable,
+@@ -71,7 +102,11 @@ impl TypeChecker<'_, '_> {
+ 
+     fn eval_no_cache(&mut self, depth: u32, env: E, e: ExprId, first: Expr) -> V {
+         if let Expr::App { fun, arg } = first {
+-            if let Expr::App { fun: f2, arg: a2 } = self.ctx.ex(arg) {
++            // Shallow argument subtrees retain their normal expression-cache reuse.
++            // Deep right spines keep the original iterative evaluator and stack bound.
++            if self.ctx.node(e).right_depth >= 64
++                && let Expr::App { fun: f2, arg: a2 } = self.ctx.ex(arg)
++            {
+                 let first_fun = fun;
+                 let mut all_same = fun == f2;
+                 let mut count = 2u32;
+diff --git a/src/term/expr.rs b/src/term/expr.rs
+index 4b87732..769d676 100644
+--- a/src/term/expr.rs
++++ b/src/term/expr.rs
+@@ -141,6 +141,8 @@ pub struct ExprNode {
+     /// The number of "loose" bound variables, which is the number of bound variables
+     /// in an expression which are bound by something above it.
+     pub(crate) loose: u16,
++    /// Saturated depth following application arguments; stored in existing padding.
++    pub(crate) right_depth: u16,
+     pub(crate) mask: u64,
+ }
+ 
+@@ -194,6 +196,7 @@ impl ExprNode {
+         Self {
+             expr,
+             loose: 0,
++            right_depth: 0,
+             mask: 0,
+         }
+     }
+@@ -203,6 +206,7 @@ impl ExprNode {
+         Self {
+             expr: Var { dbj_idx },
+             loose: dbj_idx + 1,
++            right_depth: 0,
+             mask: var_mask(dbj_idx),
+         }
+     }
+@@ -212,6 +216,7 @@ impl ExprNode {
+         Self {
+             expr: App { fun, arg },
+             loose: f.loose.max(a.loose),
++            right_depth: a.right_depth.saturating_add(1),
+             mask: f.mask | a.mask,
+         }
+     }
+@@ -221,6 +226,7 @@ impl ExprNode {
+         Self {
+             expr: Pi { binder_type, body },
+             loose: t.loose.max(b.loose.saturating_sub(1)),
++            right_depth: 0,
+             mask: t.mask | b.body_mask(),
+         }
+     }
+@@ -230,6 +236,7 @@ impl ExprNode {
+         Self {
+             expr: Lambda { binder_type, body },
+             loose: t.loose.max(b.loose.saturating_sub(1)),
++            right_depth: 0,
+             mask: t.mask | b.body_mask(),
+         }
+     }
+@@ -252,6 +259,7 @@ impl ExprNode {
+                 nondep,
+             },
+             loose: t.loose.max(v.loose.max(b.loose.saturating_sub(1))),
++            right_depth: 0,
+             mask: t.mask | v.mask | b.body_mask(),
+         }
+     }
+@@ -265,6 +273,7 @@ impl ExprNode {
+                 structure,
+             },
+             loose: s.loose,
++            right_depth: 0,
+             mask: s.mask,
+         }
+     }

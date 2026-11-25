@@ -1,0 +1,20 @@
+{
+  "state": "REJECTED_FOR_PERFORMANCE_PROMOTION",
+  "candidate_over_baseline": 1.000601507541256,
+  "paired_ratios": [
+    1.000595387808267,
+    1.0006076273116737
+  ],
+  "passed": false,
+  "gate": "Both alternating pairs <=0.99 before broad qualification",
+  "boundary": "Exact 25131-declaration prefix, matched generic local builds, software basic-block instructions with documented limitations. Not complete Mathlib, native wall time, an Arena score or a release.",
+  "candidate_source_tree": "a0417926ce1a73a3e3eb60ff15d30f1a8454a9d9",
+  "library_tests": 42,
+  "retained_export_controls": 8,
+  "integration_tests": 2,
+  "portable_230": "NOT_RUN_AFTER_COST_GATE_FAILURE",
+  "full_mathlib": "NOT_RUN_AFTER_COST_GATE_FAILURE",
+  "release_promotion": false,
+  "predecessor": "Old pointer-based single-binding ratio 1.0275834977 remains a separate negative.",
+  "apparatus_failure": "Initial new test scaffolding supplied two callback arguments instead of three; corrected before semantic test execution."
+}

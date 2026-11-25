@@ -1,0 +1,62 @@
+[
+  {
+    "case": "perf/magma-list-pair-n7",
+    "arm": "local_baseline",
+    "binary_sha256": "0b1d4d8bb6e33f931c1df0e7b70423df4243ca7166901843eccc09c5db669537",
+    "raw_exit": 0,
+    "diagnostic_stop": null,
+    "elapsed_s": 2.62649514900113,
+    "cpu_s": 2.5071830000000004,
+    "max_rss_kb": 582084
+  },
+  {
+    "case": "perf/magma-list-pair-n7",
+    "arm": "measured_candidate",
+    "binary_sha256": "7d705f1c54acec33def2a0160940dbc5d95df806b0ada4f5749a3fceb8d5d687",
+    "raw_exit": 0,
+    "diagnostic_stop": null,
+    "elapsed_s": 1.324748865001311,
+    "cpu_s": 1.259218,
+    "max_rss_kb": 635352
+  },
+  {
+    "case": "perf/magma-list-pair-n7",
+    "arm": "ci_frozen_baseline",
+    "binary_sha256": "09fe7ecf7421be7ad7f7c57596c214bcd6e7c0d912d6d555cb5749b17202bd5b",
+    "raw_exit": 0,
+    "diagnostic_stop": null,
+    "elapsed_s": 1.0099698820013145,
+    "cpu_s": 0.92529,
+    "max_rss_kb": 700164
+  },
+  {
+    "case": "perf/ite-taken-branch",
+    "arm": "local_baseline",
+    "binary_sha256": "0b1d4d8bb6e33f931c1df0e7b70423df4243ca7166901843eccc09c5db669537",
+    "raw_exit": -9,
+    "diagnostic_stop": null,
+    "elapsed_s": 4.66617160199894,
+    "cpu_s": 3.596977,
+    "max_rss_kb": 853252
+  },
+  {
+    "case": "perf/ite-taken-branch",
+    "arm": "measured_candidate",
+    "binary_sha256": "7d705f1c54acec33def2a0160940dbc5d95df806b0ada4f5749a3fceb8d5d687",
+    "raw_exit": -9,
+    "diagnostic_stop": null,
+    "elapsed_s": 1.5149627979990328,
+    "cpu_s": 1.448693,
+    "max_rss_kb": 854808
+  },
+  {
+    "case": "perf/ite-taken-branch",
+    "arm": "ci_frozen_baseline",
+    "binary_sha256": "09fe7ecf7421be7ad7f7c57596c214bcd6e7c0d912d6d555cb5749b17202bd5b",
+    "raw_exit": -9,
+    "diagnostic_stop": null,
+    "elapsed_s": 1.5262654719990678,
+    "cpu_s": 1.4750269999999999,
+    "max_rss_kb": 854536
+  }
+]

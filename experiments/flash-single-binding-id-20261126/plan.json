@@ -1,0 +1,19 @@
+{
+  "state": "CANDIDATE_PREMEASUREMENT",
+  "base_commit": "bc704eebed4e009bc66af1a849f18315c11f1926",
+  "base_source_tree": "06c257f0f2ff1f64711cfa54620b650e6dd59b7e",
+  "objective": "Avoid canonical environment projection for eligible single-binding cache lookups without widening the packed cache key.",
+  "evidence": "Full frozen-core diagnostic 45717337815 attributes 9.5960% of counted application instructions to prune_env_cold and 5.1178% to intern_frame, exclusive compiled symbols.",
+  "mechanism": "Use a distinct 32-bit cache-key type with disjoint environment-ID and selected-value-ID domains. Value and environment stores already enforce IDs below 2^31. Only single near-binding support with no universe substitution is eligible; other cases retain canonical environment keys. Evaluation computes under the original environment; closures retain their existing canonical capture. Inference checking flags and universe scopes remain unchanged.",
+  "predecessor": "An older pointer-representation single-binding trial was rejected at ratio 1.0275834977. This is a new representation-specific candidate: the compact IDs permit a domain tag without expanding the existing 64-bit pair key. The predecessor is not erased or counted as a success.",
+  "controls": [
+    "Changing an unused binding preserves evaluation.",
+    "Changing the selected binding changes evaluation.",
+    "Equal bound-variable levels with different type carriers stay distinct.",
+    "Different universe substitutions stay distinct and use the original path."
+  ],
+  "cost_gate": "Both distinct matched generic binaries must ACCEPT the exact 25,131-declaration prefix; two alternating pairs must show at least 1% fewer calibrated software-counted instructions (ratio <=0.99) before broad qualification.",
+  "if_gate_fails": "Reject performance promotion and preserve source, raw counts and controls. Do not launch full Mathlib or a broad portable qualification solely for this candidate.",
+  "if_gate_passes": "Run the unchanged 230 portable inputs and source controls, then exact complete Mathlib. Arena uses two workers and target-cpu=native, which are separate release-comparison obligations.",
+  "boundary": "This is an independently authored prototype against an attributed upstream core. It is not a new independent kernel, full qualification, an Arena score or a release."
+}

@@ -1,0 +1,18 @@
+{
+  "state": "WARRANTED_BOUNDED_CROSSCHECK",
+  "run": 45718077915,
+  "head": "b59d060b7083516db11c40af91ae1882affae5f2",
+  "artifact": 15071850150,
+  "archive_sha256": "0ea7168f2e0d72bb43cc12596bae0778cd00b8e5a5c8f40679d8c696ba250553",
+  "binary_sha256": "09fe7ecf7421be7ad7f7c57596c214bcd6e7c0d912d6d555cb5749b17202bd5b",
+  "total": 546073560149,
+  "source_tree": "06c257f0f2ff1f64711cfa54620b650e6dd59b7e",
+  "raw_block_rows": 40537,
+  "all_active_checker_named_symbol_counts_exactly_match": 315,
+  "configured_check_workers": 1,
+  "observed_process_threads": 5,
+  "calibration_cases": 3,
+  "multithread_controls": 6,
+  "shared_cache_mode_negative_raw_exit": 255,
+  "boundary": "Separate instrumentation implementation and execution on the same frozen binary and DynamoRIO SDK, not an independent kernel or independent hardware metrology. Private code caches are mandatory; the negative confirms refusal in shared-cache mode. Auxiliary process threads are not checking-worker count."
+}

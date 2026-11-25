@@ -1,0 +1,12 @@
+diff --git a/src/checker/eval.rs b/src/checker/eval.rs
+index 6c0225f..65a64e2 100644
+--- a/src/checker/eval.rs
++++ b/src/checker/eval.rs
+@@ -37,6 +37,7 @@ impl TypeChecker<'_, '_> {
+         self.eval_node(depth, env, e, node)
+     }
+ 
++    #[inline(always)]
+     fn eval_node(&mut self, depth: u32, env: E, e: ExprId, node: ExprNode) -> V {
+         if node.loose == 0 {
+             let Some(ls) = self.vals().env_lsub(env) else {

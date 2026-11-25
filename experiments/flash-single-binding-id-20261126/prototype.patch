@@ -1,0 +1,246 @@
+diff --git a/src/checker/cache.rs b/src/checker/cache.rs
+index 2b00112..9c17bd1 100644
+--- a/src/checker/cache.rs
++++ b/src/checker/cache.rs
+@@ -3,7 +3,7 @@
+ 
+ use crate::checker::infer::CachedType;
+ use crate::checker::ptrmap::{PtrMap, PtrSet};
+-use crate::checker::value::{E, LsubId, V, Vals};
++use crate::checker::value::{E, EvalEnvKey, LsubId, V, Vals};
+ use crate::term::hash::GOLDEN;
+ use crate::term::id::{ExprId, LevelId, LevelsId, NameId};
+ 
+@@ -119,8 +119,8 @@ caches! {
+         #[keep(vec![0; WHNF_ADMIT_LEN].into_boxed_slice().try_into().expect("admit table size"))]
+         whnf_admit: Box<[u8; WHNF_ADMIT_LEN]>,
+         #[cap(SESSION)] global_value_cache: PtrMap<(V, u32), Result<(u128, bool), u8>>,
+-        #[cap(SESSION)] open_eval_cache: PtrMap<(E, ExprId), V>,
+-        #[cap(SESSION)] type_cache: PtrMap<(E, ExprId), CachedType>,
++        #[cap(SESSION)] open_eval_cache: PtrMap<(EvalEnvKey, ExprId), V>,
++        #[cap(SESSION)] type_cache: PtrMap<(EvalEnvKey, ExprId), CachedType>,
+         #[cap(SESSION)] quote_cache: PtrMap<(V, u32), ExprId>,
+         #[cap(SMALL)] level_subs: PtrMap<(LevelsId, LevelsId), LsubId>,
+         #[cap(0)] prune_dm: Box<[(u64, E, E); PRUNE_DM_LEN]>,
+diff --git a/src/checker/eval.rs b/src/checker/eval.rs
+index 6c0225f..ec0f7e2 100644
+--- a/src/checker/eval.rs
++++ b/src/checker/eval.rs
+@@ -59,10 +59,15 @@ impl TypeChecker<'_, '_> {
+                 | Expr::Pi { .. }
+                 | Expr::Lambda { .. }
+         ) {
+-            let te = self.prune_env(env, node.mask);
++            let (key, te) = if matches!(node.expr, Expr::Lambda { .. } | Expr::Pi { .. }) {
++                let te = self.prune_env(env, node.mask);
++                (crate::checker::value::EvalEnvKey::environment(te), te)
++            } else {
++                self.cache_environment(env, node.mask)
++            };
+             return memo!(
+                 self.tc_cache.open_eval_cache,
+-                (te, e),
++                (key, e),
+                 self.eval_no_cache(depth, te, e, node.expr)
+             );
+         }
+diff --git a/src/checker/eval/environment.rs b/src/checker/eval/environment.rs
+index 5f1a1e8..8f6b8ff 100644
+--- a/src/checker/eval/environment.rs
++++ b/src/checker/eval/environment.rs
+@@ -4,7 +4,7 @@
+ use crate::checker::cache::memo;
+ use crate::checker::tc::TypeChecker;
+ use crate::checker::value::{
+-    C, Closure, E, EMPTY_ENV, Elim, EnvView, FAR, LsubId, NEAR, RigidHead, S, V,
++    C, Closure, E, EMPTY_ENV, Elim, EnvView, EvalEnvKey, FAR, LsubId, NEAR, RigidHead, S, V,
+ };
+ use crate::term::hash::GOLDEN;
+ use crate::term::id::{BigId, ExprId, LevelId, LevelsId, NameId, StrId};
+@@ -88,6 +88,22 @@ impl TypeChecker<'_, '_> {
+         self.prune_env_cold(e, mask, slot)
+     }
+ 
++    /// The expression ID fixes the selected binding position. The value ID also
++    /// retains the type carried by a bound variable. Universe substitutions use
++    /// the existing canonical-environment path, and no key is an environment ID.
++    #[inline(always)]
++    pub(crate) fn cache_environment(&mut self, env: E, mask: u64) -> (EvalEnvKey, E) {
++        if mask & FAR == 0
++            && mask.count_ones() == 1
++            && self.vals().env_lsub(env).is_none()
++            && let Some(value) = self.vals().env_lookup(env, mask.trailing_zeros() as u16)
++        {
++            return (EvalEnvKey::binding(value), env);
++        }
++        let projected = self.prune_env(env, mask);
++        (EvalEnvKey::environment(projected), projected)
++    }
++
+     fn frame_without(
+         &mut self,
+         dropped: u32,
+@@ -240,3 +256,93 @@ fn prune_slot(env: E, mask: u64) -> usize {
+     ((u64::from(env.raw()).wrapping_mul(GOLDEN) ^ mask.wrapping_mul(0xD6E8_FEB8_6659_FD93))
+         >> crate::checker::cache::PRUNE_DM_SHIFT) as usize
+ }
++
++#[cfg(test)]
++mod single_binding_tests {
++    use super::*;
++    use crate::checker::env::EnvLimit;
++    use crate::checker::tc::InferFlag;
++    use crate::config::Config;
++    use crate::frontend::parser::parse_export_mapped;
++    use crate::term::id::ZERO;
++    use crate::term::level::Level;
++
++    #[test]
++    fn unused_binding_can_change_but_selected_binding_cannot() {
++        let export = parse_export_mapped(b"{\"ie\":0,\"sort\":0}\n", Config::default()).unwrap();
++        export.with_ctx(|ctx, cache, _| {
++            ctx.with_tc(EnvLimit::ByIndex(0), cache, |tc| {
++                let one = tc.ctx.succ(ZERO);
++                let sort = tc.ctx.mk_sort(ZERO);
++                let outer_under_lambda = tc.ctx.mk_var(1);
++                let lambda = tc.ctx.mk_lambda(sort, outer_under_lambda);
++                let expression = tc.ctx.mk_app(lambda, sort);
++                let zero_value = tc.mk_sort_hc(ZERO);
++                let one_value = tc.mk_sort_hc(one);
++                let dead_a = tc.env_extend(EMPTY_ENV, zero_value);
++                let dead_b = tc.env_extend(EMPTY_ENV, one_value);
++                let env_a = tc.env_extend(dead_a, zero_value);
++                let env_b = tc.env_extend(dead_b, zero_value);
++                let env_c = tc.env_extend(dead_a, one_value);
++                assert_eq!(tc.eval(2, env_a, expression), zero_value);
++                assert_eq!(tc.eval(2, env_b, expression), zero_value);
++                assert_eq!(tc.eval(2, env_c, expression), one_value);
++            });
++        });
++    }
++
++    #[test]
++    fn same_bound_variable_level_with_changed_type_stays_distinct() {
++        let export = parse_export_mapped(b"{\"ie\":0,\"sort\":0}\n", Config::default()).unwrap();
++        export.with_ctx(|ctx, cache, _| {
++            ctx.with_tc(EnvLimit::ByIndex(0), cache, |tc| {
++                let one = tc.ctx.succ(ZERO);
++                let sort = tc.ctx.mk_sort(ZERO);
++                let outer_under_pi = tc.ctx.mk_var(1);
++                let expression = tc.ctx.mk_pi(sort, outer_under_pi);
++                let ty_a = tc.mk_sort_hc(ZERO);
++                let ty_b = tc.mk_sort_hc(one);
++                let value_a = tc.mk_bvar_hc(0, ty_a);
++                let value_b = tc.mk_bvar_hc(0, ty_b);
++                let env_a = tc.env_extend(EMPTY_ENV, value_a);
++                let env_b = tc.env_extend(EMPTY_ENV, value_b);
++                let ctx_a = tc.ctx_extend(crate::checker::value::EMPTY_CTX, ty_a);
++                let ctx_b = tc.ctx_extend(crate::checker::value::EMPTY_CTX, ty_b);
++                let a = tc.infer_value(InferFlag::InferOnly, 1, env_a, ctx_a, expression);
++                let b = tc.infer_value(InferFlag::InferOnly, 1, env_b, ctx_b, expression);
++                assert_eq!(a, ty_a);
++                assert_eq!(b, ty_b);
++            });
++        });
++    }
++
++    #[test]
++    fn equal_selected_values_under_changed_universes_stay_distinct() {
++        let export = parse_export_mapped(b"{\"ie\":0,\"sort\":0}\n", Config::default()).unwrap();
++        export.with_ctx(|ctx, cache, _| {
++            ctx.with_tc(EnvLimit::ByIndex(0), cache, |tc| {
++                let name = tc.ctx.str1("single_binding_u");
++                let u = tc.ctx.alloc_level(Level::Param(name));
++                let one = tc.ctx.succ(ZERO);
++                let ks = tc.ctx.alloc_levels(&[u]);
++                let vs_a = tc.ctx.alloc_levels(&[ZERO]);
++                let vs_b = tc.ctx.alloc_levels(&[one]);
++                let ls_a = tc.intern_level_sub(ks, vs_a);
++                let ls_b = tc.intern_level_sub(ks, vs_b);
++                let base_a = tc.lsub_base(Some(ls_a));
++                let base_b = tc.lsub_base(Some(ls_b));
++                let value = tc.mk_sort_hc(ZERO);
++                let expected_b = tc.mk_sort_hc(one);
++                let env_a = tc.env_extend(base_a, value);
++                let env_b = tc.env_extend(base_b, value);
++                let sort = tc.ctx.mk_sort(ZERO);
++                let body = tc.ctx.mk_sort(u);
++                let lambda = tc.ctx.mk_lambda(sort, body);
++                let var = tc.ctx.mk_var(0);
++                let expression = tc.ctx.mk_app(lambda, var);
++                assert_eq!(tc.eval(1, env_a, expression), value);
++                assert_eq!(tc.eval(1, env_b, expression), expected_b);
++            });
++        });
++    }
++}
+diff --git a/src/checker/infer.rs b/src/checker/infer.rs
+index 2e6bcd8..f9c42e4 100644
+--- a/src/checker/infer.rs
++++ b/src/checker/infer.rs
+@@ -162,7 +162,13 @@ impl TypeChecker<'_, '_> {
+             App { .. } | Lambda { .. } | Pi { .. } | Let { .. } | Proj { .. } => {}
+         }
+ 
+-        let key = (self.prune_env(env, node.mask), e);
++        let environment = if matches!(node.expr, Lambda { .. }) {
++            let projected = self.prune_env(env, node.mask);
++            crate::checker::value::EvalEnvKey::environment(projected)
++        } else {
++            self.cache_environment(env, node.mask).0
++        };
++        let key = (environment, e);
+         let scope = self.uparam_scope();
+         if let Some(cached) = self.tc_cache.type_cache.get(&key)
+             && (flag == InferOnly || cached.checked_under == scope)
+diff --git a/src/checker/ptrmap.rs b/src/checker/ptrmap.rs
+index 472ed52..8ab869b 100644
+--- a/src/checker/ptrmap.rs
++++ b/src/checker/ptrmap.rs
+@@ -2,7 +2,7 @@
+ // SPDX-License-Identifier: Apache-2.0
+ 
+ use crate::checker::cache::Reset;
+-use crate::checker::value::{E, LsubId, V};
++use crate::checker::value::{E, EvalEnvKey, LsubId, V};
+ use crate::term::hash::GOLDEN;
+ use crate::term::id::{ExprId, LevelId, LevelsId, NameId};
+ use std::marker::PhantomData;
+@@ -37,7 +37,7 @@ macro_rules! id_keys {
+     };
+ }
+ 
+-id_keys!(ExprId, NameId, LevelId, LevelsId, V, E, LsubId);
++id_keys!(ExprId, NameId, LevelId, LevelsId, V, E, EvalEnvKey, LsubId);
+ 
+ impl Half for u16 {
+     #[inline(always)]
+diff --git a/src/checker/value.rs b/src/checker/value.rs
+index b07f9c5..d05179b 100644
+--- a/src/checker/value.rs
++++ b/src/checker/value.rs
+@@ -30,6 +30,24 @@ macro_rules! store_ids {
+ 
+ store_ids!(VId, EnvId, LsubId);
+ 
++/// A cache identity only; unlike `E`, this can never be used to index an environment.
++#[derive(Clone, Copy, Default, PartialEq, Eq, Debug)]
++pub(crate) struct EvalEnvKey(u32);
++
++impl EvalEnvKey {
++    pub(crate) fn environment(env: E) -> Self {
++        Self(env.raw())
++    }
++
++    pub(crate) fn binding(value: V) -> Self {
++        Self(value.raw() | APP_ACTIVE)
++    }
++
++    pub(crate) fn raw(self) -> u32 {
++        self.0
++    }
++}
++
+ #[derive(Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+ pub struct CtxId(u32);
+ 
