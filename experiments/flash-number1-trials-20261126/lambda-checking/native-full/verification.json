@@ -1,0 +1,55 @@
+{
+  "state": "WARRANTED_BOUNDED_NATIVE_ARTIFACT_RECONCILIATION",
+  "date_auckland": "2026-11-26",
+  "run": 45700995014,
+  "run_url": "https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/45700995014",
+  "head_sha": "ae176b7b486366b204a844d321e2a6d8cd3a9e97",
+  "artifact_id": 15064681870,
+  "archive_sha256": "a10d48875e52246eddf6b0159c65ea61e559fcfd56ba19182af990071ec4f6b1",
+  "verification": [
+    "Downloaded exact artifact; SHA-256 matches GitHub artifact digest; ZIP CRC passed",
+    "Validated six raw exit-0 observations with no resource stops",
+    "Each stdout reports exactly 739167 declarations checked with no errors",
+    "Each observation matches distinct immutable build identity and pinned whole-input SHA-256",
+    "Independently recomputed both geometric CPU ratios from raw per-process user+system seconds"
+  ],
+  "source_identities": [
+    {
+      "name": "baseline",
+      "src_tree": "623a8575bbe54541e0be6217394336f4c2727994",
+      "library_tests": 46,
+      "root_tree": "57735581a76f13965786bbf1ab954d0582239664"
+    },
+    {
+      "name": "retained_types",
+      "src_tree": "dce20a3d1e32b871e80f3a77ecf3aa75420733bf",
+      "library_tests": 52,
+      "root_tree": "9913b061646327582c63ed2bdb5d7506cc1c6218"
+    },
+    {
+      "name": "bidirectional",
+      "src_tree": "90a9410a07bceebaa597e7c9a50ad245204890a9",
+      "library_tests": 52,
+      "root_tree": "1fa6f3618094f8ad4518b4312c075e360c1c7973"
+    }
+  ],
+  "input": {
+    "size": 6326141213,
+    "sha256": "f749dfd084fc0727d107c7aaded7d492cebfc0b517cfaa7337d8a7578a6c0dec"
+  },
+  "result": {
+    "boundary": "Not ten-large-case qualification or an official Arena ranking.",
+    "candidate_over_baseline_cpu": {
+      "bidirectional": 1.030924903192141,
+      "retained_types": 1.022525877279053
+    },
+    "hardware_counter_usable": false,
+    "rows": 6,
+    "status": "BOUNDED_FULL_MATHLIB_DIAGNOSTIC",
+    "unavailable_arms": []
+  },
+  "pending_instruction_run": 45702828718,
+  "decision": "Reject the predeclared 5% native CPU speedup gate for both candidates. Retain bounded acceptance. Keep instruction comparison UNKNOWN; do not promote either source or claim a rank change.",
+  "next_experiment": "Resolve the already-running matched full-Mathlib instruction counts. Then measure one independently authored reduction of evaluation/environment bookkeeping on the preserved 25131-declaration prefix, with unchanged exact-key context/universe/scope controls; qualify full workload only after a material local win.",
+  "boundary": "Native CPU, not Arena retired instructions; no complete ten-large-input candidate qualification."
+}

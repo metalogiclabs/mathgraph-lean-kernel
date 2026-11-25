@@ -1,5 +1,5 @@
 {
-  "state": "CANDIDATE_NOT_PROMOTED",
+  "state": "WARRANTED_BOUNDED_FULL_MATHLIB_ACCEPTANCE; NATIVE_5_PERCENT_SPEEDUP_GATE_REJECTED; INSTRUCTION_COMPARISON_UNKNOWN",
   "initial": {
     "src_tree": "89045c44330a0811199216deec6a2ff8128e2715",
     "cost_ratio": 1.0185845145222536,
@@ -15,6 +15,26 @@
   },
   "full_experiment_reason": "These portable microcases do not represent the complete scoring workload. Measure exact full Mathlib once before any performance promotion; preserve a deterministic source-derived 128 MiB prefix for future decisive local work.",
   "all_230_remote": "WARRANTED_BOUNDED: both retained_types and bidirectional; run 45700995014; independent archive/hash/row checks in remote-portable/",
-  "full_mathlib": "Native comparison active; exact input verified and saved before measurement",
+  "full_mathlib": {
+    "state": "WARRANTED_BOUNDED_ACCEPTANCE_NO_OBSERVED_CPU_IMPROVEMENT",
+    "run": 45700995014,
+    "commit": "ae176b7b486366b204a844d321e2a6d8cd3a9e97",
+    "artifact_id": 15064681870,
+    "archive_sha256": "a10d48875e52246eddf6b0159c65ea61e559fcfd56ba19182af990071ec4f6b1",
+    "declarations_per_observation": 739167,
+    "observations": 6,
+    "rounds_per_arm": 2,
+    "cpu_geometric_ratios": {
+      "retained_types": 1.022525877279053,
+      "bidirectional": 1.030924903192141
+    },
+    "native_gate": "Neither candidate passes predeclared <=0.95 CPU ratio; no performance promotion. Two observations per arm are not a statistical proof of universal slowdown.",
+    "instruction_gate": {
+      "state": "UNKNOWN_RUNNING",
+      "run": 45702828718,
+      "method": "Valgrind 3.22.0 Cachegrind instructions only; one worker; generic x86-64; compare same method only"
+    },
+    "boundary": "Generic-x86-64 native CPU diagnostics on exact full Mathlib, not hardware instruction counts, full 240-case candidate qualification, or an official Arena score."
+  },
   "rank": "UNCHANGED; no source promotion"
 }
