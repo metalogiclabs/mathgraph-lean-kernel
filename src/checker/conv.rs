@@ -1,0 +1,975 @@
+// SPDX-FileCopyrightText: 2026 Jeremy Chen
+// SPDX-License-Identifier: Apache-2.0
+
+use crate::checker::env::{Declar, ReducibilityHint};
+use crate::checker::relevance::{MAX_TRACKED, Sig, app_prefix_len};
+use crate::checker::tc::TypeChecker;
+use crate::checker::value::{
+    E, EMPTY_ENV, Elim, ElimView, EnvView, RigidHead, S, Spine, UnfoldHead, V, VT, Value,
+};
+use crate::term::id::{ExprId, LevelId, LevelsId, NameId};
+fn rigid_head_eq(hx: RigidHead, hy: RigidHead) -> bool {
+    match (hx, hy) {
+        (RigidHead::BVar(a, _), RigidHead::BVar(b, _)) => a == b,
+        _ => false,
+    }
+}
+
+#[inline]
+fn is_cacheable(kind: VT) -> bool {
+    matches!(
+        kind,
+        VT::Pi | VT::Lam | VT::Unfold | VT::Recursor | VT::QuotConst
+    )
+}
+
+type ProbePairs = smallvec::SmallVec<[(V, V); 8]>;
+
+impl TypeChecker<'_, '_> {
+    pub(crate) fn def_eq_core(&mut self, x: ExprId, y: ExprId) -> bool {
+        let depth = 0u32;
+        let env = EMPTY_ENV;
+        let vx = self.eval(depth, env, x);
+        let vy = self.eval(depth, env, y);
+        if self.try_proof_irrel_at(depth, vx, vy) {
+            return true;
+        }
+        self.conv_types_at(depth, vx, vy)
+    }
+
+    fn unbudgeted<R>(&mut self, f: impl FnOnce(&mut Self) -> R) -> R {
+        let depth = self.tc_cache.probe_depth;
+        let budget = self.tc_cache.probe_budget;
+        let exhausted = self.tc_cache.probe_exhausted;
+        self.tc_cache.probe_depth = 0;
+        let r = f(self);
+        self.tc_cache.probe_depth = depth;
+        self.tc_cache.probe_budget = budget;
+        self.tc_cache.probe_exhausted = exhausted;
+        r
+    }
+
+    #[inline]
+    pub(crate) fn conv_types_at(&mut self, depth: u32, a: V, b: V) -> bool {
+        a == b || self.unbudgeted(|s| s.unify_general::<true>(depth, a, b))
+    }
+
+    pub(crate) fn def_eq_at(&mut self, depth: u32, vx: V, vy: V) -> bool {
+        self.unbudgeted(|s| s.try_proof_irrel_at(depth, vx, vy) || s.unify::<true>(depth, vx, vy))
+    }
+
+    #[inline]
+    fn envs_ptr_equal(&self, e1: E, e2: E) -> bool {
+        let mut a = e1;
+        let mut b = e2;
+        loop {
+            if a == b {
+                return true;
+            }
+            match (self.vals().env_view(a), self.vals().env_view(b)) {
+                (EnvView::Nil, EnvView::Nil) => {
+                    return self.vals().env_lsub(a) == self.vals().env_lsub(b);
+                }
+                (EnvView::Cons { v: va, parent: pa }, EnvView::Cons { v: vb, parent: pb }) => {
+                    if va != vb {
+                        return false;
+                    }
+                    a = pa;
+                    b = pb;
+                }
+                _ => return false,
+            }
+        }
+    }
+
+    #[inline]
+    fn unify<const RIGID: bool>(&mut self, depth: u32, x: V, y: V) -> bool {
+        if x == y {
+            return true;
+        }
+        self.unify_general::<RIGID>(depth, x, y)
+    }
+
+    #[inline]
+    fn unify_general<const RIGID: bool>(&mut self, depth: u32, x: V, y: V) -> bool {
+        let (kx, ky) = (self.vals().kind(x), self.vals().kind(y));
+        let cacheable = is_cacheable(kx) || is_cacheable(ky);
+        let neg_eligible = kx != VT::Lam && ky != VT::Lam;
+        if cacheable {
+            let (xa, ya) = (x, y);
+            let cache_key = if xa < ya { (xa, ya) } else { (ya, xa) };
+            if self.tc_cache.conv_cache_pos.contains(&cache_key) {
+                return true;
+            }
+            if RIGID && neg_eligible {
+                if self.tc_cache.conv_cache_neg.contains(&cache_key) {
+                    return false;
+                }
+                if self.tc_cache.probe_depth > 0
+                    && self.tc_cache.conv_cache_neg_probe.contains(&cache_key)
+                {
+                    self.tc_cache.probe_exhausted = true;
+                    return false;
+                }
+            }
+            let outer = std::mem::replace(&mut self.tc_cache.probe_exhausted, false);
+            let result = self.unify_no_cache::<RIGID>(depth, x, y);
+            let truncated = self.tc_cache.probe_exhausted;
+            self.tc_cache.probe_exhausted = outer | truncated;
+            if result {
+                self.tc_cache.conv_cache_pos.insert(cache_key);
+            } else if RIGID && neg_eligible {
+                if truncated {
+                    self.tc_cache.conv_cache_neg_probe.insert(cache_key);
+                } else {
+                    self.tc_cache.conv_cache_neg.insert(cache_key);
+                }
+            }
+            result
+        } else {
+            self.unify_no_cache::<RIGID>(depth, x, y)
+        }
+    }
+
+    const PROBE_CAP: u32 = 2048;
+
+    fn unify_no_cache<const RIGID: bool>(&mut self, depth: u32, x: V, y: V) -> bool {
+        if self.tc_cache.probe_depth > 0 {
+            if self.tc_cache.probe_budget == 0 {
+                self.tc_cache.probe_exhausted = true;
+                return false;
+            }
+            self.tc_cache.probe_budget -= 1;
+        }
+        let (t, t2) = (x, y);
+        if let Some(r) = self.conv_nat::<RIGID>(depth, t, t2) {
+            return r;
+        }
+        if self.unify_direct::<RIGID>(depth, t, t2) {
+            return true;
+        }
+        self.unify_cold::<RIGID>(depth, t, t2)
+    }
+
+    fn unify_direct<const RIGID: bool>(&mut self, depth: u32, t: V, t2: V) -> bool {
+        match (self.val(t), self.val(t2)) {
+            (Value::Sort { level: lx, .. }, Value::Sort { level: ly, .. }) => {
+                self.ctx.eq_antisymm(lx, ly)
+            }
+            (Value::NatLit { lit: px, .. }, Value::NatLit { lit: py, .. }) => px == py,
+            (Value::StrLit { lit: px, .. }, Value::StrLit { lit: py, .. }) => px == py,
+
+            (
+                Value::Rigid {
+                    head: hx,
+                    spine: sx,
+                    ..
+                },
+                Value::Rigid {
+                    head: hy,
+                    spine: sy,
+                    ..
+                },
+            ) if rigid_head_eq(hx, hy) => {
+                self.unify_spine::<RIGID>(depth, sx, sy, Sig::ALL_RELEVANT, 0)
+            }
+
+            (
+                Value::Rigid {
+                    head: RigidHead::Ctor(nx, lx),
+                    spine: sx,
+                    ..
+                },
+                Value::Rigid {
+                    head: RigidHead::Ctor(ny, ly),
+                    spine: sy,
+                    ..
+                },
+            ) if nx == ny && self.ctx.eq_antisymm_many(lx, ly) => {
+                let (sig, limit) = self.head_spine_sig(nx, lx, sx, sy);
+                self.unify_spine::<RIGID>(depth, sx, sy, sig, limit)
+            }
+            (
+                Value::Rigid {
+                    head: RigidHead::Inductive(nx, lx),
+                    spine: sx,
+                    ..
+                },
+                Value::Rigid {
+                    head: RigidHead::Inductive(ny, ly),
+                    spine: sy,
+                    ..
+                },
+            ) if nx == ny && self.ctx.eq_antisymm_many(lx, ly) => {
+                let (sig, limit) = self.head_spine_sig(nx, lx, sx, sy);
+                self.unify_spine::<RIGID>(depth, sx, sy, sig, limit)
+            }
+            (
+                Value::Rigid {
+                    head: RigidHead::Axiom(nx, lx),
+                    spine: sx,
+                    ..
+                },
+                Value::Rigid {
+                    head: RigidHead::Axiom(ny, ly),
+                    spine: sy,
+                    ..
+                },
+            ) if nx == ny && self.ctx.eq_antisymm_many(lx, ly) => {
+                let (sig, limit) = self.head_spine_sig(nx, lx, sx, sy);
+                self.unify_spine::<RIGID>(depth, sx, sy, sig, limit)
+            }
+
+            (
+                Value::Rigid {
+                    head: RigidHead::Recursor(nx, lx),
+                    spine: sx,
+                    ..
+                },
+                Value::Rigid {
+                    head: RigidHead::Recursor(ny, ly),
+                    spine: sy,
+                    ..
+                },
+            )
+            | (
+                Value::Rigid {
+                    head: RigidHead::QuotConst(nx, lx),
+                    spine: sx,
+                    ..
+                },
+                Value::Rigid {
+                    head: RigidHead::QuotConst(ny, ly),
+                    spine: sy,
+                    ..
+                },
+            ) => {
+                let (nx, ny, lx, ly) = (nx, ny, lx, ly);
+                let heads_match = nx == ny && self.ctx.eq_antisymm_many(lx, ly);
+                self.unify_iota::<RIGID>(depth, t, t2, heads_match, nx, lx, sx, sy)
+            }
+
+            (
+                Value::Pi {
+                    domain: dx,
+                    body: bx,
+                    ..
+                },
+                Value::Pi {
+                    domain: dy,
+                    body: by,
+                    ..
+                },
+            ) => {
+                if bx.body == by.body
+                    && dx == dy
+                    && bx.ctx == by.ctx
+                    && self.envs_ptr_equal(bx.env, by.env)
+                {
+                    return true;
+                }
+                if !self.unify::<RIGID>(depth, dx, dy) {
+                    return false;
+                }
+                let fresh = self.mk_bvar_hc(depth, dx);
+                let vx = self.apply_closure(depth + 1, bx, fresh, Some(dx));
+                let vy = self.apply_closure(depth + 1, by, fresh, Some(dx));
+                self.unify::<RIGID>(depth + 1, vx, vy)
+            }
+
+            (Value::Lam { body: bx, .. }, Value::Lam { body: by, .. }) => {
+                let dx = self.lam_domain(depth, t);
+                let dy = self.lam_domain(depth, t2);
+                if bx.body == by.body && dx == dy && self.envs_ptr_equal(bx.env, by.env) {
+                    return true;
+                }
+                if !self.unify::<RIGID>(depth, dx, dy) {
+                    return false;
+                }
+                let fresh = self.mk_bvar_hc(depth, dx);
+                let vx = self.apply_closure(depth + 1, bx, fresh, None);
+                let vy = self.apply_closure(depth + 1, by, fresh, None);
+                self.unify::<RIGID>(depth + 1, vx, vy)
+            }
+
+            (
+                Value::Unfold {
+                    head:
+                        UnfoldHead {
+                            name: nx,
+                            levels: lx,
+                        },
+                    spine: sx,
+                    ..
+                },
+                Value::Unfold {
+                    head:
+                        UnfoldHead {
+                            name: ny,
+                            levels: ly,
+                        },
+                    spine: sy,
+                    ..
+                },
+            ) => {
+                let heads_match = nx == ny && self.ctx.eq_antisymm_many(lx, ly);
+                let (sig, limit) = if heads_match {
+                    self.head_spine_sig(nx, lx, sx, sy)
+                } else {
+                    (Sig::ALL_RELEVANT, 0)
+                };
+                if RIGID {
+                    if heads_match && self.spine_probe(depth, sx, sy, sig, limit) {
+                        return true;
+                    }
+                    if self.try_proof_irrel_at(depth, t, t2) {
+                        return true;
+                    }
+                    if heads_match {
+                        return self.unfold_pair(depth, t, t2);
+                    }
+                    let lh = self.unfold_hint(nx);
+                    let rh = self.unfold_hint(ny);
+                    if lh.is_lt(rh) {
+                        let v2 = self.unfold_value_for_conv(depth, t2, t, false);
+                        if v2 != t2 {
+                            return self.unify::<true>(depth, t, v2);
+                        }
+                        let v1 = self.unfold_value_for_conv(depth, t, t2, false);
+                        if v1 != t {
+                            return self.unify::<true>(depth, v1, t2);
+                        }
+                        let f2 = self.unfold_value_for_conv(depth, t2, t, true);
+                        if f2 == t2 {
+                            return false;
+                        }
+                        self.unify::<true>(depth, t, f2)
+                    } else if rh.is_lt(lh) {
+                        let v1 = self.unfold_value_for_conv(depth, t, t2, false);
+                        if v1 != t {
+                            return self.unify::<true>(depth, v1, t2);
+                        }
+                        let v2 = self.unfold_value_for_conv(depth, t2, t, false);
+                        if v2 != t2 {
+                            return self.unify::<true>(depth, t, v2);
+                        }
+                        let f1 = self.unfold_value_for_conv(depth, t, t2, true);
+                        if f1 == t {
+                            return false;
+                        }
+                        self.unify::<true>(depth, f1, t2)
+                    } else {
+                        self.unfold_pair(depth, t, t2)
+                    }
+                } else if heads_match {
+                    self.unify_spine::<false>(depth, sx, sy, sig, limit)
+                } else {
+                    false
+                }
+            }
+
+            (Value::Unfold { .. }, _) if RIGID => {
+                if self.try_proof_irrel_at(depth, t, t2) {
+                    return true;
+                }
+                let v1 = self.unfold_value_for_conv(depth, t, t2, false);
+                if v1 == t {
+                    let f1 = self.unfold_value_for_conv(depth, t, t2, true);
+                    if f1 == t {
+                        return false;
+                    }
+                    return self.unify::<true>(depth, f1, t2);
+                }
+                self.unify::<true>(depth, v1, t2)
+            }
+            (_, Value::Unfold { .. }) if RIGID => {
+                if self.try_proof_irrel_at(depth, t, t2) {
+                    return true;
+                }
+                let v2 = self.unfold_value_for_conv(depth, t2, t, false);
+                if v2 == t2 {
+                    let f2 = self.unfold_value_for_conv(depth, t2, t, true);
+                    if f2 == t2 {
+                        return false;
+                    }
+                    return self.unify::<true>(depth, t, f2);
+                }
+                self.unify::<true>(depth, t, v2)
+            }
+
+            (
+                Value::Rigid {
+                    head: RigidHead::Recursor(..) | RigidHead::QuotConst(..),
+                    ..
+                },
+                _,
+            ) if RIGID => {
+                if self.try_proof_irrel_at(depth, t, t2) {
+                    return true;
+                }
+                if let Some(v1) = self.iota_value(depth, t) {
+                    return self.unify::<true>(depth, v1, t2);
+                }
+                if matches!(self.vals().kind(t2), VT::Recursor | VT::QuotConst)
+                    && let Some(v2) = self.iota_value(depth, t2)
+                {
+                    return self.unify::<true>(depth, t, v2);
+                }
+                if self.vals().kind(t2) == VT::Unfold {
+                    let v2 = self.unfold_value_for_conv(depth, t2, t, true);
+                    if v2 != t2 {
+                        return self.unify::<true>(depth, t, v2);
+                    }
+                }
+                false
+            }
+            (
+                _,
+                Value::Rigid {
+                    head: RigidHead::Recursor(..) | RigidHead::QuotConst(..),
+                    ..
+                },
+            ) if RIGID => {
+                if self.try_proof_irrel_at(depth, t, t2) {
+                    return true;
+                }
+                if let Some(v2) = self.iota_value(depth, t2) {
+                    return self.unify::<true>(depth, t, v2);
+                }
+                if self.vals().kind(t) == VT::Unfold {
+                    let v1 = self.unfold_value_for_conv(depth, t, t2, true);
+                    if v1 != t {
+                        return self.unify::<true>(depth, v1, t2);
+                    }
+                }
+                false
+            }
+
+            _ => false,
+        }
+    }
+
+    fn probe_pairs(&self, sx: S, sy: S, sig: Sig, limit: u32) -> Option<ProbePairs> {
+        let (mut a, mut b) = (sx, sy);
+        let mut elims = smallvec::SmallVec::<[(u32, Elim, Elim); 8]>::new();
+        loop {
+            match (self.vals().spine(a), self.vals().spine(b)) {
+                (Spine::Empty, Spine::Empty) => break,
+                (
+                    Spine::Snoc {
+                        prev: pa, elim: ea, ..
+                    },
+                    Spine::Snoc {
+                        prev: pb, elim: eb, ..
+                    },
+                ) => {
+                    elims.push((self.vals().spine_len(pa), ea, eb));
+                    a = pa;
+                    b = pb;
+                }
+                _ => return None,
+            }
+        }
+        let mut out = ProbePairs::new();
+        for (idx, ea, eb) in elims.into_iter().rev() {
+            match (ea.view(), eb.view()) {
+                (ElimView::App(va), ElimView::App(vb)) => {
+                    if !(idx < limit && sig.arg_is_ignorable(idx)) {
+                        out.push((va, vb));
+                    }
+                }
+                (
+                    ElimView::Proj {
+                        ty_name: tx,
+                        idx: ix,
+                    },
+                    ElimView::Proj {
+                        ty_name: ty,
+                        idx: iy,
+                    },
+                ) => {
+                    if tx != ty || ix != iy {
+                        return None;
+                    }
+                }
+                _ => return None,
+            }
+        }
+        Some(out)
+    }
+
+    fn spine_probe(&mut self, depth: u32, sx: S, sy: S, sig: Sig, limit: u32) -> bool {
+        if sx == sy {
+            return true;
+        }
+        if self.tc_cache.probe_depth > 0 {
+            return self.unify_spine::<true>(depth, sx, sy, sig, limit);
+        }
+        let Some(pairs) = self.probe_pairs(sx, sy, sig, limit) else {
+            return false;
+        };
+        let outer = std::mem::replace(&mut self.tc_cache.probe_exhausted, false);
+        let decided = self.probe_pass(depth, &pairs);
+        self.tc_cache.probe_exhausted = outer;
+        decided
+    }
+
+    fn probe_pass(&mut self, depth: u32, pairs: &[(V, V)]) -> bool {
+        let mut decided = true;
+        for (va, vb) in pairs.iter().copied() {
+            self.tc_cache.probe_budget = Self::PROBE_CAP;
+            self.tc_cache.probe_exhausted = false;
+            self.tc_cache.probe_depth = 1;
+            let ok = self.unify::<true>(depth, va, vb);
+            self.tc_cache.probe_depth = 0;
+            if self.tc_cache.probe_exhausted {
+                self.tc_cache.conv_cache_neg_probe.clear();
+                decided = false;
+                continue;
+            }
+            if !ok {
+                return false;
+            }
+        }
+        decided
+    }
+
+    fn unfold_pair(&mut self, depth: u32, t: V, t2: V) -> bool {
+        let v1 = self.unfold_value_for_conv(depth, t, t2, false);
+        let v2 = self.unfold_value_for_conv(depth, t2, t, false);
+        if v1 == t && v2 == t2 {
+            let f1 = self.unfold_value_for_conv(depth, t, t2, true);
+            let f2 = self.unfold_value_for_conv(depth, t2, t, true);
+            if f1 == t && f2 == t2 {
+                return false;
+            }
+            return self.unify::<true>(depth, f1, f2);
+        }
+        self.unify::<true>(depth, v1, v2)
+    }
+
+    fn unify_iota<const RIGID: bool>(
+        &mut self,
+        depth: u32,
+        t: V,
+        t2: V,
+        heads_match: bool,
+        name: NameId,
+        levels: LevelsId,
+        sx: S,
+        sy: S,
+    ) -> bool {
+        let (sig, limit) = if heads_match {
+            self.head_spine_sig(name, levels, sx, sy)
+        } else {
+            (Sig::ALL_RELEVANT, 0)
+        };
+        if RIGID {
+            if heads_match && self.spine_probe(depth, sx, sy, sig, limit) {
+                return true;
+            }
+            if self.try_proof_irrel_at(depth, t, t2) {
+                return true;
+            }
+            let v1 = self.iota_or_self(depth, t);
+            let v2 = self.iota_or_self(depth, t2);
+            let progressed = v1 != t || v2 != t2;
+            if progressed {
+                return self.unify::<true>(depth, v1, v2);
+            }
+            if heads_match {
+                return self.unify_spine::<true>(depth, sx, sy, sig, limit);
+            }
+            false
+        } else if heads_match {
+            self.unify_spine::<false>(depth, sx, sy, sig, limit)
+        } else {
+            false
+        }
+    }
+
+    fn iota_or_self(&mut self, depth: u32, v: V) -> V {
+        self.iota_value(depth, v).unwrap_or(v)
+    }
+
+    fn unfold_hint(&mut self, name: NameId) -> ReducibilityHint {
+        match self.env.get_declar(name) {
+            Some(Declar::Definition { hint, .. }) => *hint,
+            _ => ReducibilityHint::Opaque,
+        }
+    }
+
+    #[inline]
+    fn head_spine_sig(&mut self, name: NameId, levels: LevelsId, sx: S, sy: S) -> (Sig, u32) {
+        let sig = self.sig_of(name, levels);
+        if !sig.masks_any_arg() {
+            return (Sig::ALL_RELEVANT, 0);
+        }
+        (
+            sig,
+            app_prefix_len(self.vals(), sx).min(app_prefix_len(self.vals(), sy)),
+        )
+    }
+
+    fn unify_spine<const RIGID: bool>(
+        &mut self,
+        depth: u32,
+        sx: S,
+        sy: S,
+        sig: Sig,
+        limit: u32,
+    ) -> bool {
+        if sx == sy {
+            return true;
+        }
+        match (self.vals().spine(sx), self.vals().spine(sy)) {
+            (Spine::Empty, Spine::Empty) => true,
+            (
+                Spine::Snoc {
+                    prev: pa, elim: ea, ..
+                },
+                Spine::Snoc {
+                    prev: pb, elim: eb, ..
+                },
+            ) => {
+                if !self.unify_spine::<RIGID>(depth, pa, pb, sig, limit) {
+                    return false;
+                }
+                match (ea.view(), eb.view()) {
+                    (ElimView::App(va), ElimView::App(vb)) => {
+                        let idx = self.vals().spine_len(pa);
+                        if idx < limit && sig.arg_is_ignorable(idx) {
+                            return true;
+                        }
+                        self.unify::<RIGID>(depth, va, vb)
+                    }
+                    (
+                        ElimView::Proj {
+                            ty_name: tx,
+                            idx: ix,
+                        },
+                        ElimView::Proj {
+                            ty_name: ty,
+                            idx: iy,
+                        },
+                    ) => tx == ty && ix == iy,
+                    _ => false,
+                }
+            }
+            _ => false,
+        }
+    }
+
+    fn statically_not_proof(&mut self, v: V) -> bool {
+        let (name, levels, spine) = match self.val(v) {
+            Value::Rigid {
+                head:
+                    RigidHead::Axiom(n, ls)
+                    | RigidHead::Ctor(n, ls)
+                    | RigidHead::Recursor(n, ls)
+                    | RigidHead::QuotConst(n, ls)
+                    | RigidHead::Inductive(n, ls),
+                spine,
+                ..
+            } => (n, ls, spine),
+            Value::Unfold {
+                head: UnfoldHead { name, levels },
+                spine,
+                ..
+            } => (name, levels, spine),
+            _ => return false,
+        };
+        let k = self.vals().spine_len(spine);
+        if k >= MAX_TRACKED || app_prefix_len(self.vals(), spine) != k {
+            return false;
+        }
+        let sig = self.sig_of(name, levels);
+        sig.result_is_not_proof(k)
+    }
+
+    fn unify_cold<const RIGID: bool>(&mut self, depth: u32, x: V, y: V) -> bool {
+        if !RIGID {
+            return false;
+        }
+        if self.try_proof_irrel_at(depth, x, y) {
+            return true;
+        }
+        match (self.val(x), self.val(y)) {
+            (Value::Lam { body, .. }, _) if self.vals().kind(y) != VT::Lam => {
+                let domain = self.lam_domain(depth, x);
+                let fresh = self.mk_bvar_hc(depth, domain);
+                let lhs = self.apply_closure(depth + 1, body, fresh, None);
+                let rhs = self.apply(depth + 1, y, fresh);
+                return self.unify::<true>(depth + 1, lhs, rhs);
+            }
+            (_, Value::Lam { body, .. }) if self.vals().kind(x) != VT::Lam => {
+                let domain = self.lam_domain(depth, y);
+                let fresh = self.mk_bvar_hc(depth, domain);
+                let lhs = self.apply(depth + 1, x, fresh);
+                let rhs = self.apply_closure(depth + 1, body, fresh, None);
+                return self.unify::<true>(depth + 1, lhs, rhs);
+            }
+            _ => {}
+        }
+        self.try_struct_eta(depth, x, y)
+    }
+
+    fn try_struct_eta(&mut self, depth: u32, x: V, y: V) -> bool {
+        let xt = self.value_type_opt(depth, x);
+        let yt = self.value_type_opt(depth, y);
+        let (Some(xt), Some(yt)) = (xt, yt) else {
+            return false;
+        };
+        for ty in [xt, yt] {
+            let ty_f = self.force_all(depth, ty);
+            if let Value::Rigid {
+                head: RigidHead::Inductive(ind_name, _),
+                ..
+            } = self.val(ty_f)
+                && self.can_be_struct_memo(ind_name)
+            {
+                if !self.unify::<true>(depth, xt, yt) {
+                    return false;
+                }
+                return self.is_unit_inductive(ind_name)
+                    || self.try_eta_struct_v(depth, ind_name, x, y)
+                    || self.try_eta_struct_v(depth, ind_name, y, x);
+            }
+        }
+        false
+    }
+
+    fn value_type_opt(&mut self, depth: u32, v: V) -> Option<V> {
+        match self.val(v) {
+            Value::Pi { .. } | Value::Lam { .. } => None,
+            _ => Some(self.value_type(depth, v)),
+        }
+    }
+
+    fn try_proof_irrel_at(&mut self, depth: u32, x: V, y: V) -> bool {
+        if self.vals().kind(x) == VT::Lam || self.vals().kind(y) == VT::Lam {
+            return self.try_proof_irrel_lam(depth, x, y);
+        }
+        if !self.vals().is_neutral(x) {
+            return false;
+        }
+        if !self.vals().is_neutral(y) {
+            return false;
+        }
+        if self.statically_not_proof(x) || self.statically_not_proof(y) {
+            return false;
+        }
+        let tx = self.value_type(depth, x);
+        if !self.is_prop_type(depth, tx) {
+            return false;
+        }
+        let ty = self.value_type(depth, y);
+        if !self.is_prop_type(depth, ty) {
+            return false;
+        }
+        self.conv_types_at(depth, tx, ty)
+    }
+
+    pub(crate) fn is_prop_type(&mut self, depth: u32, t: V) -> bool {
+        let level = self.level_of_type(depth, t).expect("expected a sort");
+        self.ctx.is_always_zero(level)
+    }
+
+    fn try_proof_irrel_lam(&mut self, depth: u32, x: V, y: V) -> bool {
+        if matches!(
+            (self.val(x), self.val(y)),
+            (Value::Lam { .. }, Value::Lam { .. })
+        ) {
+            let dx = self.lam_domain(depth, x);
+            let dy = self.lam_domain(depth, y);
+            if !self.unify::<true>(depth, dx, dy) {
+                return false;
+            }
+        }
+        let lam_side = match (self.val(x), self.val(y)) {
+            (Value::Lam { .. }, _) => x,
+            (_, Value::Lam { .. }) => y,
+            _ => return false,
+        };
+        let domain = self.lam_domain(depth, lam_side);
+        let fresh = self.mk_bvar_hc(depth, domain);
+        let xb = self.apply(depth + 1, x, fresh);
+        let yb = self.apply(depth + 1, y, fresh);
+        self.try_proof_irrel_at(depth + 1, xb, yb)
+    }
+
+    fn try_eta_struct_v(&mut self, depth: u32, ind_name: NameId, x: V, y: V) -> bool {
+        let Value::Rigid {
+            head: RigidHead::Ctor(yname, _),
+            spine: yspine,
+            ..
+        } = self.val(y)
+        else {
+            return false;
+        };
+        let Some((num_params, num_fields, inductive_name)) = self.ctor_shape(yname) else {
+            return false;
+        };
+        if inductive_name != ind_name {
+            return false;
+        }
+        let yargs = match self.vals().spine_apps(yspine) {
+            Some(v) if v.len() == usize::from(num_params) + usize::from(num_fields) => v,
+            _ => return false,
+        };
+        for i in 0..num_fields {
+            let proj = self.do_proj(depth, ind_name, i, x);
+            let rhs = yargs[usize::from(num_params) + usize::from(i)];
+            if !self.unify::<true>(depth, proj, rhs) {
+                return false;
+            }
+        }
+        true
+    }
+
+    fn is_unit_inductive(&self, ind_name: NameId) -> bool {
+        let Some(ind) = self.env.get_structure(ind_name, false) else {
+            return false;
+        };
+        let Some(ctor) = self.env.get_constructor(ind.all_ctor_names[0]) else {
+            return false;
+        };
+        ctor.num_fields == 0
+    }
+
+    fn conv_nat<const RIGID: bool>(&mut self, depth: u32, x: V, y: V) -> Option<bool> {
+        if !self.may_be_nat(x) && !self.may_be_nat(y) {
+            return None;
+        }
+        if self.vals().kind(x) == VT::NatLit && self.vals().kind(y) == VT::NatLit {
+            return None;
+        }
+        let xz = self.value_is_nat_zero(x);
+        let yz = self.value_is_nat_zero(y);
+        if xz && yz {
+            return Some(true);
+        }
+        let px = self.value_nat_pred(x);
+        let py = self.value_nat_pred(y);
+        match (px, py) {
+            (Some(a), Some(b)) => Some(self.unify::<RIGID>(depth, a, b)),
+            _ => None,
+        }
+    }
+
+    fn may_be_nat(&self, v: V) -> bool {
+        match self.vals().kind(v) {
+            VT::NatLit => true,
+            VT::Ctor => {
+                let name = self.vals().head_name(v);
+                let nc = &self.ctx.export_file.name_cache;
+                Some(name) == nc.nat_zero || Some(name) == nc.nat_succ
+            }
+            _ => false,
+        }
+    }
+
+    fn value_is_nat_zero(&self, v: V) -> bool {
+        match self.val(v) {
+            Value::Rigid {
+                head: RigidHead::Ctor(name, _),
+                spine,
+                ..
+            } => {
+                Some(name) == self.ctx.export_file.name_cache.nat_zero && self.vals().is_head(spine)
+            }
+            Value::NatLit { lit, .. } => num_traits::Zero::is_zero(self.ctx.bignum(lit)),
+            _ => false,
+        }
+    }
+
+    fn value_nat_pred(&mut self, v: V) -> Option<V> {
+        match self.val(v) {
+            Value::Rigid {
+                head: RigidHead::Ctor(name, _),
+                spine,
+                ..
+            } => {
+                if Some(name) == self.ctx.export_file.name_cache.nat_succ
+                    && let Spine::Snoc { prev, elim, .. } = self.vals().spine(spine)
+                    && self.vals().is_head(prev)
+                    && let ElimView::App(a) = elim.view()
+                {
+                    return Some(a);
+                }
+                None
+            }
+            Value::NatLit { lit, .. } => {
+                use num_traits::Zero;
+                let n = self.ctx.bignum(lit).clone();
+                if n.is_zero() {
+                    return None;
+                }
+                let pred = self.ctx.alloc_bignum(n - 1u8)?;
+                Some(self.mk_natlit_hc(pred))
+            }
+            _ => None,
+        }
+    }
+
+    pub(crate) fn level_of_type(&mut self, depth: u32, ty: V) -> Option<LevelId> {
+        match self.val(ty) {
+            Value::Sort { level, .. } => {
+                let s = self.ctx.succ(level);
+                Some(self.ctx.simplify(s))
+            }
+            Value::Pi { domain, body, .. } => {
+                let l_dom = self.level_of_type(depth, domain)?;
+                let fresh = self.mk_bvar_hc(depth, domain);
+                let cod = self.apply_closure(depth + 1, body, fresh, Some(domain));
+                let cod_f = self.force_all(depth + 1, cod);
+                let l_cod = self.level_of_type(depth + 1, cod_f)?;
+                let l = self.ctx.imax(l_dom, l_cod);
+                Some(self.ctx.simplify(l))
+            }
+            Value::Rigid {
+                head:
+                    RigidHead::Axiom(n, ls)
+                    | RigidHead::Ctor(n, ls)
+                    | RigidHead::Recursor(n, ls)
+                    | RigidHead::QuotConst(n, ls)
+                    | RigidHead::Inductive(n, ls),
+                ..
+            } => {
+                let (n, ls) = (n, ls);
+                if let Some(l) = self.const_result_level(n, ls) {
+                    return Some(l);
+                }
+                let t = self.value_type(depth, ty);
+                let t_f = self.force_all(depth, t);
+                match self.val(t_f) {
+                    Value::Sort { level, .. } => Some(self.ctx.simplify(level)),
+                    _ => None,
+                }
+            }
+            Value::Unfold {
+                head: UnfoldHead { name, levels },
+                ..
+            } => {
+                let t = self.value_type(depth, ty);
+                let t_f = self.force_all(depth, t);
+                if let Value::Sort { level, .. } = self.val(t_f) {
+                    return Some(self.ctx.simplify(level));
+                }
+                self.const_result_level(name, levels)
+            }
+            Value::Rigid {
+                head: RigidHead::BVar(..),
+                ..
+            } => {
+                let t = self.value_type(depth, ty);
+                let ty_f = self.force_all(depth, t);
+                match self.val(ty_f) {
+                    Value::Sort { level, .. } => Some(self.ctx.simplify(level)),
+                    _ => None,
+                }
+            }
+            _ => None,
+        }
+    }
+}

@@ -1,0 +1,261 @@
+// SPDX-FileCopyrightText: 2026 Jeremy Chen
+// SPDX-License-Identifier: Apache-2.0
+
+use crate::checker::cache::{SESSION_BUDGET, TcCache};
+use crate::checker::context::{ExportFile, TcCtx};
+use crate::checker::env::{Declar, DeclarInfo, Env, EnvLimit};
+use crate::checker::value::{V, Vals, Value};
+use crate::outcome::{CheckError, ensure};
+use crate::report::Reporter;
+use crate::term::id::ExprId;
+use std::panic::{self, AssertUnwindSafe};
+
+const CHUNK_SIZE: usize = 64;
+
+/// A flag that accompanies calls to type inference; if the flag is `Check`,
+/// we perform additional definitional equality checks (for example, the type of an
+/// argument to a lambda is the same type as the binder in the labmda). These checks
+/// are costly however, and in some cases we're using inference during reduction of
+/// expressions we know to be well-typed, so we can pass the flag `InferOnly` to omit
+/// these checks when they are not needed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(crate) enum InferFlag {
+    InferOnly,
+    Check,
+}
+
+pub struct TypeChecker<'x, 't> {
+    pub(crate) ctx: Held<'x, TcCtx<'t>>,
+    /// An immutable reference to an environment, which contains declarations and notation.
+    /// To accommodate the temporary declarations created while checking nested inductives,
+    /// the environment may have a temporary extension which also holds declarations, and
+    /// is searched before the persistent environment.
+    ///
+    /// This is stored as a field in `TypeChecker` rather than being placed in `TcCtx` so
+    /// that the borrow checker will allow us to mutably reference `TcCtx` while we have
+    /// outstanding references to environment declarations. Rust can tell that borrows
+    /// of different struct fields are exclusive, but it can't analyze what fields of a given
+    /// field's type are being exclusively borrowed.
+    pub(crate) env: &'x Env<'x>,
+    /// The caches for things like inference, reduction, and equality checking.
+    pub(crate) tc_cache: Held<'x, TcCache>,
+    /// If this type checker is being used to check a simple declaration, this field will
+    /// contain the universe parameters of that declaration. This is used in a couple of places
+    /// to make sure that all of the universe paramters actually used in a declaration `d` are
+    /// properly represented in the declaration's uparams info.
+    pub(crate) declar_info: Option<DeclarInfo>,
+    pub(crate) nat_extension: bool,
+    pub(crate) ordered_declaration: bool,
+}
+
+impl ExportFile {
+    fn check_declar_with<'t>(&'t self, ctx: &mut TcCtx<'t>, cache: &mut TcCache, d: &Declar) {
+        use Declar::{Constructor, Inductive, Quot, Recursor};
+        match d {
+            Inductive(..) | Constructor(..) | Recursor(..) | Quot { .. } => {}
+            _ => self.check_simple_declar(ctx, cache, d),
+        }
+    }
+
+    fn check_simple_declar<'t>(&'t self, ctx: &mut TcCtx<'t>, cache: &mut TcCache, d: &Declar) {
+        use Declar::{Axiom, Definition, Opaque, Theorem};
+        let env = self.new_env(EnvLimit::ByName(d.info().name));
+        let mut tc = TypeChecker::new(ctx, &env, Some(*d.info()), cache);
+        tc.ordered_declaration = true;
+        match d {
+            Definition { val, .. } | Theorem { val, .. } | Opaque { val, .. } => {
+                tc.check_def_like_v(d, *val);
+            }
+            Axiom { .. } => tc.check_declar_info_v(d),
+            _ => unreachable!(),
+        }
+    }
+
+    fn run_session<F>(&self, report: &Reporter, first: (usize, usize), mut next_chunk: F)
+    where
+        F: FnMut() -> Option<(usize, usize)>,
+    {
+        let thread_arena = bumpalo::Bump::new();
+        let mut tctx = TcCtx::new(self, &thread_arena);
+        self.run_session_inner(report, first, &mut next_chunk, &mut tctx);
+    }
+
+    fn run_session_inner<'h, F>(
+        &'h self,
+        report: &Reporter,
+        first: (usize, usize),
+        next_chunk: &mut F,
+        tctx: &mut TcCtx<'h>,
+    ) where
+        F: FnMut() -> Option<(usize, usize)>,
+    {
+        let mut cache = TcCache::new();
+        let mut pending = Some(first);
+        loop {
+            let finished = 'session: loop {
+                let Some((mut i, end)) = pending.take().or_else(&mut *next_chunk) else {
+                    break true;
+                };
+                while i < end {
+                    let (_, d) = self
+                        .declars
+                        .get_index(i)
+                        .expect("declaration index out of range");
+                    i += 1;
+                    report.check(d, || self.check_declar_with(tctx, &mut cache, d));
+                    if cache.vals.used_bytes() > SESSION_BUDGET {
+                        pending = Some((i, end));
+                        break 'session false;
+                    }
+                }
+            };
+            cache.clear_session();
+            tctx.expr_cache.clear_session();
+            if finished {
+                return;
+            }
+        }
+    }
+
+    /// Check all declarations in this export file using a single thread.
+    pub(crate) fn check_all_declars_serial(&self, report: &Reporter) {
+        let total = self.declars.len();
+        std::thread::scope(|sco| {
+            std::thread::Builder::new()
+                .stack_size(crate::STACK_SIZE)
+                .spawn_scoped(sco, || self.run_session(report, (0, total), || None))
+                .unwrap()
+                .join()
+                .unwrap_or_else(|payload| std::panic::resume_unwind(payload));
+        });
+    }
+
+    /// Check all declarations in this export file, spawning `num_threads` as
+    fn check_all_declars_par(&self, report: &Reporter, num_threads: usize) {
+        use std::sync::atomic::{AtomicUsize, Ordering::Relaxed};
+        use std::thread;
+        let task_num = AtomicUsize::new(0);
+        let total = self.declars.len();
+        let claim = || {
+            let start = task_num.fetch_add(CHUNK_SIZE, Relaxed);
+            if start >= total || report.stopped() {
+                None
+            } else {
+                Some((start, (start + CHUNK_SIZE).min(total)))
+            }
+        };
+        thread::scope(|sco| {
+            let mut handles = Vec::new();
+            for i in 0..num_threads {
+                handles.push(
+                    thread::Builder::new()
+                        .name(format!("thread_{i}"))
+                        .stack_size(crate::STACK_SIZE)
+                        .spawn_scoped(sco, || {
+                            if let Some(first) = claim() {
+                                self.run_session(report, first, claim);
+                            }
+                        })
+                        .unwrap(),
+                );
+            }
+            for t in handles {
+                t.join()
+                    .unwrap_or_else(|payload| std::panic::resume_unwind(payload));
+            }
+        });
+    }
+
+    /// Check all of the declarations in this export file on the specified number
+    /// of threads (checking will be serial on the main thread is `num_threads <= 1`).
+    pub fn check_all_declars(&self) -> Result<(), CheckError> {
+        let report = Reporter::new(self);
+        let result = panic::catch_unwind(AssertUnwindSafe(|| {
+            if self.config.parse_only {
+                for (_, d) in &self.declars {
+                    report.check(d, || {});
+                }
+            } else if self.config.num_threads > 1 {
+                self.check_all_declars_par(&report, self.config.num_threads);
+            } else {
+                self.check_all_declars_serial(&report);
+            }
+        }));
+        report.finish();
+        result.map_err(CheckError::from_panic)
+    }
+}
+
+impl<'x, 't: 'x> TypeChecker<'x, 't> {
+    pub fn new(
+        dag: &'x mut TcCtx<'t>,
+        env: &'x Env<'x>,
+        declar_info: Option<DeclarInfo>,
+        tc_cache: &'x mut TcCache,
+    ) -> Self {
+        let nat_extension = dag.export_file.config.nat_extension;
+        dag.next_declaration();
+        Self {
+            ctx: Held::new(dag),
+            env,
+            tc_cache: Held::new(tc_cache),
+            declar_info,
+            nat_extension,
+            ordered_declaration: false,
+        }
+    }
+
+    #[inline(always)]
+    pub(crate) fn vals(&self) -> &Vals {
+        &self.tc_cache.vals
+    }
+
+    #[inline(always)]
+    pub(crate) fn vals_mut(&mut self) -> &mut Vals {
+        &mut self.tc_cache.vals
+    }
+
+    #[inline(always)]
+    pub(crate) fn val(&self, v: V) -> Value {
+        self.tc_cache.vals.val(v)
+    }
+
+    pub fn assert_def_eq(&mut self, u: ExprId, v: ExprId) {
+        ensure!(self.def_eq_core(u, v), "def_eq failed");
+    }
+}
+
+pub(crate) struct Held<'x, T> {
+    value: std::mem::ManuallyDrop<T>,
+    home: &'x mut T,
+}
+
+impl<'x, T> Held<'x, T> {
+    fn new(home: &'x mut T) -> Self {
+        Self {
+            value: std::mem::ManuallyDrop::new(unsafe { std::ptr::read(home) }),
+            home,
+        }
+    }
+}
+
+impl<T> std::ops::Deref for Held<'_, T> {
+    type Target = T;
+    #[inline(always)]
+    fn deref(&self) -> &T {
+        &self.value
+    }
+}
+
+impl<T> std::ops::DerefMut for Held<'_, T> {
+    #[inline(always)]
+    fn deref_mut(&mut self) -> &mut T {
+        &mut self.value
+    }
+}
+
+impl<T> Drop for Held<'_, T> {
+    fn drop(&mut self) {
+        unsafe { std::ptr::write(self.home, std::mem::ManuallyDrop::take(&mut self.value)) }
+    }
+}
