@@ -2078,7 +2078,29 @@ impl<'x, 't, 'p> TypeChecker<'x, 't, 'p> {
             NatRed::Shr => NatBinOp::Shr,
             NatRed::Succ | NatRed::DivGo | NatRed::ModCoreGo => unreachable!(),
         };
-        let xn = self.value_to_bignum_at(depth, args[0], deep)?;
+        // A syntactically open operand can still reduce to a literal, for
+        // example an applied constant function. The ordinary bignum path
+        // conservatively refuses to force terms containing free variables.
+        // For shifts, try one ordinary delta/application step on demand and
+        // accept only an actually observed numeral; otherwise preserve the
+        // existing fallback. Never substitute a guessed value for an open term.
+        let xn = match self.value_to_bignum_at(depth, args[0], deep) {
+            Some(n) => n,
+            None if deep && matches!(op, NatBinOp::Shl | NatBinOp::Shr) => {
+                let arg = self.force_thunk(depth, args[0]);
+                match arg {
+                    Value::Unfold { head, .. } if !self.is_nat_red_name(head.name) => {
+                        let reduced = self.unfold_value(depth, arg);
+                        if std::ptr::eq(reduced, arg) {
+                            return None;
+                        }
+                        self.value_to_bignum_at(depth, reduced, false)?
+                    }
+                    _ => return None,
+                }
+            }
+            None => return None,
+        };
         let yn = self.value_to_bignum_at(depth, args[1], deep)?;
         self.do_nat_bin_val(xn, yn, op)
     }
