@@ -123,10 +123,14 @@ native = read_archive("flash-inline-native-comparison.zip")
 native_id = js(native, "comparison/identity.json")
 native_hashes = {arm: sha(native[f"builds/{arm}.bin"]) for arm in ("baseline", "candidate")}
 assert native_id["binary_sha256"] == native_hashes and native_id["candidate_source_tree"] == src
+assert native_id["base_commit"] == "bc704eebed4e009bc66af1a849f18315c11f1926"
+assert native["candidate-source-tree.txt"].decode().strip() == src
+assert native["build-flags.txt"].decode().strip() == "-C target-cpu=native"
 assert native_id["input"] == {"size": prescribed["mathlib"]["size"], "sha256": prescribed["mathlib"]["sha256"]}
 native_portable = verify_portable(native, "portable", native_hashes["candidate"])
 native_controls = js(native, "source-controls/rows.json")
 assert len(native_controls) == 16 and all(r["observed"] == r["expected"] for r in native_controls)
+assert {(r["name"], r["sha256"], r["expected"]) for r in native_controls} == {(r["name"], r["sha256"], r["expected"]) for r in controls}
 rows = js(native, "comparison/rows.json")
 assert len(rows) == 6 and {(r["pair"], r["arm"]) for r in rows} == {(n, arm) for n in range(3) for arm in ("baseline", "candidate")}
 for row in rows:
