@@ -1,0 +1,47 @@
+{
+  "state": "WARRANTED_BOUNDED_OFFICIAL_PR_SELECTED_QUALIFICATION",
+  "pr": 398,
+  "head": "23003362b3c48487f03afa72e4390a05c3ca8ead",
+  "run": 45722992953,
+  "artifacts": [
+    {
+      "id": 15072279691,
+      "sha256": "11004c4cfc01d1739abda85a00a151feb0207db828aa9573bea8f6fbc34fa841"
+    },
+    {
+      "id": 15073935467,
+      "sha256": "e74c50f10e93ed831b7919a20c3d5f40bf52fcac9e11c646c14784f534d702b8"
+    }
+  ],
+  "checker_hash": "0f962fa70d5f55ad",
+  "prescribed_selected": 231,
+  "correct_prescribed_selected": 231,
+  "selected_prescribed_hashes_match_pinned_manifest": true,
+  "policy_records": 30,
+  "policy_permitted_decisions": 28,
+  "policy_timeouts_UNKNOWN": [
+    {
+      "test": "corner-cases/eta-struct-major-and-no-whnf",
+      "status": "timeout",
+      "raw_exit": -9
+    },
+    {
+      "test": "corner-cases/eta-struct-major-no-whnf",
+      "status": "timeout",
+      "raw_exit": -9
+    }
+  ],
+  "prescribed_not_in_pr_selection": [
+    "cedar",
+    "con-leche",
+    "cslib",
+    "init",
+    "mathlib",
+    "navier-stokes-euler",
+    "perf/gf3-matrix-product",
+    "reachability",
+    "std"
+  ],
+  "mathlib_in_this_run": false,
+  "boundary": "PR selection follows per-test skip-on-ci flags, not a 10 MiB size threshold: gf3-matrix-product is omitted and two larger magma-string cases are included. Policy timeouts are UNKNOWN/errors, not semantic rejections. This selected official native-build run is distinct from the source-qualified 240-case fork join and does not establish an Arena Mathlib hardware score or rank."
+}

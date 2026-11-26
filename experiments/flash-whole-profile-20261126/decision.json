@@ -5,10 +5,8 @@
   "software_instruction_ratio": 0.5658755278431343,
   "native_cpu_ratio": 0.6716490956177736,
   "observed_peak_rss_ratio": 0.7505009266835573,
-  "prescribed_outcomes_evidenced": 239,
-  "pending": [
-    "navier-stokes-euler"
-  ],
+  "prescribed_outcomes_evidenced": 240,
+  "pending": [],
   "official_arena_score": "UNKNOWN",
   "published_release_changed": false,
   "full_profile": {
@@ -37,5 +35,24 @@
     "arena_build": "target-cpu=native",
     "counter": "software application basic-block estimate, not the Arena perf hardware event"
   },
-  "next_residual": "Establish complete coverage and an Arena hardware measurement; further reduce shared evaluation/cache costs without assuming more memoization is cheaper."
+  "next_residual": "Establish complete coverage and an Arena hardware measurement; further reduce shared evaluation/cache costs without assuming more memoization is cheaper.",
+  "source_qualification_run": 45717594082,
+  "official_pr": {
+    "number": 398,
+    "ready_for_review": true,
+    "head": "23003362b3c48487f03afa72e4390a05c3ca8ead",
+    "run": 45722992953,
+    "run_success": true,
+    "correct_selected_prescribed": 231,
+    "policy_permitted_decisions": 28,
+    "policy_timeouts_UNKNOWN": 2,
+    "mathlib_scored": false
+  },
+  "inlining_candidate": {
+    "source_tree": "de6696fcecbe99e6fcab5bb68c5974e1e9a04e49",
+    "prefix_ratio": 0.9888404457770111,
+    "full_run": 45723515088,
+    "state": "RUNNING_FULL_MATHLIB_GATES",
+    "in_submission": false
+  }
 }

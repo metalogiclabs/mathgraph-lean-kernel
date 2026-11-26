@@ -160,3 +160,35 @@ prefix result, source identity and failed/recovered apparatus lineage.
 The separately running joined qualification 45717594082 is for the unchanged
 bc704eeb core, not this inlining candidate. Its source/input/binary/verdict joins
 must succeed before recording all 240 source-qualified prescribed outcomes.
+
+
+## Final source qualification and official review update
+
+The final Navier export and source-join workflow have completed. Source bc704eeb
+now has **240/240 prescribed outcomes confirmed**, superseding the earlier
+239/pending statements above. Both new archives were independently SHA-256/CRC
+checked; all case names, input hashes and raw expected verdicts were rejoined,
+including the exact 1,559,685,706-byte Navier export and its 129,845 completed
+declarations. This is a source-qualified join of separately identified builds,
+not an assertion that one frozen executable ran all 240 cases. The retained
+manifest contains only prescribed cases; other policy cases are outside it.
+
+[Arena #398](https://github.com/leanprover/lean-kernel-arena/pull/398) is now ready
+for review, at unchanged descriptor head 23003362, pinned checker bc704eeb. Its
+[official PR run 45722992953](https://github.com/leanprover/lean-kernel-arena/actions/runs/45722992953)
+completed SUCCESS in all five jobs. The independently verified official result
+and input-stat archives contain **231 selected prescribed cases, all correct**,
+plus **28 permitted policy decisions and two policy timeouts (UNKNOWN)**. The
+selection is controlled by per-test skip-on-ci flags: it includes 229 of the
+230 local portable cases and two larger magma-string inputs. It omits GF3 and
+eight other prescribed cases, including Mathlib. The overlapping official and
+fork counts must not be added. Official native-build Mathlib hardware scoring
+and a new public rank remain unestablished.
+
+The exact final join, Navier, official PR result and official input-stat archives
+are retained under `final-verification/`, with hashes and declared boundaries.
+The separately qualified attributed core remains the submission. The inlining
+hint is outside #398 and is undergoing [full comparison 45723515088](https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/45723515088):
+source tests and the sequential portable-control stage completed; alternating
+complete-Mathlib native/software-instruction gates are still running at this
+checkpoint. No full-input gain or new 240-case qualification is imputed to it.

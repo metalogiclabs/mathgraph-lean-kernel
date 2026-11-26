@@ -1,0 +1,28 @@
+{
+  "state": "WARRANTED_BOUNDED_ALL_240_AND_COMPLETE_MATHLIB",
+  "checker_commit": "bc704eebed4e009bc66af1a849f18315c11f1926",
+  "source_tree": "06c257f0f2ff1f64711cfa54620b650e6dd59b7e",
+  "prescribed_confirmed": 240,
+  "archives": [
+    {
+      "id": 15071464854,
+      "run": 45717594082,
+      "sha256": "3a19f1f56a5d60064f8fcd13fc0d380e1494880c8fe4b6fdcb7986fdf96b1247"
+    },
+    {
+      "id": 15072847646,
+      "run": 45711718821,
+      "sha256": "6c1837f6a0bd6a4aa87a5ee4602875c4ee4a03f135b9ea0cfd25c8f597b8b7a2"
+    }
+  ],
+  "joins": [
+    "Exact case-name set equals all 240 accept/reject manifest entries",
+    "Each raw status and input hash matches prescribed outcome and pinned manifest",
+    "230 portable records rejoined to previously verified frozen artifact",
+    "Eight previously verified complete large-input verdicts rejoined",
+    "Navier exact original hash/size/source/commit/binary/verdict/complete count verified",
+    "Both new archives independently SHA-256/CRC checked"
+  ],
+  "boundary": "Source-qualified executions across separately identified generic builds. No global soundness proof or official Arena hardware score/rank. This does not qualify the separate inlining candidate.",
+  "manifest_boundary": "This retained manifest contains only the 240 prescribed accept/reject cases. Other policy cases are outside this verification; no zero-policy-case claim is made."
+}
