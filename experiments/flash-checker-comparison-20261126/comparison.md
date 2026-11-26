@@ -164,15 +164,19 @@ on the exact 25,131-declaration prefix, not full-input or Arena gains.
 | Skip interning of inferred Pi closures | 0.844% | 1.495%, 0.190% | Not promoted: repeat gate failed |
 | Demand-directed selected recursor prefix | 0.243% | 0.651%, -0.165% | Not promoted: repeat gate failed |
 | Direct sort table, complete raw IDs | 0.700% | 0.202%, 1.199% | Not promoted: repeat and aggregate gates failed |
-| Value-session budget 9 MiB to 36 MiB | 6.651% | 6.844%, 6.459% | Candidate: prefix cost gate passes; complete-input qualification pending |
+| Value-session budget 9 MiB to 36 MiB | 6.651% | 6.844%, 6.459% | Full experiment gates passed: software instructions -3.006%, native CPU +6.273%; not released |
 
-The budget candidate passes 39 library tests and 16 source controls. Its local
-portable attempt has 217 correct outcomes and 13 SIGKILLs; the latter remain
-UNKNOWN. The separately pinned hosted workflow collects complete-input
-correctness, native memory and software instruction evidence. No Arena
-seconds are extrapolated from the prefix result. An earlier motivation
-confused 14,418 cache-object census records with resets; that statement is
-corrected and is not used as cost evidence.
+The budget candidate passes 39 library tests and 16 source controls. The
+completed hosted run passes all 230 portable cases and four complete Mathlib
+accepts in each build. Independently rechecked archives show 3.006% fewer
+software instructions on the full input, but native CPU time is 6.273% worse
+and peak RSS is 2.123% higher. Both declared gates pass; the candidate remains
+unpromoted. Nine other large cases and an independent Arena result remain
+unqualified. The initial local 13 SIGKILLs remain preserved in the lineage.
+An earlier motivation confused 14,418 cache-object census records with resets;
+that statement is corrected and is not used as cost evidence.
+
+[Completed full-input qualification](https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/45811406828).
 
 The direct-sort attempt first conflated local and imported universe IDs by
 using an index that masks the namespace bit. A retained semantic regression

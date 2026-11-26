@@ -1,5 +1,5 @@
 {
-  "state": "CANDIDATE_PREFIX_COST_GATE_PASSED",
+  "state": "WARRANTED_BOUNDED_EXPERIMENT_NOT_RELEASED",
   "observations": 4,
   "declarations": 25131,
   "threads": 2,
@@ -109,6 +109,28 @@
     ]
   },
   "portable_boundary": "Nonzero killed processes remain UNKNOWN; SIGKILL cause not established. Hosted qualification is required; no crash or decline is normalized to rejection.",
-  "whole_input_effect": "UNKNOWN_PENDING_QUALIFICATION",
-  "boundary": "Exact prefix only, generic software-instruction counter. Not full Mathlib, complete qualification or Arena speed."
+  "whole_input_effect": {
+    "software_instruction_reduction": 0.030057013555294887,
+    "native_cpu_ratio": 1.062729383566774,
+    "native_peak_rss_ratio": 1.0212281514900374
+  },
+  "boundary": "Prefix fields retain their original observations. Whole-input software and native results are separate builds; neither is an official Arena result. Both declared experiment gates passed; release remains unchanged.",
+  "full_result": "whole-verified/result.json",
+  "hosted_portable_correct": 230,
+  "release_state": "NOT_PROMOTED: native CPU regression; nine other large prescribed cases and an independent Arena result remain unqualified.",
+  "remaining_large_cases": [
+    "cedar",
+    "con-leche",
+    "cslib",
+    "init",
+    "navier-stokes-euler",
+    "perf/magma-string-n4",
+    "perf/magma-string-pair-n9",
+    "reachability",
+    "std"
+  ],
+  "lineage": {
+    "prefix_decision_commit": "99b54b00f4bf5d14009cc3e60d43b7ac4dad29ab",
+    "measurement_commit": "eef92be0975e106aa371d120a3d342af9f597070"
+  }
 }

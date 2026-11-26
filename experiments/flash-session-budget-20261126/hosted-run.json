@@ -1,5 +1,5 @@
 {
-  "state": "IN_PROGRESS_AT_RECEIPT",
+  "state": "COMPLETED_SUCCESS_INDEPENDENT_ARCHIVE_VERIFICATION",
   "run_id": 45811406828,
   "url": "https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/45811406828",
   "harness_commit": "eef92be0975e106aa371d120a3d342af9f597070",
@@ -10,16 +10,14 @@
     {
       "id": 139879920453,
       "name": "compare (instructions)",
-      "status": "in_progress",
-      "conclusion": null,
-      "active_step": "Run actions/cache/restore@v4"
+      "status": "completed",
+      "conclusion": "success"
     },
     {
       "id": 139879920934,
       "name": "compare (native)",
-      "status": "in_progress",
-      "conclusion": null,
-      "active_step": "Run actions/cache/restore@v4"
+      "status": "completed",
+      "conclusion": "success"
     }
   ],
   "published_experiment_bytes": {
@@ -27,5 +25,6 @@
     "mismatches": []
   },
   "canonical_notion_sync": "NOT_UPDATED: notion.fetch returned Transport closed",
-  "boundary": "Full-input verdict, memory and cost gates are pending. The repeated prefix gain is 6.651%, not an Arena result. Published checker source remains unchanged."
+  "boundary": "Both original experiment gates passed. Full software instruction reduction 3.006%, native CPU increase 6.273%, peak RSS increase 2.123%; no Arena performance claim or release promotion. Published checker source remains unchanged.",
+  "full_result": "whole-verified/result.json"
 }

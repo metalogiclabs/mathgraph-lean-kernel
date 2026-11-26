@@ -11,26 +11,39 @@ accept all 25,131 declarations, and three exact loop controls pass.
 Software instructions fall 6.651% overall; the pairs save 6.844% and 6.459%.
 This passes the prospective 1% repeat and aggregate cost gate.
 
-This is a CANDIDATE, not a full-input or Arena speed result. The local
-230-case portable attempt has 217 correct raw outcomes and 13 SIGKILLs.
-A matched original-input control also SIGKILLs the unchanged baseline near
-the same 858,000 KiB peak RSS as the candidate. This is consistent with a
-local resource constraint, but those processes remain UNKNOWN and their
-cause is not established. No signal,
-crash or decline is normalized into rejection. The exact rows are retained.
+The completed [hosted experiment](https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/45811406828)
+passes both declared gates. Independent ZIP SHA-256 and CRC checks, checker
+and loop executable hashes, source identities and reconstruction of the raw
+metrics agree with the archived reports. All 230 hosted portable cases are
+correct; both builds accept all 739,167 declarations in each of four full
+Mathlib executions.
+
+On complete Mathlib, software instructions fall **3.006%**, with pair gains
+of 3.171% and 2.840%. The native build's median CPU use rises **6.273%**
+(133.510 to 141.885 seconds), and peak RSS rises **2.123%**
+(4,927,796 to 5,032,404 KiB). The native memory gate passes. The instruction
+comparison and native timing use separately identified generic and native
+builds; the result does not establish native instruction savings.
+
+This is a WARRANTED bounded experiment, retained as an unpromoted candidate.
+The declared gates remain passed; the native CPU regression is an additional
+release concern. Nine other large prescribed cases and an independent Arena
+measurement remain unqualified. The published release is unchanged. No Arena
+seconds are extrapolated from either the prefix or software-counter result.
+
+The original local portable attempt had 217 correct outcomes and 13 SIGKILLs.
+A matched control also killed the unchanged baseline near the same peak RSS.
+The signal cause remains unknown; the completed hosted 230-case qualification
+supersedes that local incompleteness for its native build boundary.
 
 The initial motivation incorrectly called 14,418 census records sessions
 or resets. The instrument keeps counters across session clearing and emits
 at cache-object destruction; it does not count resets. That statement is
-corrected explicitly in protocol-correction.json; it is not evidence of the
-candidate's benefit. The measured prefix comparisons provide the cost evidence.
+corrected in protocol-correction.json and is not evidence of the candidate's
+benefit. Earlier prose also said ten other large cases; the manifest has ten
+including Mathlib, leaving nine.
 
-The hosted experiment reconstructs both exact sources and freezes native
-and generic executables separately. It checks all 230 exact portable inputs,
-then runs two alternating complete Mathlib pairs for native resources and
-software instructions. The full prospective memory and cost gates are in
-full-protocol.json. Even a passed experiment requires separate coverage of
-the other ten large prescribed cases and an independent Arena measurement
-before release or ranking claims.
-
-[Hosted full-input qualification](https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/45811406828) runs source eef92be0975e106aa371d120a3d342af9f597070.
+Verified records are in whole-verified/result.json. Reproduce archive and
+metric validation with verify_archives.py. Artifact hashes and executable
+identities are retained; the 6.3 GB input and compiled counter identities are
+runner evidence and were not independently downloaded in this verification.
