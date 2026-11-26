@@ -111,3 +111,23 @@ software instructions with one worker than two, versus 2.794% more with
 four. Exact loop controls and explicit one/two/four-worker loop-coverage
 controls pass. See `../flash-worker-study-20261126/`; the whole-input effect
 remains UNKNOWN until that experiment completes. No submitted defaults change.
+
+
+## Further context-lookup residual
+
+A third observation-only build records1,411,356 type-context lookups and
+an index-plus-one upper bound of12,032,954 parent-walk steps (mean8.526)
+against761,372 new contexts. An isolated contiguous-span prototype passes
+41 dev-profile library tests, eight retained raw exports,16 release-binary
+source controls and four exact-prefix release-binary ACCEPTs. It saves
+only0.513% prefix software instructions. The release library-test build
+was SIGKILLed; that suite is UNKNOWN, not passed. The first baseline-only
+counter attempt was also SIGKILLed; its failed receipt is retained and
+excluded from the successful repeat. Exact causes remain unresolved.
+No complete-Mathlib or rank result is inferred; the prototype is not promoted.
+
+Completed PGO and native worker results are retained in their separate
+experiment directories. PGO saves1.413% whole-input software instructions
+on unchanged source. One worker saves3.413% native CPU versus two, with
+76.569% longer wall time; its native instrumented execution failed with
+SIGILL. Do not conflate these outcomes or add their percentages.

@@ -1,0 +1,46 @@
+name: Flash frozen generic worker diagnostic recovery
+on:
+  push:
+    branches: [research/flash-upstream-reconciliation-20261126]
+    paths: ['.github/workflows/flash-worker-counter-recovery.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  count:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Recover and verify the unchanged already-measured generic executable
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/frozen-worker-recovery"
+          mkdir -p "$OUT"
+          git rev-parse HEAD > "$OUT/harness-commit.txt"
+          lscpu > "$OUT/cpu.txt"
+          gh api repos/metalogiclabs/mathgraph-lean-kernel/actions/artifacts/15069518161/zip > "$OUT/original-instructions.zip"
+          python3 experiments/flash-worker-counter-recovery-20261126/thaw.py --archive "$OUT/original-instructions.zip" --out "$OUT"
+      - uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/reconciled-input/mathlib.ndjson
+          key: flash-upstream-exact-mathlib-f749dfd084fc0727d107c7aaded7d492cebfc0b517cfaa7337d8a7578a6c0dec
+          fail-on-cache-miss: true
+      - name: Build the unchanged pinned software counting client
+        run: |
+          set -euo pipefail
+          python3 experiments/flash-upstream-repair-20261126/build_counter.py
+          cp "$RUNNER_TEMP/flash-dynamorio/identity.json" "$RUNNER_TEMP/frozen-worker-recovery/counter-identity.json"
+          cp experiments/flash-upstream-repair-20261126/instruction_counter.c "$RUNNER_TEMP/frozen-worker-recovery/"
+      - name: Require exact calibrations, worker coverage and both complete ACCEPTs
+        run: |
+          python3 experiments/flash-worker-study-20261126/run.py --drrun "$RUNNER_TEMP/flash-dynamorio/DynamoRIO-Linux-11.92.20777/bin64/drrun" --client "$RUNNER_TEMP/flash-dynamorio/instruction-counter.so" --binary "$RUNNER_TEMP/frozen-worker-recovery/checker.bin" --fixture "$RUNNER_TEMP/reconciled-input/mathlib.ndjson" --workers 1,2 --rounds 1 --whole --out "$RUNNER_TEMP/frozen-worker-recovery/instructions"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-frozen-worker-recovery
+          path: ${{ runner.temp }}/frozen-worker-recovery/
+          retention-days: 90

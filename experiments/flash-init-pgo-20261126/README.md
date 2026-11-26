@@ -36,3 +36,34 @@ This workflow does not update either release reference or the pending
 Promote only after observing and independently verifying the actual results.
 The earlier prefix-trained PGO experiment remains a separate training-only
 result; its 1.97% prefix gain is not reused as evidence for this experiment.
+
+
+## Completed outcome
+
+[Run45729265712](https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/45729265712)
+completed successfully. Artifact15076991448 (57,038,303 bytes) independently
+matches SHA-256 `a58fc7871d0513b413643fff15fbb83fda1f84b056c133f31688f2f377cb2b56`
+and ZIP CRC. All572 archive entry digests and both actual executable hashes
+were recomputed. See `verified-comparison/` and the shared
+`../flash-continued-cost-trials-20261126/verify_diagnostic_archive.py`.
+
+The ordinary native binary counts515,628,583,473 software instructions;
+Init-PGO counts508,341,361,994: **1.413% fewer**, one complete execution per
+arm and three exact loop controls. Both ACCEPT739,167 declarations.
+Native median CPU is155.760s versus154.630s (0.725% lower), but the two
+paired directions disagree (-2.384%, +1.041%). That small CPU difference
+is not strong evidence of a practical CPU gain. All39 library tests,
+eight retained raw exports,230 portable prescribed outcomes and16 source
+controls pass. The other nine large exports were not replayed with this
+PGO executable. No native PMU result or Arena rank follows.
+
+The merged compiler profile is retained as `verified-comparison/training.profdata.gz`
+(62,670 bytes), with its original393,392-byte profile hash and compression
+identity, so it survives expiry of the Actions artifact. The exact training
+input is348,430,202 bytes, SHA-256 `e819664a1c7d7df8dc303077a9f85be2a1d24bc60d57636b64570edff83e5724`;
+both training executions ACCEPT59,626 declarations. Only their two actual
+checker profiles enter the merge.
+
+**Decision: retain the measured build candidate and reusable protocol; do
+not promote it into PR398 for this small gain and uncompleted large-input
+boundary.** Its gains cannot be multiplied by worker or inline results.

@@ -1,0 +1,137 @@
+{
+  "summary": {
+    "controls": 16,
+    "wrong": [],
+    "boundary": "Source correspondence controls; acceptance of altered metadata alone is not a proof of False."
+  },
+  "rows": [
+    {
+      "name": "original",
+      "expected": 0,
+      "observed": 0,
+      "sha256": "7ba26398609a78189041a9cf3a722e862339ef344a97d42eb098309bba65027a",
+      "stdout": "checked 8 declarations in 0.010s\n",
+      "stderr": ""
+    },
+    {
+      "name": "missing-field",
+      "expected": 1,
+      "observed": 1,
+      "sha256": "cc60ad10c75fb4845bd87c9d3e211ae3124f0efa8e701d5c197af145f65d802c",
+      "stdout": "",
+      "stderr": "rejected: imported recursor rule constructor or field count differs\n\nrun with `--help` for command-line options\n"
+    },
+    {
+      "name": "extra-field",
+      "expected": 1,
+      "observed": 1,
+      "sha256": "c78299d5204f2d23b71c4626c3066c54a6a49eedeb4f25693ff2fbb815011de0",
+      "stdout": "",
+      "stderr": "rejected: imported recursor rule constructor or field count differs\n\nrun with `--help` for command-line options\n"
+    },
+    {
+      "name": "nullary-extra-field",
+      "expected": 1,
+      "observed": 1,
+      "sha256": "02017b8c7aedac26f24394b9db81e9f8a7d211eb08840292aa5e067315351684",
+      "stdout": "",
+      "stderr": "rejected: imported recursor rule constructor or field count differs\n\nrun with `--help` for command-line options\n"
+    },
+    {
+      "name": "aux-missing-field",
+      "expected": 1,
+      "observed": 1,
+      "sha256": "f80ec243879a4bc5d58899429371529314d63a9b941969341420feebbf6c719e",
+      "stdout": "",
+      "stderr": "rejected: imported recursor rule constructor or field count differs\n\nrun with `--help` for command-line options\n"
+    },
+    {
+      "name": "aux-extra-field",
+      "expected": 1,
+      "observed": 1,
+      "sha256": "5a511115165f63d281d8b8bb7dcd107ae337442bc32aaf4dc8e010db469508a9",
+      "stdout": "",
+      "stderr": "rejected: imported recursor rule constructor or field count differs\n\nrun with `--help` for command-line options\n"
+    },
+    {
+      "name": "constructor-fields",
+      "expected": 1,
+      "observed": 1,
+      "sha256": "58f5f04cf3a2c48938eef60ba0b1f5c97a2e8945198044860b909deeb2cbf53c",
+      "stdout": "",
+      "stderr": "rejected: imported constructor metadata differs\n\nrun with `--help` for command-line options\n"
+    },
+    {
+      "name": "constructor-owner",
+      "expected": 1,
+      "observed": 1,
+      "sha256": "e79662209728581f1bc21a320a96db109f61d61e4c310fea31c09524b15655d8",
+      "stdout": "",
+      "stderr": "rejected: imported constructor metadata differs\n\nrun with `--help` for command-line options\n"
+    },
+    {
+      "name": "recursor-params",
+      "expected": 1,
+      "observed": 1,
+      "sha256": "394c94070f9dd09b28e768df1acf5b03a95ca16569bfb7aa8f32fe24e90aedec",
+      "stdout": "",
+      "stderr": "rejected: imported recursor metadata differs\n\nrun with `--help` for command-line options\n"
+    },
+    {
+      "name": "recursor-universes",
+      "expected": 1,
+      "observed": 1,
+      "sha256": "c9ade8e4637278f2c2cbeb1450e1d9f4c3dacfa612bf3da2176c28838a997c0e",
+      "stdout": "",
+      "stderr": "rejected: imported declaration universe parameters differ\n\nrun with `--help` for command-line options\n"
+    },
+    {
+      "name": "recursor-type",
+      "expected": 1,
+      "observed": 1,
+      "sha256": "466efb0a50c5810789aaa7513af25707af4330eda3519fed3c128ca82f203539",
+      "stdout": "",
+      "stderr": "rejected: imported declaration type differs\n\nrun with `--help` for command-line options\n"
+    },
+    {
+      "name": "recursor-rule-type",
+      "expected": 1,
+      "observed": 1,
+      "sha256": "57345b6693560741ae4e0af902f31e602968d0956cfc99d437e4a95f6df53e46",
+      "stdout": "",
+      "stderr": "rejected: imported recursor rule type differs\n\nrun with `--help` for command-line options\n"
+    },
+    {
+      "name": "missing-recursor",
+      "expected": 1,
+      "observed": 1,
+      "sha256": "3811e9bf06be8decc8cfbd9cb26d28ffc736d1a305ca45eff7f17b5371c0dbd5",
+      "stdout": "",
+      "stderr": "rejected: imported inductive block has missing or extra declarations\n\nrun with `--help` for command-line options\n"
+    },
+    {
+      "name": "duplicate-recursor",
+      "expected": 1,
+      "observed": 1,
+      "sha256": "a20063b5217aa77b23b354b7ce69f095f230c78d8c32d0fbe15e45f0a3feb238",
+      "stdout": "",
+      "stderr": "rejected: duplicate imported declaration\n\nrun with `--help` for command-line options\n"
+    },
+    {
+      "name": "foreign-recursor",
+      "expected": 1,
+      "observed": 1,
+      "sha256": "b469c647681e75d7c1ca2e489320191fd348e41510eb61750c24a8346c426418",
+      "stdout": "",
+      "stderr": "rejected: imported declaration belongs to a different block\n\nrun with `--help` for command-line options\n"
+    },
+    {
+      "name": "renamed-original",
+      "expected": 0,
+      "observed": 0,
+      "sha256": "4a1b410e52ad8bf17db46388b2cea7bbc4a05c9404d32e340c1f5e5465f1d44b",
+      "stdout": "checked 8 declarations in 0.007s\n",
+      "stderr": ""
+    }
+  ]
+}

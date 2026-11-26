@@ -1,0 +1,37 @@
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.26
+   Compiling quote v1.0.47
+   Compiling libc v0.2.189
+   Compiling shlex v2.0.1
+   Compiling autocfg v1.5.1
+   Compiling serde_core v1.0.229
+   Compiling find-msvc-tools v0.1.14
+   Compiling rand_core v0.10.1
+   Compiling cfg-if v1.0.5
+   Compiling getrandom v0.4.3
+   Compiling utf8parse v0.2.2
+   Compiling serde v1.0.229
+   Compiling anstyle-parse v1.0.0
+   Compiling cc v1.5.1
+   Compiling anstyle v1.0.14
+   Compiling is_terminal_polyfill v1.70.2
+   Compiling colorchoice v1.0.5
+   Compiling num-traits v0.2.19
+   Compiling cpufeatures v0.3.1
+   Compiling anstyle-query v1.1.5
+   Compiling zmij v1.0.23
+   Compiling chacha20 v0.10.2
+   Compiling anstream v1.0.0
+   Compiling heck v0.5.0
+   Compiling strsim v0.11.1
+   Compiling clap_lex v1.1.1
+   Compiling foldhash v0.2.0
+   Compiling equivalent v1.0.2
+   Compiling allocator-api2 v0.2.21
+   Compiling serde_json v1.0.151
+   Compiling clap_builder v4.6.7
+error: could not compile `cc` (lib)
+
+Caused by:
+  process didn't exit successfully: `rustc --crate-name cc --edition=2021 /tmp/flash-cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cc-1.5.1/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debug-assertions=off --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("jobserver", "parallel"))' -C metadata=75c07b8a8d28c8f5 -C extra-filename=-7c56078a7b926f2f --out-dir /workspace/scratch/f55dc021446a/continue-20261126/build-context/release/deps -C strip=debuginfo -L dependency=/workspace/scratch/f55dc021446a/continue-20261126/build-context/release/deps --extern find_msvc_tools=/workspace/scratch/f55dc021446a/continue-20261126/build-context/release/deps/libfind_msvc_tools-1db3d27c62408456.rmeta --extern shlex=/workspace/scratch/f55dc021446a/continue-20261126/build-context/release/deps/libshlex-4ec27d5a1f22743d.rmeta --cap-lints allow -C target-cpu=x86-64 -C target-feature=-avx,-avx2,-avx512f,-fma` (signal: 9, SIGKILL: kill)
+warning: build failed, waiting for other jobs to finish...
