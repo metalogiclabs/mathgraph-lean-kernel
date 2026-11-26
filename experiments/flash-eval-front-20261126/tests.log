@@ -1,0 +1,80 @@
+   Compiling sokonanoda v0.5.0 (/workspace/scratch/66f541013946/flash-eval-front)
+    Finished `release` profile [optimized] target(s) in 50.47s
+     Running unittests src/lib.rs (/dev/shm/flash-eval-front-target/release/deps/sokonanoda-9e2485d3b1222a2b)
+
+running 41 tests
+test checker::eval_front::tests::cached_result_requires_exact_expression_and_environment ... ok
+test checker::eval_front::tests::resets_invalidate_results_before_value_ids_can_be_reused ... ok
+test checker::nat::tests::nat_div_add_mod ... ok
+test checker::nat::tests::nat_gcd_eq ... ok
+test checker::nat::tests::nat_land_eq ... ok
+test checker::nat::tests::nat_lor_eq ... ok
+test checker::nat::tests::nat_mod_eq ... ok
+test checker::nat::tests::nat_div_le_self ... ok
+test checker::nat::tests::nat_div_eq ... ok
+test checker::nat::tests::nat_shl_eq ... ok
+test checker::nat::tests::nat_shr_eq ... ok
+test checker::nat::tests::nat_sub_eq ... ok
+test checker::nat::tests::nat_mod_eq_sub_mod ... ok
+test checker::nat::tests::nat_xor_eq ... ok
+test checker::nat::tests::zero_shift_preserves_arbitrary_natural_counts ... ok
+test checker::ptrmap::tests::fingerprint_collisions_preserve_distinct_keys ... ok
+test checker::value::tests::extending_sparse_environment_keeps_far_dependencies ... ok
+test frontend::parser::tests::ignore_binder_metadata_in_both_parser_paths ... ok
+test frontend::parser::tests::reject_undefined_binder_type ... ok
+test frontend::parser::tests::unsafe_recursion_is_rejected_but_unsupported_unsafe_identity_is_declined ... ok
+test checker::inductive::tests::rejects_nested_recursor_field_on_nullary_constructor ... ok
+test term::expr::tests::instantiation_does_not_capture_open_substitutions ... ok
+test checker::inductive::tests::rejects_auxiliary_nested_recursor_missing_field ... ok
+test term::expr::tests::shifting_respects_let_value_and_binder_scopes ... ok
+test checker::inductive::tests::rejects_nested_recursor_missing_field ... ok
+test checker::inductive::tests::rejects_auxiliary_nested_recursor_extra_field ... ok
+test term::level::tests::eq_antisymm_many_max_self ... ok
+test checker::inductive::tests::rejects_nested_recursor_extra_field ... ok
+test term::hash::tests::hash_eq_of_eq ... ok
+test term::level::tests::imax_le_succ ... ok
+test checker::inductive::tests::accepts_nested_recursor_field_counts ... ok
+test term::level::tests::imax_zero ... ok
+test term::level::tests::repr_succ ... ok
+test term::level::tests::repr_succ_max ... ok
+test term::level::tests::max_self ... ok
+test term::level::tests::succ_max_self ... ok
+test term::level::tests::param_incomparable ... ok
+test term::level::tests::succ_le_succ ... ok
+test term::level::tests::imax_eq_max_of_pos ... ok
+test term::level::tests::imax_le_imax ... ok
+test term::level::tests::max_le_max ... ok
+
+test result: ok. 41 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running unittests src/main.rs (/dev/shm/flash-eval-front-target/release/deps/sokonanoda-88a21e343b44abf3)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/arena.rs (/dev/shm/flash-eval-front-target/release/deps/arena-0497a7a2951f4bb2)
+
+running 2 tests
+test arena_fast_tier ... ok
+17/17  reject  def            0.125ms  e
+7/8  reject  def            0.021ms  explosion_helper
+test retained_source_regressions ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+   Doc-tests sokonanoda
+
+running 2 tests
+test src/checker/inductive/mod.rs - checker::inductive::InductiveCheckState::nested_to_unspecialized_ty (line 164) ... ignored
+test src/checker/inductive/mod.rs - checker::inductive::InductiveCheckState::nested_to_unspecialized_ty (line 169) ... ignored
+
+test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 1 test
+test src/checker/inductive/restore.rs - checker::inductive::restore::TypeChecker<'x,'t>::mk_specialized_rec_to_unspecialized_map (line 20) ... ignored
+
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+all doctests ran in 1.34s; merged doctests compilation took 1.33s

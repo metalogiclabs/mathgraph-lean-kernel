@@ -1,0 +1,83 @@
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.26
+   Compiling quote v1.0.47
+   Compiling libc v0.2.189
+   Compiling syn v3.0.6
+   Compiling shlex v2.0.1
+   Compiling find-msvc-tools v0.1.14
+   Compiling autocfg v1.5.1
+   Compiling serde_core v1.0.229
+   Compiling num-traits v0.2.19
+   Compiling cc v1.5.1
+   Compiling rand_core v0.10.1
+   Compiling cfg-if v1.0.5
+   Compiling utf8parse v0.2.2
+   Compiling getrandom v0.4.3
+   Compiling anstyle-parse v1.0.0
+   Compiling libmimalloc-sys v0.1.49
+   Compiling colorchoice v1.0.5
+   Compiling anstyle-query v1.1.5
+   Compiling serde v1.0.229
+   Compiling cpufeatures v0.3.1
+   Compiling anstyle v1.0.14
+   Compiling is_terminal_polyfill v1.70.2
+   Compiling zmij v1.0.23
+   Compiling anstream v1.0.0
+   Compiling chacha20 v0.10.2
+   Compiling serde_derive v1.0.229
+   Compiling heck v0.5.0
+   Compiling strsim v0.11.1
+   Compiling clap_lex v1.1.1
+   Compiling foldhash v0.2.0
+   Compiling equivalent v1.0.2
+   Compiling allocator-api2 v0.2.21
+   Compiling serde_json v1.0.151
+   Compiling hashbrown v0.17.1
+   Compiling clap_builder v4.6.7
+   Compiling clap_derive v4.6.7
+   Compiling rand v0.10.3
+   Compiling num-integer v0.1.47
+   Compiling itoa v1.0.18
+   Compiling memchr v2.8.3
+   Compiling num-bigint v0.5.1
+   Compiling mimalloc v0.1.52
+   Compiling clap v4.6.7
+   Compiling indexmap v2.14.2
+   Compiling memmap2 v0.9.11
+   Compiling bumpalo v3.20.3
+   Compiling rustc-hash v2.1.3
+   Compiling semver v1.0.28
+   Compiling smallvec v1.16.2
+   Compiling sokonanoda v0.5.0 (/workspace/scratch/66f541013946/flash-eval-front)
+    Finished `release` profile [optimized] target(s) in 40.42s
+     Running unittests src/lib.rs (/dev/shm/flash-eval-front-target/release/deps/sokonanoda-9e2485d3b1222a2b)
+
+running 2 tests
+test checker::eval_front::tests::resets_invalidate_results_before_value_ids_can_be_reused ... FAILED
+test checker::eval_front::tests::cached_result_requires_exact_expression_and_environment ... FAILED
+
+failures:
+
+---- checker::eval_front::tests::resets_invalidate_results_before_value_ids_can_be_reused stdout ----
+
+thread 'checker::eval_front::tests::resets_invalidate_results_before_value_ids_can_be_reused' (753) panicked at src/checker/eval_front.rs:55:9:
+assertion `left == right` failed
+  left: None
+ right: Some(VId(1))
+
+---- checker::eval_front::tests::cached_result_requires_exact_expression_and_environment stdout ----
+
+thread 'checker::eval_front::tests::cached_result_requires_exact_expression_and_environment' (752) panicked at src/checker/eval_front.rs:36:9:
+assertion `left == right` failed
+  left: None
+ right: Some(VId(1))
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    checker::eval_front::tests::cached_result_requires_exact_expression_and_environment
+    checker::eval_front::tests::resets_invalidate_results_before_value_ids_can_be_reused
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 39 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `--lib`

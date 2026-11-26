@@ -1,0 +1,16 @@
+diff --git a/src/checker/eval.rs b/src/checker/eval.rs
+index 6c0225f..21cfe20 100644
+--- a/src/checker/eval.rs
++++ b/src/checker/eval.rs
+@@ -51,6 +51,11 @@ impl TypeChecker<'_, '_> {
+                 self.eval_no_cache(depth, base, e, node.expr)
+             });
+         }
++        // Binder values are already interned with their exact projected closure
++        // environment. Test whether a second evaluation memo duplicates work.
++        if matches!(node.expr, Expr::Lambda { .. } | Expr::Pi { .. }) {
++            return self.eval_no_cache(depth, env, e, node.expr);
++        }
+         if matches!(
+             node.expr,
+             Expr::App { .. }

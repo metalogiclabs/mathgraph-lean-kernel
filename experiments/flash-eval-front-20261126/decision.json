@@ -1,0 +1,17 @@
+{
+  "state": "REJECTED_AS_PREFIX_PERFORMANCE_PRIORITY",
+  "baseline": "bc704eebed4e009bc66af1a849f18315c11f1926",
+  "observations": 4,
+  "declarations_per_execution": 25131,
+  "threads": 2,
+  "instruction_ratio": 1.0914307842123636,
+  "paired_ratios": [
+    1.0893260381221084,
+    1.0935239091850264
+  ],
+  "required_ratio": 0.99,
+  "library_tests": 41,
+  "source_controls": 16,
+  "whole_Mathlib": "UNKNOWN_NOT_RUN_AFTER_FAILED_PREFIX_GATE",
+  "boundary": "Two alternating software-instrumented prefix pairs. All processes ACCEPT; three exact loop controls pass. Baseline is the hash-verified frozen generic 09fe7ecf binary; candidate uses the same recorded rustc 1.99.1 and generic flags. This is not an Arena score. The first counter attempt failed its calibration before checking any input and is excluded; its receipts are retained."
+}

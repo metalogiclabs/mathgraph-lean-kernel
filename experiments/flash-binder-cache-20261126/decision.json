@@ -1,0 +1,17 @@
+{
+  "state": "REJECTED_AS_PREFIX_PERFORMANCE_PRIORITY",
+  "baseline": "bc704eebed4e009bc66af1a849f18315c11f1926",
+  "threads": 2,
+  "observations": 4,
+  "declarations_per_execution": 25131,
+  "instruction_ratio": 1.0083095198368015,
+  "paired_ratios": [
+    1.0104342273690583,
+    1.0061932545754002
+  ],
+  "required_ratio": 0.99,
+  "library_tests": 39,
+  "source_controls": 16,
+  "whole_Mathlib": "UNKNOWN_NOT_RUN_AFTER_FAILED_PREFIX_GATE",
+  "boundary": "Two alternating exact-prefix software-instruction pairs; all four processes ACCEPT and three exact loop controls pass. This is not an Arena score or universal soundness claim."
+}
