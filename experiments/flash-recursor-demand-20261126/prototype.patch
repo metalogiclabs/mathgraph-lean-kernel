@@ -1,0 +1,212 @@
+diff --git a/src/checker/eval.rs b/src/checker/eval.rs
+index 6c0225f..2dffc7e 100644
+--- a/src/checker/eval.rs
++++ b/src/checker/eval.rs
+@@ -14,6 +14,59 @@ mod environment;
+ mod reduction;
+ mod whnf_cache;
+ 
++#[cfg(test)]
++mod demanded_prefix_checks {
++    use super::*;
++    use crate::checker::env::EnvLimit;
++    use crate::checker::tc::InferFlag::Check;
++    use crate::checker::value::{EMPTY_CTX, EMPTY_ENV};
++    use crate::config::Config;
++    use crate::frontend::parser::parse_export_file;
++    use crate::outcome::Rejection;
++    use std::io;
++    use std::panic::{AssertUnwindSafe, catch_unwind};
++
++    #[test]
++    fn erased_rule_argument_keeps_scope_and_still_requires_typing() {
++        let export = parse_export_file(io::empty(), Config::default(), 0).unwrap();
++        export.with_ctx(|ctx, cache, _| {
++            let one = ctx.succ(ctx.zero());
++            let typ = ctx.mk_sort(one);
++            let [v0, v1, v2] = [0, 1, 2].map(|i| ctx.mk_var(i));
++            // The rule is fun (A : Type) (x y : A) => x.
++            let rule = ctx.mk_lambda(v1, v1);
++            let rule = ctx.mk_lambda(v0, rule);
++            let rule = ctx.mk_lambda(typ, rule);
++            let applied = ctx.mk_app(rule, v2);
++            let applied = ctx.mk_app(applied, v1);
++            let valid = ctx.mk_app(applied, v0);
++            let invalid = ctx.mk_app(applied, typ);
++            ctx.with_tc(EnvLimit::ByIndex(0), cache, |tc| {
++                let sort = tc.eval(0, EMPTY_ENV, typ);
++                let a = tc.mk_bvar_hc(0, sort);
++                let x = tc.mk_bvar_hc(1, a);
++                let y = tc.mk_bvar_hc(2, a);
++                let env = tc.env_extend(EMPTY_ENV, a);
++                let env = tc.env_extend(env, x);
++                let env = tc.env_extend(env, y);
++                let context = tc.ctx_extend(EMPTY_CTX, sort);
++                let context = tc.ctx_extend(context, a);
++                let context = tc.ctx_extend(context, a);
++                let checked = tc.infer_value(Check, 3, env, context, valid);
++                assert!(tc.conv_types_at(3, checked, a));
++                let head = tc.eval(3, EMPTY_ENV, rule);
++                let result = tc.eval_rule_prefix(3, env, head, &[v0, v1, v2]);
++                assert!(tc.def_eq_at(3, result, x));
++                assert!(!tc.def_eq_at(3, result, y));
++                let failure = catch_unwind(AssertUnwindSafe(|| {
++                    tc.infer_value(Check, 3, env, context, invalid);
++                })).expect_err("unused ill-typed argument must be rejected");
++                assert!(failure.is::<Rejection>());
++            });
++        });
++    }
++}
++
+ #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+ enum ConstKind {
+     Unfoldable,
+@@ -223,9 +276,26 @@ impl TypeChecker<'_, '_> {
+         } = self.val(f)
+             && self.vals().is_head(spine)
+         {
++            let mut known_major = None;
++            if let Value::Rigid { head: RigidHead::Recursor(name, levels), .. } = self.val(f) {
++                let declarations = self.env;
++                if let Some(rec) = declarations.get_recursor(name)
++                    && rec.major_idx() < rev_args.len()
++                {
++                    let index = rec.major_idx();
++                    let major = self.eval(depth, env, rev_args[rev_args.len() - 1 - index]);
++                    known_major = Some((index, major));
++                    if let Some(result) = self.fire_recursor_exprs(depth, env, rec, levels, rev_args, major) {
++                        return result;
++                    }
++                }
++            }
+             let mut args = smallvec::SmallVec::<[V; 16]>::with_capacity(rev_args.len());
+-            for &a in rev_args.iter().rev() {
+-                args.push(self.eval(depth, env, a));
++            for (index, &a) in rev_args.iter().rev().enumerate() {
++                args.push(match known_major {
++                    Some((at, major)) if index == at => major,
++                    _ => self.eval(depth, env, a),
++                });
+             }
+             if let Some(r) = self.fire_saturated(depth, f, &args) {
+                 return r;
+@@ -256,6 +326,37 @@ impl TypeChecker<'_, '_> {
+         f
+     }
+ 
++    // Apply a validated rule's parameter/motive/minor prefix. A binder still
++    // extends the environment even when its value is syntactically unused.
++    fn eval_rule_prefix(&mut self, depth: u32, env: E, mut f: V, rev_args: &[ExprId]) -> V {
++        let mut remaining = rev_args.len();
++        while remaining > 0 {
++            if let Value::Lam { body: closure, .. } = self.val(f) {
++                let mut bindings = closure.env;
++                let mut body = closure.body;
++                loop {
++                    remaining -= 1;
++                    let value = if self.ctx.ignores_binder(body) {
++                        self.placeholder()
++                    } else {
++                        self.eval(depth, env, rev_args[remaining])
++                    };
++                    bindings = self.env_extend(bindings, value);
++                    match self.ctx.ex(body) {
++                        Expr::Lambda { body: next, .. } if remaining > 0 => body = next,
++                        _ => break,
++                    }
++                }
++                f = self.eval(depth, bindings, body);
++            } else {
++                remaining -= 1;
++                let value = self.eval(depth, env, rev_args[remaining]);
++                f = self.apply(depth, f, value);
++            }
++        }
++        f
++    }
++
+     fn fire_saturated(&mut self, depth: u32, f: V, args: &[V]) -> Option<V> {
+         let Value::Rigid { head, spine } = self.val(f) else {
+             return None;
+diff --git a/src/checker/eval/reduction.rs b/src/checker/eval/reduction.rs
+index f7835e8..548b383 100644
+--- a/src/checker/eval/reduction.rs
++++ b/src/checker/eval/reduction.rs
+@@ -2,14 +2,14 @@
+ // SPDX-License-Identifier: Apache-2.0
+ 
+ use crate::checker::cache::memo;
+-use crate::checker::env::{Declar, RecursorData};
++use crate::checker::env::{Declar, RecRule, RecursorData};
+ use crate::checker::nat::{
+     nat_div, nat_gcd, nat_land, nat_lor, nat_mod, nat_shl, nat_shr, nat_sub, nat_xor,
+ };
+ use crate::checker::tc::TypeChecker;
+-use crate::checker::value::{EMPTY_ENV, Elim, ElimView, RigidHead, Spine, V, VT, Value};
++use crate::checker::value::{E, EMPTY_ENV, Elim, ElimView, RigidHead, Spine, SpineArgs, V, VT, Value};
+ use crate::outcome::reject;
+-use crate::term::id::{BigId, LevelsId, NameId, StrId};
++use crate::term::id::{BigId, ExprId, LevelsId, NameId, StrId};
+ use num_bigint::BigUint;
+ use num_traits::pow::Pow;
+ 
+@@ -545,6 +545,23 @@ impl TypeChecker<'_, '_> {
+         {
+             return Some(self.nat_rec_natlit(depth, args, lit, rec, levels));
+         }
++        let (rec_rule, ctor_args) = self.recursor_rule_fields(depth, rec, major)?;
++        let num_extra = ctor_args
++            .len()
++            .checked_sub(usize::from(rec_rule.ctor_telescope_size_wo_params))?;
++        let mut result = memo!(
++            self.tc_cache.rec_rule_cache,
++            (rec_rule.val, levels),
++            self.eval_inst(rec_rule.val, rec.info.uparams, levels)
++        );
++        let nprefix = usize::from(rec.num_params + rec.num_motives + rec.num_minors);
++        result = self.apply_many(depth, result, &args[..nprefix]);
++        result = self.apply_many(depth, result, &ctor_args[num_extra..]);
++        result = self.apply_many(depth, result, &args[rec.major_idx() + 1..]);
++        Some(result)
++    }
++
++    fn recursor_rule_fields(&mut self, depth: u32, rec: &RecursorData, major: V) -> Option<(RecRule, SpineArgs)> {
+         let major = self
+             .major_to_ctor(depth, major)
+             .or_else(|| self.try_k_reduce(depth, major, rec))
+@@ -556,6 +573,19 @@ impl TypeChecker<'_, '_> {
+             .iter()
+             .find(|r| r.ctor_name == ctor_name)
+             .copied()?;
++        Some((rec_rule, ctor_args))
++    }
++
++    pub(super) fn fire_recursor_exprs(
++        &mut self, depth: u32, env: E, rec: &RecursorData, levels: LevelsId,
++        rev_args: &[ExprId], major: V,
++    ) -> Option<V> {
++        // Literal and non-constructor majors retain the existing evaluator,
++        // including its Nat recursion, K and stuck-major behavior.
++        if !matches!(self.val(major), Value::Rigid { head: RigidHead::Ctor(..), .. }) {
++            return None;
++        }
++        let (rec_rule, ctor_args) = self.recursor_rule_fields(depth, rec, major)?;
+         let num_extra = ctor_args
+             .len()
+             .checked_sub(usize::from(rec_rule.ctor_telescope_size_wo_params))?;
+@@ -565,9 +595,12 @@ impl TypeChecker<'_, '_> {
+             self.eval_inst(rec_rule.val, rec.info.uparams, levels)
+         );
+         let nprefix = usize::from(rec.num_params + rec.num_motives + rec.num_minors);
+-        result = self.apply_many(depth, result, &args[..nprefix]);
++        result = self.eval_rule_prefix(depth, env, result, &rev_args[rev_args.len() - nprefix..]);
+         result = self.apply_many(depth, result, &ctor_args[num_extra..]);
+-        result = self.apply_many(depth, result, &args[rec.major_idx() + 1..]);
++        let remaining = rev_args.len() - rec.major_idx() - 1;
++        if remaining != 0 {
++            result = self.eval_spine(depth, env, result, &rev_args[..remaining]);
++        }
+         Some(result)
+     }
+ 

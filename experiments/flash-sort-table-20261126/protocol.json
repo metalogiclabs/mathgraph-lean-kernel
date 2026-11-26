@@ -1,0 +1,8 @@
+{
+  "base": "bc704eebed4e009bc66af1a849f18315c11f1926",
+  "hypothesis": "Replace the general three-word value interning probe for sorts at raw universe-level ids below 4096 with a direct indexed per-Vals table. Larger ids retain the original interner.",
+  "scope": "Standalone change: no recursor-demand, Pi, worker or other prototype is combined. Exact LevelId keys and all value/session reset boundaries are retained. Table storage enters the existing byte budgets.",
+  "cost_gate": "Two alternating exact 25131-declaration prefix pairs, two workers; at least 1% fewer software instructions in each pair and aggregate; four complete ACCEPTs and three exact loop controls.",
+  "correctness_gate": "Sort identity, distinct levels, boundary ids and reset controls; full library suite and 16 source-record controls before measuring. A passed prefix cost gate requires all portable cases and full-input qualification before promotion.",
+  "provenance": "Gruszka direct sort/constant tables motivated replacing a general lookup. Independently authored on the existing credited Flash source; no competitor implementation copied."
+}

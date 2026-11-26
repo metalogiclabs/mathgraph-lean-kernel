@@ -1,0 +1,24 @@
+   Compiling sokonanoda v0.5.0 (/workspace/scratch/66f541013946/flash-sort-table)
+    Finished `release` profile [optimized] target(s) in 49.65s
+     Running unittests src/lib.rs (/dev/shm/flash-recursor-demand-target/release/deps/sokonanoda-9e2485d3b1222a2b)
+
+running 1 test
+test checker::value::tests::sort_table_preserves_levels_and_resets_with_values ... FAILED
+
+failures:
+
+---- checker::value::tests::sort_table_preserves_levels_and_resets_with_values stdout ----
+
+thread 'checker::value::tests::sort_table_preserves_levels_and_resets_with_values' (103) panicked at src/checker/value.rs:1296:9:
+assertion `left != right` failed
+  left: VId(2)
+ right: VId(2)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    checker::value::tests::sort_table_preserves_levels_and_resets_with_values
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 39 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `--lib`

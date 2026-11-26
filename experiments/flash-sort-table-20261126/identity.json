@@ -1,0 +1,13 @@
+{
+  "base_commit": "bc704eebed4e009bc66af1a849f18315c11f1926",
+  "base_source_tree": "06c257f0f2ff1f64711cfa54620b650e6dd59b7e",
+  "prototype_tree": "86da2f4539ca57a5c97e35588b1a95794e9fa3c5",
+  "prototype_src_tree": "7ee0fe05ee477179c5d84de0c917c20d8edcff2c",
+  "prototype_patch_sha256": "9af67ffe1a1908a3fad31af7621355b3e75170db6725384b85a332321ae503dc",
+  "binary_sha256": "30fc547ea012340b71b3d4547952429c4897c672fef508475a5fd5e5616996eb",
+  "baseline_binary_sha256": "09fe7ecf7421be7ad7f7c57596c214bcd6e7c0d912d6d555cb5749b17202bd5b",
+  "compiler": "rustc 1.99.1 (58cf8f9c3 2026-10-13), LLVM 23.1.1",
+  "compiler_commit": "58cf8f9c35b355199727627d07ae34a4e2846d67",
+  "flags": "-C target-cpu=x86-64 -C target-feature=-avx,-avx2,-avx512f,-fma",
+  "build": "cargo build --release --locked --offline; CARGO_BUILD_JOBS=1"
+}

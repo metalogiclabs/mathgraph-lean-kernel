@@ -1,0 +1,49 @@
+diff --git a/src/checker/value.rs b/src/checker/value.rs
+index b07f9c5..efbeb0e 100644
+--- a/src/checker/value.rs
++++ b/src/checker/value.rs
+@@ -386,6 +386,7 @@ pub(crate) struct Vals {
+     nils: PtrMap<LsubId, E>,
+     ctxs: Vec<CtxNode>,
+     lsubs: Vec<LevelSub>,
++    sharing_observations: [u64; 6],
+ }
+ 
+ impl Closure {
+@@ -422,6 +423,7 @@ impl Vals {
+             nils: Reset::with_cap(SMALL),
+             ctxs: Vec::new(),
+             lsubs: Vec::new(),
++            sharing_observations: [0; 6],
+         };
+         vals.clear();
+         vals
+@@ -977,6 +979,7 @@ impl Vals {
+     }
+ 
+     fn intern(&mut self, node: VNode) -> V {
++        let bucket = if node.kind == VT::Pi { if node.d == 0 { 0 } else { 2 } } else { 4 };
+         let w0 = node.kind as u64
+             | (u64::from(node.flags) << 8)
+             | (u64::from(node.loose) << 16)
+@@ -984,8 +987,9 @@ impl Vals {
+         let w1 = u64::from(node.b) | (u64::from(node.c) << 32);
+         let key = (w0, w1, u64::from(node.d));
+         match self.table.find(key) {
+-            Ok(v) => v,
++            Ok(v) => { self.sharing_observations[bucket] += 1; v },
+             Err(slot) => {
++                self.sharing_observations[bucket + 1] += 1;
+                 let id = self.push_node(node);
+                 self.table.insert_at(slot, key, id);
+                 id
+@@ -1274,3 +1278,9 @@ mod tests {
+         assert!(!vals.env_is_pruned(env, 3));
+     }
+ }
++
++impl Drop for Vals {
++    fn drop(&mut self) {
++        eprintln!("PI_SHARING_CENSUS {}", serde_json::json!({"counts": self.sharing_observations}));
++    }
++}

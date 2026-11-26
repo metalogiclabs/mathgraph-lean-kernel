@@ -1,0 +1,1 @@
+Invalid harness invocation: --allow-all-axioms is not a supported flag. Every process declined before reading input; these are not semantic results. The corrected invocation uses --axiom-allow-all and is stored separately.

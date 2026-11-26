@@ -1,0 +1,10 @@
+{
+  "baseline": "bc704eebed4e009bc66af1a849f18315c11f1926",
+  "hypothesis": "Skip general value interning only for Pi nodes whose codomain is an inference closure; retain their exact context and ordinary Pi interning.",
+  "motivation": "Native prefix census: one hit in 311862 inferred-Pi interning requests.",
+  "comparison": "Two alternating exact-prefix pairs, identical generic flags/compiler, two workers, three exact loop controls, immutable distinct executable hashes.",
+  "cost_gate": "At least 1% fewer software instructions in each pair and aggregate; all four executions must ACCEPT the exact 25131 declarations.",
+  "compatibility_gate": "All library tests and 16 source-record controls before cost measurement.",
+  "full_input_effect": "UNKNOWN until separately measured; prefix ratios are not Arena seconds.",
+  "provenance": "Mechanism comparison informed by the pinned nano-lean interner. This patch is independently authored against the existing credited Flash source; competitor implementation code is not copied."
+}

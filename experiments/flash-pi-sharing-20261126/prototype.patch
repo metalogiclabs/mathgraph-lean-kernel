@@ -1,0 +1,88 @@
+diff --git a/src/checker/infer.rs b/src/checker/infer.rs
+index 2e6bcd8..42516a0 100644
+--- a/src/checker/infer.rs
++++ b/src/checker/infer.rs
+@@ -12,6 +12,53 @@ use std::mem::MaybeUninit;
+ use Expr::{App, Const, Lambda, Let, NatLit, Pi, Proj, Sort, StringLit, Var};
+ use InferFlag::{Check, InferOnly};
+ 
++#[cfg(test)]
++mod pi_context_characterization {
++    use super::*;
++    use crate::checker::env::EnvLimit;
++    use crate::config::Config;
++    use crate::frontend::parser::parse_export_file;
++    use std::io;
++
++    #[test]
++    fn inferred_codomain_keeps_the_selected_bound_type() {
++        let export = parse_export_file(io::empty(), Config::default(), 0).unwrap();
++        export.with_ctx(|ctx, cache, _| {
++            let one = ctx.succ(ctx.zero());
++            let typ = ctx.mk_sort(one);
++            let [v0, v1, v2, v3] = [0, 1, 2, 3].map(|i| ctx.mk_var(i));
++            // A B : Type, x : A, y : B. The two functions return x or y.
++            let mut terms = Vec::new();
++            for result in [v1, v0] {
++                let y = ctx.mk_lambda(v1, result);
++                let x = ctx.mk_lambda(v1, y);
++                let b = ctx.mk_lambda(typ, x);
++                terms.push(ctx.mk_lambda(typ, b));
++            }
++            let mut types = Vec::new();
++            for result_type in [v3, v2] {
++                let y = ctx.mk_pi(v1, result_type);
++                let x = ctx.mk_pi(v1, y);
++                let b = ctx.mk_pi(typ, x);
++                types.push(ctx.mk_pi(typ, b));
++            }
++            ctx.with_tc(EnvLimit::ByIndex(0), cache, |tc| {
++                for ty in &types {
++                    tc.infer_value(Check, 0, EMPTY_ENV, EMPTY_CTX, *ty);
++                }
++                let tx = tc.infer_value(Check, 0, EMPTY_ENV, EMPTY_CTX, terms[0]);
++                let ty = tc.infer_value(Check, 0, EMPTY_ENV, EMPTY_CTX, terms[1]);
++                let ex = tc.eval(0, EMPTY_ENV, types[0]);
++                let ey = tc.eval(0, EMPTY_ENV, types[1]);
++                assert!(tc.conv_types_at(0, tx, ex));
++                assert!(tc.conv_types_at(0, ty, ey));
++                assert!(!tc.conv_types_at(0, tx, ey));
++                assert!(!tc.conv_types_at(0, ty, ex));
++            });
++        });
++    }
++}
++
+ #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+ pub(crate) enum CheckScope {
+     Unchecked,
+diff --git a/src/checker/value.rs b/src/checker/value.rs
+index b07f9c5..69d6d24 100644
+--- a/src/checker/value.rs
++++ b/src/checker/value.rs
+@@ -1098,7 +1098,7 @@ impl Vals {
+     }
+ 
+     pub(crate) fn mk_pi(&mut self, domain: V, body: Closure) -> V {
+-        self.intern(VNode {
++        let node = VNode {
+             kind: VT::Pi,
+             loose: body.loose,
+             a: domain.0,
+@@ -1106,7 +1106,15 @@ impl Vals {
+             c: body.body.raw(),
+             d: body.ctx.map_or(0, |c| c.0 + 1),
+             ..BLANK
+-        })
++        };
++        // Inference closures retain their exact typing context. The observed
++        // prefix almost never reuses these values; test allocation without a
++        // redundant interning probe. Ordinary evaluation Pis remain interned.
++        if body.ctx.is_some() {
++            self.push_node(node)
++        } else {
++            self.intern(node)
++        }
+     }
+ 
+     pub(crate) fn mk_sort(&mut self, level: LevelId) -> V {

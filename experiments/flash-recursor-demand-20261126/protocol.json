@@ -1,0 +1,8 @@
+{
+  "base": "bc704eebed4e009bc66af1a849f18315c11f1926",
+  "hypothesis": "For a saturated bare recursor with an already evaluated constructor major, apply only the selected validated rule prefix, evaluating each prefix argument only if the remaining lambda body reads its binder.",
+  "preserved": "Existing rule selection, constructor fields, K/eta handling and source-record checks; literal and non-constructor majors use existing reduction; every argument remains checked by inference.",
+  "cost_gate": "Two alternating exact 25131-declaration prefix pairs with two workers. Each pair and aggregate must save at least 1% software instructions. Three analytical loop controls, immutable distinct executable hashes and four complete ACCEPTs required.",
+  "compatibility": "All library tests, retained raw exports, scoped prefix/type controls and 16 source-record controls before cost measurement. Full-input and broad portable effects remain UNKNOWN until separately qualified.",
+  "provenance": "Gruszka/Pestka documentation motivated demand-directed recursor evaluation. The prototype is independently authored from the existing credited Flash evaluator and its rule machinery."
+}
