@@ -6,11 +6,43 @@
   "frozen_generic_binary_sha256": "878d871f79bcf71ee1de3f131708ff31553fb130ea69b52f30be186fd414d553",
   "qualification_run": 45742567835,
   "qualification_receipt": "qualification-final/independent-verification.json",
-  "performance_state": "UNKNOWN_ACTIVE",
+  "performance_state": "WARRANTED_BOUNDED_FULL_INPUT_SOFTWARE_MEASUREMENT",
   "performance_run": 45737482656,
   "predeclared_full_input_instruction_gate": 0.99,
   "official_PR398_source_changed": false,
   "official_PMU_score": "UNKNOWN",
   "new_Arena_rank": "UNKNOWN",
-  "boundary": "Final direct Mathlib receipt supersedes the pending generic correctness state, not the pending instruction-cost result. No production or release promotion."
+  "boundary": "All 240 original prescribed generic outcomes are warranted. One complete two-worker software-counted execution per arm saves 0.836%, below the predeclared 1% priority threshold. Native CPU pair directions disagree. This is not a proof of zero gain or a new official score; prefix, native and generic measures cannot be combined.",
+  "performance_decision": "REJECTED_INSTRUCTION_PRIORITY_GATE",
+  "generic_software_instructions": {
+    "baseline": 557278137483,
+    "strict": 552616945844
+  },
+  "generic_instruction_ratio": 0.9916357895178649,
+  "generic_instruction_reduction_percent": 0.8364210482135093,
+  "instruction_priority_gate_passed": false,
+  "native_medians": {
+    "baseline": {
+      "cpu_s": 136.23000000000002,
+      "wall_s": 74.03,
+      "max_rss_kib": 4897802.0
+    },
+    "strict": {
+      "cpu_s": 135.22,
+      "wall_s": 73.38,
+      "max_rss_kib": 4842072.0
+    }
+  },
+  "native_ratios": {
+    "cpu_s": 0.9925860676796593,
+    "wall_s": 0.991219775766581,
+    "max_rss_kib": 0.9886214265092791
+  },
+  "native_paired_cpu_ratios": [
+    1.00316694314583,
+    0.9825514874141876
+  ],
+  "full_comparison_artifact": 15082331579,
+  "full_comparison_archive_sha256": "6b665252aa5e21bcc492ca522430c140713583c4a378f2fc99a331a00d005f2d",
+  "decision": "Retain the qualified one-line source candidate and measurements; do not promote it or alter PR398 on this sub-threshold result."
 }

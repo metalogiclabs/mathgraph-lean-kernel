@@ -1,5 +1,11 @@
 # Scheduling-batch candidate
 
+**Completed:** all 240 prescribed generic outcomes pass. The complete-input
+instruction reduction is only **0.836%**, below the predeclared 1% priority
+gate. The source remains isolated; PR398 is unchanged. See
+[`complete-comparison/outcome.md`](complete-comparison/outcome.md) for raw
+count identities, independent verification and separate native tradeoffs.
+
 Candidate source [4816054e](https://github.com/metalogiclabs/mathgraph-lean-kernel/commit/4816054e2331c3cd6b57cbcd51d3e265b48c68e7),
 source tree `fa9f0de20650f28f63f1d01d7dab50397e167bcf`.
 The sole checker change from qualified `bc704eeb` is `CHUNK_SIZE: 64 -> 512`.

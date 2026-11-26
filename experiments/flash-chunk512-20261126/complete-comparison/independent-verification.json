@@ -1,0 +1,80 @@
+{
+  "state": "WARRANTED_BOUNDED_240_PRESCRIBED_GENERIC",
+  "candidate_commit": "4816054e2331c3cd6b57cbcd51d3e265b48c68e7",
+  "candidate_source_tree": "fa9f0de20650f28f63f1d01d7dab50397e167bcf",
+  "archive_sha256": "6b665252aa5e21bcc492ca522430c140713583c4a378f2fc99a331a00d005f2d",
+  "zip_crc_valid": true,
+  "qualification_capsule_sha256": "84fb4d1f8586974b58fad8c8c5431bbaf89c1a4095d41ae3e91e1076a98cc4cb",
+  "official_manifest_sha256": "e3630d221b0c824b481d0fb9afd568f04b7bdd6eca442ba66a928790ebc49877",
+  "counter_identity": {
+    "release_url": "https://github.com/DynamoRIO/dynamorio/releases/download/cronbuild-11.92.20777/DynamoRIO-Linux-11.92.20777.tar.gz",
+    "archive_sha256": "3958421d74964ea2a30b43752560ae584d854ceb6209946dd2d9e173352d7a2c",
+    "source_sha256": "6d00654e55d4b2049ff3f2031383106b9658a0ddaa3a3a05db53261fb35adb34",
+    "client_sha256": "deeb10e057eca52930d9321c6d2f1bf148767f7ede5a5dcced7c46c818655578",
+    "compiler_command": [
+      "gcc",
+      "-shared",
+      "-fPIC",
+      "-O3",
+      "-fno-stack-protector",
+      "-DX86_64",
+      "-DLINUX",
+      "-I/home/runner/work/_temp/flash-dynamorio/DynamoRIO-Linux-11.92.20777/include",
+      "-I/home/runner/work/_temp/flash-dynamorio/DynamoRIO-Linux-11.92.20777/ext/include",
+      "/home/runner/work/mathgraph-lean-kernel/mathgraph-lean-kernel/experiments/flash-upstream-repair-20261126/instruction_counter.c",
+      "-L/home/runner/work/_temp/flash-dynamorio/DynamoRIO-Linux-11.92.20777/lib64/release",
+      "-Wl,-rpath,/home/runner/work/_temp/flash-dynamorio/DynamoRIO-Linux-11.92.20777/lib64/release",
+      "-L/home/runner/work/_temp/flash-dynamorio/DynamoRIO-Linux-11.92.20777/ext/lib64/release",
+      "-Wl,-rpath,/home/runner/work/_temp/flash-dynamorio/DynamoRIO-Linux-11.92.20777/ext/lib64/release",
+      "-ldrx",
+      "-ldrreg",
+      "-ldrmgr",
+      "-ldynamorio",
+      "-o",
+      "/home/runner/work/_temp/flash-dynamorio/instruction-counter.so"
+    ]
+  },
+  "generic_binary_sha256": {
+    "baseline": "09fe7ecf7421be7ad7f7c57596c214bcd6e7c0d912d6d555cb5749b17202bd5b",
+    "strict": "878d871f79bcf71ee1de3f131708ff31553fb130ea69b52f30be186fd414d553"
+  },
+  "native_binary_sha256": {
+    "baseline": "4e9cfc19f60846cf0deac9c0b948ebc450def24a876eec40222bb626f957c46c",
+    "strict": "954ccccbedfa545f4f9ab072a2d97fff91ba5206401caccd48e55040ab1b440a"
+  },
+  "prescribed_correct": 240,
+  "additional_source_controls": 16,
+  "generic_whole_accepts": 2,
+  "native_whole_accepts": 4,
+  "declarations_per_whole_execution": 739167,
+  "generic_software_instructions": {
+    "baseline": 557278137483,
+    "strict": 552616945844
+  },
+  "generic_instruction_ratio": 0.9916357895178649,
+  "generic_instruction_reduction_percent": 0.8364210482135093,
+  "declared_instruction_priority_gate": "at least 1% fewer complete-input software instructions",
+  "instruction_priority_gate_passed": false,
+  "native_medians": {
+    "baseline": {
+      "cpu_s": 136.23000000000002,
+      "wall_s": 74.03,
+      "max_rss_kib": 4897802.0
+    },
+    "strict": {
+      "cpu_s": 135.22,
+      "wall_s": 73.38,
+      "max_rss_kib": 4842072.0
+    }
+  },
+  "native_ratios": {
+    "cpu_s": 0.9925860676796593,
+    "wall_s": 0.991219775766581,
+    "max_rss_kib": 0.9886214265092791
+  },
+  "native_paired_cpu_ratios": [
+    1.00316694314583,
+    0.9825514874141876
+  ],
+  "boundary": "Same frozen generic candidate joins all 230 portable, nine other large and complete Mathlib prescribed outcomes. One software-counted complete execution per generic arm with two workers, three exact loop controls and a separate thread-coverage control. Native builds are separately matched on the measurement host in two alternating pairs. Native nine-large compatibility, universal soundness, official PMU scores and new Arena rank remain outside this warrant."
+}
