@@ -10,7 +10,7 @@ use crate::report::Reporter;
 use crate::term::id::ExprId;
 use std::panic::{self, AssertUnwindSafe};
 
-const CHUNK_SIZE: usize = 64;
+const CHUNK_SIZE: usize = 512;
 
 /// A flag that accompanies calls to type inference; if the flag is `Check`,
 /// we perform additional definitional equality checks (for example, the type of an
