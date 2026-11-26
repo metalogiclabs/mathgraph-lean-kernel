@@ -1,0 +1,98 @@
+name: Flash Init-trained compiler comparison
+on:
+  push:
+    branches: [research/flash-upstream-reconciliation-20261126]
+    paths: ['.github/workflows/flash-init-pgo.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  compare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: 0
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Require the qualified source unchanged
+        run: |
+          set -euo pipefail
+          git diff --exit-code bc704eebed4e009bc66af1a849f18315c11f1926 -- src Cargo.toml Cargo.lock tests test_resources
+          test "$(git rev-parse HEAD:src)" = 06c257f0f2ff1f64711cfa54620b650e6dd59b7e
+          mkdir -p "$RUNNER_TEMP/init-pgo/builds"
+          git rev-parse HEAD > "$RUNNER_TEMP/init-pgo/harness-commit.txt"
+          git rev-parse HEAD:src > "$RUNNER_TEMP/init-pgo/source-tree.txt"
+          lscpu > "$RUNNER_TEMP/init-pgo/cpu.txt"
+      - uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/reconciled-input/mathlib.ndjson
+          key: flash-upstream-exact-mathlib-f749dfd084fc0727d107c7aaded7d492cebfc0b517cfaa7337d8a7578a6c0dec
+          fail-on-cache-miss: true
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.99.1'
+          components: llvm-tools-preview
+      - name: Build the ordinary native baseline and isolated instrumented checker
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/init-pgo"
+          HOST="$(rustc -vV | sed -n 's/^host: //p')"
+          rustc -Vv > "$OUT/compiler.txt"
+          printf '%s\n' '-C target-cpu=native' > "$OUT/native-flags.txt"
+          RUSTFLAGS='-C target-cpu=native' cargo build --release --locked --target "$HOST" --target-dir "$RUNNER_TEMP/pgo-baseline-target" > "$OUT/native-build.log" 2>&1
+          cp "$RUNNER_TEMP/pgo-baseline-target/$HOST/release/sokonanoda" "$OUT/builds/baseline.bin"
+          mkdir -p "$OUT/raw"
+          FLAGS="-C target-cpu=native -C profile-generate=$OUT/raw -C llvm-args=-instrprof-atomic-counter-update-all"
+          printf '%s\n' "$FLAGS" > "$OUT/generate-flags.txt"
+          RUSTFLAGS="$FLAGS" cargo build --release --locked --target "$HOST" --target-dir "$RUNNER_TEMP/pgo-generate-target" > "$OUT/generate-build.log" 2>&1
+          cp "$RUNNER_TEMP/pgo-generate-target/$HOST/release/sokonanoda" "$OUT/training.bin"
+      - name: Train on the fixed public Init export and merge only checker profiles
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/init-pgo"
+          HOST="$(rustc -vV | sed -n 's/^host: //p')"
+          export LLVM_PROFILE_FILE="$OUT/raw/flash-%p-%m.profraw"
+          python3 experiments/flash-init-pgo-20261126/train.py --binary "$OUT/training.bin" --out "$OUT/training" --raw "$OUT/raw"
+          PROFDATA="$(rustc --print sysroot)/lib/rustlib/$HOST/bin/llvm-profdata"
+          "$PROFDATA" merge -sparse "$OUT"/raw/*.profraw -o "$OUT/training.profdata"
+          sha256sum "$OUT/training.profdata" > "$OUT/profdata.sha256"
+      - name: Build the profile-optimized checker without changing its source
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/init-pgo"
+          HOST="$(rustc -vV | sed -n 's/^host: //p')"
+          FLAGS="-C target-cpu=native -C profile-use=$OUT/training.profdata -C llvm-args=-pgo-warn-missing-function"
+          printf '%s\n' "$FLAGS" > "$OUT/use-flags.txt"
+          RUSTFLAGS="$FLAGS" cargo build --release --locked --target "$HOST" --target-dir "$RUNNER_TEMP/pgo-use-target" > "$OUT/use-build.log" 2>&1
+          cp "$RUNNER_TEMP/pgo-use-target/$HOST/release/sokonanoda" "$OUT/builds/strict.bin"
+          RUSTFLAGS="$FLAGS" cargo test --release --locked --target "$HOST" --target-dir "$RUNNER_TEMP/pgo-use-target" > "$OUT/native-tests.log" 2>&1
+      - name: Verify portable inputs and all raw prescribed outcomes with the PGO binary
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/init-pgo"
+          python3 experiments/flash-upstream-repair-20261126/prepare_portable.py
+          python3 experiments/flash-upstream-repair-20261126/verify.py portable --binary "$OUT/builds/strict.bin" --results experiments/flash-upstream-repair-20261126/official-inputs.json --fixtures "$RUNNER_TEMP/lambda-portable-inputs/fixtures" --out "$OUT/portable"
+          python3 experiments/flash-upstream-repair-20261126/metadata_controls.py --binary "$OUT/builds/strict.bin" --out "$OUT/source-controls"
+      - name: Compare complete native Mathlib executions in two alternating pairs
+        run: |
+          python3 experiments/flash-init-pgo-20261126/native_compare.py --fixture "$RUNNER_TEMP/reconciled-input/mathlib.ndjson" --binaries "$RUNNER_TEMP/init-pgo/builds" --out "$RUNNER_TEMP/init-pgo/native"
+      - name: Build the pinned calibrated software counter
+        run: |
+          set -euo pipefail
+          python3 experiments/flash-upstream-repair-20261126/build_counter.py
+          cp "$RUNNER_TEMP/flash-dynamorio/identity.json" "$RUNNER_TEMP/init-pgo/counter-identity.json"
+          cp experiments/flash-upstream-repair-20261126/instruction_counter.c "$RUNNER_TEMP/init-pgo/"
+      - name: Count both complete executions with one checking worker
+        run: |
+          set -euo pipefail
+          python3 experiments/flash-upstream-repair-20261126/fast_instructions.py --drrun "$RUNNER_TEMP/flash-dynamorio/DynamoRIO-Linux-11.92.20777/bin64/drrun" --client "$RUNNER_TEMP/flash-dynamorio/instruction-counter.so" --fixture "$RUNNER_TEMP/reconciled-input/mathlib.ndjson" --binaries "$RUNNER_TEMP/init-pgo/builds" --baseline-cli --whole --rounds 1 --out "$RUNNER_TEMP/init-pgo/instructions"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-init-pgo-comparison
+          path: ${{ runner.temp }}/init-pgo/
+          retention-days: 90

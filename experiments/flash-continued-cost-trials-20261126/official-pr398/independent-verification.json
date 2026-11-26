@@ -1,0 +1,44 @@
+{
+  "status": "WARRANTED_BOUNDED",
+  "repository": "leanprover/lean-kernel-arena",
+  "pull_request": 398,
+  "pull_request_head": "23003362b3c48487f03afa72e4390a05c3ca8ead",
+  "run_id": 45722992953,
+  "job_id": 139586219550,
+  "artifacts": {
+    "results": 15072279691,
+    "test_stats": 15073935467
+  },
+  "archive_sha256": {
+    "results-mathgraph.zip": "11004c4cfc01d1739abda85a00a151feb0207db828aa9573bea8f6fbc34fa841",
+    "test-stats.zip": "e74c50f10e93ed831b7919a20c3d5f40bf52fcac9e11c646c14784f534d702b8"
+  },
+  "archive_crc_valid": true,
+  "raw_result_entries": 261,
+  "input_stat_entries": 261,
+  "prescribed": {
+    "correct": 231,
+    "accept": 139,
+    "reject": 92
+  },
+  "policy": {
+    "total": 30,
+    "decisions": 28,
+    "timeouts": [
+      {
+        "test": "corner-cases/eta-struct-major-and-no-whnf",
+        "status": "timeout",
+        "correctness": "error",
+        "exit_code": -9
+      },
+      {
+        "test": "corner-cases/eta-struct-major-no-whnf",
+        "status": "timeout",
+        "correctness": "error",
+        "exit_code": -9
+      }
+    ]
+  },
+  "checker_hash": "0f962fa70d5f55ad",
+  "boundary": "Independent verification of archive identities, CRC, retained receipt digests and the join of raw outcomes to their own input-stat manifest. This is not a checker rerun. Official PR CI omits Mathlib and other large exports. The overlapping 231 current PR outcomes and previous 230 portable/240 exact cases must not be added. No new rank or full-input hardware score."
+}

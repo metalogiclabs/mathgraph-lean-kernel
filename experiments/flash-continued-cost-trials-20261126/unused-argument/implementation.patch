@@ -1,0 +1,120 @@
+diff --git a/src/checker/eval.rs b/src/checker/eval.rs
+index 6c0225f..4de76a9 100644
+--- a/src/checker/eval.rs
++++ b/src/checker/eval.rs
+@@ -239,7 +239,13 @@ impl TypeChecker<'_, '_> {
+                 let mut body = clo.body;
+                 loop {
+                     i -= 1;
+-                    let a = self.eval(depth, env, rev_args[i]);
++                    // MathGraph: reduction may erase a syntactically unused
++                    // argument. Type inference still checks every argument.
++                    let a = if self.ctx.ignores_binder(body) {
++                        self.placeholder()
++                    } else {
++                        self.eval(depth, env, rev_args[i])
++                    };
+                     benv = self.env_extend(benv, a);
+                     match self.ctx.ex(body) {
+                         Expr::Lambda { body: inner, .. } if i > 0 => body = inner,
+@@ -634,3 +640,100 @@ impl TypeChecker<'_, '_> {
+         }
+     }
+ }
++
++#[cfg(test)]
++mod unused_argument_tests {
++    use crate::checker::context::TcCtx;
++    use crate::checker::env::EnvLimit;
++    use crate::checker::tc::InferFlag::Check;
++    use crate::checker::value::{EMPTY_CTX, EMPTY_ENV};
++    use crate::config::Config;
++    use crate::frontend::parser::parse_export_file;
++    use crate::outcome::Rejection;
++    use crate::term::id::ExprId;
++    use std::io;
++    use std::panic::{catch_unwind, AssertUnwindSafe};
++
++    fn close(ctx: &mut TcCtx<'_>, sort: ExprId, body: ExprId) -> ExprId {
++        let a0 = ctx.mk_var(0);
++        let a1 = ctx.mk_var(1);
++        let body = ctx.mk_lambda(a1, body);
++        let body = ctx.mk_lambda(a0, body);
++        ctx.mk_lambda(sort, body)
++    }
++
++    fn check_selection(mode: u8) {
++        let export = parse_export_file(io::empty(), Config::default(), 0).unwrap();
++        export.with_ctx(|ctx, cache, _| {
++            let one = ctx.succ(ctx.zero());
++            let sort = ctx.mk_sort(one);
++            let [v0, v1, v2] = [0, 1, 2].map(|n| ctx.mk_var(n));
++            let result = match mode {
++                // A : Type, x y : A. The added binder is unused, but x's
++                // de Bruijn position must still be shifted correctly.
++                0 => {
++                    let f = ctx.mk_lambda(v2, v2);
++                    ctx.mk_app(f, v0)
++                }
++                // An actually used argument must survive the same path.
++                1 => {
++                    let f = ctx.mk_lambda(v2, v0);
++                    ctx.mk_app(f, v0)
++                }
++                // The first argument occurs only in a later binder's type.
++                // It still matters when comparing function domains.
++                _ => {
++                    let f = ctx.mk_lambda(v0, v0);
++                    let f = ctx.mk_lambda(sort, f);
++                    let f = ctx.mk_app(f, v2);
++                    ctx.mk_app(f, v1)
++                }
++            };
++            let term = close(ctx, sort, result);
++            let expected = close(ctx, sort, if mode == 1 { v0 } else { v1 });
++            let wrong = close(ctx, sort, if mode == 1 { v1 } else { v0 });
++            ctx.with_tc(EnvLimit::ByIndex(0), cache, |tc| {
++                for expr in [term, expected, wrong] {
++                    tc.infer_value(Check, 0, EMPTY_ENV, EMPTY_CTX, expr);
++                }
++                assert!(tc.def_eq_core(term, expected));
++                assert!(!tc.def_eq_core(term, wrong));
++            });
++        });
++    }
++
++    #[test]
++    fn unused_argument_preserves_outer_variables() {
++        check_selection(0);
++    }
++
++    #[test]
++    fn used_argument_is_retained() {
++        check_selection(1);
++    }
++
++    #[test]
++    fn dependence_in_a_later_binder_type_is_retained() {
++        check_selection(2);
++    }
++
++    #[test]
++    fn erased_argument_still_requires_a_valid_type() {
++        let export = parse_export_file(io::empty(), Config::default(), 0).unwrap();
++        export.with_ctx(|ctx, cache, _| {
++            let prop = ctx.mk_sort(ctx.zero());
++            let one = ctx.succ(ctx.zero());
++            let typ = ctx.mk_sort(one);
++            let f = ctx.mk_lambda(prop, prop);
++            let bad_term = ctx.mk_app(f, typ);
++            ctx.with_tc(EnvLimit::ByIndex(0), cache, |tc| {
++                // Reduction to Prop must not authorize the ill-typed term.
++                assert!(tc.def_eq_core(bad_term, prop));
++                let err = catch_unwind(AssertUnwindSafe(|| {
++                    tc.infer_value(Check, 0, EMPTY_ENV, EMPTY_CTX, bad_term);
++                })).expect_err("unused ill-typed argument must be rejected");
++                assert!(err.is::<Rejection>(), "expected a semantic rejection");
++            });
++        });
++    }
++}
