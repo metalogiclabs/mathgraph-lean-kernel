@@ -57,3 +57,22 @@ binary hash. It keeps all calibration controls, both full ACCEPT gates,
 and the exact Mathlib hash; it changes no release or submitted descriptor.
 The recovery measures the generic-build instruction boundary and does not
 replace or relabel the native measurements above.
+
+
+## Generic recovery completed
+
+[Run45733992103](https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/45733992103)
+passed on the exact previously frozen generic executable09fe7ecf…bd5b.
+All739,167 declarations ACCEPT with both worker counts. Six exact-loop and
+thread-coverage controls pass. One worker counts545,996,703,520 software
+instructions; two count556,736,069,952: **1.929% fewer** with one worker.
+This is one complete execution per configuration, with the same binary,
+input, counter and host. It does not resolve the native SIGILL or establish
+a native PMU score. The earlier4.540% prefix gain overestimates the complete
+input effect; do not transport the prefix ratio into the leaderboard.
+
+Artifact15079500277 matches SHA-256 `13f00a6dc756053f43e85170720990e0dc01dd5782df750cc43759071d245deb`
+and CRC; all55 archive-entry hashes, the actual executable hash and raw
+counts were independently recomputed. Completed evidence is under
+`../flash-worker-counter-recovery-20261126/completed/`. The large native
+wall-time tradeoff remains; no submitted worker setting changes here.
