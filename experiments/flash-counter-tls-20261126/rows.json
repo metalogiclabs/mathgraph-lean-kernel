@@ -1,0 +1,239 @@
+[
+  {
+    "arm": "tls",
+    "control": "loop-1",
+    "raw_exit": 0,
+    "expected": 8,
+    "observed": 8,
+    "exact": true,
+    "elapsed_s": 0.016106625000247732,
+    "argv": [
+      "/workspace/scratch/f55dc021446a/continue-20261126/chunk512-prefix/loop-1.bin"
+    ],
+    "binary_sha256": "fefd6219fbf41323f6229d83df81acc6bcf76806e6f9950bb64f9dea0f8f4df1",
+    "client_sha256": "9814ce0660a1f9383590c8b841963170662e5cf8722b2677a86399e6e6d842f4",
+    "threads_aggregated": 1
+  },
+  {
+    "arm": "tls",
+    "control": "carry-zero-1",
+    "raw_exit": 0,
+    "expected": 52,
+    "observed": 52,
+    "exact": true,
+    "elapsed_s": 0.006600589997105999,
+    "argv": [
+      "/workspace/scratch/f55dc021446a/continue-20261126/counter-register-pressure/pressure-1.bin"
+    ],
+    "binary_sha256": "c0d911914b8f8a6629256e19d6b28559d04d3b37bc4cf68fd4a65f58d141391c",
+    "client_sha256": "9814ce0660a1f9383590c8b841963170662e5cf8722b2677a86399e6e6d842f4",
+    "threads_aggregated": 1
+  },
+  {
+    "arm": "tls",
+    "control": "carry-one-1",
+    "raw_exit": 0,
+    "expected": 52,
+    "observed": 52,
+    "exact": true,
+    "elapsed_s": 0.004546196996670915,
+    "argv": [
+      "/workspace/scratch/f55dc021446a/continue-20261126/counter-register-pressure/carry-one/pressure-1.bin"
+    ],
+    "binary_sha256": "754487ed10f9ca953de315be1c6709d395d4a68e0273041a95735cbcb9fe4d76",
+    "client_sha256": "9814ce0660a1f9383590c8b841963170662e5cf8722b2677a86399e6e6d842f4",
+    "threads_aggregated": 1
+  },
+  {
+    "arm": "tls",
+    "control": "loop-17",
+    "raw_exit": 0,
+    "expected": 56,
+    "observed": 56,
+    "exact": true,
+    "elapsed_s": 0.004726995000964962,
+    "argv": [
+      "/workspace/scratch/f55dc021446a/continue-20261126/chunk512-prefix/loop-17.bin"
+    ],
+    "binary_sha256": "c140ee93d8a98ea9510b10effe0b07a6f42ad884a0e490974eaa9f0a5e0e77b5",
+    "client_sha256": "9814ce0660a1f9383590c8b841963170662e5cf8722b2677a86399e6e6d842f4",
+    "threads_aggregated": 1
+  },
+  {
+    "arm": "tls",
+    "control": "carry-zero-17",
+    "raw_exit": 0,
+    "expected": 100,
+    "observed": 100,
+    "exact": true,
+    "elapsed_s": 0.00501585299934959,
+    "argv": [
+      "/workspace/scratch/f55dc021446a/continue-20261126/counter-register-pressure/pressure-17.bin"
+    ],
+    "binary_sha256": "6ce589b3a3665ca4c9dbf0469ad7e1b5e7b8b475e6a54c1bd674d91dbd6356c5",
+    "client_sha256": "9814ce0660a1f9383590c8b841963170662e5cf8722b2677a86399e6e6d842f4",
+    "threads_aggregated": 1
+  },
+  {
+    "arm": "tls",
+    "control": "carry-one-17",
+    "raw_exit": 0,
+    "expected": 100,
+    "observed": 100,
+    "exact": true,
+    "elapsed_s": 0.004870799002674175,
+    "argv": [
+      "/workspace/scratch/f55dc021446a/continue-20261126/counter-register-pressure/carry-one/pressure-17.bin"
+    ],
+    "binary_sha256": "69b2666bd51c5e2fa4b5b7565eecc7404a3cc38395d6adec8bada095dd23b79b",
+    "client_sha256": "9814ce0660a1f9383590c8b841963170662e5cf8722b2677a86399e6e6d842f4",
+    "threads_aggregated": 1
+  },
+  {
+    "arm": "tls",
+    "control": "loop-1000000",
+    "raw_exit": 0,
+    "expected": 3000005,
+    "observed": 3000005,
+    "exact": true,
+    "elapsed_s": 0.00594489600189263,
+    "argv": [
+      "/workspace/scratch/f55dc021446a/continue-20261126/chunk512-prefix/loop-1000000.bin"
+    ],
+    "binary_sha256": "0613279fdd4c01219d2b8767242662a2c050c4746ff359d04fff81e54b95ee9e",
+    "client_sha256": "9814ce0660a1f9383590c8b841963170662e5cf8722b2677a86399e6e6d842f4",
+    "threads_aggregated": 1
+  },
+  {
+    "arm": "tls",
+    "control": "carry-zero-1000000",
+    "raw_exit": 0,
+    "expected": 3000049,
+    "observed": 3000049,
+    "exact": true,
+    "elapsed_s": 0.005981976999464678,
+    "argv": [
+      "/workspace/scratch/f55dc021446a/continue-20261126/counter-register-pressure/pressure-1000000.bin"
+    ],
+    "binary_sha256": "af00f51456dba4b513fa2c83cee1cf216a9138e937b0f772e2dda30c11bf60ba",
+    "client_sha256": "9814ce0660a1f9383590c8b841963170662e5cf8722b2677a86399e6e6d842f4",
+    "threads_aggregated": 1
+  },
+  {
+    "arm": "tls",
+    "control": "carry-one-1000000",
+    "raw_exit": 0,
+    "expected": 3000049,
+    "observed": 3000049,
+    "exact": true,
+    "elapsed_s": 0.005643553002300905,
+    "argv": [
+      "/workspace/scratch/f55dc021446a/continue-20261126/counter-register-pressure/carry-one/pressure-1000000.bin"
+    ],
+    "binary_sha256": "f7f62128678dee5f9c08ee4c31b63bcd70fb7f0a5ddd1017a9b2566d0592e759",
+    "client_sha256": "9814ce0660a1f9383590c8b841963170662e5cf8722b2677a86399e6e6d842f4",
+    "threads_aggregated": 1
+  },
+  {
+    "arm": "reference",
+    "control": "workers-1",
+    "raw_exit": 0,
+    "expected": 60000000,
+    "observed": 60138332,
+    "exact": false,
+    "elapsed_s": 0.13461886399818468,
+    "argv": [
+      "/workspace/scratch/f55dc021446a/continue-20261126/worker-prefix/worker-control.bin",
+      "1",
+      "20000000"
+    ],
+    "binary_sha256": "6bfed542d7bf2aed5b0cf9d49903dafd355ce1f075da4d1a32979ff051dbfc25",
+    "client_sha256": "212a57d6dedc34155467d196e76d30b5d50ceb15010212c4c0f65dd6914194ce",
+    "threads_aggregated": null
+  },
+  {
+    "arm": "tls",
+    "control": "workers-1",
+    "raw_exit": 0,
+    "expected": 60000000,
+    "observed": 60138316,
+    "exact": false,
+    "elapsed_s": 0.06500310800038278,
+    "argv": [
+      "/workspace/scratch/f55dc021446a/continue-20261126/worker-prefix/worker-control.bin",
+      "1",
+      "20000000"
+    ],
+    "binary_sha256": "6bfed542d7bf2aed5b0cf9d49903dafd355ce1f075da4d1a32979ff051dbfc25",
+    "client_sha256": "9814ce0660a1f9383590c8b841963170662e5cf8722b2677a86399e6e6d842f4",
+    "threads_aggregated": 2
+  },
+  {
+    "arm": "reference",
+    "control": "workers-2",
+    "raw_exit": 0,
+    "expected": 120000000,
+    "observed": 120140412,
+    "exact": false,
+    "elapsed_s": 0.33373771400147234,
+    "argv": [
+      "/workspace/scratch/f55dc021446a/continue-20261126/worker-prefix/worker-control.bin",
+      "2",
+      "20000000"
+    ],
+    "binary_sha256": "6bfed542d7bf2aed5b0cf9d49903dafd355ce1f075da4d1a32979ff051dbfc25",
+    "client_sha256": "212a57d6dedc34155467d196e76d30b5d50ceb15010212c4c0f65dd6914194ce",
+    "threads_aggregated": null
+  },
+  {
+    "arm": "tls",
+    "control": "workers-2",
+    "raw_exit": 0,
+    "expected": 120000000,
+    "observed": 120140466,
+    "exact": false,
+    "elapsed_s": 0.059654005999618676,
+    "argv": [
+      "/workspace/scratch/f55dc021446a/continue-20261126/worker-prefix/worker-control.bin",
+      "2",
+      "20000000"
+    ],
+    "binary_sha256": "6bfed542d7bf2aed5b0cf9d49903dafd355ce1f075da4d1a32979ff051dbfc25",
+    "client_sha256": "9814ce0660a1f9383590c8b841963170662e5cf8722b2677a86399e6e6d842f4",
+    "threads_aggregated": 3
+  },
+  {
+    "arm": "reference",
+    "control": "workers-4",
+    "raw_exit": 0,
+    "expected": 240000000,
+    "observed": 240144677,
+    "exact": false,
+    "elapsed_s": 0.674782268000854,
+    "argv": [
+      "/workspace/scratch/f55dc021446a/continue-20261126/worker-prefix/worker-control.bin",
+      "4",
+      "20000000"
+    ],
+    "binary_sha256": "6bfed542d7bf2aed5b0cf9d49903dafd355ce1f075da4d1a32979ff051dbfc25",
+    "client_sha256": "212a57d6dedc34155467d196e76d30b5d50ceb15010212c4c0f65dd6914194ce",
+    "threads_aggregated": null
+  },
+  {
+    "arm": "tls",
+    "control": "workers-4",
+    "raw_exit": 0,
+    "expected": 240000000,
+    "observed": 240144499,
+    "exact": false,
+    "elapsed_s": 0.06786419399941224,
+    "argv": [
+      "/workspace/scratch/f55dc021446a/continue-20261126/worker-prefix/worker-control.bin",
+      "4",
+      "20000000"
+    ],
+    "binary_sha256": "6bfed542d7bf2aed5b0cf9d49903dafd355ce1f075da4d1a32979ff051dbfc25",
+    "client_sha256": "9814ce0660a1f9383590c8b841963170662e5cf8722b2677a86399e6e6d842f4",
+    "threads_aggregated": 5
+  }
+]

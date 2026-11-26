@@ -1,0 +1,34 @@
+[
+  {
+    "arm": "reference",
+    "workers": 1,
+    "raw_exit": 0,
+    "count": 10216054452,
+    "declarations": 25131,
+    "elapsed_s": 10.371193678001873
+  },
+  {
+    "arm": "tls",
+    "workers": 1,
+    "raw_exit": 0,
+    "count": 10215868875,
+    "declarations": 25131,
+    "elapsed_s": 4.748153217999061
+  },
+  {
+    "arm": "tls",
+    "workers": 2,
+    "raw_exit": 0,
+    "count": 10647947262,
+    "declarations": 25131,
+    "elapsed_s": 3.7766523159989447
+  },
+  {
+    "arm": "reference",
+    "workers": 2,
+    "raw_exit": 0,
+    "count": 10663830493,
+    "declarations": 25131,
+    "elapsed_s": 12.586388297997473
+  }
+]

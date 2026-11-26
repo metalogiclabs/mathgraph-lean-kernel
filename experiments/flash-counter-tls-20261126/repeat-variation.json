@@ -1,0 +1,34 @@
+{
+  "state": "WARRANTED_BOUNDED_WITHIN_CLIENT_VARIATION",
+  "observations_per_client": 3,
+  "prefix_counts": {
+    "reference": [
+      10216054452,
+      10215882838,
+      10216007552
+    ],
+    "tls": [
+      10215868875,
+      10215907555,
+      10215979627
+    ]
+  },
+  "within_client_ranges": {
+    "reference": [
+      10215882838,
+      10216054452
+    ],
+    "tls": [
+      10215868875,
+      10215979627
+    ]
+  },
+  "within_client_span_ppm": {
+    "reference": 16.79858152493343,
+    "tls": 10.841119962650975
+  },
+  "ranges_overlap": true,
+  "original_prefix_gate": "FAILED_RETAINED",
+  "counter_equivalence": "UNKNOWN",
+  "boundary": "Two additional alternating single-worker pairs after the initial failure; all eight total prefix processes ACCEPT. Original-client variation itself exceeds the original ten-ppm tolerance. Overlapping observed ranges do not establish identical counts, their causal origin, hardware accuracy or interchangeability. No kernel/source/default/active-comparison change."
+}

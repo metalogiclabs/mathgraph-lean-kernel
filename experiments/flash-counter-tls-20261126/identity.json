@@ -1,0 +1,27 @@
+{
+  "source_sha256": "681d760fa58b6baa0c31aa4f875a2d99ebde75243bbd9f5f392c45e282cd0e34",
+  "client_sha256": "9814ce0660a1f9383590c8b841963170662e5cf8722b2677a86399e6e6d842f4",
+  "sdk_archive_sha256": "3958421d74964ea2a30b43752560ae584d854ceb6209946dd2d9e173352d7a2c",
+  "compiler_command": [
+    "gcc",
+    "-shared",
+    "-fPIC",
+    "-O3",
+    "-fno-stack-protector",
+    "-DX86_64",
+    "-DLINUX",
+    "-I/workspace/scratch/f55dc021446a/diagnostics/dynamorio/include",
+    "-I/workspace/scratch/f55dc021446a/diagnostics/dynamorio/ext/include",
+    "/workspace/scratch/f55dc021446a/continue-20261126/counter-tls/instruction_counter_tls.c",
+    "-L/workspace/scratch/f55dc021446a/diagnostics/dynamorio/lib64/release",
+    "-Wl,-rpath,/workspace/scratch/f55dc021446a/diagnostics/dynamorio/lib64/release",
+    "-L/workspace/scratch/f55dc021446a/diagnostics/dynamorio/ext/lib64/release",
+    "-Wl,-rpath,/workspace/scratch/f55dc021446a/diagnostics/dynamorio/ext/lib64/release",
+    "-ldrreg",
+    "-ldrmgr",
+    "-ldynamorio",
+    "-o",
+    "/workspace/scratch/f55dc021446a/continue-20261126/counter-tls/counter.so"
+  ],
+  "boundary": "Experimental thread-local counter; not used in the active batch512 comparison."
+}

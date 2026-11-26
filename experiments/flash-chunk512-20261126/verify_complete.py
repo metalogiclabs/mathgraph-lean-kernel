@@ -98,6 +98,8 @@ with zipfile.ZipFile(a.archive) as z:
     assert coverage['body_instructions'] == 120000000
     assert 120000000 <= coverage['with_libraries'] <= 122400000
     assert coverage['binary_sha256'] == sha(g + 'instructions/worker-control.bin')
+    control_source = Path(__file__).resolve().parents[1] / 'flash-worker-study-20261126/worker_control.c'
+    assert coverage['source_sha256'] == hashlib.sha256(control_source.read_bytes()).hexdigest()
     assert re.findall(r'MATHGRAPH_DYNAMIC_INSTRUCTIONS (\d+)',
                       text(g + 'instructions/worker-control.stderr')) == [str(coverage['with_libraries'])]
     native_hashes = {arm: sha(n + 'builds/' + arm + '.bin') for arm in ['baseline', 'strict']}
