@@ -1,0 +1,58 @@
+{
+  "state": "NOT_PROMOTED_PREFIX_COST_GATES_FAILED",
+  "measurement_source_commit": "35c6a8155c05ab0b0bbf81179eadf169818e556a",
+  "base_commit": "bc704eebed4e009bc66af1a849f18315c11f1926",
+  "prototype_tree": "86f668b90ade5fb8eb343f123399bba96681b061",
+  "control": "All four arms share the same experimental source patch; baseline has both features disabled. The original frozen released executable is used separately for instruction attribution.",
+  "results": {
+    "skip": {
+      "paired_instruction_ratios": [
+        1.008709941248817,
+        1.003952544408305
+      ],
+      "aggregate_instruction_ratio": 1.0063355551557651,
+      "cpu_ratio_same_build": 0.9483929269245799,
+      "peak_rss_ratio_same_build": 1.0272571724165374,
+      "cost_gate_passed": false
+    },
+    "reuse": {
+      "paired_instruction_ratios": [
+        0.995409256673024,
+        0.9891607943929649
+      ],
+      "aggregate_instruction_ratio": 0.9922906894317142,
+      "cpu_ratio_same_build": 0.9888599168323222,
+      "peak_rss_ratio_same_build": 0.9593198307535182,
+      "cost_gate_passed": false
+    },
+    "combined": {
+      "paired_instruction_ratios": [
+        0.9981784821251563,
+        1.0037932529740434
+      ],
+      "aggregate_instruction_ratio": 1.0009807780584583,
+      "cpu_ratio_same_build": 0.9776340855803046,
+      "peak_rss_ratio_same_build": 0.9796798111230486,
+      "cost_gate_passed": false
+    }
+  },
+  "cost_gate_minimum_reduction": 0.01,
+  "baseline_control_fractional_range": 0.0013588975149363622,
+  "mechanism": "Skip removes unused payload evaluation in the tested paths; atomic closed-codomain reuse removes body inference in the tested application controls. Event savings do not establish end-to-end speed gains.",
+  "scope_controls": "All four arms pass InferOnly-to-Check rejection of an invalid unused argument, dependent-bound-type comparison, raw local/global level identity and reset, and three warmed-universe exports.",
+  "library_tests_per_arm": 44,
+  "source_record_controls_per_arm": 16,
+  "hosted_portable_correct_per_arm": 230,
+  "prefix_complete_accepts": 16,
+  "local_transfer": "180 correct raw outcomes and two SIGKILLs per arm; all original cases are subsequently qualified on the hosted generic builds. The local signal cause remains UNKNOWN.",
+  "whole_candidate_performance": "UNKNOWN_NOT_RUN: no arm passed the prospectively declared prefix gate.",
+  "native_target_performance": "UNKNOWN_NOT_RUN: screen measures matched generic builds.",
+  "release": "UNCHANGED",
+  "next_residual": {
+    "state": "INTERESTING_NOT_YET_TESTED",
+    "target": "Avoid repeated environment projection and frame construction across inference/evaluation handoffs.",
+    "evidence": "Verified prior full-input compiled-symbol profile assigns 9.596% to prune_env_cold and 5.118% to intern_frame. These are exclusive symbol buckets including inlined work, not a claim that all of that work can be removed.",
+    "smallest_next_experiment": "Measure producer-to-consumer repetition and exact-context reuse opportunities in those paths before another semantic optimization."
+  },
+  "canonical_notion_sync": "UNAVAILABLE: Transport closed; GitHub retains the evidence authority."
+}
