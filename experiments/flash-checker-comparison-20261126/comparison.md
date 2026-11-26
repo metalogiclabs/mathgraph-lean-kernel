@@ -164,6 +164,15 @@ on the exact 25,131-declaration prefix, not full-input or Arena gains.
 | Skip interning of inferred Pi closures | 0.844% | 1.495%, 0.190% | Not promoted: repeat gate failed |
 | Demand-directed selected recursor prefix | 0.243% | 0.651%, -0.165% | Not promoted: repeat gate failed |
 | Direct sort table, complete raw IDs | 0.700% | 0.202%, 1.199% | Not promoted: repeat and aggregate gates failed |
+| Value-session budget 9 MiB to 36 MiB | 6.651% | 6.844%, 6.459% | Candidate: prefix cost gate passes; complete-input qualification pending |
+
+The budget candidate passes 39 library tests and 16 source controls. Its local
+portable attempt has 217 correct outcomes and 13 SIGKILLs; the latter remain
+UNKNOWN. The separately pinned hosted workflow collects complete-input
+correctness, native memory and software instruction evidence. No Arena
+seconds are extrapolated from the prefix result. An earlier motivation
+confused 14,418 cache-object census records with resets; that statement is
+corrected and is not used as cost evidence.
 
 The direct-sort attempt first conflated local and imported universe IDs by
 using an index that masks the namespace bit. A retained semantic regression

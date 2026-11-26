@@ -1,0 +1,104 @@
+name: Flash session-budget complete-input experiment
+on:
+  push:
+    branches: [research/flash-upstream-reconciliation-20261126]
+    paths: ['.github/workflows/flash-session-budget.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  compare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 95
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [native, instructions]
+    env:
+      MODE: ${{ matrix.mode }}
+      RUSTFLAGS: ${{ matrix.mode == 'native' && '-C target-cpu=native' || '-C target-cpu=x86-64 -C target-feature=-avx,-avx2,-avx512f,-fma' }}
+      CARGO_BUILD_JOBS: 1
+      CARGO_INCREMENTAL: 0
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.99.1'
+      - name: Reconstruct exact independent source and freeze both executables
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/session-budget"
+          mkdir -p "$OUT/builds"
+          git diff --exit-code bc704eebed4e009bc66af1a849f18315c11f1926 -- src Cargo.toml Cargo.lock
+          git rev-parse HEAD > "$OUT/harness-commit.txt"
+          rustc -Vv > "$OUT/compiler.txt"
+          lscpu > "$OUT/cpu.txt"
+          printf '%s\n' "$RUSTFLAGS" > "$OUT/build-flags.txt"
+          for ARM in baseline strict; do
+            SOURCE="$RUNNER_TEMP/session-$ARM-source"
+            TARGET="$RUNNER_TEMP/session-$ARM-target"
+            git worktree add --detach "$SOURCE" bc704eebed4e009bc66af1a849f18315c11f1926
+            if [ "$ARM" = strict ]; then
+              cp experiments/flash-session-budget-20261126/prototype.patch "$OUT/prototype.patch"
+              git -C "$SOURCE" apply --check "$OUT/prototype.patch"
+              git -C "$SOURCE" apply "$OUT/prototype.patch"
+            fi
+            git -C "$SOURCE" add src
+            TREE=$(git -C "$SOURCE" write-tree)
+            git -C "$SOURCE" rev-parse "$TREE:src" > "$OUT/$ARM-source-tree.txt"
+            cargo build --release --locked --manifest-path "$SOURCE/Cargo.toml" --target-dir "$TARGET" > "$OUT/$ARM-build.log" 2>&1
+            cp "$TARGET/release/sokonanoda" "$OUT/builds/$ARM.bin"
+            chmod 555 "$OUT/builds/$ARM.bin"
+            if [ "$ARM" = strict ]; then
+              test "$(cat "$OUT/strict-source-tree.txt")" = c5c0ec81bcba210382242ce5c4777b052f48780f
+              cargo test --release --locked --manifest-path "$SOURCE/Cargo.toml" --target-dir "$TARGET" > "$OUT/tests.log" 2>&1
+              (cd "$SOURCE" && python3 "$GITHUB_WORKSPACE/experiments/flash-upstream-repair-20261126/metadata_controls.py" --binary "$OUT/builds/strict.bin" --out "$OUT/source-controls")
+            else
+              test "$(cat "$OUT/baseline-source-tree.txt")" = 06c257f0f2ff1f64711cfa54620b650e6dd59b7e
+            fi
+            rm -rf "$TARGET"
+          done
+          sha256sum "$OUT/builds/"*.bin > "$OUT/executables.sha256"
+      - uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/reconciled-input/mathlib.ndjson
+          key: flash-upstream-exact-mathlib-f749dfd084fc0727d107c7aaded7d492cebfc0b517cfaa7337d8a7578a6c0dec
+          fail-on-cache-miss: true
+      - name: All exact portable inputs with raw statuses
+        if: matrix.mode == 'native'
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          python3 experiments/flash-upstream-repair-20261126/prepare_portable.py
+          python3 experiments/flash-upstream-repair-20261126/verify.py portable --binary "$RUNNER_TEMP/session-budget/builds/strict.bin" --out "$RUNNER_TEMP/session-budget/portable" --results experiments/flash-upstream-repair-20261126/official-inputs.json --fixtures "$RUNNER_TEMP/lambda-portable-inputs/fixtures"
+      - name: Two alternating complete native Mathlib pairs
+        if: matrix.mode == 'native'
+        run: |
+          set -euo pipefail
+          python3 experiments/flash-session-budget-20261126/whole_native.py --fixture "$RUNNER_TEMP/reconciled-input/mathlib.ndjson" --binaries "$RUNNER_TEMP/session-budget/builds" --out "$RUNNER_TEMP/session-budget/native"
+          sha256sum --check "$RUNNER_TEMP/session-budget/executables.sha256"
+      - name: Build hash-pinned calibrated software counter
+        if: matrix.mode == 'instructions'
+        run: |
+          set -euo pipefail
+          python3 experiments/flash-session-budget-20261126/build_counter.py
+          cp "$RUNNER_TEMP/flash-dynamorio/identity.json" "$RUNNER_TEMP/session-budget/counter-identity.json"
+      - name: Two alternating complete software-instruction pairs
+        if: matrix.mode == 'instructions'
+        run: |
+          set -euo pipefail
+          python3 experiments/flash-session-budget-20261126/compare_instructions.py --drrun "$RUNNER_TEMP/flash-dynamorio/DynamoRIO-Linux-11.92.20777/bin64/drrun" --client "$RUNNER_TEMP/flash-dynamorio/instruction-counter.so" --fixture "$RUNNER_TEMP/reconciled-input/mathlib.ndjson" --binaries "$RUNNER_TEMP/session-budget/builds" --out "$RUNNER_TEMP/session-budget/instructions" --baseline-cli --whole --rounds 2
+          sha256sum --check "$RUNNER_TEMP/session-budget/executables.sha256"
+      - name: Evaluate the declared bounded gate
+        run: |
+          python3 experiments/flash-session-budget-20261126/full_gate.py --mode "$MODE" --out "$RUNNER_TEMP/session-budget"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-session-budget-${{ matrix.mode }}
+          path: ${{ runner.temp }}/session-budget/
+          retention-days: 90

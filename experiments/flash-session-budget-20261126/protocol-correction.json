@@ -1,0 +1,14 @@
+{
+  "state": "CORRECTED_MOTIVATION",
+  "original_claim": "14418 census records were described as sessions/resets.",
+  "correction": "EvalCostCensus is kept across clear_session and emits on Drop. These are cache object lifetime records, not reset counts; they do not demonstrate excessive clearing.",
+  "still_testable": "A single larger value budget can measure the cost of longer retention directly. Existing data do not establish the expected direction.",
+  "unchanged": [
+    "36 MiB prespecified threshold",
+    "independent baseline",
+    "source patch",
+    "correctness gates",
+    "1% each-pair and aggregate cost gate"
+  ],
+  "lineage": "Original prospective protocol is retained unchanged alongside this correction."
+}
