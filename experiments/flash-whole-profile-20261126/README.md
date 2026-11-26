@@ -1,5 +1,24 @@
 # Flash — complete instruction result and next cost profile
 
+Current checkpoint, 2026-11-26 UTC: **bc704eeb is source-qualified on all 240
+prescribed inputs and submitted in [Arena PR #398](https://github.com/leanprover/lean-kernel-arena/pull/398),
+ready for review.** Its official PR CI selected 231 prescribed cases, all correct;
+28 separate policy decisions were permitted and two policy timeouts remain UNKNOWN.
+The official PR workflow skips Mathlib. A new Arena hardware score/rank is UNKNOWN.
+
+The subsequent one-line inlining experiment has also completed and passed its
+predeclared full-input instruction gate: **1.1770% fewer software-counted
+instructions in two complete pairs**. Its native CPU median was **0.5667% higher**
+and maximum observed peak RSS **0.9345% higher**, so these observations establish
+no CPU speedup. Its frozen binary passed all 230 portable outcomes, 16 metadata
+controls and eight complete Mathlib executions. The other nine large inputs and
+official Arena hardware measurement of that variant remain UNKNOWN. It is a
+separate CANDIDATE, excluded from #398. The artifact, verification script and
+explicit non-promotion decision are in the adjacent
+[`flash-eval-dispatch-inline-20261126`](../flash-eval-dispatch-inline-20261126/outcome.md)
+experiment. Older checkpoint statements below preserve causal history; the
+completed results in this opening and final sections supersede their pending states.
+
 The [complete diagnostic](https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/45712976230)
 finished on source `bc704eebed4e009bc66af1a849f18315c11f1926` / tree
 `06c257f0f2ff1f64711cfa54620b650e6dd59b7e`, using harness `2ba65451`.
@@ -188,7 +207,14 @@ and a new public rank remain unestablished.
 The exact final join, Navier, official PR result and official input-stat archives
 are retained under `final-verification/`, with hashes and declared boundaries.
 The separately qualified attributed core remains the submission. The inlining
-hint is outside #398 and is undergoing [full comparison 45723515088](https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/45723515088):
-source tests and the sequential portable-control stage completed; alternating
-complete-Mathlib native/software-instruction gates are still running at this
-checkpoint. No full-input gain or new 240-case qualification is imputed to it.
+hint is outside #398. [Full comparison 45723515088](https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/45723515088)
+completed successfully; its downloaded artifact SHA-256/CRC, frozen executables,
+230 exact portable input identities/verdicts, 16 raw controls, eight full completion
+markers, four complete block tables, calibration sums and gates were independently
+recomputed. Instruction pairs have ratios 0.9882294199325855 and
+0.9882301370898227. Native CPU median rose from 152.630 s to 153.495 s; observed
+peak RSS rose from 4,865,640 KiB to 4,911,108 KiB. This passes the declared
+instruction gate with bounded CPU/RSS regression, while establishing no native
+CPU improvement. Preserve it as a separate CANDIDATE pending native-build hardware
+evidence and the other nine large inputs. No 240-case qualification is imputed
+to the changed source, and the submitted qualified core remains bc704eeb.

@@ -1,0 +1,58 @@
+{
+  "state": "WARRANTED_BOUNDED_FULL_MATHLIB_INSTRUCTION_REDUCTION",
+  "run": 45723515088,
+  "artifact": 15073369717,
+  "archive_sha256": "6f55b2f7d754e4310589fe74aed040ae98ba82d39ba395bffd7cb6d439a0821e",
+  "archive_files": 574,
+  "identity": {
+    "binary_sha256": {
+      "baseline": "09fe7ecf7421be7ad7f7c57596c214bcd6e7c0d912d6d555cb5749b17202bd5b",
+      "candidate": "a76e2bbfe07ce80b204937548b7a00524bee1bff113fe19c9e1244ed93443f46"
+    },
+    "input_sha256": "f749dfd084fc0727d107c7aaded7d492cebfc0b517cfaa7337d8a7578a6c0dec",
+    "input_bytes": 6326141213,
+    "base_commit": "bc704eebed4e009bc66af1a849f18315c11f1926",
+    "baseline_source_tree": "06c257f0f2ff1f64711cfa54620b650e6dd59b7e",
+    "candidate_source_tree": "de6696fcecbe99e6fcab5bb68c5974e1e9a04e49",
+    "client_sha256": "8d783445a654e01e843ffc3340d148dfd62f80cca4c55c2c6f38e09936c678b0",
+    "helper_sha256": "fe768ff919f829bb1125977991e6b7403097dc2dcb5356f2ca3bef8a107997d9",
+    "native_check_workers": 2,
+    "count_check_workers": 1,
+    "boundary": "Generic-build matched execution. Software basic-block counts are not the Arena hardware event; REP and asynchronous limits remain."
+  },
+  "portable_correct": 230,
+  "source_controls_correct": 16,
+  "library_tests": 39,
+  "integration_tests": 2,
+  "complete_mathlib_executions": 8,
+  "declarations_per_execution": 739167,
+  "summary": {
+    "state": "CANDIDATE_FULL_MATHLIB_GATE_PASSED",
+    "instruction_paired_ratios": [
+      0.9882294199325855,
+      0.9882301370898227
+    ],
+    "instruction_geometric_ratio": 0.988229778511139,
+    "cpu_medians_s": {
+      "baseline": 152.63,
+      "candidate": 153.495
+    },
+    "cpu_ratio": 1.005667300006552,
+    "peak_rss_kb": {
+      "baseline": 4865640,
+      "candidate": 4911108
+    },
+    "peak_rss_ratio": 1.0093447110760352,
+    "observations": 8,
+    "passed": true,
+    "gate": "Each complete instruction pair <=0.99, native median CPU ratio <=1.05, maximum observed RSS ratio <=1.10; every process accepts exactly 739167 declarations.",
+    "boundary": "Full Mathlib only, generic builds. Other nine large candidate inputs, target-cpu=native Arena hardware scoring and release remain separate UNKNOWNs."
+  },
+  "decision": "Retain as separate CANDIDATE; do not replace the qualified bc704 source in Arena PR398. Count reduction is repeatable, but these native CPU observations do not establish a speedup.",
+  "remaining_UNKNOWN": [
+    "other nine large inputs on this variant",
+    "Arena target-cpu=native hardware event and public score"
+  ],
+  "historical_unknowns": "Local SIGKILL observations and invalidated mutable-binary run remain preserved. This isolated CI run resolves only its own stated boundaries.",
+  "sdk_note": "32-bit SDK library warnings are retained in raw stderr. The 64-bit counter completed; three exact calibration totals and all additive full block sums match. SDK preparer client identity differs from the actually measured profile.so recorded above."
+}

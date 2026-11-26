@@ -35,7 +35,7 @@
     "arena_build": "target-cpu=native",
     "counter": "software application basic-block estimate, not the Arena perf hardware event"
   },
-  "next_residual": "Establish complete coverage and an Arena hardware measurement; further reduce shared evaluation/cache costs without assuming more memoization is cheaper.",
+  "next_residual": "Obtain an Arena-native hardware full-Mathlib score for the submitted qualified bc704 core. Keep the inlining variant separate until its native hardware benefit and other nine large inputs are established; do not infer score or rank by scaling software counts.",
   "source_qualification_run": 45717594082,
   "official_pr": {
     "number": 398,
@@ -52,7 +52,19 @@
     "source_tree": "de6696fcecbe99e6fcab5bb68c5974e1e9a04e49",
     "prefix_ratio": 0.9888404457770111,
     "full_run": 45723515088,
-    "state": "RUNNING_FULL_MATHLIB_GATES",
-    "in_submission": false
+    "state": "WARRANTED_BOUNDED_FULL_MATHLIB_INSTRUCTION_REDUCTION",
+    "in_submission": false,
+    "artifact": 15073369717,
+    "artifact_sha256": "6f55b2f7d754e4310589fe74aed040ae98ba82d39ba395bffd7cb6d439a0821e",
+    "binary_sha256": "a76e2bbfe07ce80b204937548b7a00524bee1bff113fe19c9e1244ed93443f46",
+    "full_instruction_ratio": 0.988229778511139,
+    "native_cpu_ratio": 1.005667300006552,
+    "observed_peak_rss_ratio": 1.0093447110760352,
+    "portable_correct": 230,
+    "metadata_controls_correct": 16,
+    "complete_mathlib_executions": 8,
+    "other_nine_large_inputs": "UNKNOWN",
+    "official_arena_score": "UNKNOWN",
+    "promotion": "Separate CANDIDATE, excluded from PR398. Count reduction is established within this generic-build diagnostic; no native CPU improvement is established."
   }
 }
