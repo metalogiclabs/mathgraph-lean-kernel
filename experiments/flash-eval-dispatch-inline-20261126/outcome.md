@@ -46,8 +46,30 @@ the raw warnings and SDK/preparer/client identities are preserved explicitly.
 
 **Decision:** the declared full-Mathlib instruction gate is WARRANTED within
 this boundary. The source remains a separate **CANDIDATE**, excluded from Arena
-PR #398. Nine other large inputs and the Arena-native hardware result for this
-variant remain UNKNOWN. The qualified submitted core remains bc704eeb with its
+PR #398. The nine other generic large inputs were still UNKNOWN at that point.
+The follow-up below closes that residual and records a native CPU regression;
+the Arena hardware result remains UNKNOWN. The qualified submitted core remains bc704eeb with its
 separate 240-input source qualification. Historical local SIGKILLs and the first
 invalidated mutable-executable run remain preserved; this new isolated CI result
 does not retroactively turn those observations into successful executions.
+
+
+## Follow-up: generic 240 complete; native CPU promotion rejected
+
+[Run 45730741082](https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/45730741082)
+passed all nine remaining large inputs using the exact frozen a76e2b executable,
+unchanged prescribed hashes and original timeout budgets. The independently
+verified join now establishes **240/240 prescribed outcomes for this generic
+executable**, including the complete Navier–Stokes–Euler input.
+
+The separately built native candidate passed 230 portable outcomes, 16 identical
+source controls and all six full-Mathlib executions. It was slower in every
+alternating pair: CPU ratios 1.009300, 1.022483 and 1.027501; median CPU
+127.63 seconds for the baseline versus 131.14 for the candidate (**+2.7501%**).
+The predeclared native CPU promotion gate failed.
+
+[Committed outcome and independent raw evidence](https://github.com/metalogiclabs/mathgraph-lean-kernel/tree/a84b549e317e13e44d6b90dfe42700091a9e06f0/experiments/flash-inline-native-large-20261126)
+preserve the positive generic compatibility result and the negative native CPU
+result separately. This supersedes the pending-nine-generic-input status above.
+The candidate remains excluded from PR #398; hardware instruction ordering and
+the native executable's other nine large inputs remain UNKNOWN.
