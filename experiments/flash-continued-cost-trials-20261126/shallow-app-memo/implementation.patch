@@ -1,0 +1,188 @@
+diff --git a/src/checker/eval.rs b/src/checker/eval.rs
+index 6c0225f..8b126f9 100644
+--- a/src/checker/eval.rs
++++ b/src/checker/eval.rs
+@@ -71,7 +71,11 @@ impl TypeChecker<'_, '_> {
+ 
+     fn eval_no_cache(&mut self, depth: u32, env: E, e: ExprId, first: Expr) -> V {
+         if let Expr::App { fun, arg } = first {
+-            if let Expr::App { fun: f2, arg: a2 } = self.ctx.ex(arg) {
++            if let Expr::App { fun: f2, arg: a2 } = self.ctx.ex(arg)
++                && self.ctx.node(arg).right_depth >= 32
++            {
++                // MathGraph: keep deep chains iterative. Shallow arguments
++                // enter eval normally, sharing their cached intermediate values.
+                 let first_fun = fun;
+                 let mut all_same = fun == f2;
+                 let mut count = 2u32;
+@@ -634,3 +638,100 @@ impl TypeChecker<'_, '_> {
+         }
+     }
+ }
++
++#[cfg(test)]
++mod spine_order_tests {
++    use crate::checker::context::TcCtx;
++    use crate::checker::env::EnvLimit;
++    use crate::checker::tc::InferFlag::Check;
++    use crate::checker::value::{EMPTY_CTX, EMPTY_ENV};
++    use crate::config::Config;
++    use crate::frontend::parser::parse_export_file;
++    use crate::term::id::ExprId;
++    use std::io;
++
++    // Abstract A : Type, x : A, y : A. The two results remain distinguishable;
++    // these are data values, so proof irrelevance cannot hide an order error.
++    fn close(ctx: &mut TcCtx<'_>, sort: ExprId, body: ExprId) -> ExprId {
++        let a0 = ctx.mk_var(0);
++        let a1 = ctx.mk_var(1);
++        let body = ctx.mk_lambda(a1, body);
++        let body = ctx.mk_lambda(a0, body);
++        ctx.mk_lambda(sort, body)
++    }
++
++    fn verify_chain(mode: u8) {
++        let export = parse_export_file(io::empty(), Config::default(), 0).unwrap();
++        export.with_ctx(|ctx, cache, _| {
++            let one = ctx.succ(ctx.zero());
++            let sort = ctx.mk_sort(one);
++            let [v0,v1,v2,v3,v4] = [0,1,2,3,4].map(|n| ctx.mk_var(n));
++            let body = if mode < 2 || mode == 3 {
++                let f = ctx.mk_lambda(v2, v2); // constant x
++                let g = ctx.mk_lambda(v2, v1); // constant y
++                let inner = ctx.mk_app(g, v0);
++                let inner = ctx.mk_app(g, inner);
++                let inner = ctx.mk_app(f, inner);
++                if mode == 3 {
++                    (0..131).fold(v0, |term, i| ctx.mk_app(if i % 2 == 0 { f } else { g }, term))
++                } else if mode == 0 { inner } else { ctx.mk_app(f, inner) }
++            } else {
++                // Church negation applied three times to true must select y.
++                // Applying only two times would select x instead.
++                let codomain = ctx.mk_pi(v3, v4);
++                let bool_a = ctx.mk_pi(v2, codomain);
++                let selected = ctx.mk_app(v2, v0);
++                let selected = ctx.mk_app(selected, v1);
++                let negation = ctx.mk_lambda(v4, selected);
++                let negation = ctx.mk_lambda(v3, negation);
++                let negation = ctx.mk_lambda(bool_a, negation);
++                let truth = ctx.mk_lambda(v3, v1);
++                let truth = ctx.mk_lambda(v2, truth);
++                let body = (0..3).fold(truth, |b,_| ctx.mk_app(negation, b));
++                let body = ctx.mk_app(body, v1);
++                ctx.mk_app(body, v0)
++            };
++            let term = close(ctx, sort, body);
++            let expected = close(ctx, sort, if mode != 2 { v1 } else { v0 });
++            let wrong = close(ctx, sort, if mode != 2 { v0 } else { v1 });
++            ctx.with_tc(EnvLimit::ByIndex(0), cache, |tc| {
++                for expr in [term, expected, wrong] {
++                    tc.infer_value(Check, 0, EMPTY_ENV, EMPTY_CTX, expr);
++                }
++                assert!(tc.def_eq_core(term, expected));
++                assert!(!tc.def_eq_core(term, wrong));
++            });
++        });
++    }
++
++    #[test]
++    fn mixed_spine_keeps_outer_to_inner_order() { verify_chain(0); }
++
++    #[test]
++    fn mixed_spine_keeps_the_initial_uniform_prefix() { verify_chain(1); }
++
++    #[test]
++    fn uniform_spine_preserves_every_application() { verify_chain(2); }
++    #[test]
++    fn long_mixed_spine_preserves_outer_to_inner_order() { verify_chain(3); }
++
++    #[test]
++    fn iterative_threshold_saturates_and_ignores_left_application_depth() {
++        let export = parse_export_file(io::empty(), Config::default(), 0).unwrap();
++        export.with_ctx(|ctx, _, _| {
++            let atom = ctx.prop();
++            let mut right = atom;
++            for depth in 1..=u32::from(u16::MAX) + 2 {
++                right = ctx.mk_app(atom, right);
++                assert_eq!(ctx.node(right).right_depth, depth.min(u32::from(u16::MAX)) as u16);
++            }
++            let mut left = atom;
++            for _ in 0..1000 {
++                left = ctx.mk_app(left, atom);
++                assert_eq!(ctx.node(left).right_depth, 1);
++            }
++            let reset = ctx.mk_lambda(atom, right);
++            assert_eq!(ctx.node(reset).right_depth, 0);
++        });
++    }
++}
+diff --git a/src/term/expr.rs b/src/term/expr.rs
+index 4b87732..2f0ef1e 100644
+--- a/src/term/expr.rs
++++ b/src/term/expr.rs
+@@ -141,6 +141,9 @@ pub struct ExprNode {
+     /// The number of "loose" bound variables, which is the number of bound variables
+     /// in an expression which are bound by something above it.
+     pub(crate) loose: u16,
++    /// MathGraph: length of the application chain following only arguments.
++    /// Saturation keeps long chains on the iterative evaluator path.
++    pub(crate) right_depth: u16,
+     pub(crate) mask: u64,
+ }
+ 
+@@ -194,6 +197,7 @@ impl ExprNode {
+         Self {
+             expr,
+             loose: 0,
++            right_depth: 0,
+             mask: 0,
+         }
+     }
+@@ -203,6 +207,7 @@ impl ExprNode {
+         Self {
+             expr: Var { dbj_idx },
+             loose: dbj_idx + 1,
++            right_depth: 0,
+             mask: var_mask(dbj_idx),
+         }
+     }
+@@ -212,6 +217,7 @@ impl ExprNode {
+         Self {
+             expr: App { fun, arg },
+             loose: f.loose.max(a.loose),
++            right_depth: a.right_depth.saturating_add(1),
+             mask: f.mask | a.mask,
+         }
+     }
+@@ -221,6 +227,7 @@ impl ExprNode {
+         Self {
+             expr: Pi { binder_type, body },
+             loose: t.loose.max(b.loose.saturating_sub(1)),
++            right_depth: 0,
+             mask: t.mask | b.body_mask(),
+         }
+     }
+@@ -230,6 +237,7 @@ impl ExprNode {
+         Self {
+             expr: Lambda { binder_type, body },
+             loose: t.loose.max(b.loose.saturating_sub(1)),
++            right_depth: 0,
+             mask: t.mask | b.body_mask(),
+         }
+     }
+@@ -252,6 +260,7 @@ impl ExprNode {
+                 nondep,
+             },
+             loose: t.loose.max(v.loose.max(b.loose.saturating_sub(1))),
++            right_depth: 0,
+             mask: t.mask | v.mask | b.body_mask(),
+         }
+     }
+@@ -265,6 +274,7 @@ impl ExprNode {
+                 structure,
+             },
+             loose: s.loose,
++            right_depth: 0,
+             mask: s.mask,
+         }
+     }

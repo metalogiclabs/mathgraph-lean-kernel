@@ -17,7 +17,7 @@ symbol. It is not a call-tree or source-level causal decomposition.
 | Exclusive compiled symbol | Share |
 | --- | ---: |
 | eval_no_cache | 20.515% |
-| eval_node | 13.249% |
+| eval_node | 13.250% |
 | infer_nonvar | 12.700% |
 | prune_env_cold | 9.596% |
 | Vals::intern_frame | 5.118% |
@@ -83,3 +83,31 @@ those counts. Official full-Mathlib scoring and a new rank are outstanding.
 
 The next isolated experiment tests Init-trained compiler PGO on unchanged
 source. See `../flash-init-pgo-20261126/`; no PGO performance result is assumed.
+
+
+## Further residual tests
+
+A seventh isolated trial routes shallow argument chains through ordinary
+memoized evaluation while retaining the iterative path for deep chains.
+Its right-depth metadata fits the existing 32-byte expression node, and
+44 library tests, eight retained raw exports, all 16 source controls and
+four prefix ACCEPTs pass. It nevertheless costs **3.838% more** prefix
+software instructions and is not promoted. This measures the combined
+metadata/evaluation change; it does not isolate a single cause of the loss.
+
+Two observation-only builds measured environment shape on the fixed prefix.
+They are excluded from every speed comparison. Across 3,604,409 new Cons
+environments, pruning skips 8,872,539 bindings in 3,264,561 runs (mean 2.718);
+only 6.640% of runs skip at least eight bindings. Of 4,116,927 frame calls,
+only 4.848% are index-zero singletons without a rest environment. These
+observations disfavor prioritizing a jump pointer on every new Cons or a
+special singleton-zero representation. They do not reject those ideas on
+whole Mathlib. Patches, actual instrumented stdout/stderr, binary hashes and
+histograms are retained under `environment-shape/`.
+
+A separate worker-count experiment preserves the identical executable and
+varies only its explicit argv. Its six prefix ACCEPTs indicate 4.540% fewer
+software instructions with one worker than two, versus 2.794% more with
+four. Exact loop controls and explicit one/two/four-worker loop-coverage
+controls pass. See `../flash-worker-study-20261126/`; the whole-input effect
+remains UNKNOWN until that experiment completes. No submitted defaults change.

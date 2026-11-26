@@ -1,0 +1,53 @@
+{
+  "source": "https://leanprover.github.io/lean-kernel-arena-beta/results.json",
+  "meta": {
+    "timestamp": "2026-11-26 00:05:30 UTC",
+    "git_revision": "a0f41f1ad246d91fdfa50e6e77497496d26e31d0",
+    "git_revision_short": "a0f41f1a",
+    "github_url": "https://github.com/leanprover/lean-kernel-arena-beta/commit/a0f41f1ad246d91fdfa50e6e77497496d26e31d0",
+    "github_action_url": "https://github.com/leanprover/lean-kernel-arena-beta/actions/runs/45723560700",
+    "round": null,
+    "doi": null,
+    "zenodo_deposition": null,
+    "github_run_id": "45723560700"
+  },
+  "checker": [
+    {
+      "description": "Nucleus is an independently implemented Rust proof checker developed by\n[Metalogic Labs](https://mathgraph.org/). It is separate from MathGraph Flash,\nthe sokonanoda-derived checker on the main Arena.\n\nThis initial preview entry supports a bounded fragment of export format\n3.2.0. It reconstructs admitted nonrecursive inductive families and\nrecursors from source types, validates their feature flags and computation\nrules, and checks a bounded projection fragment with dependent field\nsubstitutions. Unsupported declarations or conversions are declined.\nThe launcher freezes the qualified configuration and explicitly declines\ninputs larger than 10 MiB. It passes input bytes unchanged and consults no\nexternal checker at runtime. Full Mathlib acceptance is not established.\n",
+      "version": "beta-2026-11-26",
+      "language": "rust",
+      "threads": 1,
+      "timeout": 120,
+      "declines": [
+        "init",
+        "std",
+        "perf/grind-ring-5",
+        "perf/gf3-matrix-product"
+      ],
+      "url": "https://github.com/heathsanchez/test",
+      "ref": "research/nucleus-beta-entry-20261126",
+      "rev": "578697991a903ab78d344aa71165d465bef3c3d7",
+      "build": "cargo build --locked --release --features diagnostics --manifest-path metatron-kernel/Cargo.toml\n",
+      "run": "python3 metatron-kernel/arena.py < \"$IN\"\n",
+      "name": "nucleus"
+    }
+  ],
+  "records": 367,
+  "status": {
+    "rejected": 52,
+    "declined": 254,
+    "accepted": 61
+  },
+  "correctness": {
+    "correct": 110,
+    "declined": 254,
+    "either": 3
+  },
+  "mathlib": [],
+  "merged_pr": {
+    "number": 3,
+    "merged_at": "2026-11-25T22:39:35Z",
+    "merge_commit": "6efe1adf8241eb2bcdc6a7cc83af1243dbd1596c"
+  },
+  "boundary": "Current beta published metadata and Nucleus result records, distinct from Flash in the stable Arena. Published source/body claims do not substitute for individual result rows. No complete Mathlib performance warrant."
+}
