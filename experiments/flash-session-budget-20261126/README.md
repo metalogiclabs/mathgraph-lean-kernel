@@ -13,7 +13,10 @@ This passes the prospective 1% repeat and aggregate cost gate.
 
 This is a CANDIDATE, not a full-input or Arena speed result. The local
 230-case portable attempt has 217 correct raw outcomes and 13 SIGKILLs.
-Those processes remain UNKNOWN; their cause is not established. No signal,
+A matched original-input control also SIGKILLs the unchanged baseline near
+the same 858,000 KiB peak RSS as the candidate. This is consistent with a
+local resource constraint, but those processes remain UNKNOWN and their
+cause is not established. No signal,
 crash or decline is normalized into rejection. The exact rows are retained.
 
 The initial motivation incorrectly called 14,418 census records sessions
@@ -29,3 +32,5 @@ software instructions. The full prospective memory and cost gates are in
 full-protocol.json. Even a passed experiment requires separate coverage of
 the other ten large prescribed cases and an independent Arena measurement
 before release or ranking claims.
+
+[Hosted full-input qualification](https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/45811406828) runs source eef92be0975e106aa371d120a3d342af9f597070.
