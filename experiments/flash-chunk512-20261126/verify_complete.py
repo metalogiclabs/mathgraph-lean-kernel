@@ -18,6 +18,8 @@ p.add_argument('--qualification', type=Path, required=True)
 p.add_argument('--manifest', type=Path, default=Path(__file__).resolve().parents[1] /
                'flash-upstream-repair-20261126/official-inputs.json')
 p.add_argument('--out', type=Path, required=True)
+p.add_argument('--final-case', action='store_true',
+               help='Join the separate direct Mathlib receipt; establish no cost effect.')
 a = p.parse_args()
 assert hashlib.sha256(a.archive.read_bytes()).hexdigest() == a.sha256
 qualification = json.loads(a.qualification.read_text())
@@ -42,6 +44,52 @@ with zipfile.ZipFile(a.archive) as z:
 
     def sha(name):
         return hashlib.sha256(z.read(name)).hexdigest()
+
+    if a.final_case:
+        identity = data('identity.json')
+        verdict = data('verdict.json')
+        actual = sha('checker.bin')
+        assert actual == identity['candidate_binary_sha256'] == verdict['binary_sha256'] == \
+            qualification['frozen_generic_binary_sha256']
+        assert identity['candidate_commit'] == qualification['candidate_commit']
+        assert identity['candidate_source_tree'] == qualification['candidate_source_tree']
+        assert identity['input_bytes'] == 6326141213
+        assert identity['input_sha256'] == verdict['input_sha256'] == \
+            'f749dfd084fc0727d107c7aaded7d492cebfc0b517cfaa7337d8a7578a6c0dec'
+        assert verdict['raw_exit'] == 0 and verdict['checked_declarations'] == 739167
+        assert identity['threads'] == verdict['threads'] == 2
+        assert re.search(r'checked 739167 declarations', text('stdout.txt'), re.I)
+        assert text('harness-commit.txt').strip() == '04b00fd832825bafa44ef99298967b8e402a6acc'
+        report = {
+            'state': 'WARRANTED_BOUNDED_240_PRESCRIBED_GENERIC',
+            'run_id': 45742567835, 'artifact_id': 15081788031,
+            'archive_sha256': a.sha256, 'zip_crc_valid': True,
+            'candidate_commit': qualification['candidate_commit'],
+            'candidate_source_tree': qualification['candidate_source_tree'],
+            'actual_binary_sha256': actual, 'prescribed_correct': 240,
+            'portable': 230, 'other_large': 9, 'Mathlib_declarations': 739167,
+            'threads': 2, 'raw_exit': 0,
+            'qualification_capsule_sha256': hashlib.sha256(a.qualification.read_bytes()).hexdigest(),
+            'boundary': 'The independent 239-case capsule and this direct complete-Mathlib '
+                        'ACCEPT join on the identical frozen generic executable. This establishes '
+                        '240 distinct prescribed outcomes, not a cost effect, native-build '
+                        'nine-large qualification, universal soundness, hardware score or rank.',
+        }
+        a.out.mkdir(parents=True, exist_ok=True)
+        (a.out / 'independent-verification.json').write_text(json.dumps(report, indent=2) + '\n')
+        entries = {}
+        for name in names:
+            if name.endswith('/'):
+                continue
+            blob = z.read(name)
+            entries[name] = {'sha256': hashlib.sha256(blob).hexdigest(), 'bytes': len(blob)}
+            if not name.endswith('.bin'):
+                dest = a.out / 'raw' / name
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                dest.write_bytes(blob)
+        (a.out / 'archive-entries.json').write_text(json.dumps(entries, indent=2) + '\n')
+        print(json.dumps(report, indent=2))
+        raise SystemExit(0)
 
     g = 'chunk512/'
     n = 'chunk512-native/'

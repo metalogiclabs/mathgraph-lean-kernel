@@ -44,5 +44,12 @@ hostage to instrumentation availability. `qualify_frozen_whole.py` separately
 restores byte-identical generic candidate 878d871f from archive 15079511997,
 verifies archive CRC/SHA, source identity and original complete-input SHA,
 and runs the final Mathlib correctness case directly with two workers.
-Its result remains pending until independently verified. It establishes no
-instruction effect or rank and does not alter the active comparison.
+The [direct replay 45742567835](https://github.com/metalogiclabs/mathgraph-lean-kernel/actions/runs/45742567835)
+passes all 739,167 declarations, finishing **240/240 distinct prescribed
+outcomes on the same frozen generic executable**. Archive 15081788031,
+SHA-256 `3108ba5ee865b92aef1b3a70ca157b3d4fd7a38c4eee9fad08cd001c4e853833`,
+its CRC, all six entry hashes, actual executable bytes and original verdict
+were independently verified. `qualification-final/` retains the receipts.
+Rerun `verify_complete.py --final-case` with this ZIP, its digest, the earlier
+239-case capsule and an output directory. This establishes no instruction
+effect or rank and does not alter the active comparison or promotion gate.
