@@ -1,0 +1,25 @@
+{
+  "state": "PROSPECTIVE_PROTOCOL",
+  "base_commit": "bc704eebed4e009bc66af1a849f18315c11f1926",
+  "base_src_tree": "06c257f0f2ff1f64711cfa54620b650e6dd59b7e",
+  "arms": {
+    "baseline": "neither feature",
+    "skip": "skip syntactically unused lambda argument and let-value evaluation; preserve binder positions and all inference checks",
+    "reuse": "reuse a checked lambda body type when it is atomic and closed, as the codomain closure consumed by application; preserve dependent/open-body fallback",
+    "combined": "both independent features"
+  },
+  "mechanism_tests": [
+    "demand scaling unused/used lambda and let values with forced evaluation",
+    "reuse scaling of application to checked closed-atomic versus dependent body types",
+    "valid-to-invalid context poisoning, InferOnly-to-Check, local/global IDs and reset lifetime",
+    "16 retained raw source-record controls",
+    "library and retained export regression gates"
+  ],
+  "cost_screen": "Same generic x86-64 compiler/flags and frozen executables for instrumented instruction and uninstrumented CPU/RSS measurements. Two alternating four-arm rounds on exact 25131-declaration prefix. Each promoted arm must save >=1% against the matching baseline in both rounds and aggregate, beyond baseline control variation. Loop controls and complete ACCEPTs required.",
+  "attribution": "Unchanged qualified original executable, exclusive compiled-symbol software instruction profile on exact prefix; inlining prevents interpreting symbol names as pure semantic cost shares.",
+  "transfer": "Exact portable fixtures selected for lambda/let, projection, dependent contexts and recursors; full hosted 230 gate for surviving arms; complete Mathlib and other nine large cases only after a cost-screen survivor.",
+  "boundary": "Semantic microtests and software profiles are bounded evidence, never an official Arena score. No previously rejected prototype or larger-session-budget change is combined.",
+  "noise_rule": "Before candidate observations, run two intentional identical-executable baseline controls. Set the minimum reduction to max(1%, twice their fractional instruction-count range). This is a conservative screen, not a statistical confidence interval.",
+  "implementation_scope": "Skip: direct syntactically erasing beta redex before eager right-argument flattening; unused lambda arguments reached through the ordinary spine; unused let values. Reuse: only atomic, closed body types already established by Check. All dependent/open types retain the original inference closure.",
+  "local_transfer_boundary": "All selected original bug/tutorial cases up to 512 KiB plus selected let/projection performance cases and three generated warmed-universe controls. Local killed processes remain UNKNOWN; a hosted four-arm all-230 qualification resolves the portable boundary."
+}

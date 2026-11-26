@@ -1,0 +1,80 @@
+name: Flash skip-reuse factorial portable qualification
+on:
+  push:
+    branches: [research/flash-upstream-reconciliation-20261126]
+    paths: ['.github/workflows/flash-skip-reuse.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  portable:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - arm: baseline
+            features: ''
+          - arm: skip
+            features: application-skip
+          - arm: reuse
+            features: application-reuse
+          - arm: combined
+            features: application-skip,application-reuse
+    env:
+      ARM: ${{ matrix.arm }}
+      FEATURES: ${{ matrix.features }}
+      RUSTFLAGS: -C target-cpu=x86-64 -C target-feature=-avx,-avx2,-avx512f,-fma
+      CARGO_BUILD_JOBS: 1
+      CARGO_INCREMENTAL: 0
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.99.1'
+      - name: Reconstruct isolated source and freeze the selected arm
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/factorial"
+          SOURCE="$RUNNER_TEMP/factorial-source"
+          TARGET="$RUNNER_TEMP/factorial-target"
+          mkdir -p "$OUT"
+          git diff --exit-code bc704eebed4e009bc66af1a849f18315c11f1926 -- src Cargo.toml Cargo.lock
+          git rev-parse HEAD > "$OUT/harness-commit.txt"
+          git worktree add --detach "$SOURCE" bc704eebed4e009bc66af1a849f18315c11f1926
+          cp experiments/flash-skip-reuse-20261127/prototype.patch "$OUT/prototype.patch"
+          git -C "$SOURCE" apply --check "$OUT/prototype.patch"
+          git -C "$SOURCE" apply "$OUT/prototype.patch"
+          git -C "$SOURCE" add Cargo.toml src
+          TREE=$(git -C "$SOURCE" write-tree)
+          test "$TREE" = 86f668b90ade5fb8eb343f123399bba96681b061
+          git -C "$SOURCE" rev-parse "$TREE:src" > "$OUT/source-tree.txt"
+          rustc -Vv > "$OUT/compiler.txt"
+          printf '%s\n' "$RUSTFLAGS" > "$OUT/build-flags.txt"
+          printf '%s\n' "$FEATURES" > "$OUT/features.txt"
+          EXTRA=()
+          if [ -n "$FEATURES" ]; then EXTRA=(--features "$FEATURES"); fi
+          cargo test --release --locked --manifest-path "$SOURCE/Cargo.toml" --target-dir "$TARGET" "${EXTRA[@]}" -- --nocapture > "$OUT/tests.log" 2>&1
+          cargo build --release --locked --manifest-path "$SOURCE/Cargo.toml" --target-dir "$TARGET" "${EXTRA[@]}" > "$OUT/build.log" 2>&1
+          cp "$TARGET/release/sokonanoda" "$OUT/checker.bin"
+          chmod 555 "$OUT/checker.bin"
+          sha256sum "$OUT/checker.bin" > "$OUT/executable.sha256"
+          (cd "$SOURCE" && python3 "$GITHUB_WORKSPACE/experiments/flash-upstream-repair-20261126/metadata_controls.py" --binary "$OUT/checker.bin" --out "$OUT/source-controls")
+      - name: All 230 exact portable inputs with unchanged raw statuses
+        run: |
+          set -euo pipefail
+          python3 experiments/flash-upstream-repair-20261126/prepare_portable.py
+          python3 experiments/flash-upstream-repair-20261126/verify.py portable --binary "$RUNNER_TEMP/factorial/checker.bin" --out "$RUNNER_TEMP/factorial/portable" --results experiments/flash-upstream-repair-20261126/official-inputs.json --fixtures "$RUNNER_TEMP/lambda-portable-inputs/fixtures"
+          sha256sum --check "$RUNNER_TEMP/factorial/executable.sha256"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-skip-reuse-${{ matrix.arm }}
+          path: ${{ runner.temp }}/factorial/
+          retention-days: 90
