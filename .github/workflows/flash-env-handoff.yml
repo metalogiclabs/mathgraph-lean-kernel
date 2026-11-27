@@ -1,0 +1,71 @@
+name: Flash projected environment complete qualification
+on:
+  push:
+    branches: [research/flash-env-handoff-20261127]
+    paths: ['.github/workflows/flash-env-handoff.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 95
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [native, instructions]
+    env:
+      MODE: ${{ matrix.mode }}
+      RUSTFLAGS: ${{ matrix.mode == 'native' && '-C target-cpu=native' || '-C target-cpu=x86-64 -C target-feature=-avx,-avx2,-avx512f,-fma' }}
+      CARGO_BUILD_JOBS: 1
+      CARGO_INCREMENTAL: 0
+      GH_TOKEN: ${{ github.token }}
+      FLASH_HANDOFF_ARMS: baseline,projection
+      FLASH_HANDOFF_RUN_TESTS: ${{ matrix.mode == 'native' && '1' || '0' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.99.1'
+      - name: Reconstruct exact sources and freeze independently identified executables
+        run: |
+          export FLASH_HANDOFF_WORK="$RUNNER_TEMP/handoff"
+          python3 experiments/flash-env-handoff-20261127/prepare.py
+          cp "$FLASH_HANDOFF_WORK/evidence/builds/projection.bin" "$FLASH_HANDOFF_WORK/evidence/builds/strict.bin"
+          sha256sum "$FLASH_HANDOFF_WORK/evidence/builds/"*.bin > "$FLASH_HANDOFF_WORK/evidence/executables.sha256"
+      - uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/reconciled-input/mathlib.ndjson
+          key: flash-upstream-exact-mathlib-f749dfd084fc0727d107c7aaded7d492cebfc0b517cfaa7337d8a7578a6c0dec
+          fail-on-cache-miss: true
+      - name: Qualify all 230 exact portable inputs on the frozen native executable
+        if: matrix.mode == 'native'
+        run: |
+          python3 experiments/flash-upstream-repair-20261126/prepare_portable.py
+          python3 experiments/flash-upstream-repair-20261126/verify.py portable --binary "$RUNNER_TEMP/handoff/evidence/builds/strict.bin" --out "$RUNNER_TEMP/handoff/evidence/portable" --results experiments/flash-upstream-repair-20261126/official-inputs.json --fixtures "$RUNNER_TEMP/lambda-portable-inputs/fixtures"
+      - name: Two alternating complete native Mathlib pairs
+        if: matrix.mode == 'native'
+        run: |
+          python3 experiments/flash-session-budget-20261126/whole_native.py --fixture "$RUNNER_TEMP/reconciled-input/mathlib.ndjson" --binaries "$RUNNER_TEMP/handoff/evidence/builds" --out "$RUNNER_TEMP/handoff/evidence/native"
+      - name: Build the pinned calibrated software counter
+        if: matrix.mode == 'instructions'
+        run: |
+          python3 experiments/flash-session-budget-20261126/build_counter.py
+          cp "$RUNNER_TEMP/flash-dynamorio/identity.json" "$RUNNER_TEMP/handoff/evidence/counter-identity.json"
+      - name: Two alternating complete software-instruction Mathlib pairs
+        if: matrix.mode == 'instructions'
+        run: |
+          python3 experiments/flash-session-budget-20261126/compare_instructions.py --drrun "$RUNNER_TEMP/flash-dynamorio/DynamoRIO-Linux-11.92.20777/bin64/drrun" --client "$RUNNER_TEMP/flash-dynamorio/instruction-counter.so" --fixture "$RUNNER_TEMP/reconciled-input/mathlib.ndjson" --binaries "$RUNNER_TEMP/handoff/evidence/builds" --out "$RUNNER_TEMP/handoff/evidence/instructions" --baseline-cli --whole --rounds 2
+      - name: Apply the declared gates and verify frozen executables
+        run: |
+          python3 experiments/flash-env-handoff-20261127/full_gate.py --mode "$MODE" --out "$RUNNER_TEMP/handoff/evidence"
+          sha256sum --check "$RUNNER_TEMP/handoff/evidence/executables.sha256"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-env-handoff-${{ matrix.mode }}
+          path: ${{ runner.temp }}/handoff/evidence/
+          retention-days: 90

@@ -1,0 +1,248 @@
+{
+  "state": "WARRANTED_BOUNDED_NEGATIVE_STACKING_RESULTS",
+  "source_tree_unchanged": "498d5312b2abb1a1a9fe93127c47a0ae48dc1009",
+  "promotion_workers": 2,
+  "protocol": {
+    "state": "PROSPECTIVE_BEFORE_CANDIDATE_MEASUREMENTS",
+    "parent": "stack-control",
+    "features": {
+      "stack-prune4": {
+        "projection": true,
+        "inline": true,
+        "budget": 36,
+        "prune_bits": 12
+      },
+      "stack-infer": {
+        "projection": true,
+        "inline": true,
+        "budget": 36,
+        "inline_infer": true
+      },
+      "stack-both": {
+        "projection": true,
+        "inline": true,
+        "budget": 36,
+        "prune_bits": 12,
+        "inline_infer": true
+      }
+    },
+    "source_control": "same source path, explicit x86_64 target, compiler flags and frozen executable guards",
+    "cost_gate": "Two alternating pairs and aggregate must each beat the pre-measured max(1%, twice larger baseline/parent identical-executable range).",
+    "boundary": "Exact prefix only; no score or elapsed-speed forecast. Keep two workers; no check is removed."
+  },
+  "deduplication": {
+    "state": "WARRANTED_NO_EXECUTABLE_CHANGE_FOR_INFER_INLINE_HINT",
+    "parent_sha256": "cc06d4a0d10f6fca8dc882d70fae16fc5bb553947430659e27427ba9e1138032",
+    "prune4_sha256": "45c342910a60db0e0bb93023a29f0a3968b58165809b3d05db976aa1d4933458",
+    "equal_pairs": [
+      [
+        "stack-control",
+        "stack-infer"
+      ],
+      [
+        "stack-prune4",
+        "stack-both"
+      ]
+    ],
+    "boundary": "All source/build logs retained. Inference hint has no binary effect for this compiler/configuration. Avoid duplicate executable comparisons; only the three distinct baseline/parent/prune4 binaries enter the cost screen."
+  },
+  "instruction_screen": {
+    "results": {
+      "baseline-targeted": {
+        "baseline-targeted": {
+          "paired_ratios": [
+            1.0,
+            1.0
+          ],
+          "aggregate_ratio": 1.0,
+          "gate_passed": false,
+          "cpu_ratio": 1.0,
+          "wall_ratio": 1.0,
+          "peak_rss_ratio": 1.0
+        },
+        "stack-control": {
+          "paired_ratios": [
+            1.1024966142905601,
+            1.1165676550021315
+          ],
+          "aggregate_ratio": 1.1095130978087344,
+          "gate_passed": false,
+          "cpu_ratio": 0.9292021446254254,
+          "wall_ratio": 0.940734281103616,
+          "peak_rss_ratio": 0.6509015339278262
+        }
+      },
+      "stack-control": {
+        "baseline-targeted": {
+          "paired_ratios": [
+            0.9070322638981388,
+            0.8956017985297012
+          ],
+          "aggregate_ratio": 0.9012962550644779,
+          "gate_passed": true,
+          "cpu_ratio": 1.0761920920911285,
+          "wall_ratio": 1.0629994251159391,
+          "peak_rss_ratio": 1.53633068578831
+        },
+        "stack-control": {
+          "paired_ratios": [
+            1.0,
+            1.0
+          ],
+          "aggregate_ratio": 1.0,
+          "gate_passed": false,
+          "cpu_ratio": 1.0,
+          "wall_ratio": 1.0,
+          "peak_rss_ratio": 1.0
+        }
+      },
+      "stack-prune4": {
+        "baseline-targeted": {
+          "paired_ratios": [
+            0.9071755473688289,
+            0.8955029684523974
+          ],
+          "aggregate_ratio": 0.9013180416927141,
+          "gate_passed": true,
+          "cpu_ratio": 1.0232442556217005,
+          "wall_ratio": 1.007156790114039,
+          "peak_rss_ratio": 1.563076560721249
+        },
+        "stack-control": {
+          "paired_ratios": [
+            1.0001579695413196,
+            0.9998896495323412
+          ],
+          "aggregate_ratio": 1.0000241725493852,
+          "gate_passed": false,
+          "cpu_ratio": 0.9508007567993311,
+          "wall_ratio": 0.9474669189065559,
+          "peak_rss_ratio": 1.0174089310200918
+        }
+      }
+    },
+    "threshold": 0.01853560144670902,
+    "boundary": "Fixed-prefix two-worker combinations; observed counts, not sums of separate improvements. Complete Mathlib, native-target instructions and official rank remain UNKNOWN."
+  },
+  "native_protocol": {
+    "state": "PROSPECTIVE_NEW_SAMPLE_AFTER_EXPLORATORY_FOUR_PAIRS",
+    "rounds": 12,
+    "checking_workers": 2,
+    "identity": {
+      "executables": {
+        "baseline-targeted": "56c6fd8df3a4b454626f71282d9257e01eb0f12de2701812dc1959a76d0a0525",
+        "stack-control": "cc06d4a0d10f6fca8dc882d70fae16fc5bb553947430659e27427ba9e1138032",
+        "stack-prune4": "45c342910a60db0e0bb93023a29f0a3968b58165809b3d05db976aa1d4933458"
+      },
+      "input_sha256": "c3d1e08032bbfe2dbfc4c8a84fd711ba83296a47d7468d9ce15988efa4acfa3a",
+      "client_sha256": "212a57d6dedc34155467d196e76d30b5d50ceb15010212c4c0f65dd6914194ce",
+      "drrun_sha256": "08dfd65fef5f5e678f40b168a407c315a02e95ed0bf108b2515bed5219e8ee87",
+      "checking_workers": 2,
+      "boundary": "Fixed prefix; generic-build software instruction counts and matched-build native resources. No full-input or Arena rank claim."
+    },
+    "order": "Rotate first arm each round; reverse each second round.",
+    "wall_locality_confirmation": "vs stack-control: median paired ratio <= 0.99, at least 10/12 paired ratios < 1, median paired CPU <= 1.01 and peak RSS <= 1.05.",
+    "boundary": "Only this exact 25,131-declaration prefix, hardware and generic executable; no full-Mathlib, rank, or general wall-speed claim."
+  },
+  "native_confirmation": {
+    "results": {
+      "stack-control": {
+        "baseline-targeted": {
+          "paired_wall_ratios": [
+            1.1234711964385036,
+            1.0663029897128604,
+            1.187305253870138,
+            0.9692298835331168,
+            1.0703659472428697,
+            0.9398268084444718,
+            1.105789044690052,
+            1.0094953973829957,
+            1.026810318555378,
+            1.0333810929470673,
+            1.0276119950537836,
+            1.179330702018852
+          ],
+          "median_wall_ratio": 1.0498420413299638,
+          "wall_improved_pairs": 2,
+          "median_cpu_ratio": 1.0500624516896706,
+          "peak_rss_ratio": 1.5486590829857838,
+          "locality_rule_passed": false
+        },
+        "stack-control": {
+          "paired_wall_ratios": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "median_wall_ratio": 1.0,
+          "wall_improved_pairs": 0,
+          "median_cpu_ratio": 1.0,
+          "peak_rss_ratio": 1.0,
+          "locality_rule_passed": false
+        }
+      },
+      "stack-prune4": {
+        "baseline-targeted": {
+          "paired_wall_ratios": [
+            1.0248195290262736,
+            1.0867780753866954,
+            1.1240077617651107,
+            1.0593259866093625,
+            1.0952151568640562,
+            1.0401684599353245,
+            1.1425889598216297,
+            0.9468162121520144,
+            1.0809802494118617,
+            1.0435547611333431,
+            0.9449215763961709,
+            1.0337378327992242
+          ],
+          "median_wall_ratio": 1.051440373871353,
+          "wall_improved_pairs": 2,
+          "median_cpu_ratio": 1.0852064583914434,
+          "peak_rss_ratio": 1.5092644001704392,
+          "locality_rule_passed": false
+        },
+        "stack-control": {
+          "paired_wall_ratios": [
+            0.9121903011621801,
+            1.0192019396657122,
+            0.9466881057767556,
+            1.0929563817696375,
+            1.0232156204942757,
+            1.106766109020587,
+            1.0332793269279426,
+            0.9379103803806633,
+            1.052755538075129,
+            1.0098450303142879,
+            0.9195314777799135,
+            0.8765461893170483
+          ],
+          "median_wall_ratio": 1.01452348499,
+          "wall_improved_pairs": 5,
+          "median_cpu_ratio": 1.0174266907170764,
+          "peak_rss_ratio": 0.974562069051768,
+          "locality_rule_passed": false
+        }
+      }
+    },
+    "boundary": "New-sample native prefix confirmation; full input and broad correctness remain UNKNOWN."
+  },
+  "decision": {
+    "inference_inline": "REJECTED_NO_EXECUTABLE_EFFECT_FOR_THIS_BUILD",
+    "prune_memo_4k": "REJECTED_NO_INCREMENTAL_INSTRUCTION_GAIN_AND_NATIVE_CONFIRMATION_FAILED",
+    "selected_kernel_changed": false,
+    "practical_speedup": "NOT_ESTABLISHED",
+    "full_input": "UNKNOWN"
+  },
+  "lineage": "Four native exploratory pairs suggested a gain; retain them alongside the independent 12-pair failed confirmation. Never replace the earlier sample or infer a full-input percentage."
+}

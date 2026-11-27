@@ -1,0 +1,127 @@
+{
+  "state": "CANDIDATE_WITH_WARRANTED_BOUNDED_PREFIX_GAIN",
+  "base_commit": "bc704eebed4e009bc66af1a849f18315c11f1926",
+  "selected_arm": "projection",
+  "source_patch_sha256": "f28e98ca1dcff95efacdf375648ec124ae2b38db8ba4e33a0b2f55ddc0f2e87f",
+  "selected_binary_sha256": "2f5bc0c284fb0d9d3fba412ac9e0f2fe546e96af50dab166c8c9cc97f1a6702d",
+  "input_sha256": "c3d1e08032bbfe2dbfc4c8a84fd711ba83296a47d7468d9ce15988efa4acfa3a",
+  "input_bytes": 134232002,
+  "declarations": 25131,
+  "checking_workers": 2,
+  "cost_results": {
+    "state": "BOUNDED_PREFIX_FACTORIAL",
+    "minimum_reduction": 0.010977101955902948,
+    "results": {
+      "projection": {
+        "paired_instruction_ratios": [
+          0.9740521156696936,
+          0.9678389946239516
+        ],
+        "aggregate_instruction_ratio": 0.9709394773770885,
+        "cpu_ratio_same_build": 0.9941601426238146,
+        "peak_rss_ratio_same_build": 1.0558631033542405,
+        "cost_gate_passed": true
+      },
+      "frame-copy": {
+        "paired_instruction_ratios": [
+          0.9998718256756066,
+          0.9948426752767412
+        ],
+        "aggregate_instruction_ratio": 0.9973523308845778,
+        "cpu_ratio_same_build": 1.0869421511137147,
+        "peak_rss_ratio_same_build": 1.0419280065448595,
+        "cost_gate_passed": false
+      },
+      "combined": {
+        "paired_instruction_ratios": [
+          0.9725074314367621,
+          0.9632587073291892
+        ],
+        "aggregate_instruction_ratio": 0.9678740221400447,
+        "cpu_ratio_same_build": 1.1272719737695849,
+        "peak_rss_ratio_same_build": 1.0214616853013363,
+        "cost_gate_passed": true
+      }
+    },
+    "boundary": "Exact prefix only, two workers, generic build. Calibrated basic-block instruction estimate and matched-build CPU/RSS; not native-target hardware counts, full Mathlib or Arena scores."
+  },
+  "observational_census": {
+    "workers": [
+      {
+        "already_pruned": 2078968,
+        "cold_projections": 1863625,
+        "direct_memo_hit": 2002334,
+        "fresh_frame": 971365,
+        "full_prefix_selections": 73601,
+        "full_prefix_slots": 244083,
+        "infer_projection_changed": 1033276,
+        "infer_projection_same": 311115,
+        "prune_calls": 6211323,
+        "repeated_cold_exact_key": 29947,
+        "reused_frame": 892260,
+        "sparse_selections": 787717,
+        "sparse_slots": 1895067,
+        "value_epochs": 21,
+        "zero_mask": 266396
+      },
+      {
+        "already_pruned": 2357349,
+        "cold_projections": 2152590,
+        "direct_memo_hit": 2245955,
+        "fresh_frame": 1101357,
+        "full_prefix_selections": 91681,
+        "full_prefix_slots": 302235,
+        "infer_projection_changed": 1161095,
+        "infer_projection_same": 306293,
+        "prune_calls": 7069117,
+        "repeated_cold_exact_key": 37780,
+        "reused_frame": 1051233,
+        "sparse_selections": 893158,
+        "sparse_slots": 2155300,
+        "value_epochs": 24,
+        "zero_mask": 313223
+      }
+    ],
+    "totals": {
+      "value_epochs": 45,
+      "reused_frame": 1943493,
+      "sparse_slots": 4050367,
+      "repeated_cold_exact_key": 67727,
+      "full_prefix_selections": 165282,
+      "cold_projections": 4016215,
+      "direct_memo_hit": 4248289,
+      "prune_calls": 13280440,
+      "fresh_frame": 2072722,
+      "sparse_selections": 1680875,
+      "zero_mask": 579619,
+      "infer_projection_changed": 2194371,
+      "already_pruned": 4436317,
+      "infer_projection_same": 617408,
+      "full_prefix_slots": 546318
+    },
+    "boundary": "Observation-only exact prefix; not speed evidence"
+  },
+  "selected_correctness": {
+    "portable_correct": 230,
+    "portable_attempted": 230,
+    "library_tests": 39,
+    "source_controls": 16
+  },
+  "other_observations": {
+    "frame_copy_portable": {
+      "correct": 229,
+      "SIGKILL_UNKNOWN": 1
+    },
+    "combined_release_library_build": "SIGKILL_UNKNOWN"
+  },
+  "selection_reason": "Projection alone clears both noise-adjusted cost pairs with the smallest source change. Frame copy fails the prospective cost screen. Combined gain beyond projection is below the screening threshold; its short CPU diagnostic regresses and broader correctness is incomplete.",
+  "unknown": [
+    "complete current Mathlib performance and verdict",
+    "nine other large prescribed inputs",
+    "native-target instruction counts",
+    "official Arena rank improvement"
+  ],
+  "external_publication": "BLOCKED_BY_AUTOMATIC_APPROVAL_REVIEW; no new GitHub branch or workflow published",
+  "release": "UNCHANGED",
+  "reusable_candidate_law": "Carry a canonical result across a producer-consumer boundary rather than reconstructing it from a broader state. Cross-project generality is INTERESTING, not established by this experiment."
+}

@@ -37,6 +37,7 @@ impl TypeChecker<'_, '_> {
         self.eval_node(depth, env, e, node)
     }
 
+    #[inline(always)]
     fn eval_node(&mut self, depth: u32, env: E, e: ExprId, node: ExprNode) -> V {
         if node.loose == 0 {
             let Some(ls) = self.vals().env_lsub(env) else {

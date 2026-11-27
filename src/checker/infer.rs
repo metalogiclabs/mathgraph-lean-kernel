@@ -162,7 +162,8 @@ impl TypeChecker<'_, '_> {
             App { .. } | Lambda { .. } | Pi { .. } | Let { .. } | Proj { .. } => {}
         }
 
-        let key = (self.prune_env(env, node.mask), e);
+        let env = self.prune_env(env, node.mask);
+        let key = (env, e);
         let scope = self.uparam_scope();
         if let Some(cached) = self.tc_cache.type_cache.get(&key)
             && (flag == InferOnly || cached.checked_under == scope)

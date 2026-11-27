@@ -1,0 +1,109 @@
+name: Flash measured stack complete Mathlib qualification
+on:
+  push:
+    branches: [research/flash-stacked-20261127]
+    paths: ['.github/workflows/flash-stacked.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [native, instructions]
+        workers: [2]
+    env:
+      MODE: ${{ matrix.mode }}
+      STRICT_THREADS: ${{ matrix.workers }}
+      FLASH_STACK_RUSTFLAGS: ${{ matrix.mode == 'native' && '-C target-cpu=native' || '-C target-cpu=x86-64 -C target-feature=-avx,-avx2,-avx512f,-fma' }}
+      CARGO_BUILD_JOBS: 1
+      CARGO_INCREMENTAL: 0
+      FLASH_STACK_OFFLINE: '0'
+      CARGO: cargo
+      RUSTC: rustc
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.99.1'
+          components: llvm-tools-preview
+      - name: Build the exact selected source and compiler combination
+        run: |
+          export FLASH_STACK_WORK="$RUNNER_TEMP/stack-qualification"
+          python3 experiments/flash-stacked-20261127/full_build.py
+          sha256sum "$FLASH_STACK_WORK/evidence/builds/"*.bin > "$FLASH_STACK_WORK/evidence/executables.sha256"
+      - uses: actions/cache/restore@v4
+        id: input
+        with:
+          path: ${{ runner.temp }}/reconciled-input/mathlib.ndjson
+          key: flash-upstream-exact-mathlib-f749dfd084fc0727d107c7aaded7d492cebfc0b517cfaa7337d8a7578a6c0dec
+      - name: Reconstruct the pinned complete input if the branch has no cache
+        if: steps.input.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          A="$RUNNER_TEMP/stack-arena"
+          git init "$A"
+          git -C "$A" remote add origin https://github.com/leanprover/lean-kernel-arena.git
+          git -C "$A" fetch --depth 1 origin cb0665b7b0f34d53fa8d62584535c27c86dfa982
+          git -C "$A" checkout --detach FETCH_HEAD
+          python3 -m venv "$RUNNER_TEMP/stack-arena-venv"
+          "$RUNNER_TEMP/stack-arena-venv/bin/pip" install jinja2 jsonschema markdown pyyaml
+          curl -fsSL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none
+          export PATH="$HOME/.elan/bin:$PATH"
+          mkdir -p "$RUNNER_TEMP/reconciled-input"
+          cd "$A"
+          "$RUNNER_TEMP/stack-arena-venv/bin/python" lka.py build-test mathlib 2>&1 | tee "$RUNNER_TEMP/stack-qualification/evidence/input-export.log"
+          mv _build/tests/mathlib.ndjson "$RUNNER_TEMP/reconciled-input/mathlib.ndjson"
+      - name: Verify complete input identity before measuring
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          p=Path(os.environ['RUNNER_TEMP'])/'reconciled-input/mathlib.ndjson'
+          h=hashlib.sha256()
+          with p.open('rb') as f:
+              for block in iter(lambda:f.read(1024*1024),b''):h.update(block)
+          identity={'size':p.stat().st_size,'sha256':h.hexdigest()}
+          assert identity=={'size':6326141213,'sha256':'f749dfd084fc0727d107c7aaded7d492cebfc0b517cfaa7337d8a7578a6c0dec'}
+          (Path(os.environ['RUNNER_TEMP'])/'stack-qualification/evidence/input.json').write_text(json.dumps(identity)+'\n')
+          PY
+      - uses: actions/cache/save@v4
+        if: steps.input.outputs.cache-hit != 'true'
+        with:
+          path: ${{ runner.temp }}/reconciled-input/mathlib.ndjson
+          key: flash-upstream-exact-mathlib-f749dfd084fc0727d107c7aaded7d492cebfc0b517cfaa7337d8a7578a6c0dec
+      - name: All 230 exact portable outcomes with the declared worker count
+        if: matrix.mode == 'native'
+        run: |
+          python3 experiments/flash-upstream-repair-20261126/prepare_portable.py
+          python3 experiments/flash-stacked-20261127/portable.py portable --binary "$RUNNER_TEMP/stack-qualification/evidence/builds/strict.bin" --out "$RUNNER_TEMP/stack-qualification/evidence/portable" --results experiments/flash-upstream-repair-20261126/official-inputs.json --fixtures "$RUNNER_TEMP/lambda-portable-inputs/fixtures"
+      - name: Two alternating complete native Mathlib pairs
+        if: matrix.mode == 'native'
+        run: |
+          python3 experiments/flash-stacked-20261127/compare.py native --fixture "$RUNNER_TEMP/reconciled-input/mathlib.ndjson" --binaries "$RUNNER_TEMP/stack-qualification/evidence/builds" --out "$RUNNER_TEMP/stack-qualification/evidence/native"
+      - name: Build the original pinned calibrated software counter
+        if: matrix.mode == 'instructions'
+        run: |
+          python3 experiments/flash-session-budget-20261126/build_counter.py
+          cp "$RUNNER_TEMP/flash-dynamorio/identity.json" "$RUNNER_TEMP/stack-qualification/evidence/counter-identity.json"
+      - name: Two alternating complete software-instruction Mathlib pairs
+        if: matrix.mode == 'instructions'
+        run: |
+          python3 experiments/flash-stacked-20261127/compare.py instructions --drrun "$RUNNER_TEMP/flash-dynamorio/DynamoRIO-Linux-11.92.20777/bin64/drrun" --client "$RUNNER_TEMP/flash-dynamorio/instruction-counter.so" --fixture "$RUNNER_TEMP/reconciled-input/mathlib.ndjson" --binaries "$RUNNER_TEMP/stack-qualification/evidence/builds" --out "$RUNNER_TEMP/stack-qualification/evidence/instructions" --baseline-cli --whole --rounds 2
+      - name: Require full-input instruction, CPU, wall, memory and acceptance gates
+        run: |
+          python3 experiments/flash-stacked-20261127/full_gate.py --mode "$MODE" --out "$RUNNER_TEMP/stack-qualification/evidence"
+          sha256sum --check "$RUNNER_TEMP/stack-qualification/evidence/executables.sha256"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-measured-stack-${{ matrix.mode }}-${{ matrix.workers }}
+          path: ${{ runner.temp }}/stack-qualification/evidence/
+          retention-days: 90
