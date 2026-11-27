@@ -1,0 +1,82 @@
+{
+  "state": "REJECTED_FOR_PRACTICAL_PERFORMANCE_PROMOTION",
+  "warranted_boundary": "Downloaded raw native artifact independently verified; not a local replay of full Mathlib or a universal correctness proof. Native build and two workers only.",
+  "run_id": 45933439619,
+  "job_id": 140291089453,
+  "artifact_id": 15169223962,
+  "head_sha": "1c0fba9b076b7abbf790cd2cac30b131d7f54221",
+  "artifact_bytes": 3771306,
+  "artifact_sha256": "ec84c6e3c2e97c487030d6339c44367c82c41b35bb4c7a3f77152cce702b8b4a",
+  "crc_entries": 598,
+  "checks": {
+    "all_230_portable_correct": true,
+    "four_complete_accepts": true,
+    "source_matches_declared_candidate": true,
+    "checking_workers_fixed_at_two": true,
+    "archived_executable_hashes_match": true,
+    "cpu_regression_at_most_three_percent": false,
+    "wall_regression_at_most_three_percent": false,
+    "peak_memory_within_declared_limit": true,
+    "four_raw_stdout_accepts_confirmed": true,
+    "both_source_control_sets_correct": true
+  },
+  "medians": {
+    "wall_s": {
+      "baseline": 74.62,
+      "strict": 80.435
+    },
+    "cpu_s": {
+      "baseline": 133.95999999999998,
+      "strict": 143.70999999999998
+    }
+  },
+  "peak_rss_kib": {
+    "baseline": 4895556,
+    "strict": 4985820
+  },
+  "ratios": {
+    "wall": 1.077928169391584,
+    "cpu": 1.0727829202747088,
+    "peak_rss": 1.0184379465784887
+  },
+  "paired_wall_ratios": [
+    1.0979256465517242,
+    1.0581333333333334
+  ],
+  "binaries": {
+    "baseline": "3af498d1de5c3a1a92fe7117a7b004d8a79261658ccb74c44df00caa6a36bede",
+    "strict": "eb24c925dec92da3bd6f333d8fa9648cab6aca638db3cc8ae6d63c93100e77a2"
+  },
+  "source_controls": [
+    {
+      "name": "baseline-targeted-source-controls/summary.json",
+      "summary": {
+        "controls": 16,
+        "wrong": [],
+        "boundary": "Source correspondence controls; acceptance of altered metadata alone is not a proof of False."
+      }
+    },
+    {
+      "name": "stack-control-source-controls/summary.json",
+      "summary": {
+        "controls": 16,
+        "wrong": [],
+        "boundary": "Source correspondence controls; acceptance of altered metadata alone is not a proof of False."
+      }
+    }
+  ],
+  "portable": {
+    "attempted": 230,
+    "correct": 230,
+    "wrong_or_unavailable": []
+  },
+  "source_library_tests_passed": 39,
+  "source_integration_tests_passed": 2,
+  "source_ignored_tests": 3,
+  "gate_reporting_note": "CPU guard correctly failed. Its parent subprocess exited before the outer wrapper emitted stack-gate.json or ran the final SHA check. This independent inspection recomputes wall gate and checks the actual archived binaries; it does not alter or rerun the hosted result.",
+  "unknown": [
+    "complete generic software-instruction gain; sibling job still running at inspection",
+    "nine other large cases for this stack",
+    "official Arena rank"
+  ]
+}
