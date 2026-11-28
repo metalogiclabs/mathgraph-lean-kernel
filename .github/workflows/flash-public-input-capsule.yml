@@ -1,0 +1,53 @@
+# Public-data transport only. No checkout, checker source, binary, private artifact,
+# optimization, benchmark, or results are read or published by this workflow.
+name: Preserve exact public Mathlib input
+on:
+  push:
+    branches: [research/flash-stacked-20261127]
+    paths: [.github/workflows/flash-public-input-capsule.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: public-mathlib-input-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  preserve:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/reconciled-input/mathlib.ndjson
+          key: flash-upstream-exact-mathlib-f749dfd084fc0727d107c7aaded7d492cebfc0b517cfaa7337d8a7578a6c0dec
+          fail-on-cache-miss: true
+      - name: Authenticate public bytes and create the transferable capsule
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import gzip,hashlib,json,os
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP'])
+          source=root/'reconciled-input/mathlib.ndjson'
+          out=root/'public-mathlib-input';out.mkdir()
+          archive=out/'mathlib.ndjson.gz'
+          expected={'size':6326141213,'sha256':'f749dfd084fc0727d107c7aaded7d492cebfc0b517cfaa7337d8a7578a6c0dec'}
+          h=hashlib.sha256();size=0
+          with source.open('rb') as f,gzip.open(archive,'wb',compresslevel=1) as z:
+              for block in iter(lambda:f.read(1024*1024),b''):
+                  h.update(block);size+=len(block);z.write(block)
+          identity={'size':size,'sha256':h.hexdigest()}
+          assert identity==expected,identity
+          h=hashlib.sha256()
+          with archive.open('rb') as f:
+              for block in iter(lambda:f.read(1024*1024),b''):h.update(block)
+          identity.update(archive_sha256=h.hexdigest(),archive_size=archive.stat().st_size,transport_commit=os.environ['GITHUB_SHA'],cache_branch=os.environ['GITHUB_REF'])
+          (out/'input-identity.json').write_text(json.dumps(identity,indent=2)+'\n')
+          print(json.dumps(identity))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-exact-mathlib-input-f749dfd
+          path: ${{ runner.temp }}/public-mathlib-input/
+          compression-level: 0
+          retention-days: 3
