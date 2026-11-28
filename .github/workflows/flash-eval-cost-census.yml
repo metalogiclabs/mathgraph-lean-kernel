@@ -1,0 +1,64 @@
+name: Flash native evaluator work census
+on:
+  push:
+    branches: [research/flash-upstream-reconciliation-20261126]
+    paths: ['.github/workflows/flash-eval-cost-census.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      RUSTFLAGS: -C target-cpu=native
+      CARGO_BUILD_JOBS: 1
+      CARGO_INCREMENTAL: 0
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.99.1'
+      - name: Build isolated observation source and freeze executable
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/eval-cost"
+          SOURCE="$RUNNER_TEMP/eval-cost-source"
+          mkdir -p "$OUT"
+          git diff --exit-code bc704eebed4e009bc66af1a849f18315c11f1926 -- src Cargo.toml Cargo.lock
+          git rev-parse HEAD > "$OUT/harness-commit.txt"
+          git worktree add --detach "$SOURCE" bc704eebed4e009bc66af1a849f18315c11f1926
+          cp experiments/flash-eval-cost-20261126/census.patch "$OUT/census.patch"
+          git -C "$SOURCE" apply --check "$OUT/census.patch"
+          git -C "$SOURCE" apply "$OUT/census.patch"
+          git -C "$SOURCE" add src
+          TREE=$(git -C "$SOURCE" write-tree)
+          git -C "$SOURCE" rev-parse "$TREE:src" > "$OUT/observation-source-tree.txt"
+          rustc -Vv > "$OUT/compiler.txt"
+          lscpu > "$OUT/cpu.txt"
+          printf '%s\n' "$RUSTFLAGS" > "$OUT/build-flags.txt"
+          cargo build --release --locked --manifest-path "$SOURCE/Cargo.toml" --target-dir "$RUNNER_TEMP/eval-cost-target" > "$OUT/build.log" 2>&1
+          cp "$RUNNER_TEMP/eval-cost-target/release/sokonanoda" "$OUT/census.bin"
+          chmod 555 "$OUT/census.bin"
+          sha256sum "$OUT/census.bin" > "$OUT/executable.sha256"
+          cargo test --release --locked --manifest-path "$SOURCE/Cargo.toml" --target-dir "$RUNNER_TEMP/eval-cost-target" > "$OUT/tests.log" 2>&1
+          (cd "$SOURCE" && python3 experiments/flash-upstream-repair-20261126/metadata_controls.py --binary "$OUT/census.bin" --out "$OUT/source-controls")
+          sha256sum --check "$OUT/executable.sha256"
+      - uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/reconciled-input/mathlib.ndjson
+          key: flash-upstream-exact-mathlib-f749dfd084fc0727d107c7aaded7d492cebfc0b517cfaa7337d8a7578a6c0dec
+          fail-on-cache-miss: true
+      - name: Count work on the complete original input with two workers
+        run: |
+          set -euo pipefail
+          python3 experiments/flash-eval-cost-20261126/run_census.py --binary "$RUNNER_TEMP/eval-cost/census.bin" --fixture "$RUNNER_TEMP/reconciled-input/mathlib.ndjson" --out "$RUNNER_TEMP/eval-cost/whole" --whole --threads 2
+          sha256sum --check "$RUNNER_TEMP/eval-cost/executable.sha256"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-native-evaluator-cost-census
+          path: ${{ runner.temp }}/eval-cost/
+          retention-days: 90

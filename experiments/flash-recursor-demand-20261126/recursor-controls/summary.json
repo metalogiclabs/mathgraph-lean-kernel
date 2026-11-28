@@ -1,0 +1,14 @@
+{
+  "cases": 29,
+  "wrong": [],
+  "command": [
+    "/tmp/flash-recursor-demand-binaries/strict.bin",
+    "--stdin",
+    "--threads",
+    "1",
+    "--nat-extension",
+    "--string-extension",
+    "--axiom-allow-all"
+  ],
+  "boundary": "Original recursor-named tutorial exports only, exact manifest hashes; not full corpus. Prior invalid CLI invocation retained separately."
+}

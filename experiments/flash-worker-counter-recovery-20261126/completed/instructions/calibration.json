@@ -1,0 +1,56 @@
+[
+  {
+    "kind": "exact_loop",
+    "iterations": 1,
+    "raw_exit": 0,
+    "expected": 8,
+    "observed": 8
+  },
+  {
+    "kind": "exact_loop",
+    "iterations": 17,
+    "raw_exit": 0,
+    "expected": 56,
+    "observed": 56
+  },
+  {
+    "kind": "exact_loop",
+    "iterations": 1000000,
+    "raw_exit": 0,
+    "expected": 3000005,
+    "observed": 3000005
+  },
+  {
+    "kind": "thread_coverage",
+    "workers": 1,
+    "iterations": 20000000,
+    "loop_body_instructions": 60000000,
+    "observed_with_libraries": 60177383,
+    "raw_exit": 0,
+    "source_sha256": "8af900fd6224c2b79ff813b6d3b05ed7d337d1215ae6d6dd107e637dde87f8ca",
+    "binary_sha256": "5c9b1cc5d7885a00905a037a10f0810b1b6250eacfac1fb40cf160b0406bdef7",
+    "boundary": "Total includes library and thread startup work. Every worker loop must be counted; non-loop work must add less than 2%."
+  },
+  {
+    "kind": "thread_coverage",
+    "workers": 2,
+    "iterations": 20000000,
+    "loop_body_instructions": 120000000,
+    "observed_with_libraries": 120179698,
+    "raw_exit": 0,
+    "source_sha256": "8af900fd6224c2b79ff813b6d3b05ed7d337d1215ae6d6dd107e637dde87f8ca",
+    "binary_sha256": "5c9b1cc5d7885a00905a037a10f0810b1b6250eacfac1fb40cf160b0406bdef7",
+    "boundary": "Total includes library and thread startup work. Every worker loop must be counted; non-loop work must add less than 2%."
+  },
+  {
+    "kind": "thread_coverage",
+    "workers": 4,
+    "iterations": 20000000,
+    "loop_body_instructions": 240000000,
+    "observed_with_libraries": 240184684,
+    "raw_exit": 0,
+    "source_sha256": "8af900fd6224c2b79ff813b6d3b05ed7d337d1215ae6d6dd107e637dde87f8ca",
+    "binary_sha256": "5c9b1cc5d7885a00905a037a10f0810b1b6250eacfac1fb40cf160b0406bdef7",
+    "boundary": "Total includes library and thread startup work. Every worker loop must be counted; non-loop work must add less than 2%."
+  }
+]

@@ -1,0 +1,9 @@
+{
+  "base": "bc704eebed4e009bc66af1a849f18315c11f1926",
+  "hypothesis": "Raise the existing value session threshold from 9 MiB to 36 MiB to reduce budget-driven resets while retaining every declaration-order, failure and typing-context boundary. No other optimization is combined.",
+  "configuration": "One prespecified threshold (36 MiB); ARENA_KEEP remains four times the threshold. No parameter sweep.",
+  "motivation": "Full native census emitted 14418 session records over Mathlib. Leaders reuse forward sessions with distinct memory limits; their limits count different objects, so this Flash threshold must be tested independently.",
+  "cost_gate": "Two alternating exact 25131-declaration prefix pairs, two workers, complete ACCEPTs, three exact loop controls; each pair and aggregate must save at least 1% software instructions.",
+  "correctness_gate": "Existing library and retained-source tests plus 16 source controls before cost comparison. Full portable corpus and full original Mathlib acceptance, instruction cost and peak memory required before promotion.",
+  "boundary": "Larger caches can cost more memory or expose latent invalid reuse; no Arena speed is inferred from a prefix. Unchanged semantics is a hypothesis until qualification."
+}

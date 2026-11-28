@@ -1,0 +1,61 @@
+name: Flash complete calibrated instruction diagnostic
+on:
+  push:
+    branches: [research/flash-upstream-reconciliation-20261126]
+    paths: ['.github/workflows/flash-upstream-instructions.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  count:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    env:
+      CARGO_INCREMENTAL: 0
+      RUSTFLAGS: -C target-cpu=x86-64 -C target-feature=-avx,-avx2,-avx512f,-fma
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.99.1'
+      - name: Build exact isolated checker executables and counting client
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/fast-instructions"
+          mkdir -p "$OUT/builds"
+          git diff --exit-code bc704eebed4e009bc66af1a849f18315c11f1926 -- src Cargo.toml Cargo.lock tests test_resources
+          git rev-parse HEAD > "$OUT/harness-commit.txt"
+          git rev-parse HEAD:src > "$OUT/source-tree.txt"
+          rustc -Vv > "$OUT/compiler.txt"
+          printf '%s\n' "$RUSTFLAGS" > "$OUT/build-flags.txt"
+          cargo build --release --locked --target-dir "$RUNNER_TEMP/strict-target"
+          cp "$RUNNER_TEMP/strict-target/release/sokonanoda" "$OUT/builds/strict.bin"
+          git worktree add --detach "$RUNNER_TEMP/baseline-source" 819d59c34db3fd8f7b790a83f5728f255f75f33e
+          cargo build --release --locked --manifest-path "$RUNNER_TEMP/baseline-source/Cargo.toml" --target-dir "$RUNNER_TEMP/baseline-target"
+          cp "$RUNNER_TEMP/baseline-target/release/sokonanoda" "$OUT/builds/baseline.bin"
+          rm -rf "$RUNNER_TEMP/strict-target" "$RUNNER_TEMP/baseline-target"
+          python3 experiments/flash-upstream-repair-20261126/build_counter.py
+          cp "$RUNNER_TEMP/flash-dynamorio/identity.json" "$OUT/counter-identity.json"
+          cp experiments/flash-upstream-repair-20261126/instruction_counter.c "$OUT/"
+      - uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/reconciled-input/mathlib.ndjson
+          key: flash-upstream-exact-mathlib-f749dfd084fc0727d107c7aaded7d492cebfc0b517cfaa7337d8a7578a6c0dec
+          fail-on-cache-miss: true
+      - name: Count both complete executions after exact loop calibration
+        run: |
+          set -euo pipefail
+          python3 experiments/flash-upstream-repair-20261126/fast_instructions.py \
+            --drrun "$RUNNER_TEMP/flash-dynamorio/DynamoRIO-Linux-11.92.20777/bin64/drrun" \
+            --client "$RUNNER_TEMP/flash-dynamorio/instruction-counter.so" \
+            --fixture "$RUNNER_TEMP/reconciled-input/mathlib.ndjson" \
+            --binaries "$RUNNER_TEMP/fast-instructions/builds" \
+            --out "$RUNNER_TEMP/fast-instructions/counts" --whole --rounds 1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-complete-fast-instructions
+          path: ${{ runner.temp }}/fast-instructions/
+          retention-days: 30

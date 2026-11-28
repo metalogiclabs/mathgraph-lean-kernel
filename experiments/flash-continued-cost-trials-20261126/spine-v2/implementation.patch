@@ -1,0 +1,155 @@
+diff --git a/src/checker/eval.rs b/src/checker/eval.rs
+index 6c0225f..2ca657f 100644
+--- a/src/checker/eval.rs
++++ b/src/checker/eval.rs
+@@ -73,16 +73,38 @@ impl TypeChecker<'_, '_> {
+         if let Expr::App { fun, arg } = first {
+             if let Expr::App { fun: f2, arg: a2 } = self.ctx.ex(arg) {
+                 let first_fun = fun;
+-                let mut all_same = fun == f2;
+                 let mut count = 2u32;
+                 let mut cur = a2;
++                if fun == f2 {
++                    // MathGraph: scan the uniform prefix once, without a
++                    // per-node optional collection in the mixed suffix.
++                    while let Expr::App { fun: fn3, arg: an3 } = self.ctx.ex(cur) {
++                        if fn3 != first_fun { break }
++                        count += 1;
++                        cur = an3;
++                    }
++                    if !matches!(self.ctx.ex(cur), Expr::App { .. }) {
++                        let mut result = self.eval(depth, env, cur);
++                        let f_val = self.eval(depth, env, first_fun);
++                        if self.vals().is_inert_rigid(f_val) {
++                            for _ in 0..count { result = self.neutral_app(f_val, result); }
++                        } else {
++                            for _ in 0..count { result = self.apply(depth, f_val, result); }
++                        }
++                        return result;
++                    }
++                }
++                let mut funs = SpineArgs::new();
++                if fun == f2 {
++                    funs.resize(usize::try_from(count).expect("spine count fits usize"), first_fun);
++                } else {
++                    funs.push(fun);
++                    funs.push(f2);
++                }
+                 let leaf_expr = loop {
+                     match self.ctx.ex(cur) {
+                         Expr::App { fun: fn3, arg: an3 } => {
+-                            count += 1;
+-                            if all_same && fn3 != first_fun {
+-                                all_same = false;
+-                            }
++                            funs.push(fn3);
+                             cur = an3;
+                         }
+                         _ => break cur,
+@@ -90,29 +112,6 @@ impl TypeChecker<'_, '_> {
+                 };
+                 let mut result = self.eval(depth, env, leaf_expr);
+ 
+-                if all_same {
+-                    let f_val = self.eval(depth, env, first_fun);
+-                    if self.vals().is_inert_rigid(f_val) {
+-                        for _ in 0..count {
+-                            result = self.neutral_app(f_val, result);
+-                        }
+-                        return result;
+-                    }
+-                    for _ in 0..count {
+-                        result = self.apply(depth, f_val, result);
+-                    }
+-                    return result;
+-                }
+-
+-                let mut funs = SpineArgs::new();
+-                funs.push(fun);
+-                funs.push(f2);
+-                let mut cur2 = a2;
+-                while let Expr::App { fun: fn3, arg: an3 } = self.ctx.ex(cur2) {
+-                    funs.push(fn3);
+-                    cur2 = an3;
+-                }
+-
+                 let mut last_f_expr: Option<ExprId> = None;
+                 let mut last_f_val: Option<V> = None;
+                 while let Some(f_expr) = funs.pop() {
+@@ -634,3 +633,76 @@ impl TypeChecker<'_, '_> {
+         }
+     }
+ }
++
++#[cfg(test)]
++mod spine_order_tests {
++    use crate::checker::context::TcCtx;
++    use crate::checker::env::EnvLimit;
++    use crate::checker::tc::InferFlag::Check;
++    use crate::checker::value::{EMPTY_CTX, EMPTY_ENV};
++    use crate::config::Config;
++    use crate::frontend::parser::parse_export_file;
++    use crate::term::id::ExprId;
++    use std::io;
++
++    // Abstract A : Type, x : A, y : A. The two results remain distinguishable;
++    // these are data values, so proof irrelevance cannot hide an order error.
++    fn close(ctx: &mut TcCtx<'_>, sort: ExprId, body: ExprId) -> ExprId {
++        let a0 = ctx.mk_var(0);
++        let a1 = ctx.mk_var(1);
++        let body = ctx.mk_lambda(a1, body);
++        let body = ctx.mk_lambda(a0, body);
++        ctx.mk_lambda(sort, body)
++    }
++
++    fn verify_chain(mode: u8) {
++        let export = parse_export_file(io::empty(), Config::default(), 0).unwrap();
++        export.with_ctx(|ctx, cache, _| {
++            let one = ctx.succ(ctx.zero());
++            let sort = ctx.mk_sort(one);
++            let [v0,v1,v2,v3,v4] = [0,1,2,3,4].map(|n| ctx.mk_var(n));
++            let body = if mode < 2 {
++                let f = ctx.mk_lambda(v2, v2); // constant x
++                let g = ctx.mk_lambda(v2, v1); // constant y
++                let inner = ctx.mk_app(g, v0);
++                let inner = ctx.mk_app(g, inner);
++                let inner = ctx.mk_app(f, inner);
++                if mode == 0 { inner } else { ctx.mk_app(f, inner) }
++            } else {
++                // Church negation applied three times to true must select y.
++                // Applying only two times would select x instead.
++                let codomain = ctx.mk_pi(v3, v4);
++                let bool_a = ctx.mk_pi(v2, codomain);
++                let selected = ctx.mk_app(v2, v0);
++                let selected = ctx.mk_app(selected, v1);
++                let negation = ctx.mk_lambda(v4, selected);
++                let negation = ctx.mk_lambda(v3, negation);
++                let negation = ctx.mk_lambda(bool_a, negation);
++                let truth = ctx.mk_lambda(v3, v1);
++                let truth = ctx.mk_lambda(v2, truth);
++                let body = (0..3).fold(truth, |b,_| ctx.mk_app(negation, b));
++                let body = ctx.mk_app(body, v1);
++                ctx.mk_app(body, v0)
++            };
++            let term = close(ctx, sort, body);
++            let expected = close(ctx, sort, if mode < 2 { v1 } else { v0 });
++            let wrong = close(ctx, sort, if mode < 2 { v0 } else { v1 });
++            ctx.with_tc(EnvLimit::ByIndex(0), cache, |tc| {
++                for expr in [term, expected, wrong] {
++                    tc.infer_value(Check, 0, EMPTY_ENV, EMPTY_CTX, expr);
++                }
++                assert!(tc.def_eq_core(term, expected));
++                assert!(!tc.def_eq_core(term, wrong));
++            });
++        });
++    }
++
++    #[test]
++    fn mixed_spine_keeps_outer_to_inner_order() { verify_chain(0); }
++
++    #[test]
++    fn mixed_spine_keeps_the_initial_uniform_prefix() { verify_chain(1); }
++
++    #[test]
++    fn uniform_spine_preserves_every_application() { verify_chain(2); }
++}

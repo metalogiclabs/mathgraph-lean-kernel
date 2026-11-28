@@ -1,0 +1,114 @@
+{
+  "state": "WARRANTED_PUBLISHED_SNAPSHOT",
+  "source": "https://arena.lean-lang.org/results.json",
+  "raw_snapshot_sha256": "9cc6ebbae7555d73fbc8e7974029e5d7b6cdd33dc160c9397e831c0cbefcea57",
+  "meta": {
+    "timestamp": "2026-11-25 21:04:48 UTC",
+    "git_revision": "04c2e955ce32a43e0f3e3c0a473c25215dd2afea",
+    "git_revision_short": "04c2e955",
+    "github_url": "https://github.com/leanprover/lean-kernel-arena/commit/04c2e955ce32a43e0f3e3c0a473c25215dd2afea",
+    "github_action_url": "https://github.com/leanprover/lean-kernel-arena/actions/runs/45691317417",
+    "round": null,
+    "doi": null,
+    "zenodo_deposition": null,
+    "github_run_id": "45691317417"
+  },
+  "checkers": [
+    {
+      "name": "nano-lean",
+      "version": "v0.4.2 (5cd4a25)",
+      "source_commit": "5cd4a25de7cdd8a5fadde3fec53e41a6a8693138",
+      "correctness": {
+        "correct": 239,
+        "declined": 3,
+        "either": 28
+      },
+      "mathlib": {
+        "status": "accepted",
+        "correctness": "correct",
+        "instructions": 394884600833,
+        "max_rss": 5368479744,
+        "cpu_time": 121.616936077,
+        "wall_time": 36.835343444,
+        "test_hash": "21cf8ad30056298e",
+        "checker_hash": "d6c5021f0f382842",
+        "github_job_url": "https://github.com/leanprover/lean-kernel-arena/actions/runs/44969047114/job/137044819435"
+      },
+      "virtual_seconds": 65.81410013883334
+    },
+    {
+      "name": "gruszka",
+      "version": "0.2.0",
+      "source_commit": "39d03331823f084a39323998fb1ee73de374182e",
+      "correctness": {
+        "correct": 240,
+        "either": 30
+      },
+      "mathlib": {
+        "status": "accepted",
+        "correctness": "correct",
+        "instructions": 460835688008,
+        "max_rss": 2751664128,
+        "cpu_time": 101.16057829900001,
+        "wall_time": 29.454974128000003,
+        "test_hash": "21cf8ad30056298e",
+        "checker_hash": "ffea77c33bce9d8c",
+        "github_job_url": "https://github.com/leanprover/lean-kernel-arena/actions/runs/45465540124/job/138700155223"
+      },
+      "virtual_seconds": 76.80594800133333
+    },
+    {
+      "name": "sokonanoda",
+      "version": "9a021b6",
+      "source_commit": "9a021b66f804a1d1df68a981337c67413ef72f6b",
+      "correctness": {
+        "correct": 236,
+        "error": 4,
+        "either": 28,
+        "declined": 2
+      },
+      "mathlib": {
+        "status": "accepted",
+        "correctness": "correct",
+        "instructions": 527406147961,
+        "max_rss": 5316808704,
+        "cpu_time": 154.812722186,
+        "wall_time": 46.325764653,
+        "test_hash": "21cf8ad30056298e",
+        "checker_hash": "28208cc237739891",
+        "github_job_url": "https://github.com/leanprover/lean-kernel-arena/actions/runs/44969047114/job/137044819484"
+      },
+      "virtual_seconds": 87.90102466016667
+    },
+    {
+      "name": "mathgraph",
+      "version": "flash-2026-11-25",
+      "source_commit": "819d59c34db3fd8f7b790a83f5728f255f75f33e",
+      "correctness": {
+        "correct": 240,
+        "either": 28,
+        "error": 2
+      },
+      "mathlib": {
+        "status": "accepted",
+        "correctness": "correct",
+        "instructions": 931656523742,
+        "max_rss": 6608916480,
+        "cpu_time": 250.43273967000002,
+        "wall_time": 132.638776285,
+        "test_hash": "21cf8ad30056298e",
+        "checker_hash": "2760dd1e36c39be5",
+        "github_job_url": "https://github.com/leanprover/lean-kernel-arena/actions/runs/45581042122/job/139091476907"
+      },
+      "virtual_seconds": 155.27608729033332
+    }
+  ],
+  "official_upgrade_pr": {
+    "url": "https://github.com/leanprover/lean-kernel-arena/pull/398",
+    "state": "open",
+    "source_commit": "bc704eebed4e009bc66af1a849f18315c11f1926",
+    "version": "flash-2026-11-26",
+    "head_sha": "23003362b3c48487f03afa72e4390a05c3ca8ead"
+  },
+  "boundary": "Published full-Mathlib PMU counts, all for the same Arena test hash. This still scores flash-2026-11-25. It does not score pending Flash sources or beta Nucleus. Separate private software instruction counts cannot establish a new rank."
+}

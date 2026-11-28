@@ -1,0 +1,136 @@
+{
+  "state": "WARRANTED_BOUNDED_EXPERIMENT_NOT_RELEASED",
+  "observations": 4,
+  "declarations": 25131,
+  "threads": 2,
+  "instruction_ratio": 0.933485965418536,
+  "paired_ratios": [
+    0.9315603182518951,
+    0.9354079088410308
+  ],
+  "gate_passed": true,
+  "library_tests": 39,
+  "source_controls": 16,
+  "local_portable": {
+    "attempted": 230,
+    "correct": 217,
+    "wrong_or_unavailable": [
+      {
+        "name": "perf/gf3-matrix-product",
+        "expected": 0,
+        "observed": -9,
+        "sha256": "9826fe188e0b5d8b77e41cad188870f25fb07270ec55c65d3b8ff0c41c82a9bc",
+        "elapsed_s": 2.0156253060049494
+      },
+      {
+        "name": "perf/ite-taken-branch",
+        "expected": 0,
+        "observed": -9,
+        "sha256": "6e669aef4f85d584bff3e35cb5a9603e859e1a0c6290a46661560883823d6088",
+        "elapsed_s": 0.6875229260040214
+      },
+      {
+        "name": "perf/ite-taken-branch-bad",
+        "expected": 1,
+        "observed": -9,
+        "sha256": "be58b27c935928b4ae40955da0948088994d4f893c3570a10641d03f3361c909",
+        "elapsed_s": 1.29586814600043
+      },
+      {
+        "name": "perf/magma-list-deep-n36",
+        "expected": 0,
+        "observed": -9,
+        "sha256": "c8e0ad4037e2123eb2e5fce42b8da1c705b9dd52487549d932e00b82eeff93c7",
+        "elapsed_s": 0.8730203209997853
+      },
+      {
+        "name": "perf/magma-list-pair-n21",
+        "expected": 0,
+        "observed": -9,
+        "sha256": "36895459051bfb2494aa6a5c8542b36581c74f03a5cbe59282874e2068a47a32",
+        "elapsed_s": 0.5455870619989582
+      },
+      {
+        "name": "perf/magma-list-pair-n7",
+        "expected": 0,
+        "observed": -9,
+        "sha256": "41333e6e8c06623d8064583e040d2983148ca7d2c6e98b6604c0fc98ef8b7102",
+        "elapsed_s": 0.755170773001737
+      },
+      {
+        "name": "perf/proj-applied-struct-arg-bad",
+        "expected": 1,
+        "observed": -9,
+        "sha256": "b7164a9143aaa62920b541b07202c9581af81083bd793eb3df51f8fbe6d1850d",
+        "elapsed_s": 0.8620134490047349
+      },
+      {
+        "name": "perf/proj-applied-struct-bad",
+        "expected": 1,
+        "observed": -9,
+        "sha256": "2bdad7ce54c48e70a9d15a18ac84cd482ad0a981bb86898dcd58cb147ea14705",
+        "elapsed_s": 0.44180808999954024
+      },
+      {
+        "name": "perf/short-circuit-and",
+        "expected": 0,
+        "observed": -9,
+        "sha256": "ab5cb78a88611603f2f2982c5d9a02f8306bcd114cd0329493259e0816793252",
+        "elapsed_s": 0.6856731040024897
+      },
+      {
+        "name": "perf/short-circuit-and-bad",
+        "expected": 1,
+        "observed": -9,
+        "sha256": "fdcdfc59dbe17c73d69dab1f332e10ac9f4fa4eaa6bdc3a803ed2f7fadbaea54",
+        "elapsed_s": 0.7061063849978382
+      },
+      {
+        "name": "perf/unfold-before-literal",
+        "expected": 0,
+        "observed": -9,
+        "sha256": "ca30fb3a52b7c0b130f318777fd9ac215fe3510aeca6f22b34fa2d08a4940f3c",
+        "elapsed_s": 0.6388402539960225
+      },
+      {
+        "name": "perf/unfold-before-literal-bad",
+        "expected": 1,
+        "observed": -9,
+        "sha256": "7541304fe48cb5b2ccdb91d3e14a690ee2b2ea7a5efd20c6a8bd9b581b4d0c5e",
+        "elapsed_s": 0.4322888509996119
+      },
+      {
+        "name": "perf/unfold-before-literal-fallback",
+        "expected": 0,
+        "observed": -9,
+        "sha256": "f0ba42ccc7c0f4a08fbc66413976ae0547a2eafcd56f14384c2f76440fe9d017",
+        "elapsed_s": 0.5967500330007169
+      }
+    ]
+  },
+  "portable_boundary": "Nonzero killed processes remain UNKNOWN; SIGKILL cause not established. Hosted qualification is required; no crash or decline is normalized to rejection.",
+  "whole_input_effect": {
+    "software_instruction_reduction": 0.030057013555294887,
+    "native_cpu_ratio": 1.062729383566774,
+    "native_peak_rss_ratio": 1.0212281514900374
+  },
+  "boundary": "Prefix fields retain their original observations. Whole-input software and native results are separate builds; neither is an official Arena result. Both declared experiment gates passed; release remains unchanged.",
+  "full_result": "whole-verified/result.json",
+  "hosted_portable_correct": 230,
+  "release_state": "NOT_PROMOTED: native CPU regression; nine other large prescribed cases and an independent Arena result remain unqualified.",
+  "remaining_large_cases": [
+    "cedar",
+    "con-leche",
+    "cslib",
+    "init",
+    "navier-stokes-euler",
+    "perf/magma-string-n4",
+    "perf/magma-string-pair-n9",
+    "reachability",
+    "std"
+  ],
+  "lineage": {
+    "prefix_decision_commit": "99b54b00f4bf5d14009cc3e60d43b7ac4dad29ab",
+    "measurement_commit": "eef92be0975e106aa371d120a3d342af9f597070"
+  }
+}

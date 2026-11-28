@@ -1,0 +1,64 @@
+{
+  "state": "CANDIDATE_NOT_PROMOTED",
+  "upstream": "intgrah/sokonanoda@9a021b66f804a1d1df68a981337c67413ef72f6b",
+  "flash_release": "819d59c34db3fd8f7b790a83f5728f255f75f33e",
+  "licensing": "Retains upstream Apache-2.0 license and Jeremy Chen copyright notices. This is an attributed upstream reconciliation, not an independently implemented kernel.",
+  "changes": [
+    "Compare source inductive, constructor and recursor records with the reconstructed declarations before full proof checking.",
+    "Check source rule types before value conversion when source and derived syntax differ.",
+    "Reject loose top-level declaration values before inductive preprocessing.",
+    "Recover zero left shifts at arbitrarily large natural counts.",
+    "Reject self-referential unsafe/partial declarations as kernel evidence while preserving UNKNOWN for other unsupported unsafe declarations."
+  ],
+  "native_suite": {
+    "library": 39,
+    "explicit_retained_export_controls": 8,
+    "integration_tests": 2,
+    "optional_integration_without_corpus": "not a corpus qualification",
+    "ignored_documentation_examples": 3
+  },
+  "qualification": "Full Mathlib and current 240-case qualification remain unknown.",
+  "prefix_comparison": {
+    "observations": 6,
+    "wrong_or_unavailable": [],
+    "boundary": "Exact source-derived prefix only; no Arena performance claim.",
+    "ratios_to_flash": {
+      "flash": 1.0,
+      "upstream": 0.713121587096384,
+      "strict": 0.7633804472897237
+    }
+  },
+  "source_controls": {
+    "controls": 16,
+    "wrong": [],
+    "boundary": "Source correspondence controls; acceptance of altered metadata alone is not a proof of False."
+  },
+  "initial_portable": {
+    "attempted": 230,
+    "correct": 228,
+    "wrong_or_unavailable": [
+      {
+        "name": "bugs/nat-shift-huge",
+        "expected": 0,
+        "observed": -9,
+        "sha256": "e00dfce17f87da4e5e77b7a648b6a789d4b3e959b6a30f6ac4c9bac1a9ab4774",
+        "elapsed_s": 17.59865705699849
+      },
+      {
+        "name": "perf/magma-list-pair-n21",
+        "expected": 0,
+        "observed": -9,
+        "sha256": "36895459051bfb2494aa6a5c8542b36581c74f03a5cbe59282874e2068a47a32",
+        "elapsed_s": 11.456545495002501
+      }
+    ]
+  },
+  "shift_recovery": {
+    "name": "bugs/nat-shift-huge",
+    "exit": 0,
+    "elapsed_s": 0.01102357700074208,
+    "stdout": "checked 212 declarations in 0.009s\n",
+    "stderr": ""
+  },
+  "upstream_notebook": "Five post-parse unit mutations are outside the input boundary; the replacement tests mutate untrusted NDJSON before reconstruction. New strict controls reject the actual five source-record changes."
+}

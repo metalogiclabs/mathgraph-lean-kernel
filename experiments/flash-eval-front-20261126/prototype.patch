@@ -1,0 +1,162 @@
+diff --git a/src/checker/cache.rs b/src/checker/cache.rs
+index 2b00112..d9f49f0 100644
+--- a/src/checker/cache.rs
++++ b/src/checker/cache.rs
+@@ -2,6 +2,7 @@
+ // SPDX-License-Identifier: Apache-2.0
+ 
+ use crate::checker::infer::CachedType;
++use crate::checker::eval_front::EvalFront;
+ use crate::checker::ptrmap::{PtrMap, PtrSet};
+ use crate::checker::value::{E, LsubId, V, Vals};
+ use crate::term::hash::GOLDEN;
+@@ -98,6 +99,7 @@ pub(crate) use memo;
+ 
+ caches! {
+     pub struct TcCache {
++        #[cap(0)] eval_front: EvalFront,
+         #[cap(SESSION_SMALL)] unfold_const_cache: PtrMap<(NameId, LevelsId), V>,
+         #[cap(SMALL)] arithmetic_delta_cache: PtrMap<V, V>,
+         #[cap(SMALL)] rec_rule_cache: PtrMap<(ExprId, LevelsId), V>,
+diff --git a/src/checker/eval.rs b/src/checker/eval.rs
+index 6c0225f..fc8ab3f 100644
+--- a/src/checker/eval.rs
++++ b/src/checker/eval.rs
+@@ -34,7 +34,12 @@ impl TypeChecker<'_, '_> {
+                 .env_lookup(env, dbj_idx)
+                 .expect("eval: loose bvar");
+         }
+-        self.eval_node(depth, env, e, node)
++        if let Some(result) = self.tc_cache.eval_front.get(e, env) {
++            return result;
++        }
++        let result = self.eval_node(depth, env, e, node);
++        self.tc_cache.eval_front.insert(e, env, result);
++        result
+     }
+ 
+     fn eval_node(&mut self, depth: u32, env: E, e: ExprId, node: ExprNode) -> V {
+diff --git a/src/checker/eval_front.rs b/src/checker/eval_front.rs
+new file mode 100644
+index 0000000..995e85a
+--- /dev/null
++++ b/src/checker/eval_front.rs
+@@ -0,0 +1,106 @@
++//! Experimental exact-expression/original-environment front cache.
++use crate::checker::cache::Reset;
++use crate::checker::value::{E, V};
++use crate::term::id::ExprId;
++
++const PAGE_BITS: usize = 7;
++const PAGE_LEN: usize = 1 << PAGE_BITS;
++
++#[derive(Clone, Copy, Default)]
++struct Slot {
++    generation: u32,
++    env: E,
++    result: V,
++}
++
++pub(crate) struct EvalFront {
++    pages: [Vec<Option<Box<[Slot; PAGE_LEN]>>>; 2],
++    generation: u32,
++}
++
++impl EvalFront {
++    #[inline(always)]
++    pub(crate) fn get(&self, e: ExprId, env: E) -> Option<V> {
++        let index = e.index();
++        let page = self.pages[usize::from(e.is_local())].get(index >> PAGE_BITS)?.as_ref()?;
++        let slot = page[index & (PAGE_LEN - 1)];
++        (slot.generation == self.generation && slot.env == env).then_some(slot.result)
++    }
++
++    pub(crate) fn insert(&mut self, e: ExprId, env: E, result: V) {
++        let index = e.index();
++        let pages = &mut self.pages[usize::from(e.is_local())];
++        let pi = index >> PAGE_BITS;
++        if pages.len() <= pi {
++            pages.resize_with(pi + 1, || None);
++        }
++        let page = pages[pi].get_or_insert_with(|| Box::new([Slot::default(); PAGE_LEN]));
++        page[index & (PAGE_LEN - 1)] = Slot { generation: self.generation, env, result };
++    }
++}
++
++impl Reset for EvalFront {
++    fn with_cap(_: usize) -> Self {
++        Self { pages: [Vec::new(), Vec::new()], generation: 1 }
++    }
++
++    fn reset(&mut self) {
++        if self.generation == u32::MAX {
++            self.pages = [Vec::new(), Vec::new()];
++            self.generation = 1;
++        } else {
++            self.generation += 1;
++        }
++    }
++
++    fn reset_shrink(&mut self) {
++        self.pages = [Vec::new(), Vec::new()];
++        self.generation = 1;
++    }
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use crate::checker::value::{EMPTY_ENV, Vals};
++    use crate::term::id::ZERO;
++
++    // Removing expression or environment identity must change these outcomes.
++    #[test]
++    fn cached_result_requires_exact_expression_and_environment() {
++        let mut vals = Vals::new();
++        let v = vals.mk_sort(ZERO);
++        let env = vals.env_push(EMPTY_ENV, v);
++        let e = ExprId::new(129, false);
++        let local = ExprId::new(129, true);
++        let other = ExprId::new(257, false);
++        let mut cache = EvalFront::with_cap(0);
++        cache.insert(e, env, v);
++        assert_eq!(cache.get(e, env), Some(v));
++        assert_eq!(cache.get(e, EMPTY_ENV), None);
++        assert_eq!(cache.get(local, env), None);
++        assert_eq!(cache.get(other, env), None);
++        cache.insert(local, EMPTY_ENV, v);
++        cache.insert(other, EMPTY_ENV, v);
++        assert_eq!(cache.get(e, env), Some(v));
++        assert_eq!(cache.get(local, EMPTY_ENV), Some(v));
++        assert_eq!(cache.get(other, EMPTY_ENV), Some(v));
++    }
++
++    // Losing either reset would return a stale V after a namespace/session change.
++    #[test]
++    fn resets_invalidate_results_before_value_ids_can_be_reused() {
++        let mut vals = Vals::new();
++        let v = vals.mk_sort(ZERO);
++        let e = ExprId::new(7, false);
++        let mut cache = EvalFront::with_cap(0);
++        cache.insert(e, EMPTY_ENV, v);
++        assert_eq!(cache.get(e, EMPTY_ENV), Some(v));
++        cache.reset();
++        assert_eq!(cache.get(e, EMPTY_ENV), None);
++        cache.insert(e, EMPTY_ENV, v);
++        assert_eq!(cache.get(e, EMPTY_ENV), Some(v));
++        cache.reset_shrink();
++        assert_eq!(cache.get(e, EMPTY_ENV), None);
++    }
++}
+diff --git a/src/checker/mod.rs b/src/checker/mod.rs
+index 731a446..cff1f64 100644
+--- a/src/checker/mod.rs
++++ b/src/checker/mod.rs
+@@ -7,6 +7,7 @@ pub(crate) mod conv;
+ pub(crate) mod debug_printer;
+ pub(crate) mod env;
+ pub(crate) mod eval;
++pub(crate) mod eval_front;
+ pub(crate) mod imported;
+ pub(crate) mod inductive;
+ pub(crate) mod infer;

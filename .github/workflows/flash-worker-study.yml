@@ -1,0 +1,73 @@
+name: Flash complete worker-count comparison
+on:
+  push:
+    branches: [research/flash-upstream-reconciliation-20261126]
+    paths: ['.github/workflows/flash-worker-study.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  compare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: 0
+      RUSTFLAGS: -C target-cpu=native
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Require the unchanged qualified checker
+        run: |
+          set -euo pipefail
+          git diff --exit-code bc704eebed4e009bc66af1a849f18315c11f1926 -- src Cargo.toml Cargo.lock tests test_resources
+          test "$(git rev-parse HEAD:src)" = 06c257f0f2ff1f64711cfa54620b650e6dd59b7e
+          mkdir -p "$RUNNER_TEMP/worker-study"
+          git rev-parse HEAD > "$RUNNER_TEMP/worker-study/harness-commit.txt"
+          git rev-parse HEAD:src > "$RUNNER_TEMP/worker-study/source-tree.txt"
+          lscpu > "$RUNNER_TEMP/worker-study/cpu.txt"
+      - uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/reconciled-input/mathlib.ndjson
+          key: flash-upstream-exact-mathlib-f749dfd084fc0727d107c7aaded7d492cebfc0b517cfaa7337d8a7578a6c0dec
+          fail-on-cache-miss: true
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.99.1'
+      - name: Build one ordinary native executable for both configurations
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/worker-study"
+          rustc -Vv > "$OUT/compiler.txt"
+          printf '%s\n' "$RUSTFLAGS" > "$OUT/build-flags.txt"
+          cargo build --release --locked --target-dir "$RUNNER_TEMP/worker-target" > "$OUT/build.log" 2>&1
+          cp "$RUNNER_TEMP/worker-target/release/sokonanoda" "$OUT/checker.bin"
+          sha256sum "$OUT/checker.bin" > "$OUT/binary.sha256"
+          cargo test --release --locked --target-dir "$RUNNER_TEMP/worker-target" > "$OUT/native-tests.log" 2>&1
+      - name: Verify the exact portable inputs with one checking worker
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/worker-study"
+          python3 experiments/flash-upstream-repair-20261126/prepare_portable.py
+          python3 experiments/flash-upstream-repair-20261126/verify.py portable --binary "$OUT/checker.bin" --results experiments/flash-upstream-repair-20261126/official-inputs.json --fixtures "$RUNNER_TEMP/lambda-portable-inputs/fixtures" --out "$OUT/portable"
+          python3 experiments/flash-upstream-repair-20261126/metadata_controls.py --binary "$OUT/checker.bin" --out "$OUT/source-controls"
+      - name: Compare complete native Mathlib with one and two workers
+        run: |
+          python3 experiments/flash-worker-study-20261126/native_compare.py --fixture "$RUNNER_TEMP/reconciled-input/mathlib.ndjson" --binary "$RUNNER_TEMP/worker-study/checker.bin" --out "$RUNNER_TEMP/worker-study/native"
+      - name: Build the pinned calibrated software counter
+        run: |
+          set -euo pipefail
+          python3 experiments/flash-upstream-repair-20261126/build_counter.py
+          cp "$RUNNER_TEMP/flash-dynamorio/identity.json" "$RUNNER_TEMP/worker-study/counter-identity.json"
+          cp experiments/flash-upstream-repair-20261126/instruction_counter.c "$RUNNER_TEMP/worker-study/"
+      - name: Count both complete executions with explicit multithreaded controls
+        run: |
+          python3 experiments/flash-worker-study-20261126/run.py --drrun "$RUNNER_TEMP/flash-dynamorio/DynamoRIO-Linux-11.92.20777/bin64/drrun" --client "$RUNNER_TEMP/flash-dynamorio/instruction-counter.so" --binary "$RUNNER_TEMP/worker-study/checker.bin" --fixture "$RUNNER_TEMP/reconciled-input/mathlib.ndjson" --workers 1,2 --rounds 1 --whole --out "$RUNNER_TEMP/worker-study/instructions"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-complete-worker-study
+          path: ${{ runner.temp }}/worker-study/
+          retention-days: 90

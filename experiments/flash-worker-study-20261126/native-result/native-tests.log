@@ -1,0 +1,85 @@
+[1m[92m   Compiling[0m getrandom v0.4.3
+[1m[92m   Compiling[0m rand_core v0.10.1
+[1m[92m   Compiling[0m cfg-if v1.0.5
+[1m[92m   Compiling[0m cpufeatures v0.3.1
+[1m[92m   Compiling[0m chacha20 v0.10.2
+[1m[92m   Compiling[0m rand v0.10.3
+[1m[92m   Compiling[0m num-bigint v0.5.1
+[1m[92m   Compiling[0m sokonanoda v0.5.0 (/home/runner/work/mathgraph-lean-kernel/mathgraph-lean-kernel)
+[1m[92m    Finished[0m `release` profile [optimized] target(s) in 23.65s
+[1m[92m     Running[0m unittests src/lib.rs (/home/runner/work/_temp/worker-target/release/deps/sokonanoda-61f83f660c87e7d6)
+
+running 39 tests
+test checker::inductive::tests::rejects_nested_recursor_extra_field ... ok
+test checker::inductive::tests::accepts_nested_recursor_field_counts ... ok
+test checker::inductive::tests::rejects_auxiliary_nested_recursor_extra_field ... ok
+test checker::nat::tests::nat_div_add_mod ... ok
+test checker::nat::tests::nat_div_eq ... ok
+test checker::inductive::tests::rejects_nested_recursor_missing_field ... ok
+test checker::nat::tests::nat_gcd_eq ... ok
+test checker::nat::tests::nat_land_eq ... ok
+test checker::nat::tests::nat_lor_eq ... ok
+test checker::nat::tests::nat_mod_eq ... ok
+test checker::inductive::tests::rejects_nested_recursor_field_on_nullary_constructor ... ok
+test checker::nat::tests::nat_shl_eq ... ok
+test checker::nat::tests::nat_shr_eq ... ok
+test checker::nat::tests::nat_sub_eq ... ok
+test checker::nat::tests::nat_xor_eq ... ok
+test checker::nat::tests::zero_shift_preserves_arbitrary_natural_counts ... ok
+test checker::ptrmap::tests::fingerprint_collisions_preserve_distinct_keys ... ok
+test checker::value::tests::extending_sparse_environment_keeps_far_dependencies ... ok
+test checker::nat::tests::nat_mod_eq_sub_mod ... ok
+test frontend::parser::tests::ignore_binder_metadata_in_both_parser_paths ... ok
+test checker::nat::tests::nat_div_le_self ... ok
+test frontend::parser::tests::reject_undefined_binder_type ... ok
+test frontend::parser::tests::unsafe_recursion_is_rejected_but_unsupported_unsafe_identity_is_declined ... ok
+test checker::inductive::tests::rejects_auxiliary_nested_recursor_missing_field ... ok
+test term::expr::tests::instantiation_does_not_capture_open_substitutions ... ok
+test term::level::tests::eq_antisymm_many_max_self ... ok
+test term::expr::tests::shifting_respects_let_value_and_binder_scopes ... ok
+test term::level::tests::imax_le_succ ... ok
+test term::hash::tests::hash_eq_of_eq ... ok
+test term::level::tests::imax_zero ... ok
+test term::level::tests::max_self ... ok
+test term::level::tests::param_incomparable ... ok
+test term::level::tests::imax_le_imax ... ok
+test term::level::tests::repr_succ ... ok
+test term::level::tests::repr_succ_max ... ok
+test term::level::tests::succ_max_self ... ok
+test term::level::tests::succ_le_succ ... ok
+test term::level::tests::max_le_max ... ok
+test term::level::tests::imax_eq_max_of_pos ... ok
+
+test result: ok. 39 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+[1m[92m     Running[0m unittests src/main.rs (/home/runner/work/_temp/worker-target/release/deps/sokonanoda-df92eb39e17db75e)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+[1m[92m     Running[0m tests/arena.rs (/home/runner/work/_temp/worker-target/release/deps/arena-49c02ec652f9a392)
+
+running 2 tests
+test arena_fast_tier ... ok
+17/17  reject  def            0.146ms  e
+7/8  reject  def            0.024ms  explosion_helper
+test retained_source_regressions ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+[1m[92m   Doc-tests[0m sokonanoda
+
+running 2 tests
+test src/checker/inductive/mod.rs - checker::inductive::InductiveCheckState::nested_to_unspecialized_ty (line 164) ... ignored
+test src/checker/inductive/mod.rs - checker::inductive::InductiveCheckState::nested_to_unspecialized_ty (line 169) ... ignored
+
+test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 1 test
+test src/checker/inductive/restore.rs - checker::inductive::restore::TypeChecker<'x,'t>::mk_specialized_rec_to_unspecialized_map (line 20) ... ignored
+
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+all doctests ran in 1.35s; merged doctests compilation took 1.35s

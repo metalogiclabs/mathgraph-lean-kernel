@@ -1,0 +1,134 @@
+diff --git a/src/checker/value.rs b/src/checker/value.rs
+index b07f9c5..5d789d4 100644
+--- a/src/checker/value.rs
++++ b/src/checker/value.rs
+@@ -385,6 +385,9 @@ pub(crate) struct Vals {
+     frames: PtrMap<u64, E>,
+     nils: PtrMap<LsubId, E>,
+     ctxs: Vec<CtxNode>,
++    // MathGraph: contiguous parent spans, separate from the compact context
++    // nodes so an index-zero lookup retains its original layout and fast path.
++    ctx_runs: Vec<u16>,
+     lsubs: Vec<LevelSub>,
+ }
+ 
+@@ -421,6 +424,7 @@ impl Vals {
+             frames: Reset::with_cap(SESSION),
+             nils: Reset::with_cap(SMALL),
+             ctxs: Vec::new(),
++            ctx_runs: Vec::new(),
+             lsubs: Vec::new(),
+         };
+         vals.clear();
+@@ -438,6 +442,7 @@ impl Vals {
+         self.frames.reset_shrink();
+         self.nils.reset();
+         self.ctxs.clear();
++        self.ctx_runs.clear();
+         self.lsubs.clear();
+         self.nodes.push(BLANK);
+         self.envs.push(NIL_ENV_NODE);
+@@ -445,6 +450,7 @@ impl Vals {
+             ty: DUMMY,
+             parent: EMPTY_CTX,
+         });
++        self.ctx_runs.push(0);
+     }
+ 
+     pub(crate) fn clear_memos(&mut self) {
+@@ -470,6 +476,7 @@ impl Vals {
+             + self.envs.capacity() * size_of::<EnvNode>()
+             + self.env_slots.capacity() * size_of::<V>()
+             + self.ctxs.capacity() * size_of::<CtxNode>()
++            + self.ctx_runs.capacity() * size_of::<u16>()
+             + self.lsubs.capacity() * size_of::<LevelSub>();
+         if held > keep {
+             *self = Vals::new();
+@@ -483,6 +490,7 @@ impl Vals {
+             + self.envs.len() * size_of::<EnvNode>()
+             + self.env_slots.len() * size_of::<V>()
+             + self.ctxs.len() * size_of::<CtxNode>()
++            + self.ctx_runs.len() * size_of::<u16>()
+             + self.lsubs.len() * size_of::<LevelSub>()
+     }
+ 
+@@ -896,8 +904,13 @@ impl Vals {
+             if idx == 0 {
+                 return Some(n.ty);
+             }
+-            idx -= 1;
+-            cur = n.parent;
++            let span = *at(&self.ctx_runs, cur.index());
++            debug_assert!(span > 0);
++            if idx < span {
++                return Some(at(&self.ctxs, cur.index() - usize::from(idx)).ty);
++            }
++            idx -= span;
++            cur = at(&self.ctxs, cur.index() - usize::from(span - 1)).parent;
+         }
+         None
+     }
+@@ -1234,7 +1247,13 @@ impl Vals {
+ 
+     pub(crate) fn ctx_extend(&mut self, parent: C, ty: V) -> C {
+         let id = CtxId(next_id(self.ctxs.len()));
++        let span = if parent.index() + 1 == id.index() {
++            at(&self.ctx_runs, parent.index()).saturating_add(1)
++        } else {
++            1
++        };
+         self.ctxs.push(CtxNode { ty, parent });
++        self.ctx_runs.push(span);
+         id
+     }
+ }
+@@ -1273,4 +1292,49 @@ mod tests {
+         assert!(vals.env_is_pruned(env, FAR | 3));
+         assert!(!vals.env_is_pruned(env, 3));
+     }
++
++    #[test]
++    fn compressed_context_lookup_matches_parent_walk_across_branches() {
++        let mut vals = Vals::new();
++        let sort = vals.mk_sort(ZERO);
++        let mut last = EMPTY_CTX;
++        for i in 1..2500u32 {
++            let parent = if i % 17 == 0 { CtxId(i / 3) } else { last };
++            let ty = vals.mk_head(RigidHead::BVar(i, sort), false);
++            last = vals.ctx_extend(parent, ty);
++            for idx in [0u16, 1, 2, 7, 16, 17, 63, 127, 1024] {
++                let mut reference = last;
++                let mut remaining = idx;
++                while reference != EMPTY_CTX && remaining > 0 {
++                    reference = vals.ctxs[reference.index()].parent;
++                    remaining -= 1;
++                }
++                let expected = (reference != EMPTY_CTX).then(|| vals.ctxs[reference.index()].ty);
++                assert_eq!(vals.ctx_lookup(last, idx), expected, "context {i}, index {idx}");
++            }
++        }
++    }
++
++    #[test]
++    fn context_spans_saturate_and_reset_without_changing_lookup() {
++        let mut vals = Vals::new();
++        let sort = vals.mk_sort(ZERO);
++        let mut ctx = EMPTY_CTX;
++        let mut types = Vec::new();
++        for i in 0..u32::from(u16::MAX) + 3 {
++            let ty = vals.mk_head(RigidHead::BVar(i, sort), false);
++            types.push(ty);
++            ctx = vals.ctx_extend(ctx, ty);
++        }
++        assert_eq!(vals.ctx_runs[ctx.index()], u16::MAX);
++        for idx in [0u16, 1, 63, 32767, 65534, 65535] {
++            assert_eq!(vals.ctx_lookup(ctx, idx), Some(types[types.len() - 1 - usize::from(idx)]));
++        }
++        vals.clear();
++        assert_eq!(vals.ctx_runs, [0]);
++        let fresh = vals.mk_sort(ZERO);
++        let ctx = vals.ctx_extend(EMPTY_CTX, fresh);
++        assert_eq!(vals.ctx_lookup(ctx, 0), Some(fresh));
++        assert_eq!(vals.ctx_lookup(ctx, 1), None);
++    }
+ }

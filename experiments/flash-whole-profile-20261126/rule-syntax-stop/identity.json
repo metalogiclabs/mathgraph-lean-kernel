@@ -1,0 +1,16 @@
+{
+  "boundary": "Matched-method diagnostic; not Callgrind counts, ten-large-input qualification or official Arena rank.",
+  "build": {
+    "binary_sha256": "898020346c3537307887c3b2246f32531b0a281c6f163bd05b2da7faf6506720",
+    "library_tests": 47,
+    "name": "rule_syntax",
+    "src_tree": "136bed4a3151e4ddf117980dcb05e242da9c0cbf"
+  },
+  "build_evidence_head": "6d01fda18dd28a0ad29369eef7efcc879f740425",
+  "input": {
+    "sha256": "f749dfd084fc0727d107c7aaded7d492cebfc0b517cfaa7337d8a7578a6c0dec",
+    "size": 6326141213
+  },
+  "method": "Cachegrind, cache-sim=no, branch-sim=no, generic x86-64, one worker",
+  "valgrind": "valgrind-3.22.0"
+}

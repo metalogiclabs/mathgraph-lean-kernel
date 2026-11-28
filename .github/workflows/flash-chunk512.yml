@@ -1,0 +1,155 @@
+name: Flash 512-declaration batch qualification
+on:
+  push:
+    branches: [research/flash-upstream-reconciliation-20261126]
+    paths: ['.github/workflows/flash-chunk512.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RUSTFLAGS: -C target-cpu=x86-64 -C target-feature=-avx,-avx2,-avx512f,-fma
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.99.1'
+      - name: Require the single scheduling-constant source change
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/chunk512"
+          mkdir -p "$OUT/builds"
+          git rev-parse HEAD > "$OUT/harness-commit.txt"
+          git worktree add --detach "$RUNNER_TEMP/chunk512-source" 4816054e2331c3cd6b57cbcd51d3e265b48c68e7
+          test "$(git rev-parse 4816054e:src)" = fa9f0de20650f28f63f1d01d7dab50397e167bcf
+          test "$(git diff --numstat bc704eeb 4816054e)" = "$(printf '1\t1\tsrc/checker/tc.rs')"
+          git diff bc704eeb 4816054e > "$OUT/prototype.patch"
+          rustc -Vv > "$OUT/compiler.txt"
+          printf '%s\n' "$RUSTFLAGS" > "$OUT/build-flags.txt"
+          gh api repos/metalogiclabs/mathgraph-lean-kernel/actions/artifacts/15069518161/zip > "$OUT/original.zip"
+          python3 experiments/flash-worker-counter-recovery-20261126/thaw.py --archive "$OUT/original.zip" --out "$OUT/baseline"
+          cp "$OUT/baseline/checker.bin" "$OUT/builds/baseline.bin"
+          cargo build --release --locked --manifest-path "$RUNNER_TEMP/chunk512-source/Cargo.toml" --target-dir "$RUNNER_TEMP/chunk512-target" > "$OUT/build.log" 2>&1
+          cp "$RUNNER_TEMP/chunk512-target/release/sokonanoda" "$OUT/builds/strict.bin"
+          cargo test --release --locked --manifest-path "$RUNNER_TEMP/chunk512-source/Cargo.toml" --target-dir "$RUNNER_TEMP/chunk512-target" > "$OUT/tests.log" 2>&1
+          python3 - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          out=Path(os.environ['RUNNER_TEMP'])/'chunk512'
+          record=json.loads(Path('experiments/flash-chunk512-20261126/candidate.json').read_text())
+          record['candidate_binary_sha256']=hashlib.sha256((out/'builds/strict.bin').read_bytes()).hexdigest()
+          record['baseline_binary_sha256']=hashlib.sha256((out/'builds/baseline.bin').read_bytes()).hexdigest()
+          assert record['candidate_binary_sha256']!=record['baseline_binary_sha256']
+          (out/'identity.json').write_text(json.dumps(record,indent=2)+'\n')
+          PY
+      - name: Verify exact portable outcomes with two workers
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/chunk512"
+          python3 experiments/flash-upstream-repair-20261126/prepare_portable.py
+          python3 experiments/flash-chunk512-20261126/verify_two_workers.py portable --binary "$OUT/builds/strict.bin" --results experiments/flash-upstream-repair-20261126/official-inputs.json --fixtures "$RUNNER_TEMP/lambda-portable-inputs/fixtures" --out "$OUT/portable"
+          python3 experiments/flash-chunk512-20261126/metadata_two_workers.py --binary "$OUT/builds/strict.bin" --out "$OUT/source-controls"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-chunk512-generic
+          path: ${{ runner.temp }}/chunk512/
+          retention-days: 90
+  measure:
+    needs: qualify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 80
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: flash-chunk512-generic
+          path: ${{ runner.temp }}/chunk512
+      - uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/reconciled-input/mathlib.ndjson
+          key: flash-upstream-exact-mathlib-f749dfd084fc0727d107c7aaded7d492cebfc0b517cfaa7337d8a7578a6c0dec
+          fail-on-cache-miss: true
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.99.1'
+      - name: Build both native executables on this measurement host
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/chunk512-native"
+          mkdir -p "$OUT/builds"
+          lscpu > "$OUT/cpu.txt"
+          for ARM in baseline strict; do
+            REF=bc704eebed4e009bc66af1a849f18315c11f1926
+            if [ "$ARM" = strict ]; then REF=4816054e2331c3cd6b57cbcd51d3e265b48c68e7; fi
+            git worktree add --detach "$RUNNER_TEMP/chunk512-native-$ARM" "$REF"
+            RUSTFLAGS='-C target-cpu=native' cargo build --release --locked --manifest-path "$RUNNER_TEMP/chunk512-native-$ARM/Cargo.toml" --target-dir "$RUNNER_TEMP/chunk512-native-target-$ARM" > "$OUT/$ARM-build.log" 2>&1
+            cp "$RUNNER_TEMP/chunk512-native-target-$ARM/release/sokonanoda" "$OUT/builds/$ARM.bin"
+          done
+      - name: Run both complete native configurations in alternating pairs
+        run: |
+          python3 experiments/flash-chunk512-20261126/native_compare.py --fixture "$RUNNER_TEMP/reconciled-input/mathlib.ndjson" --binaries "$RUNNER_TEMP/chunk512-native/builds" --out "$RUNNER_TEMP/chunk512-native/measurements"
+      - name: Count both complete generic executables with two workers
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/chunk512"
+          chmod +x "$OUT/builds/"*.bin
+          python3 experiments/flash-upstream-repair-20261126/build_counter.py
+          cp "$RUNNER_TEMP/flash-dynamorio/identity.json" "$OUT/counter-identity.json"
+          python3 experiments/flash-chunk512-20261126/compare_instructions.py --drrun "$RUNNER_TEMP/flash-dynamorio/DynamoRIO-Linux-11.92.20777/bin64/drrun" --client "$RUNNER_TEMP/flash-dynamorio/instruction-counter.so" --fixture "$RUNNER_TEMP/reconciled-input/mathlib.ndjson" --binaries "$OUT/builds" --baseline-cli --whole --rounds 1 --out "$OUT/instructions"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-chunk512-complete-comparison
+          path: |
+            ${{ runner.temp }}/chunk512/
+            ${{ runner.temp }}/chunk512-native/
+          retention-days: 90
+  large:
+    needs: qualify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include:
+          - {id: cedar, case: cedar}
+          - {id: con-leche, case: con-leche}
+          - {id: cslib, case: cslib}
+          - {id: init, case: init}
+          - {id: navier-stokes-euler, case: navier-stokes-euler}
+          - {id: magma-string-n4, case: perf/magma-string-n4}
+          - {id: magma-string-pair-n9, case: perf/magma-string-pair-n9}
+          - {id: reachability, case: reachability}
+          - {id: std, case: std}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: flash-chunk512-generic
+          path: ${{ runner.temp }}/chunk512
+      - uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/large-input/test.ndjson
+          key: flash-reconciled-current-large-${{ matrix.id }}-cb0665b7
+          fail-on-cache-miss: true
+      - name: Require the original input hash and exact declaration count
+        run: |
+          chmod +x "$RUNNER_TEMP/chunk512/builds/strict.bin"
+          python3 experiments/flash-chunk512-20261126/large.py --case '${{ matrix.case }}' --binary "$RUNNER_TEMP/chunk512/builds/strict.bin" --identity "$RUNNER_TEMP/chunk512/identity.json" --fixture "$RUNNER_TEMP/large-input/test.ndjson" --out "$RUNNER_TEMP/chunk512-large"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-chunk512-large-${{ matrix.id }}
+          path: ${{ runner.temp }}/chunk512-large/
+          retention-days: 90

@@ -1,0 +1,829 @@
+diff --git a/src/checker/eval/reduction.rs b/src/checker/eval/reduction.rs
+index 8e88df2..f7835e8 100644
+--- a/src/checker/eval/reduction.rs
++++ b/src/checker/eval/reduction.rs
+@@ -392,8 +392,22 @@ impl TypeChecker<'_, '_> {
+                 }
+             }
+             if arithmetic && let Some(args) = self.vals().spine_apps(spine) {
+-                if !symbolic && let Some(r) = self.do_nat_red(depth, head.name, &args) {
+-                    self.vals_mut().set_step(v, r);
++                let reduction = if !symbolic {
++                    self.do_nat_red(depth, head.name, &args)
++                } else if matches!(
++                    self.ctx.export_file.nat_red(head.name),
++                    Some(crate::term::name::NatRed::Shl | crate::term::name::NatRed::Shr)
++                ) {
++                    self.do_nat_red_at(depth, head.name, &args, false)
++                } else {
++                    None
++                };
++                if let Some(r) = reduction {
++                    if symbolic {
++                        self.tc_cache.arithmetic_delta_cache.insert(v, r);
++                    } else {
++                        self.vals_mut().set_step(v, r);
++                    }
+                     return r;
+                 }
+                 if !force && self.nat_red_defer(head.name, &args) {
+@@ -757,6 +771,23 @@ impl TypeChecker<'_, '_> {
+         self.do_nat_red_at(depth, name, args, true)
+     }
+ 
++    fn observed_shift_operand(&mut self, depth: u32, arg: V) -> Option<BigUint> {
++        if let Some(n) = self.value_to_bignum_at(depth, arg, false) {
++            return Some(n);
++        }
++        // An applied ordinary function may discard its open argument. Expose
++        // exactly one real source reduction and require an observed numeral.
++        if let Value::Unfold { head, .. } = self.val(arg) {
++            if self.ctx.export_file.nat_red(head.name).is_none() {
++                let reduced = self.unfold_value(depth, arg);
++                if reduced != arg {
++                    return self.value_to_bignum_at(depth, reduced, false);
++                }
++            }
++        }
++        None
++    }
++
+     fn do_nat_red_at(&mut self, depth: u32, name: NameId, args: &[V], deep: bool) -> Option<V> {
+         use crate::term::name::NatRed;
+         let kind = self.ctx.export_file.nat_red(name)?;
+@@ -778,7 +809,13 @@ impl TypeChecker<'_, '_> {
+             if args.len() != 2 {
+                 return None;
+             }
+-            let x = self.value_to_bignum_at(depth, args[0], deep)?;
++            let x = self.value_to_bignum_at(depth, args[0], deep).or_else(|| {
++                if matches!(kind, NatRed::Shl | NatRed::Shr) {
++                    self.observed_shift_operand(depth, args[0])
++                } else {
++                    None
++                }
++            })?;
+             let y = self.value_to_bignum_at(depth, args[1], deep)?;
+             (x, y)
+         };
+diff --git a/src/checker/imported.rs b/src/checker/imported.rs
+new file mode 100644
+index 0000000..59c0503
+--- /dev/null
++++ b/src/checker/imported.rs
+@@ -0,0 +1,112 @@
++// SPDX-License-Identifier: Apache-2.0
++// MathGraph: retain comparison with imported declarations when reconstructing them.
++
++use super::cache::TcCache;
++use super::context::{ExportFile, TcCtx};
++use super::env::{Declar, EnvLimit};
++use super::tc::{InferFlag::Check, TypeChecker};
++use super::value::{EMPTY_CTX, EMPTY_ENV};
++use crate::outcome::{CheckError, ensure};
++use crate::term::id::NameId;
++use std::error::Error;
++use std::sync::Arc;
++
++pub(crate) struct SourceBlock {
++    pub names: Arc<[NameId]>,
++    pub declarations: Vec<Declar>,
++}
++
++fn belongs(d: &Declar, names: &[NameId]) -> bool {
++    match d {
++        Declar::Inductive(d) => d.all_ind_names.as_ref() == names,
++        Declar::Constructor(d) => names.contains(&d.inductive_name),
++        Declar::Recursor(d) => d.all_inductives.as_ref() == names,
++        _ => false,
++    }
++}
++
++impl ExportFile {
++    pub(crate) fn check_imported_blocks(
++        &self,
++        blocks: &[SourceBlock],
++    ) -> Result<(), Box<dyn Error>> {
++        std::thread::scope(|scope| {
++            std::thread::Builder::new().name("imported-declarations".into())
++                .stack_size(crate::STACK_SIZE).spawn_scoped(scope, || {
++                for block in blocks {
++                    let start = self.declars.get_index_of(&block.names[0]).expect("missing derived block");
++                    let count = self.declars.iter().skip(start)
++                        .take_while(|(_, d)| belongs(d, &block.names)).count();
++                    ensure!(count == block.declarations.len(), "imported inductive block has missing or extra declarations");
++                    let env = self.new_env(EnvLimit::ByIndex(start + count));
++                    let mut seen = crate::term::hash::FxHashSet::default();
++                    for source in &block.declarations {
++                        ensure!(seen.insert(source.info().name), "duplicate imported declaration");
++                        let Some(derived) = self.declars.get(&source.info().name) else {
++                            crate::outcome::reject!("imported declaration was not reconstructed")
++                        };
++                        ensure!(belongs(derived, &block.names), "imported declaration belongs to a different block");
++                        ensure!(source.info().uparams == derived.info().uparams, "imported declaration universe parameters differ");
++                        match (source, derived) {
++                            (Declar::Inductive(a), Declar::Inductive(b)) => ensure!(
++                                a.all_ind_names == b.all_ind_names && a.all_ctor_names == b.all_ctor_names
++                                && a.num_params == b.num_params && a.num_indices == b.num_indices
++                                && a.is_recursive == b.is_recursive && a.is_nested == b.is_nested,
++                                "imported inductive metadata differs"),
++                            (Declar::Constructor(a), Declar::Constructor(b)) => ensure!(
++                                a.inductive_name == b.inductive_name && a.ctor_idx == b.ctor_idx
++                                && a.num_params == b.num_params && a.num_fields == b.num_fields,
++                                "imported constructor metadata differs"),
++                            (Declar::Recursor(a), Declar::Recursor(b)) => {
++                                ensure!(a.all_inductives == b.all_inductives && a.num_params == b.num_params
++                                    && a.num_indices == b.num_indices && a.num_motives == b.num_motives
++                                    && a.num_minors == b.num_minors && a.is_k == b.is_k
++                                    && a.rec_rules.len() == b.rec_rules.len(), "imported recursor metadata differs");
++                                for (a, b) in a.rec_rules.iter().zip(b.rec_rules.iter()) {
++                                    ensure!(a.ctor_name == b.ctor_name
++                                        && a.ctor_telescope_size_wo_params == b.ctor_telescope_size_wo_params,
++                                        "imported recursor rule constructor or field count differs");
++                                }
++                            },
++                            _ => crate::outcome::reject!("imported declaration kind differs"),
++                        }
++                        let rules_differ = match (source, derived) {
++                            (Declar::Recursor(a), Declar::Recursor(b)) =>
++                                a.rec_rules.iter().zip(b.rec_rules.iter()).any(|(a,b)| a.val != b.val),
++                            _ => false,
++                        };
++                        // The exact derived expression is already checked by reconstruction.
++                        if source.info().ty == derived.info().ty && !rules_differ { continue }
++                        let arena = bumpalo::Bump::new();
++                        let mut ctx = TcCtx::new(self, &arena);
++                        let mut cache = TcCache::new_small();
++                        let mut tc = TypeChecker::new(&mut ctx, &env, Some(*source.info()), &mut cache);
++                        if source.info().ty != derived.info().ty {
++                            ensure!(tc.ctx.node(source.info().ty).loose == 0, "imported type contains a loose bound variable");
++                            tc.infer_sort_of_v(Check, 0, EMPTY_ENV, EMPTY_CTX, source.info().ty);
++                            let a = tc.eval(0, EMPTY_ENV, source.info().ty);
++                            let b = tc.eval(0, EMPTY_ENV, derived.info().ty);
++                            ensure!(tc.conv_types_at(0, a, b), "imported declaration type differs");
++                        }
++                        if let (Declar::Recursor(a), Declar::Recursor(b)) = (source, derived) {
++                            for (a, b) in a.rec_rules.iter().zip(b.rec_rules.iter()) {
++                                if a.val == b.val { continue }
++                                ensure!(tc.ctx.node(a.val).loose == 0, "imported rule contains a loose bound variable");
++                                let aty = tc.infer_value(Check, 0, EMPTY_ENV, EMPTY_CTX, a.val);
++                                let bty = tc.infer_value(Check, 0, EMPTY_ENV, EMPTY_CTX, b.val);
++                                ensure!(tc.conv_types_at(0, aty, bty), "imported recursor rule type differs");
++                                let av = tc.eval(0, EMPTY_ENV, a.val);
++                                let bv = tc.eval(0, EMPTY_ENV, b.val);
++                                ensure!(tc.def_eq_at(0, av, bv), "imported recursor rule value differs");
++                            }
++                        }
++                    }
++                }
++            })?.join().map_err(CheckError::from_panic)
++                .map_err(|e| -> Box<dyn Error> { match e {
++                    CheckError::Rejected(e) => Box::new(e), CheckError::Declined(e) => Box::new(e),
++                    CheckError::Internal(p) => std::panic::resume_unwind(p),
++                } })
++        })
++    }
++}
+diff --git a/src/checker/inductive/tests.rs b/src/checker/inductive/tests.rs
+index 00260d0..9ca5d97 100644
+--- a/src/checker/inductive/tests.rs
++++ b/src/checker/inductive/tests.rs
+@@ -2,11 +2,9 @@
+ // SPDX-License-Identifier: Apache-2.0
+ 
+ use crate::checker::context::ExportFile;
+-use crate::checker::env::Declar;
+ use crate::config::Config;
+ use crate::frontend::parser::parse_export_mapped;
+-use crate::outcome::CheckError;
+-use std::sync::Arc;
++use crate::outcome::Rejection;
+ 
+ const NESTED_EXPORT: &str = r#"{"in":1,"str":{"pre":0,"str":"C"}}
+ {"il":1,"succ":0}
+@@ -130,34 +128,80 @@ fn nested_export(num_threads: usize) -> ExportFile {
+ }
+ 
+ fn reject_field_count(rec_name: &str, ctor_name: &str, nfields: u16) {
++    // Mutate the untrusted bytes before parsing. Parsing reconstructs checked
++    // declarations, so mutating ExportFile afterward attacks a different boundary.
++    let mut names = std::collections::BTreeMap::from([(0u64, String::new())]);
++    let mut rows: Vec<serde_json::Value> = NESTED_EXPORT
++        .lines()
++        .map(|line| serde_json::from_str(line).unwrap())
++        .collect();
++    for row in &rows {
++        if let Some(s) = row.get("str") {
++            let prefix = &names[&s["pre"].as_u64().unwrap()];
++            let suffix = s["str"].as_str().unwrap();
++            let name = if prefix.is_empty() {
++                suffix.to_owned()
++            } else {
++                format!("{prefix}.{suffix}")
++            };
++            names.insert(row["in"].as_u64().unwrap(), name);
++        }
++    }
++    let rec_id = *names
++        .iter()
++        .find(|(_, n)| n.as_str() == rec_name)
++        .unwrap()
++        .0;
++    let ctor_id = *names
++        .iter()
++        .find(|(_, n)| n.as_str() == ctor_name)
++        .unwrap()
++        .0;
++    let mut changed = 0;
++    for row in &mut rows {
++        if let Some(recs) = row
++            .get_mut("inductive")
++            .and_then(|i| i.get_mut("recs"))
++            .and_then(|r| r.as_array_mut())
++        {
++            for rec in recs {
++                if rec["name"].as_u64() == Some(rec_id) {
++                    for rule in rec["rules"].as_array_mut().unwrap() {
++                        if rule["ctor"].as_u64() == Some(ctor_id) {
++                            assert_ne!(rule["nfields"].as_u64(), Some(u64::from(nfields)));
++                            rule["nfields"] = serde_json::json!(nfields);
++                            changed += 1;
++                        }
++                    }
++                }
++            }
++        }
++    }
++    assert_eq!(changed, 1);
++    let input = rows
++        .iter()
++        .map(|r| serde_json::to_string(r).unwrap())
++        .collect::<Vec<_>>()
++        .join("\n")
++        + "\n";
+     for num_threads in [1, 4] {
+-        let mut export = nested_export(num_threads);
+-        let find_name = |name: &str| {
+-            export
+-                .declars
+-                .keys()
+-                .copied()
+-                .find(|&n| export.display(n).to_string() == name)
+-                .unwrap()
+-        };
+-        let rec_name_id = find_name(rec_name);
+-        let ctor_name_id = find_name(ctor_name);
+-        let Some(Declar::Recursor(rec)) = export.declars.get_mut(&rec_name_id) else {
+-            panic!("expected recursor");
+-        };
+-        let rule = Arc::make_mut(&mut rec.rec_rules)
+-            .iter_mut()
+-            .find(|r| r.ctor_name == ctor_name_id)
+-            .unwrap();
+-        assert_ne!(rule.ctor_telescope_size_wo_params, nfields);
+-        rule.ctor_telescope_size_wo_params = nfields;
+-        let Err(CheckError::Rejected(error)) = export.check_all_declars() else {
++        let Err(error) = parse_export_mapped(
++            input.as_bytes(),
++            Config {
++                num_threads,
++                ..Config::default()
++            },
++        ) else {
+             panic!("expected rejection for {rec_name}, {ctor_name}, nfields={nfields}");
+         };
+         assert!(
+-            error.0.contains(&format!(
+-                "recursor rule field count mismatch for {ctor_name} in {rec_name}"
+-            )),
++            error.downcast_ref::<Rejection>().is_some(),
++            "unexpected failure: {error}"
++        );
++        assert!(
++            error
++                .to_string()
++                .contains("imported recursor rule constructor or field count differs"),
+             "unexpected rejection: {error}"
+         );
+     }
+diff --git a/src/checker/mod.rs b/src/checker/mod.rs
+index 7c982cc..731a446 100644
+--- a/src/checker/mod.rs
++++ b/src/checker/mod.rs
+@@ -7,6 +7,7 @@ pub(crate) mod conv;
+ pub(crate) mod debug_printer;
+ pub(crate) mod env;
+ pub(crate) mod eval;
++pub(crate) mod imported;
+ pub(crate) mod inductive;
+ pub(crate) mod infer;
+ pub(crate) mod nat;
+diff --git a/src/checker/nat.rs b/src/checker/nat.rs
+index 0f588bc..935d62b 100644
+--- a/src/checker/nat.rs
++++ b/src/checker/nat.rs
+@@ -30,6 +30,9 @@ fn shift_amount(y: &BigUint) -> Option<u64> {
+ }
+ 
+ pub(crate) fn nat_shl(x: BigUint, y: &BigUint) -> BigUint {
++    if x.is_zero() {
++        return x;
++    }
+     let sh = shift_amount(y).expect("Nat.shiftLeft: shift does not fit in a machine word");
+     x << sh
+ }
+@@ -55,6 +58,17 @@ mod tests {
+     use num_bigint::BigUint;
+     use num_traits::{One, Zero};
+ 
++    #[test]
++    fn zero_shift_preserves_arbitrary_natural_counts() {
++        let beyond_word = BigUint::one() << 128u32;
++        assert_eq!(nat_shl(BigUint::zero(), &beyond_word), BigUint::zero());
++        assert_eq!(nat_shr(BigUint::one(), &beyond_word), BigUint::zero());
++        assert_eq!(
++            nat_shl(BigUint::from(3u8), &BigUint::from(2u8)),
++            BigUint::from(12u8)
++        );
++    }
++
+     fn pred(x: BigUint) -> BigUint {
+         if x == BigUint::zero() {
+             x
+diff --git a/src/frontend/parser.rs b/src/frontend/parser.rs
+index abd22cd..de4f383 100644
+--- a/src/frontend/parser.rs
++++ b/src/frontend/parser.rs
+@@ -2,7 +2,10 @@
+ // SPDX-License-Identifier: Apache-2.0
+ 
+ use crate::checker::context::ExportFile;
+-use crate::checker::env::{ConstructorData, Declar, DeclarInfo, InductiveData, ReducibilityHint};
++use crate::checker::env::{
++    ConstructorData, Declar, DeclarInfo, InductiveData, RecRule, RecursorData, ReducibilityHint,
++};
++use crate::checker::imported::SourceBlock;
+ use crate::config::{AxiomDecision, Config};
+ use crate::outcome::{decline, ensure, reject, unsupported};
+ use crate::term::expr::{Expr, ExprNode};
+@@ -50,6 +53,7 @@ pub struct Parser {
+     config: Config,
+     mutual_block_sizes: FxHashMap<NameId, (usize, usize)>,
+     scratch_idxs: Vec<u32>,
++    imported_blocks: Vec<SourceBlock>,
+ }
+ 
+ #[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
+@@ -114,6 +118,7 @@ enum DefinitionSafety {
+ 
+ #[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
+ struct IndInfo {
++    all: Vec<u32>,
+     name: u32,
+     #[serde(rename = "levelParams")]
+     uparams: Vec<u32>,
+@@ -124,6 +129,12 @@ struct IndInfo {
+     num_params: u16,
+     #[serde(rename = "isUnsafe")]
+     is_unsafe: bool,
++    #[serde(rename = "numIndices")]
++    num_indices: u16,
++    #[serde(rename = "numNested")]
++    num_nested: u16,
++    #[serde(rename = "isRec")]
++    is_recursive: bool,
+ }
+ 
+ #[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
+@@ -131,6 +142,45 @@ struct Constructor {
+     name: u32,
+     #[serde(rename = "type")]
+     ty: u32,
++    induct: u32,
++    cidx: u16,
++    #[serde(rename = "levelParams")]
++    uparams: Vec<u32>,
++    #[serde(rename = "numParams")]
++    num_params: u16,
++    #[serde(rename = "numFields")]
++    num_fields: u16,
++    #[serde(rename = "isUnsafe")]
++    is_unsafe: bool,
++}
++
++#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
++struct ImportedRule {
++    ctor: u32,
++    nfields: u16,
++    rhs: u32,
++}
++
++#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
++struct ImportedRecursor {
++    name: u32,
++    all: Vec<u32>,
++    #[serde(rename = "type")]
++    ty: u32,
++    #[serde(rename = "levelParams")]
++    uparams: Vec<u32>,
++    #[serde(rename = "numParams")]
++    num_params: u16,
++    #[serde(rename = "numIndices")]
++    num_indices: u16,
++    #[serde(rename = "numMotives")]
++    num_motives: u16,
++    #[serde(rename = "numMinors")]
++    num_minors: u16,
++    #[serde(rename = "isUnsafe")]
++    is_unsafe: bool,
++    k: bool,
++    rules: Vec<ImportedRule>,
+ }
+ 
+ #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+@@ -256,6 +306,8 @@ enum ExportJsonVal<'a> {
+         ind_vals: Vec<IndInfo>,
+         #[serde(rename = "ctors")]
+         ctor_vals: Vec<Constructor>,
++        #[serde(rename = "recs")]
++        rec_vals: Vec<ImportedRecursor>,
+     },
+ }
+ 
+@@ -659,6 +711,7 @@ impl Parser {
+             config,
+             mutual_block_sizes: new_fx_hash_map(),
+             scratch_idxs: Vec::new(),
++            imported_blocks: Vec::new(),
+         }
+     }
+ 
+@@ -767,6 +820,7 @@ impl Parser {
+     }
+ 
+     fn finish(self) -> Result<ExportFile, Box<dyn Error>> {
++        let imported_blocks = self.imported_blocks;
+         let num_names = self.terms.names.items.len();
+         let mut nat_red = vec![None; num_names];
+         let name_cache = self.terms.mk_name_cache(&mut nat_red);
+@@ -783,6 +837,7 @@ impl Parser {
+         };
+         if !export.config.parse_only {
+             export.check_inductives()?;
++            export.check_imported_blocks(&imported_blocks)?;
+         }
+         Ok(export)
+     }
+@@ -1193,6 +1248,19 @@ impl Parser {
+     }
+ 
+     fn add_declar(&mut self, name: NameId, d: Declar) {
++        ensure!(
++            self.node(d.info().ty).loose == 0,
++            "declaration type contains a loose bound variable"
++        );
++        if let Declar::Definition { val, .. }
++        | Declar::Theorem { val, .. }
++        | Declar::Opaque { val, .. } = &d
++        {
++            ensure!(
++                self.node(*val).loose == 0,
++                "declaration value contains a loose bound variable"
++            );
++        }
+         let idx = u32::try_from(self.declars.len()).expect("declaration count exceeds u32");
+         if idx == NO_DECL {
+             unsupported!("declaration count exceeds u32");
+@@ -1226,6 +1294,25 @@ impl Parser {
+         self.add_declar(name, theorem);
+     }
+ 
++    fn source_mentions(&self, root: ExprId, target: NameId) -> bool {
++        let mut pending = vec![root];
++        let mut seen = crate::term::hash::FxHashSet::default();
++        while let Some(expr) = pending.pop() {
++            if !seen.insert(expr) {
++                continue;
++            }
++            let node = self.node(expr).expr;
++            if matches!(node, Expr::Const { name, .. } if name == target) {
++                return true;
++            }
++            node.map_children(|child, _| {
++                pending.push(child);
++                child
++            });
++        }
++        false
++    }
++
+     fn go1_general(&mut self, line: &str) -> Result<(), Box<dyn Error>> {
+         use ExportJsonVal::{
+             Axiom, Defn, ExprApp, ExprBVar, ExprConst, ExprLambda, ExprLet, ExprMData, ExprPi,
+@@ -1306,6 +1393,12 @@ impl Parser {
+                 safety,
+             } => {
+                 if matches!(safety, DefinitionSafety::Unsafe | DefinitionSafety::Partial) {
++                    // A self-reference is independently inadmissible to the safe
++                    // kernel; an unsafe declaration is not evidence for its type.
++                    ensure!(
++                        !self.source_mentions(self.get_expr(value), self.get_name(name)),
++                        "recursive unsafe or partial definition is not kernel evidence"
++                    );
+                     return decline("unsafe and partial definitions are not supported");
+                 }
+                 self.do_def(name, ty, value, &uparams, hint);
+@@ -1353,7 +1446,9 @@ impl Parser {
+             Inductive {
+                 ind_vals,
+                 ctor_vals,
++                rec_vals,
+             } => {
++                let mut source_declarations = Vec::new();
+                 let block_start = self.declars.len();
+                 let block_size =
+                     ind_vals.len() + ind_vals.iter().map(|ind| ind.ctors.len()).sum::<usize>();
+@@ -1376,6 +1471,19 @@ impl Parser {
+                     let name = self.get_name(ind.name);
+                     let ty = self.get_expr(ind.ty);
+                     let all_ctor_names: Arc<[_]> = Arc::from(self.get_names(&ind.ctors));
++                    source_declarations.push(Declar::Inductive(InductiveData {
++                        info: DeclarInfo {
++                            name,
++                            uparams: self.get_uparams(&ind.uparams),
++                            ty,
++                        },
++                        all_ind_names: Arc::from(self.get_names(&ind.all)),
++                        all_ctor_names: all_ctor_names.clone(),
++                        num_params: ind.num_params,
++                        num_indices: ind.num_indices,
++                        is_recursive: ind.is_recursive,
++                        is_nested: ind.num_nested != 0,
++                    }));
+                     self.mutual_block_sizes
+                         .insert(name, (block_start, block_size));
+                     self.add_declar(
+@@ -1397,6 +1505,20 @@ impl Parser {
+                             .ok_or("missing constructor specification")?;
+                         let ctor_name = self.get_name(ctor_name);
+                         let ty = self.get_expr(ctor.ty);
++                        if ctor.is_unsafe {
++                            return decline("unsafe declarations are not supported");
++                        }
++                        source_declarations.push(Declar::Constructor(ConstructorData {
++                            info: DeclarInfo {
++                                name: ctor_name,
++                                uparams: self.get_uparams(&ctor.uparams),
++                                ty,
++                            },
++                            inductive_name: self.get_name(ctor.induct),
++                            ctor_idx: ctor.cidx,
++                            num_params: ctor.num_params,
++                            num_fields: ctor.num_fields,
++                        }));
+                         constructors.push(ConstructorData {
+                             info: DeclarInfo {
+                                 name: ctor_name,
+@@ -1413,6 +1535,39 @@ impl Parser {
+                 for ctor in constructors {
+                     self.add_declar(ctor.info.name, Declar::Constructor(ctor));
+                 }
++                for rec in rec_vals {
++                    if rec.is_unsafe {
++                        return decline("unsafe declarations are not supported");
++                    }
++                    let rules: Arc<[_]> = rec
++                        .rules
++                        .into_iter()
++                        .map(|r| RecRule {
++                            ctor_name: self.get_name(r.ctor),
++                            ctor_telescope_size_wo_params: r.nfields,
++                            val: self.get_expr(r.rhs),
++                        })
++                        .collect();
++                    source_declarations.push(Declar::Recursor(RecursorData {
++                        info: DeclarInfo {
++                            name: self.get_name(rec.name),
++                            uparams: self.get_uparams(&rec.uparams),
++                            ty: self.get_expr(rec.ty),
++                        },
++                        all_inductives: Arc::from(self.get_names(&rec.all)),
++                        num_params: rec.num_params,
++                        num_indices: rec.num_indices,
++                        num_motives: rec.num_motives,
++                        num_minors: rec.num_minors,
++                        is_k: rec.k,
++                        rec_rules: rules,
++                    }));
++                }
++                ensure!(!all_ind_names.is_empty(), "empty inductive block");
++                self.imported_blocks.push(SourceBlock {
++                    names: all_ind_names,
++                    declarations: source_declarations,
++                });
+             }
+         }
+         Ok(())
+diff --git a/src/frontend/parser/tests.rs b/src/frontend/parser/tests.rs
+index 0644981..bb83942 100644
+--- a/src/frontend/parser/tests.rs
++++ b/src/frontend/parser/tests.rs
+@@ -3,6 +3,32 @@
+ 
+ use super::*;
+ 
++#[test]
++fn unsafe_recursion_is_rejected_but_unsupported_unsafe_identity_is_declined() {
++    let prefix = "{\"in\":1,\"str\":{\"pre\":0,\"str\":\"f\"}}\n{\"ie\":0,\"sort\":0}\n{\"ie\":1,\"forallE\":{\"type\":0,\"body\":0}}\n";
++    for safety in ["unsafe", "partial"] {
++        let recursive = format!(
++            "{prefix}{{\"ie\":2,\"const\":{{\"name\":1,\"us\":[]}}}}\n{{\"def\":{{\"name\":1,\"type\":1,\"value\":2,\"levelParams\":[],\"hints\":\"opaque\",\"safety\":\"{safety}\"}}}}\n"
++        );
++        let Err(payload) = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
++            parse_export_mapped(recursive.as_bytes(), config())
++        })) else {
++            panic!("recursive unsafe source must be rejected")
++        };
++        let rejection = payload
++            .downcast::<crate::outcome::Rejection>()
++            .expect("expected source rejection");
++        assert!(rejection.0.contains("not kernel evidence"));
++        let identity = format!(
++            "{prefix}{{\"ie\":2,\"bvar\":0}}\n{{\"ie\":3,\"lam\":{{\"type\":0,\"body\":2}}}}\n{{\"def\":{{\"name\":1,\"type\":1,\"value\":3,\"levelParams\":[],\"hints\":\"opaque\",\"safety\":\"{safety}\"}}}}\n"
++        );
++        let Err(error) = parse_export_mapped(identity.as_bytes(), config()) else {
++            panic!("unsupported input must not be accepted")
++        };
++        assert!(error.downcast_ref::<crate::outcome::Decline>().is_some());
++    }
++}
++
+ fn config() -> Config {
+     Config {
+         use_stdin: true,
+diff --git a/tests/arena.rs b/tests/arena.rs
+new file mode 100644
+index 0000000..f35fd1f
+--- /dev/null
++++ b/tests/arena.rs
+@@ -0,0 +1,160 @@
++use sokonanoda::{AxiomPolicy, CheckError, Config, Rejection};
++use std::fs;
++use std::panic::{self, AssertUnwindSafe};
++use std::path::{Path, PathBuf};
++
++const MAX_EXPORT_BYTES: u64 = 64 * 1024 * 1024;
++
++fn arena_root() -> Option<PathBuf> { std::env::var_os("LEAN_KERNEL_ARENA").map(PathBuf::from) }
++
++#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
++enum ExpectedOutcome {
++    Accept,
++    Reject,
++    Either,
++}
++
++fn expected_outcome(root: &Path, stem: &str) -> Option<ExpectedOutcome> {
++    let spec = fs::read_to_string(root.join("tests").join(format!("{stem}.yaml"))).ok()?;
++    spec.lines().find_map(|l| l.strip_prefix("outcome:")).map(|v| match v.trim() {
++        "accept" => ExpectedOutcome::Accept,
++        "reject" => ExpectedOutcome::Reject,
++        "either" => ExpectedOutcome::Either,
++        other => panic!("bad outcome {other:?} for {stem}"),
++    })
++}
++
++fn collect_cases(root: &Path, out: &mut Vec<(PathBuf, ExpectedOutcome)>) {
++    let Ok(entries) = fs::read_dir(root.join("_build/tests")) else {
++        return;
++    };
++    for entry in entries.flatten() {
++        let path = entry.path();
++        if path.extension().map(|e| e != "ndjson").unwrap_or(true) {
++            continue;
++        }
++        if fs::metadata(&path).map(|m| m.len() > MAX_EXPORT_BYTES).unwrap_or(true) {
++            continue;
++        }
++        let stem = path.file_stem().unwrap().to_string_lossy().into_owned();
++        if let Some(expected) = expected_outcome(root, &stem) {
++            out.push((path, expected));
++        }
++    }
++}
++
++enum Outcome {
++    Accepted,
++    ParseError(String),
++    KernelRejected(String),
++    UnexpectedPanic(String),
++}
++
++fn run_case(export: PathBuf) -> Outcome {
++    std::thread::Builder::new()
++        .stack_size(64 * 1024 * 1024)
++        .spawn(move || run_case_inner(export))
++        .expect("spawn case thread")
++        .join()
++        .unwrap_or_else(|_| Outcome::UnexpectedPanic("thread join failed".to_string()))
++}
++
++fn run_case_inner(export: PathBuf) -> Outcome {
++    let cfg = Config {
++        export_file_path: Some(export),
++        use_stdin: false,
++        axiom_policy: AxiomPolicy::AllowAll,
++        parse_only: false,
++        num_threads: 1,
++        nat_extension: true,
++        string_extension: true,
++        ..Config::default()
++    };
++    let ef = match cfg.to_export_file() {
++        Ok(ef) => ef,
++        Err(e) if e.downcast_ref::<Rejection>().is_some() => return Outcome::KernelRejected(format!("{e}")),
++        Err(e) => return Outcome::ParseError(format!("{e}")),
++    };
++    let result = panic::catch_unwind(AssertUnwindSafe(|| ef.check_all_declars()));
++    match result {
++        Ok(Ok(())) => Outcome::Accepted,
++        Ok(Err(CheckError::Rejected(e))) => Outcome::KernelRejected(format!("{e}")),
++        Ok(Err(e)) => Outcome::UnexpectedPanic(format!("{e}")),
++        Err(payload) => {
++            let msg = if let Some(s) = payload.downcast_ref::<&str>() {
++                (*s).to_string()
++            } else if let Some(s) = payload.downcast_ref::<String>() {
++                s.clone()
++            } else {
++                "panic".to_string()
++            };
++            if msg == "def_eq failed" || msg.starts_with("def_eq") {
++                Outcome::KernelRejected(msg)
++            } else {
++                Outcome::UnexpectedPanic(msg)
++            }
++        }
++    }
++}
++
++#[test]
++fn retained_source_regressions() {
++    for (name, accepted) in [
++        ("Empty", true), ("LevelIndexOutOfOrder", true), ("SparseNameIndex", true),
++        ("ProofIrrelUnderBVar", true), ("KReduceDepthAlias", false),
++        ("ProjFromProp", false), ("RuleDomainMismatch", false), ("UnlistedRecursor", false),
++    ] {
++        let p = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("test_resources").join(name).join("export");
++        let outcome = run_case(p);
++        match (accepted, outcome) {
++            (true, Outcome::Accepted) | (false, Outcome::KernelRejected(_)) => {},
++            (_, Outcome::ParseError(e) | Outcome::KernelRejected(e) | Outcome::UnexpectedPanic(e)) => panic!("{name}: {e}"),
++            (false, Outcome::Accepted) => panic!("{name}: forged input accepted"),
++        }
++    }
++}
++
++#[test]
++fn arena_fast_tier() {
++    let Some(root) = arena_root() else {
++        eprintln!("arena_fast_tier: LEAN_KERNEL_ARENA is not set; skipping");
++        return;
++    };
++    let mut cases = Vec::new();
++    collect_cases(&root, &mut cases);
++    cases.sort();
++    assert!(!cases.is_empty(), "no arena cases found under {}", root.display());
++
++    if std::env::var("LEAN_KERNEL_ARENA_VERBOSE").is_err() {
++        panic::set_hook(Box::new(|_| {}));
++    }
++
++    let mut failures = Vec::new();
++    for (export, expected) in &cases {
++        let outcome = run_case(export.clone());
++        let (got_accept, detail) = match &outcome {
++            Outcome::Accepted => (true, "(accepted)".to_string()),
++            Outcome::ParseError(e) => (false, format!("parse: {e}")),
++            Outcome::KernelRejected(e) => (false, format!("kernel: {e}")),
++            Outcome::UnexpectedPanic(e) => (false, format!("panic: {e}")),
++        };
++        let mismatch = match expected {
++            ExpectedOutcome::Accept => !got_accept || matches!(outcome, Outcome::UnexpectedPanic(_)),
++            ExpectedOutcome::Reject => got_accept,
++            ExpectedOutcome::Either => false,
++        };
++        if mismatch {
++            let name = export.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
++            let expected = match expected {
++                ExpectedOutcome::Accept => "accept",
++                ExpectedOutcome::Reject => "reject",
++                ExpectedOutcome::Either => "either",
++            };
++            failures.push(format!("{name}: expected {expected}, got accept={got_accept} ({detail})"));
++        }
++    }
++
++    if !failures.is_empty() {
++        panic!("{}/{} arena cases mismatched:\n{}", failures.len(), cases.len(), failures.join("\n"));
++    }
++}

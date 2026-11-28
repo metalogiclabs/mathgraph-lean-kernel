@@ -1,0 +1,1612 @@
+[
+  {
+    "name": "bugs/closure-level-subst",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "ba61ad635f4a1e8929b3ada25df22a8ab854f908d5fac44f9e7bf5f2d91ae3a0",
+    "elapsed_s": 0.0034896920000164755
+  },
+  {
+    "name": "bugs/constlevels",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "2fa6a967f15f76cfdcea3ef1992ff31a4cc4aa647b0f8fabf0ff61eedb3afbf1",
+    "elapsed_s": 0.005356975999973201
+  },
+  {
+    "name": "bugs/ctor-num-fields",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "d2ae68ca43f78b6295815c5c0020e5ae7ff03a3bc7933973dcfc3662cd34b987",
+    "elapsed_s": 0.004788498000010577
+  },
+  {
+    "name": "bugs/eta-ctor-alias",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "4226fcb520a549ae478f51e92179514a6cdd0464e6e37e5fcc8b4d6a3f1f9f37",
+    "elapsed_s": 0.004254301999992549
+  },
+  {
+    "name": "bugs/k-rec-conv",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "cdbc8ac430d367a13c009b5c383692c392ac790ae7178a297bfca6f89611da28",
+    "elapsed_s": 0.004738978999995425
+  },
+  {
+    "name": "bugs/large-elim-param",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "df7d23ff199c4956620f3b1b4d17976c6bbe99ec6c1b5a4e803a7f9f415e331f",
+    "elapsed_s": 0.003383294000002479
+  },
+  {
+    "name": "bugs/large-elim-prop-bool",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "f4a607bfcb72613d4f21423aa8d6eedd927f4e6e929bccfbbe0e01c66a7aaf11",
+    "elapsed_s": 0.0035825050000255487
+  },
+  {
+    "name": "bugs/level-imax-leq",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "497eaa80a214386c679356c33a72c8beab5019c4938494b1608e3772a2756191",
+    "elapsed_s": 0.003273796000001994
+  },
+  {
+    "name": "bugs/level-imax-normalization",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "d368d5569321b717b7ec95bd1f4fa5bbd7d6e1f8d6ebdf1a0644dc8bc76bc2ec",
+    "elapsed_s": 0.00412353099997631
+  },
+  {
+    "name": "bugs/loose-bvar-value",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "a702608ad2a794f5a4fbac42aa8d3894c2f1ab9707013b9e3ac57b2310a2b328",
+    "elapsed_s": 0.001986671999986811
+  },
+  {
+    "name": "bugs/nat-rec-k-lie",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "5a49d132bb0c7dca091baa481333f5e97e390fde72c8ec18c6124a690ec47d7c",
+    "elapsed_s": 0.0033503950000124405
+  },
+  {
+    "name": "bugs/nat-rec-rules",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "934e59fdc4f2a978605c4a44e90b94b57e9940f3828620c0db337b7125cdd169",
+    "elapsed_s": 0.003048965000004955
+  },
+  {
+    "name": "bugs/nat-shift-huge",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "e00dfce17f87da4e5e77b7a648b6a789d4b3e959b6a30f6ac4c9bac1a9ab4774",
+    "elapsed_s": 0.012153226999998878
+  },
+  {
+    "name": "bugs/nested-name-capture",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "9d38f6480b12a9061ac54dec8ea27477414a39c65301dfb7ee5cedaa8d3cffad",
+    "elapsed_s": 0.005617554999986396
+  },
+  {
+    "name": "bugs/nested-rec-rule-nfields",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "219705fe0441ce59be6034b40f301fca0bbab2daf1ed0a2340fe57b88bef1e93",
+    "elapsed_s": 0.004332989999994652
+  },
+  {
+    "name": "bugs/nested-unused-param",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "4655ab3132498e61c2a254a394792a47268ece4fbe13cf8eb3ce2c075105f160",
+    "elapsed_s": 0.004267341000002034
+  },
+  {
+    "name": "bugs/open-term-cache-context",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "32b03b411fa0ec4e50e799ccc2bcfe0f925b8f26e7068b92a6746c04ad1b3cf7",
+    "elapsed_s": 0.004089376999985461
+  },
+  {
+    "name": "bugs/orphan-rec",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "738f28bc1175d70faf09f4b45ae7ca92e8b8d397f6c5d0183240cd695f6d7bc4",
+    "elapsed_s": 0.004206735999986222
+  },
+  {
+    "name": "bugs/pi-closure-context",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "730013454f261b1c20e3ee4600821e325715929a6ddca36779f6ce9e5f506520",
+    "elapsed_s": 0.00317313600001512
+  },
+  {
+    "name": "bugs/proj-non-structure",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "42d1f0023f97ce7bd31c5d2bda5858a22ce1c0ead587093d767f7c223f376e7a",
+    "elapsed_s": 0.004467950000019982
+  },
+  {
+    "name": "bugs/proj-of-imax-prop",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "b5eaae68615b8331dc28b00490939d7d304b6c4dd72ba14f8862c4b523aeb6f3",
+    "elapsed_s": 0.005936724999997978
+  },
+  {
+    "name": "bugs/proj-of-stuck-prop",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "aabaaa8c00735d29d654cdf7dbee03c3bf6428251987c4487018dceb8209536e",
+    "elapsed_s": 0.005986473999996633
+  },
+  {
+    "name": "bugs/proj-of-subst-prop",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "c82690db06f271a8318c774336827ac3a7828b84710bc805bf78c8ba0687c21a",
+    "elapsed_s": 0.011874731999995447
+  },
+  {
+    "name": "bugs/quot-bad-type",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "3ee49c21f36b4147076952b3db718c52a49d12caa02b9c65a98c9418235606aa",
+    "elapsed_s": 0.004661518999995451
+  },
+  {
+    "name": "bugs/rec-k-lie",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "30ca6fafd71f89bac3094d0aac5baa16d80bff972deddb2e7784a7fc5cef9e06",
+    "elapsed_s": 0.0032676410000078704
+  },
+  {
+    "name": "bugs/rec-missing-ih",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "8a240552317ba17d44d175c10531e5f988f55569db5eff734701735ce598fa73",
+    "elapsed_s": 0.007087049999995543
+  },
+  {
+    "name": "bugs/rec-of-subst-prop",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "8fb68d3b31c15fa2bab2fe7dab5c32ed68a153ed63712bed650f8480775ca802",
+    "elapsed_s": 0.01142114099999958
+  },
+  {
+    "name": "bugs/rec-rule-proof-irrel",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "1f51a36c829353797ca5def9e2a33171b5fee90071d993ff7c611f59e35d83bf",
+    "elapsed_s": 0.005466819000019996
+  },
+  {
+    "name": "bugs/rec-rule-proof-irrel-nested",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "9d477146c0668ad4eb67f2dcb31f8aebb83db7f147bb6894bfb831bacacee0b1",
+    "elapsed_s": 0.004391746999999668
+  },
+  {
+    "name": "bugs/rec-rule-wrong-arg",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "36600e2f6f7dfa6c289adb9d0d4b3b13f59f4d62aa4cc2ab0bd993010e74687d",
+    "elapsed_s": 0.004424885999981143
+  },
+  {
+    "name": "bugs/rec-type-proof-irrel",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "64741a196ef4d88041b2d99a9e1ad0096769ced1bf3acec60e23d232448f97e7",
+    "elapsed_s": 0.004038079000025618
+  },
+  {
+    "name": "bugs/str-lit-utf8",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "85b733d00d8034801c3f946589cd5f0803210b90826954dd57e30f1066a8ac27",
+    "elapsed_s": 0.018823099999991655
+  },
+  {
+    "name": "bugs/str-lit-utf8-bad",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "3980980b789c2a4e3028f08f36fee068e47e00956e3309d5dce84481152b558d",
+    "elapsed_s": 0.017641269000023385
+  },
+  {
+    "name": "bugs/unit-rec-rule",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "cb6d127a5f0daa9fa2047c338e809d1ffb9cc3d8454956c30eede38091a4a969",
+    "elapsed_s": 0.0038769950000130393
+  },
+  {
+    "name": "corner-cases/proof-param-ok",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "7f9b3c07a64b441f8dd0f7dd2912274241fdb17118953fb089f796fdd1590af4",
+    "elapsed_s": 0.0034848749999980555
+  },
+  {
+    "name": "init-prelude",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "4772efbd23270de11b206ed63c5bbe6783363acc83757d37c5e6884a2549074b",
+    "elapsed_s": 0.07099906100000908
+  },
+  {
+    "name": "other/extra-rec",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "eab650028a71177bd4d9fcb6a84b4e92dd91cf4e7af67023af458d18729be0e2",
+    "elapsed_s": 0.00376812299998619
+  },
+  {
+    "name": "other/inductive-undeclared-universe",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "ca3ad18ba0d1bd8abc4ec86f750ec583912ca657b68389cb2e29611c2888a7c9",
+    "elapsed_s": 0.0026208780000160914
+  },
+  {
+    "name": "other/level-index-out-of-order",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "7db8148079e2e8160a1a4c71258ad11b17ce18edfa84ab1e12eae937ec9538d1",
+    "elapsed_s": 0.0033049060000109876
+  },
+  {
+    "name": "other/nat-lit-add",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "70dac063c0c1a67670bedec96e492632b05cb2831dd38e735764716dd181b245",
+    "elapsed_s": 0.0046128760000101465
+  },
+  {
+    "name": "other/nat-lit-add-bad",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "ffcc715bbab5c92e7dfe079215b0986b89cd3bbf6371e204e1a333e1e0a1bac7",
+    "elapsed_s": 0.005629475999995748
+  },
+  {
+    "name": "other/nat-lit-ble",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "7b4dba99f2145c789b2772f709e752cb6a7f76adebff9a375d62eda4b6f8319d",
+    "elapsed_s": 0.00535796299999447
+  },
+  {
+    "name": "other/nat-lit-sub",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "4cf9e8e73e1d906b2c4d53ff521256d1a60263047edda53db52949694be5ad8e",
+    "elapsed_s": 0.005293410999996695
+  },
+  {
+    "name": "other/orphan-ctor",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "2c9b12979ea3da11272d6eca4b0a39523a863d6fb501daf61c4edb8996a97daa",
+    "elapsed_s": 0.0040058120000026065
+  },
+  {
+    "name": "other/proj-of-prop",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "5138e56a1e601e89d3c45ce42a8ed9a9f5f4f2a8d8b29e609e27cfec8cefe198",
+    "elapsed_s": 0.004596491999990349
+  },
+  {
+    "name": "other/sparse-name-index",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "3279c9c8ae24d5b3a8433ddee5d4a421c4e15e3cd84117fb4873d1284112b96d",
+    "elapsed_s": 0.004175746000015579
+  },
+  {
+    "name": "perf/app-lam",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "557fbc2c92374f2067454aeefbe0a5e8d588a5ada2d7e3c0ac0e19164f45bbee",
+    "elapsed_s": 0.023482796999985567
+  },
+  {
+    "name": "perf/args-before-unfold",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "9dfe2db4210d434497499fdfa7f0c000809296540b22b8a02fc70ca250702905",
+    "elapsed_s": 0.005622141000003467
+  },
+  {
+    "name": "perf/beta-ladder",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "9a6bca5f9ece4c413b2b7b8b47d190029bcd4cda6f268b4a47cc1ae90c762741",
+    "elapsed_s": 0.049035980000013524
+  },
+  {
+    "name": "perf/church-numerals",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "f411fad799c03ec0ff40c941ed846a4af9d246024cf0000313ed436a1d4e9e1c",
+    "elapsed_s": 0.004517855999978337
+  },
+  {
+    "name": "perf/discarded-argument",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "c8f47e11816007ea5ef7159da23c29edfe3dfd186a20ad812937386ecad0c76c",
+    "elapsed_s": 0.005456638999987717
+  },
+  {
+    "name": "perf/discarded-argument-match",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "f1ca4c078302c462a773a5c02d2223331ad1fb4a1a40fb2d820a2eb4f5856c40",
+    "elapsed_s": 0.005005065999995395
+  },
+  {
+    "name": "perf/folded-constant-first",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "4c4bcd32a9af0ca91314f07b6d357a3cb6d2c37145047f96c6dc87771ffa8e13",
+    "elapsed_s": 0.006886836999996149
+  },
+  {
+    "name": "perf/folded-constant-last",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "9189c2eac2f61bbf4fc9605004ef63d3d336490b61bb5d7b94585b06f495beba",
+    "elapsed_s": 0.007385018999997328
+  },
+  {
+    "name": "perf/fueled-chain",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "48b8b93fbc50c84528f275dca393c09c0f1301031b518fa33601926c64c6b46d",
+    "elapsed_s": 0.029655449000017597
+  },
+  {
+    "name": "perf/gf3-matrix-product",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "9826fe188e0b5d8b77e41cad188870f25fb07270ec55c65d3b8ff0c41c82a9bc",
+    "elapsed_s": 2.715268588000015
+  },
+  {
+    "name": "perf/grind-ring-5",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "19331af9652c84013b934a26ebf2bf25eba19abc8b9246baa4014c08850fb2e3",
+    "elapsed_s": 0.4113637899999958
+  },
+  {
+    "name": "perf/identical-nesting",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "15491987c20611f97f7ed97a0f8723f743a126837c9aad6fbe032ad2f91b932f",
+    "elapsed_s": 0.0050596930000210705
+  },
+  {
+    "name": "perf/irrelevance-before-evaluation",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "44a0b9f331d54aefdd736d78817678d6ca7d7d06bdd0705bff62738077423c2f",
+    "elapsed_s": 0.004070407999989811
+  },
+  {
+    "name": "perf/irrelevance-refutes",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "812387a76695886313edcd973646ea0737bcd9ca488b33941e0cb76d0ca6ebf0",
+    "elapsed_s": 0.004332057999988592
+  },
+  {
+    "name": "perf/ite-taken-branch",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "6e669aef4f85d584bff3e35cb5a9603e859e1a0c6290a46661560883823d6088",
+    "elapsed_s": 6.489159336
+  },
+  {
+    "name": "perf/ite-taken-branch-bad",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "be58b27c935928b4ae40955da0948088994d4f893c3570a10641d03f3361c909",
+    "elapsed_s": 2.054683705000002
+  },
+  {
+    "name": "perf/let-fold",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "016a814880c289096b06ee26665cccfc0a75da46c92693afb451e56673a29c53",
+    "elapsed_s": 0.012368162999990773
+  },
+  {
+    "name": "perf/let-ladder",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "d57e978f7e68ab7aee3bd1632890859eb16cff1551da1ab0b24b418f79679804",
+    "elapsed_s": 0.00987529200000381
+  },
+  {
+    "name": "perf/loop-unfolded-once",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "06f5d50e3f664321a4b4e0c90ff9a0143a174266d32f09ec0cd7dd88da7baba5",
+    "elapsed_s": 0.0670165879999729
+  },
+  {
+    "name": "perf/loop-unfolded-once-bad",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "f506ae3b24d7e5356e01c41720d500fe3245cfa25fc8af3d4ee1c4bfac3219ef",
+    "elapsed_s": 0.127747496000012
+  },
+  {
+    "name": "perf/magma-list-deep-n21",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "5d470c0b68949e393ea61469dccb0aac6185433c56f06bfc15202e2644a5a5ff",
+    "elapsed_s": 0.5483104420000018
+  },
+  {
+    "name": "perf/magma-list-deep-n36",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "c8e0ad4037e2123eb2e5fce42b8da1c705b9dd52487549d932e00b82eeff93c7",
+    "elapsed_s": 11.82857123300002
+  },
+  {
+    "name": "perf/magma-list-pair-n21",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "36895459051bfb2494aa6a5c8542b36581c74f03a5cbe59282874e2068a47a32",
+    "elapsed_s": 13.919113239000012
+  },
+  {
+    "name": "perf/magma-list-pair-n7",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "41333e6e8c06623d8064583e040d2983148ca7d2c6e98b6604c0fc98ef8b7102",
+    "elapsed_s": 0.7896550220000336
+  },
+  {
+    "name": "perf/proj-app-lazy-delta",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "af53da2879ce0c88a11c37cbdaf5fddbfada7f6fb8aa7128afb8915d113edf38",
+    "elapsed_s": 0.007580457000017304
+  },
+  {
+    "name": "perf/proj-applied-struct",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "f0fef3dca221e91e9d19d5f84f58f3a00940075a04b049d4c5c1f3d9ba57e5c8",
+    "elapsed_s": 0.007306182999968769
+  },
+  {
+    "name": "perf/proj-applied-struct-arg-bad",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "b7164a9143aaa62920b541b07202c9581af81083bd793eb3df51f8fbe6d1850d",
+    "elapsed_s": 1.8476977770000076
+  },
+  {
+    "name": "perf/proj-applied-struct-bad",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "2bdad7ce54c48e70a9d15a18ac84cd482ad0a981bb86898dcd58cb147ea14705",
+    "elapsed_s": 1.786161461000006
+  },
+  {
+    "name": "perf/proj-cheap-struct",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "218f5a7d5e0bf2f580308db175fc2acfeee66b89401e74e8edc2c9ebfc6b3453",
+    "elapsed_s": 0.00757925499999601
+  },
+  {
+    "name": "perf/proj-lazy-struct",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "1320d791347581c657571c7b92a495a1c174b9c931298ed2c134d9a5ab977ea9",
+    "elapsed_s": 0.010769602000038958
+  },
+  {
+    "name": "perf/proj-stuck-struct",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "4211de17b3fb55217226d8ed9f56b442ed1112d2da742c612f3181808a8426ad",
+    "elapsed_s": 0.006864465000035125
+  },
+  {
+    "name": "perf/prop-struct-projections",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "18694d69879f2a01aa3c16b5082a6c436b4aeb4b76d249acf246f484b8f8957a",
+    "elapsed_s": 0.08063405399997237
+  },
+  {
+    "name": "perf/refute-cheap-first",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "592e8c40f216075d764ef6fba2e235fe9e9f2e53162c2a93ed790a93ebc3b5a4",
+    "elapsed_s": 0.004960054000036962
+  },
+  {
+    "name": "perf/refute-cheap-last",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "27f300cd0b793555a9accc8862cbab910fd671247a30d75d03dfc98a43919a65",
+    "elapsed_s": 0.005845281999995677
+  },
+  {
+    "name": "perf/repeated-subproblem",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "cdb599bbb8f0b1d49297508577051b8376928ca67f0c8b70a00bd3b6dd22851d",
+    "elapsed_s": 0.004298543000004429
+  },
+  {
+    "name": "perf/shared-subterm",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "22d1ca176249a3a69dd0162fbb84bc0248c2ea539b54f38bb27c775cc923fde3",
+    "elapsed_s": 0.009391494999988481
+  },
+  {
+    "name": "perf/shift-cascade",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "164059da34883d7654d4a3a48b0594e243836ac1a241220d0298287c68332d5f",
+    "elapsed_s": 0.008466191000024992
+  },
+  {
+    "name": "perf/short-circuit-and",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "ab5cb78a88611603f2f2982c5d9a02f8306bcd114cd0329493259e0816793252",
+    "elapsed_s": 5.723133254999993
+  },
+  {
+    "name": "perf/short-circuit-and-bad",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "fdcdfc59dbe17c73d69dab1f332e10ac9f4fa4eaa6bdc3a803ed2f7fadbaea54",
+    "elapsed_s": 1.5351421070000129
+  },
+  {
+    "name": "perf/unfold-before-literal",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "ca30fb3a52b7c0b130f318777fd9ac215fe3510aeca6f22b34fa2d08a4940f3c",
+    "elapsed_s": 4.774244536000026
+  },
+  {
+    "name": "perf/unfold-before-literal-bad",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "7541304fe48cb5b2ccdb91d3e14a690ee2b2ea7a5efd20c6a8bd9b581b4d0c5e",
+    "elapsed_s": 1.7579061670000442
+  },
+  {
+    "name": "perf/unfold-before-literal-fallback",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "f0ba42ccc7c0f4a08fbc66413976ae0547a2eafcd56f14384c2f76440fe9d017",
+    "elapsed_s": 4.794548367000004
+  },
+  {
+    "name": "perf/unroll-versus-evaluate",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "7cfb70d4954f7e88dd41fe535fc804e4b8244270d209d04327b1b9c965888902",
+    "elapsed_s": 0.006882376000021395
+  },
+  {
+    "name": "tutorial/001_basicDef",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "452da36409147282653fbd49d9eea93c869e70f4e26a0b24fc7bd6e23898c171",
+    "elapsed_s": 0.0038257709999811595
+  },
+  {
+    "name": "tutorial/002_badDef",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "ac3314be1f67eb6f34ae863ca34d7b97672d3a4747db46946de4796a49e4d9e1",
+    "elapsed_s": 0.003328650000014477
+  },
+  {
+    "name": "tutorial/003_arrowType",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "0e9db1d7c2941b3af74b941e56cf2f5719cb0107692b0f842be4a017974f6b3f",
+    "elapsed_s": 0.0030514680000237604
+  },
+  {
+    "name": "tutorial/004_dependentType",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "d2c12fe19c8a467c0bc90bbde2959dc77ec22a82141653bc08c98e6947fbbfd8",
+    "elapsed_s": 0.003280448999987584
+  },
+  {
+    "name": "tutorial/005_constType",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "99669695aa1e055facfedae4d331c3ab3879534caada9008c5b615c885b63ed9",
+    "elapsed_s": 0.0033227520000309596
+  },
+  {
+    "name": "tutorial/006_betaReduction",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "09eac8899a89e6ff631f33ab5568128b3d6dee870e0a0b15d002a07a83bf8253",
+    "elapsed_s": 0.005093580999982805
+  },
+  {
+    "name": "tutorial/007_betaReduction2",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "1254c01a42667e695bcbeb074f670b27341cdb6fbabfdcf0862b8223393565ab",
+    "elapsed_s": 0.0032008300000256895
+  },
+  {
+    "name": "tutorial/008_forallSortWhnf",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "d54d188126193de35bb5ec4ab372c79b38bc858dc358c96418041c08bb365306",
+    "elapsed_s": 0.0031281819999549043
+  },
+  {
+    "name": "tutorial/009_forallSortBad",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "131eba168386d03ef2b0d45a019f692d3f0dccd98f335e28e69b266e9e35d5f2",
+    "elapsed_s": 0.004161050999982763
+  },
+  {
+    "name": "tutorial/010_nonTypeType",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "e85f6c90e6dcecf267f6005d326d02ac8a7efbdb1174672ad7a032bbe88f9bec",
+    "elapsed_s": 0.003404820000014297
+  },
+  {
+    "name": "tutorial/011_nonTypeAxiom",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "fa2ffb11a4dacaad702e94b8a1abaccfc9d3af431119aa0f395b3e68eb0166b7",
+    "elapsed_s": 0.003299631999993835
+  },
+  {
+    "name": "tutorial/012_nonPropThm",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "7d86e804fb23ddeffee1132e72dc1548daa16e577d8ef2e4fb2a02e2d4d8031b",
+    "elapsed_s": 0.0034246030000417704
+  },
+  {
+    "name": "tutorial/013_thmProof",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "4368d1189e8d4b9f1d26aec79856d3700d74b73d67d4693ee4454d87a1289688",
+    "elapsed_s": 0.0032072399999947265
+  },
+  {
+    "name": "tutorial/014_selfProof",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "9a01d45019a9bff48fba9a7d88908238580f0708e205ccfe6ec194ba4c2daa90",
+    "elapsed_s": 0.0036572909999676995
+  },
+  {
+    "name": "tutorial/015_levelComp1",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "d486581acd8b34506074669ca24fa2c775efb10456f814886b6d67c86ef640da",
+    "elapsed_s": 0.0031894680000164044
+  },
+  {
+    "name": "tutorial/016_levelComp2",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "f3153749d57f99dd4ac9536e64fb20a6829a8d556df8fd7d1fe18ffdf344cc55",
+    "elapsed_s": 0.0032941649999997935
+  },
+  {
+    "name": "tutorial/017_levelComp3",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "af28791b0b67a03a27cdb0717e46dcddea0f9248013d59a775244fc2fc5c683f",
+    "elapsed_s": 0.002950797000039529
+  },
+  {
+    "name": "tutorial/018_levelParams",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "575cd8c91e81b70819017c86da7220f017459a9e9eba8bde98f1ca5a5e47f88f",
+    "elapsed_s": 0.0035901410000178657
+  },
+  {
+    "name": "tutorial/019_tut06_bad01",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "de869d1c304afc864bef3acee0957107c02d8571e111d75df8647023e8d9d751",
+    "elapsed_s": 0.0035018379999769422
+  },
+  {
+    "name": "tutorial/020_levelComp4",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "fa0a8b27601b9cec67c3c17c7687d06ae0d4d7c58f8daf00caf419e00e67b28c",
+    "elapsed_s": 0.0031392879999998513
+  },
+  {
+    "name": "tutorial/021_levelComp5",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "8d0dff1944cd424079d4750ac09df425e085e17f79335a599f5715b01ac4a0ed",
+    "elapsed_s": 0.0033591060000048856
+  },
+  {
+    "name": "tutorial/022_imax1",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "5fdd13476cef4169b5a9a9b7e9ae60669e55dfb455ce7ed50339b8812f88f183",
+    "elapsed_s": 0.0034646340000108466
+  },
+  {
+    "name": "tutorial/023_imax2",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "e4dbd746b235712d61ae18453ce2684dbd4230c3fd25caa434fa461764f595e8",
+    "elapsed_s": 0.0030376170000181446
+  },
+  {
+    "name": "tutorial/024_levelMaxComm",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "501a8e844a2062a108ea82719a1eaa27a0188e5aba86f14cc99ed458ff06a165",
+    "elapsed_s": 0.0034599960000036845
+  },
+  {
+    "name": "tutorial/025_levelMaxAssoc",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "87813b2ebd9ab46d85d192f36b972344d3bff1510c8758bf63263de0f0be67d0",
+    "elapsed_s": 0.003118427000003976
+  },
+  {
+    "name": "tutorial/026_levelMaxIdem",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "bd036c89691aa01361f6facaa7e963889e5fdc954d31b4b1771f343f38f214b6",
+    "elapsed_s": 0.003437853000036739
+  },
+  {
+    "name": "tutorial/027_levelMaxAbsorb",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "bc81befefa77ee955e3b57d18a79d029d7c3592a995bb00ebbb1675cea9bea81",
+    "elapsed_s": 0.0030308970000305635
+  },
+  {
+    "name": "tutorial/028_inferVar",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "dc70b43ad0efa180de31ec39831f8110d9fa24fed5678bac955bb8c6f9c37852",
+    "elapsed_s": 0.003541798000014751
+  },
+  {
+    "name": "tutorial/029_defEqLambda",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "b74cd38cb75aff401cbd891f128297f29c96a6d958246670adaa3c81a2beabda",
+    "elapsed_s": 0.0034895150000124886
+  },
+  {
+    "name": "tutorial/030_peano1",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "f652dc0cad4706ffd7036480a96ee93a345cb4dd538d5ece6b9f3c4f929d8a8c",
+    "elapsed_s": 0.0031589679999797227
+  },
+  {
+    "name": "tutorial/031_peano2",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "cba813becc49d507543fc52e0452fa133fbf5f2e24f69312d47964bbee902fea",
+    "elapsed_s": 0.004106714999977612
+  },
+  {
+    "name": "tutorial/032_peano3",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "03c105a7596d55a312622b936db2ccaa383ed9b446f26a5b2cd0bbcc6826fa2f",
+    "elapsed_s": 0.003202481999949214
+  },
+  {
+    "name": "tutorial/033_letType",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "8fca66343063ba49a6875c3eba7748ed9e761a77f8fcde0e99f2dda24a01bd26",
+    "elapsed_s": 0.003118556999993416
+  },
+  {
+    "name": "tutorial/034_letTypeDep",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "99ea74afb7f951c1d9676601a9a0d63792ce29b1827c53e4f6249ac6876b2b3f",
+    "elapsed_s": 0.003433106000045427
+  },
+  {
+    "name": "tutorial/035_letRed",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "153c835c452a28d8fefb32db71e345cc7f037a2552710ec9504632a8fa8e3b22",
+    "elapsed_s": 0.003280248000010033
+  },
+  {
+    "name": "tutorial/036_empty",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "725be784bfa6cd322313e743a91b6e5af2404dad1075ef6898f03d556e46a10a",
+    "elapsed_s": 0.0040755130000320605
+  },
+  {
+    "name": "tutorial/037_boolType",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "ff471bd6c180ec70a6d8ec31e93d62f41a3eb264824dbfdce27184178f5e5934",
+    "elapsed_s": 0.0036600239999984296
+  },
+  {
+    "name": "tutorial/038_twoBool",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "5dff3e59ee30e4c311563e2b8b52ff82f9aa362c43eb055274d4b220982699e6",
+    "elapsed_s": 0.004260278999993261
+  },
+  {
+    "name": "tutorial/039_andType",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "f9a28765bff2af11f7a31f1e66d62857344fab84f71aeff7a2e55c079ec627fd",
+    "elapsed_s": 0.0054865860000177236
+  },
+  {
+    "name": "tutorial/040_prodType",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "a06eff57cd2392486c46a46879cf49e3ef1f235b2fc3160fe3b6a69316301681",
+    "elapsed_s": 0.00398491899994724
+  },
+  {
+    "name": "tutorial/041_pprodType",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "cc19599ee771f4054ae77ee6319f78cd7e072ccb71951dfe2ab44937149ff4c0",
+    "elapsed_s": 0.004176534000009724
+  },
+  {
+    "name": "tutorial/042_pUnitType",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "e36546e154b91c02850a7615aac070ff57a9a0283aad566fa19289be5a54221d",
+    "elapsed_s": 0.004230744999972558
+  },
+  {
+    "name": "tutorial/043_eqType",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "ce7e04db2ed6c34703ef356e1086303400ca2531c8424797e52bd3e36ff6de1d",
+    "elapsed_s": 0.004096164000031877
+  },
+  {
+    "name": "tutorial/044_natDef",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "8e37e3a8e13aea63cfe66221ce299dc30cfe133d8952afd252278c79631a9d43",
+    "elapsed_s": 0.005632639999987532
+  },
+  {
+    "name": "tutorial/045_rbTreeDef",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "0b194e3bcf4bd574ac018b8a1dfbd4e1aa4774b186eba46e153fa603d94ca3cb",
+    "elapsed_s": 0.004704630999981418
+  },
+  {
+    "name": "tutorial/046_inductBadNonSort",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "202b909ed05d8a6eb50c1ffc66013eb12e846e701e7146ce00d4fdf2018fe04b",
+    "elapsed_s": 0.0028141240000536527
+  },
+  {
+    "name": "tutorial/047_inductBadNonSort2",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "9c21a133d8adb9e8271018971b68edefeaf9267a644f2ac0903dec43c8aa043f",
+    "elapsed_s": 0.002765610999972523
+  },
+  {
+    "name": "tutorial/048_inductLevelParam",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "525fda6c5b84c8fb6643748e53d2e313ab67383084765650300fd41f61e49a08",
+    "elapsed_s": 0.006092413999965629
+  },
+  {
+    "name": "tutorial/049_inductTooFewParams",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "4546c3ad772245ebc2215a1a1f82f63b6038c52531f98a9a811e89eb25d72593",
+    "elapsed_s": 0.0032304200000226047
+  },
+  {
+    "name": "tutorial/050_inductWrongCtorParams",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "24ba196b2f3776006bce4801f499f6805fbc6ba0dc529aa2fde70d6cf62e41ca",
+    "elapsed_s": 0.00307182799997463
+  },
+  {
+    "name": "tutorial/051_inductWrongCtorResParams",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "06398994c3f57e2a184eb5079a044ad6a8091e5f643af027be91609551ff6eed",
+    "elapsed_s": 0.002596829999959027
+  },
+  {
+    "name": "tutorial/052_inductWrongCtorResLevel",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "8713beacfc7953b1e56c099da8ea3630700df4dc0439d8437e0a05a158759fb8",
+    "elapsed_s": 0.0025940760000366936
+  },
+  {
+    "name": "tutorial/053_inductInIndex",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "3e0e9bcfc73b1b9ff222d286b83ba5ec06f672f75c4b8bb9f9624d693ffaef76",
+    "elapsed_s": 0.003927713999985372
+  },
+  {
+    "name": "tutorial/054_indNeg",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "96f61470c1c056735ccfc31459beb8e20eaae0223a7c24053deff1711f079e6f",
+    "elapsed_s": 0.002809533000004194
+  },
+  {
+    "name": "tutorial/055_reduceCtorParam.mk",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "4cb3e039236b6bf8cc75cecc6db3c44cdd9b90111cff4c7c198c7ba6fbfa9dc4",
+    "elapsed_s": 0.0044904330000008486
+  },
+  {
+    "name": "tutorial/056_reduceCtorType.mk",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "7c1164870632a59c5014362aaccb133f95127d154af24b44229a1fb55d3d5153",
+    "elapsed_s": 0.002884960000017145
+  },
+  {
+    "name": "tutorial/057_indNegReducible",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "dd54dcf6e0e8be2a01efecc13d307df010877be0c904885672a89ee9e3310fe0",
+    "elapsed_s": 0.002649008000048525
+  },
+  {
+    "name": "tutorial/058_predWithTypeField",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "4cb82cafdfd8ad9a6a5683610f6339f037a8a6edea040ea1f733e2bf1974446b",
+    "elapsed_s": 0.004749412999956348
+  },
+  {
+    "name": "tutorial/059_typeWithTypeField",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "442205c6c21609f84d8d2d12f663e290244f5b3f83b045fffa098e3b3d68ec8c",
+    "elapsed_s": 0.004032289000008404
+  },
+  {
+    "name": "tutorial/060_typeWithTypeFieldPoly",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "624440ccef6849ce56d9d376467decb02062ce17f7af2d5260cbc33ffa58b59e",
+    "elapsed_s": 0.0037846349999881568
+  },
+  {
+    "name": "tutorial/061_typeWithTooHighTypeField.mk",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "34724350d858e00322afdf43097eb86b9a27fc87968461177964d12ba429d3d4",
+    "elapsed_s": 0.0033939490000420847
+  },
+  {
+    "name": "tutorial/062_emptyRec",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "4d15ad611f088f70e889200b40a6a6d3c0556ea743c714b376135bc76fd84e8f",
+    "elapsed_s": 0.003780013999971743
+  },
+  {
+    "name": "tutorial/063_boolRec",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "6f9fccc64f47bb2483f36c366d69c5bd2b7ce3d8f6c1bbea48d6689340aeb4e2",
+    "elapsed_s": 0.0042814309999812394
+  },
+  {
+    "name": "tutorial/064_twoBoolRec",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "012f281bfe115f6f977bb38f0a234362c3e1da9917519ac994af24f943d42490",
+    "elapsed_s": 0.004017067000006591
+  },
+  {
+    "name": "tutorial/065_andRec",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "252dced17509200aaa5d4a567a550b04a2457e8f28b1cfebc3b89ffdaeb985ae",
+    "elapsed_s": 0.005916997999975138
+  },
+  {
+    "name": "tutorial/066_prodRec",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "880f0446de1ab514e32345cbce03e53fc53550b99205c9d651d0e41b0829d518",
+    "elapsed_s": 0.0038205679999805398
+  },
+  {
+    "name": "tutorial/067_pprodRec",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "0cea83775a251dafd57d25b0ce5dd6b5643c87b29a6a1793302d1c4f0cec49de",
+    "elapsed_s": 0.004068654000036531
+  },
+  {
+    "name": "tutorial/068_punitRec",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "41fff78db80acf9708296374404045ca35022e898cecea8e6bdb900c3f7a9778",
+    "elapsed_s": 0.003670837000015581
+  },
+  {
+    "name": "tutorial/069_eqRec",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "c1a598ca6c09e8b21d5bf693a60ecf36e7753b0040f03cf2b29d43e875f1d6fb",
+    "elapsed_s": 0.003964713000016218
+  },
+  {
+    "name": "tutorial/070_nRec",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "96817a88da3d96f81bd974426b4d9bf0c1549e5d650f8fb613741a0ad503fbc3",
+    "elapsed_s": 0.003711291000001893
+  },
+  {
+    "name": "tutorial/071_rbTreeRef",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "912ed301c6e48a8829a3d932134d63ee3a9fa5abeb4659b4d6ad5fb5c756b9f5",
+    "elapsed_s": 0.00480171600003132
+  },
+  {
+    "name": "tutorial/072_boolPropRec",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "46d7541ef5aebba59bd4ababd276ddbd1e47a2b8ed33e343e44c4f5f4ceea1ae",
+    "elapsed_s": 0.004613095999957295
+  },
+  {
+    "name": "tutorial/073_BogusRecursor",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "b5dc122fe0806633c3e6fae577e824ac3fa6aa237f01622e3c8baff9a903087c",
+    "elapsed_s": 0.003102544000000762
+  },
+  {
+    "name": "tutorial/074_existsRec",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "b997c1adffd0bfd8303803abcfc4a3a58cb8cd2c851f20dd2e67264770b584f4",
+    "elapsed_s": 0.004158847999974569
+  },
+  {
+    "name": "tutorial/075_typeSingletonRecReduction",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "d50e808678846aaf751be6f4303bd209c62d6cbd327739ad0575cfce0af97714",
+    "elapsed_s": 0.004496250999977747
+  },
+  {
+    "name": "tutorial/076_sortElimPropRec",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "3fc164eb4b989900346ddfb325f1f349bb00236c17d4ec4ddcde45a4c2fdce9c",
+    "elapsed_s": 0.005047558000001118
+  },
+  {
+    "name": "tutorial/077_sortElimProp2Rec",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "413efdad5135c8219984ae8f48d1e637422e3bff775be57eeecd509351cfc7d7",
+    "elapsed_s": 0.004069285000014133
+  },
+  {
+    "name": "tutorial/078_boolRecEqns",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "78d41410fed2abd21f6e4c3ae8acaf6188f9e3c18691158bf9546723e1296aae",
+    "elapsed_s": 0.005695577999972556
+  },
+  {
+    "name": "tutorial/079_prodRecEqns",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "40cb2c2794fb493e1ff585ba9fb05a6d5e46b2d3c9c669f07eaa722e8d04a928",
+    "elapsed_s": 0.004375430999971286
+  },
+  {
+    "name": "tutorial/080_nRecReduction",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "a9f45fc26c0b5f9ca2b33ddba4380c53f0880e50a8fdf86cc1cb58a6d9137910",
+    "elapsed_s": 0.004896137000002909
+  },
+  {
+    "name": "tutorial/081_listRecReduction",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "bf97127df6481f6f9882f49ab32decc5ed7a845a82b4dbb45f824227e827504f",
+    "elapsed_s": 0.004368720999991638
+  },
+  {
+    "name": "tutorial/082_RBTree.id_spec",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "f6c0b577338a8541e884a3dd0289dec9a88a66c52d4723dacd643d7f74704e14",
+    "elapsed_s": 0.0049589210000249295
+  },
+  {
+    "name": "tutorial/083_And.right",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "af8fe401cc52894a4a48e38cc438d76d50bc7c5ebdc26b3814a415b8356c8338",
+    "elapsed_s": 0.003956846999983554
+  },
+  {
+    "name": "tutorial/084_Prod.snd",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "4c0c0898619d528f9a70068f4b1c0e9d5d96d0e22762fd60e7d12abb5792ffe3",
+    "elapsed_s": 0.0037821270000222285
+  },
+  {
+    "name": "tutorial/085_PProd.snd",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "9d057a874a75b9ff11272fb8f27abe87ad2aa85f170b4e47f4b2e98ed4a80121",
+    "elapsed_s": 0.003990057000009983
+  },
+  {
+    "name": "tutorial/086_PSigma.snd",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "c53b1e653a5c3adc3d1986caed98a70f260c07dbd45d569d2ad2b0c8cea40ab8",
+    "elapsed_s": 0.0046979020000321725
+  },
+  {
+    "name": "tutorial/087_projOutOfRange",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "520293e32a2cbedef3d44987f30dab5a22ba56594e4ab7eae156db0e2cd1fabf",
+    "elapsed_s": 0.004007172000001447
+  },
+  {
+    "name": "tutorial/088_projNotStruct",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "d127bec36a908a954b562a68cfa98c1e816dfe1c65b9b18cb6b50c300ed43b37",
+    "elapsed_s": 0.005020477000016399
+  },
+  {
+    "name": "tutorial/089_projProp1",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "f3dfba2ebfbec35450b9fdbe91f415d0c1be15012e2de41af0cc6b0d84be852a",
+    "elapsed_s": 0.004440387999977702
+  },
+  {
+    "name": "tutorial/090_projProp2",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "d8ea976f7c94c4f3d8a1e2080db46dbabf884a85647f5092471930fb57a50f49",
+    "elapsed_s": 0.005307114000004276
+  },
+  {
+    "name": "tutorial/091_projProp3",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "e148e804db17df54cb69b1ffb0f3f4e8b13f30a2c0464f968b71b47c5e56eb5f",
+    "elapsed_s": 0.004257354999992913
+  },
+  {
+    "name": "tutorial/092_projProp4",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "ece4c7f02451764b8343126761f8101490599194886697b30d414bbeb8042f43",
+    "elapsed_s": 0.005388787000015327
+  },
+  {
+    "name": "tutorial/093_projProp5",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "409598617a6de7afc18427c2503e6bef5ea3a39742fe94e99de7ce64328b148b",
+    "elapsed_s": 0.004598454000017682
+  },
+  {
+    "name": "tutorial/094_projProp6",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "f7841a52cf39c556f03214d7da51f0ff1017f7aeeeede7c6143742d70e1c33a4",
+    "elapsed_s": 0.004441849999977876
+  },
+  {
+    "name": "tutorial/095_projDataIndexRec",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "d72a7a622b6580f344c98f2eb9b9d3a61dedab0aaf20c053f9ddef58a09bb0f5",
+    "elapsed_s": 0.004535950999979832
+  },
+  {
+    "name": "tutorial/096_projIndexData",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "0944a963c08413bda90b3b50a9c24628f5d4e0e64d8dd6651c379e25abfc5485",
+    "elapsed_s": 0.005242504000023018
+  },
+  {
+    "name": "tutorial/097_projIndexData2",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "d53946347324f99baf9fefe77999c4908d515dc294759ddad2a04f8b264627d0",
+    "elapsed_s": 0.005679114000031404
+  },
+  {
+    "name": "tutorial/098_projRed",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "c23b7ba9254cff520a42974b6db8d6199c2895b44edf4b3a29eb4fbb345b6ed0",
+    "elapsed_s": 0.004663559999983136
+  },
+  {
+    "name": "tutorial/099_ruleK",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "e903bb23353e57acb5db3035ee38f83b48b98bd30c2a0206a307c55d628346ee",
+    "elapsed_s": 0.0046195350000175495
+  },
+  {
+    "name": "tutorial/100_ruleKbad",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "a66ae5140e9f7f934090292506a6e2a746b932ad53347672122c234158782ad2",
+    "elapsed_s": 0.004234822000000804
+  },
+  {
+    "name": "tutorial/101_ruleKAcc",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "bfacaaa1af816677e32b23718a06f6f1fb2ef85cd4a1701ce33a311ac613d0fb",
+    "elapsed_s": 0.004639440000005379
+  },
+  {
+    "name": "tutorial/102_aNatLit",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "cb770a2865667edd35ffdea37e100d736952cdd3a1de5e10748e389140dc842e",
+    "elapsed_s": 0.003948494999974628
+  },
+  {
+    "name": "tutorial/103_natLitEq",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "862b6369da05b9120c7f65095b5dad99d51be9c4c9fc8c5310532daf73a2c48d",
+    "elapsed_s": 0.0042085329999963506
+  },
+  {
+    "name": "tutorial/104_proofIrrelevance",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "9768390b86144454cf79297194c1a0e73500042d7f14161c256acbd0185449f4",
+    "elapsed_s": 0.003587245999995048
+  },
+  {
+    "name": "tutorial/105_proofIrrelevanceBad",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "3c1466eed22d3cfd09b3f1b79b4374a63e8bd7ecfb8fc8cf0b469bd6f59105de",
+    "elapsed_s": 0.004520146999993813
+  },
+  {
+    "name": "tutorial/106_proofIrrelevanceWhnf",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "fc1c79283d738f2a8f45c9a84b9faec0df1a14a791faedca2feb009c026121f7",
+    "elapsed_s": 0.004865886999994018
+  },
+  {
+    "name": "tutorial/107_proofIrrelevanceUnderBinder",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "99925710f01d45f48fc5e64f59fa8dafa66fa292eb948aee3c88d7280259a088",
+    "elapsed_s": 0.003401339999982156
+  },
+  {
+    "name": "tutorial/108_unitEta1",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "563e5e4c162feb7a56263bb1d072e994710022f16304a495de875a098a4d2d13",
+    "elapsed_s": 0.004004047000023547
+  },
+  {
+    "name": "tutorial/109_unitEta2",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "72bd12cf6d89f33d83020e44962439f387abd0d22dff2d36bb60faff081dbba1",
+    "elapsed_s": 0.0046418530000096325
+  },
+  {
+    "name": "tutorial/110_unitEta3",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "18874badbad5c8aacac5377250fc6c63da617ef3b007e155217e2e62f9233eca",
+    "elapsed_s": 0.004870478999976058
+  },
+  {
+    "name": "tutorial/111_indexedUnitEta",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "c8f10f2d011e2f61ecc67820e2d562ce95d9d87cee4b43af543c95bb16d33f80",
+    "elapsed_s": 0.004053189999979168
+  },
+  {
+    "name": "tutorial/112_structEta",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "6a6e92399f06b7dd72f2055e42d89c5fbc5ec59a54107353bcf039025164765c",
+    "elapsed_s": 0.0045141030000195315
+  },
+  {
+    "name": "tutorial/113_indexedStructEta",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "357e56731251d5fa3a5ef89553eadb862ad58282b36d2a3113897815e93eba8a",
+    "elapsed_s": 0.0049745840000241515
+  },
+  {
+    "name": "tutorial/114_funEta",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "896d3af4e2b3c24e4cda3503bdddbf1e33654e595ce626222ef94f6507ae5633",
+    "elapsed_s": 0.003942945999995118
+  },
+  {
+    "name": "tutorial/115_funEtaDep",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "4abdb18a324f0ab8d81b752c2a46a2bd7e0d01cebee4b370314980b7f6817691",
+    "elapsed_s": 0.004513591999966593
+  },
+  {
+    "name": "tutorial/116_funEtaBad",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "28651916597db84cab283b820ac5489e8ad8d2e2cf25c4aeee250ff14a51cf6f",
+    "elapsed_s": 0.004582599999991999
+  },
+  {
+    "name": "tutorial/117_reflOccLeft",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "1d316fb114a82541ae006e911a784fec76334f8e2a22ead4822b21315c47c898",
+    "elapsed_s": 0.002872361000015644
+  },
+  {
+    "name": "tutorial/118_reflOccInIndex",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "ecbcd16395d437f176ec28f9b4b2c7fa7c120bf9b3b7176900d1500499545309",
+    "elapsed_s": 0.003235801999949217
+  },
+  {
+    "name": "tutorial/119_reduceCtorParamRefl.mk",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "bbe2bd2824e7ab971847aa122bced56c3dc59a84f6ab9a1fcf62e0e885cbceb0",
+    "elapsed_s": 0.004139960000031806
+  },
+  {
+    "name": "tutorial/120_reduceCtorParamRefl2.mk",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "e39bd89f0a35f9d04bc3ad5e235a2fa38df3e390d9521134a7c244d68f41dceb",
+    "elapsed_s": 0.0037267050000195923
+  },
+  {
+    "name": "tutorial/121_rTreeRec",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "b0e149f215a9d0d7b6fa4007f91c49934c4268a4d6b217711415ba18e6275553",
+    "elapsed_s": 0.005598703999964982
+  },
+  {
+    "name": "tutorial/122_rtreeRecReduction",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "a76503873a009b5760dffc4143d68c65f8e1dc649d3eec19f011ef9b32ca7e74",
+    "elapsed_s": 0.004231567000033465
+  },
+  {
+    "name": "tutorial/123_accRecType",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "7c6ea69f56391a47ecb3f6b5061e5116eefe79627ecc59ae3dcbb652679510e0",
+    "elapsed_s": 0.0043519459999856736
+  },
+  {
+    "name": "tutorial/124_accRecReduction",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "6b2dfb17c64f3a2b8c3ac67c4abfe612fbf29de4e69c9e6972f06bc8ab60b799",
+    "elapsed_s": 0.005575539000005847
+  },
+  {
+    "name": "tutorial/125_accRecNoEta",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "71c40eb3ad74d8fb99501f8355f2c9c5e643e6f0ea771c629abcfa37675149b1",
+    "elapsed_s": 0.0048595829999840134
+  },
+  {
+    "name": "tutorial/126_quotMkType",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "44995b6f691b9fce53c4a36830421626611dc253d2d8419c64e654309a73f733",
+    "elapsed_s": 0.004623687000048449
+  },
+  {
+    "name": "tutorial/127_quotIndType",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "05031ab093efe0f3a4097e8f5ddcca3ff8046547ace23cac25ee1a974360efdd",
+    "elapsed_s": 0.004520818000003146
+  },
+  {
+    "name": "tutorial/128_quotLiftType",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "c9127157334111bec54d7a1886f21218d3a9d93714a14a044e4250d451d8043f",
+    "elapsed_s": 0.004784130000018649
+  },
+  {
+    "name": "tutorial/129_quotSoundType",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "631eb545bc836854e9adb44ae293a1e0909a8f1a6cb402a88850dac75d398fef",
+    "elapsed_s": 0.0038580400000114423
+  },
+  {
+    "name": "tutorial/130_quotLiftReduction",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "6be727f01e1515742bdc2234c2442a383ea229a62cf9c73eb6a7060bd387dc0c",
+    "elapsed_s": 0.00453724199996941
+  },
+  {
+    "name": "tutorial/131_quotIndReduction",
+    "expected": 0,
+    "observed": 0,
+    "sha256": "c9e115ddb99cf74930e8f62e6e3e95464b2b9bcc04d97685610d1f9d36a077ca",
+    "elapsed_s": 0.0040079130000094665
+  },
+  {
+    "name": "tutorial/132_dup_defs",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "be956703057e4ad1c4db50f3b8c50a17cca93f2568bccb639781804f76cebf35",
+    "elapsed_s": 0.0021324619999631977
+  },
+  {
+    "name": "tutorial/133_dup_ind_def",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "d6e1437d0ced441e83202138f20f8317e5f76e330e88c6ecca3786d4ebe856b1",
+    "elapsed_s": 0.0018153959999835934
+  },
+  {
+    "name": "tutorial/134_dup_ctor_def",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "4c7b41af3e9a03edd1958154776be074e59fa8bcc87afdcf644cfed6227030d2",
+    "elapsed_s": 0.0017661520000160635
+  },
+  {
+    "name": "tutorial/135_dup_rec_def",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "3928f03b1291bfeca11e1e3d6b6731bb592611627620b7486000e7b4e2644a4f",
+    "elapsed_s": 0.002430322000009255
+  },
+  {
+    "name": "tutorial/136_misnamed_rec_user",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "1527a49c5bf2410b549f04008ef099747c2235a4349cf4646fecef8dbefb4f9a",
+    "elapsed_s": 0.0025553689999924245
+  },
+  {
+    "name": "tutorial/137_dup_rec_def2",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "1b19aa37516d10a465b418164d6472790e1ef39dc3d5ce9a2ce1935dfce1a36e",
+    "elapsed_s": 0.0035785279999913655
+  },
+  {
+    "name": "tutorial/138_dup_ctor_rec",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "c312e1f4b64f35963c3b402bb5234c87f42d7fa415481948fe59cb6ceef6828a",
+    "elapsed_s": 0.0026256429999875763
+  },
+  {
+    "name": "tutorial/139_DupConCon",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "ea853360417474246eb1b066880193a0f467dd9cabdd53cd2aef7b2dcb76cecd",
+    "elapsed_s": 0.0017482459999769162
+  },
+  {
+    "name": "tutorial/140_falseFromUnsafe",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "e9aca3d9b3d56f6002baf489eb9e79c29d60d6faa58e936c7d5976c8d20db441",
+    "elapsed_s": 0.0016230690000043069
+  },
+  {
+    "name": "tutorial/141_falseFromPartial",
+    "expected": 1,
+    "observed": 1,
+    "sha256": "55aaf8bb26d84e8fafdf65d08155d4f9564a90813f3d78a45f27d746ecc9c611",
+    "elapsed_s": 0.0026014880000388985
+  }
+]

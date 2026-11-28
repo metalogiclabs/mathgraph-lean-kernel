@@ -1,0 +1,114 @@
+name: Flash attributed upstream reconciliation
+on:
+  push:
+    branches: [research/flash-upstream-reconciliation-20261126]
+    paths: ['src/**', 'Cargo.toml', 'Cargo.lock', 'tests/**', '.github/workflows/flash-upstream-reconciliation.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    env:
+      RUSTFLAGS: -C target-cpu=x86-64 -C target-feature=-avx,-avx2,-avx512f,-fma
+      CARGO_INCREMENTAL: 0
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.99.1'
+      - name: Build and verify separately identified executables
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/reconciled-evidence"
+          mkdir -p "$OUT/builds"
+          git rev-parse HEAD > "$OUT/commit.txt"
+          rustc -Vv > "$OUT/compiler.txt"
+          printf '%s\n' "$RUSTFLAGS" > "$OUT/build-flags.txt"
+          python3 - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          expected=json.loads(Path('experiments/flash-upstream-repair-20261126/source-identity.json').read_text())
+          for name,digest in expected.items():
+              assert hashlib.sha256(Path(name).read_bytes()).hexdigest()==digest,name
+          PY
+          cargo test --locked --target-dir "$RUNNER_TEMP/strict-target" 2>&1 | tee "$OUT/native-tests.log"
+          cargo build --locked --release --target-dir "$RUNNER_TEMP/strict-target"
+          cp "$RUNNER_TEMP/strict-target/release/sokonanoda" "$OUT/builds/strict.bin"
+          python3 experiments/flash-upstream-repair-20261126/metadata_controls.py --binary "$OUT/builds/strict.bin" --out "$OUT/source-controls"
+          git worktree add --detach "$RUNNER_TEMP/released-source" 819d59c34db3fd8f7b790a83f5728f255f75f33e
+          cargo build --locked --release --manifest-path "$RUNNER_TEMP/released-source/Cargo.toml" --target-dir "$RUNNER_TEMP/released-target"
+          cp "$RUNNER_TEMP/released-target/release/sokonanoda" "$OUT/builds/baseline.bin"
+          python3 - <<'PY'
+          import hashlib,json,os,re
+          from pathlib import Path
+          out=Path(os.environ['RUNNER_TEMP'])/'reconciled-evidence'
+          log=(out/'native-tests.log').read_text()
+          counts=[int(n) for n in re.findall(r'test result: ok\. (\d+) passed; 0 failed',log)]
+          assert counts and counts[0]==39,counts
+          assert 'test retained_source_regressions ... ok' in log
+          hashes={n:hashlib.sha256((out/'builds'/(n+'.bin')).read_bytes()).hexdigest() for n in ['baseline','strict']}
+          assert len(set(hashes.values()))==2
+          (out/'binary-identities.json').write_text(json.dumps(hashes,indent=2)+'\n')
+          PY
+          rm -rf "$RUNNER_TEMP/strict-target" "$RUNNER_TEMP/released-target"
+      - name: All exact portable inputs with unchanged raw statuses
+        run: |
+          set -euo pipefail
+          python3 experiments/flash-upstream-repair-20261126/prepare_portable.py
+          python3 experiments/flash-upstream-repair-20261126/verify.py portable --binary "$RUNNER_TEMP/reconciled-evidence/builds/strict.bin" --results experiments/flash-upstream-repair-20261126/official-inputs.json --fixtures "$RUNNER_TEMP/lambda-portable-inputs/fixtures" --out "$RUNNER_TEMP/reconciled-evidence/portable"
+      - uses: actions/cache/restore@v4
+        id: input
+        with:
+          path: ${{ runner.temp }}/reconciled-input/mathlib.ndjson
+          key: flash-upstream-exact-mathlib-f749dfd084fc0727d107c7aaded7d492cebfc0b517cfaa7337d8a7578a6c0dec
+      - name: Reconstruct pinned official full input if absent
+        if: steps.input.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          A="$RUNNER_TEMP/reconciled-arena"
+          git init "$A"
+          git -C "$A" remote add origin https://github.com/leanprover/lean-kernel-arena.git
+          git -C "$A" fetch --depth 1 origin cb0665b7b0f34d53fa8d62584535c27c86dfa982
+          git -C "$A" checkout --detach FETCH_HEAD
+          python3 -m venv "$RUNNER_TEMP/reconciled-venv"
+          "$RUNNER_TEMP/reconciled-venv/bin/pip" install jinja2 jsonschema markdown pyyaml
+          curl -fsSL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none
+          export PATH="$HOME/.elan/bin:$PATH"
+          mkdir -p "$RUNNER_TEMP/reconciled-input"
+          cd "$A"
+          "$RUNNER_TEMP/reconciled-venv/bin/python" lka.py build-test mathlib 2>&1 | tee "$RUNNER_TEMP/reconciled-evidence/export.log"
+          mv _build/tests/mathlib.ndjson "$RUNNER_TEMP/reconciled-input/mathlib.ndjson"
+      - name: Verify complete input before preserving it
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          p=Path(os.environ['RUNNER_TEMP'])/'reconciled-input/mathlib.ndjson'
+          h=hashlib.sha256()
+          with p.open('rb') as f:
+              for b in iter(lambda:f.read(1024*1024),b''):h.update(b)
+          identity={'size':p.stat().st_size,'sha256':h.hexdigest()}
+          assert identity=={'size':6326141213,'sha256':'f749dfd084fc0727d107c7aaded7d492cebfc0b517cfaa7337d8a7578a6c0dec'}
+          (Path(os.environ['RUNNER_TEMP'])/'reconciled-evidence/input.json').write_text(json.dumps(identity)+'\n')
+          PY
+      - uses: actions/cache/save@v4
+        if: steps.input.outputs.cache-hit != 'true'
+        with:
+          path: ${{ runner.temp }}/reconciled-input/mathlib.ndjson
+          key: flash-upstream-exact-mathlib-f749dfd084fc0727d107c7aaded7d492cebfc0b517cfaa7337d8a7578a6c0dec
+      - name: Matched complete Mathlib comparison
+        run: |
+          set -euo pipefail
+          python3 experiments/flash-upstream-repair-20261126/whole_mathlib.py --fixture "$RUNNER_TEMP/reconciled-input/mathlib.ndjson" --binaries "$RUNNER_TEMP/reconciled-evidence/builds" --out "$RUNNER_TEMP/reconciled-evidence/mathlib"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-upstream-qualification
+          path: ${{ runner.temp }}/reconciled-evidence/
+          retention-days: 30

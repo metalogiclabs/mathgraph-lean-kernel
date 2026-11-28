@@ -1,0 +1,88 @@
+diff --git a/src/checker/eval/environment.rs b/src/checker/eval/environment.rs
+index 5f1a1e8..4f429c1 100644
+--- a/src/checker/eval/environment.rs
++++ b/src/checker/eval/environment.rs
+@@ -197,6 +197,9 @@ impl TypeChecker<'_, '_> {
+                         cur = parent;
+                         hops += 1;
+                     }
++                    crate::checker::value::ENV_TRACE.with(|trace| {
++                        trace.borrow_mut().skips[hops as usize] += 1;
++                    });
+                     rem >>= hops;
+                     consumed += hops;
+                 }
+diff --git a/src/checker/value.rs b/src/checker/value.rs
+index b07f9c5..4f12013 100644
+--- a/src/checker/value.rs
++++ b/src/checker/value.rs
+@@ -7,6 +7,29 @@ use crate::term::expr::{FAR_VARS, NEAR_VARS};
+ use crate::term::hash::GOLDEN;
+ use crate::term::id::{BigId, ExprId, LevelId, LevelsId, NameId, StrId};
+ 
++// Temporary MathGraph observation only. These counters are excluded from
++// every performance comparison and from all candidate release sources.
++pub(crate) struct EnvTrace {
++    pub cons_new: u64,
++    pub skips: [u64; 64],
++    pub frames: [u64; 4],
++    pub context_new: u64,
++    pub context_lookups: u64,
++    pub context_requested_steps: u64,
++}
++
++impl Drop for EnvTrace {
++    fn drop(&mut self) {
++        eprintln!("MG_ENV_TRACE {{\"cons_new\":{},\"skips\":{:?},\"frames\":{:?},\"context_new\":{},\"context_lookups\":{},\"context_requested_steps\":{}}}", self.cons_new, self.skips, self.frames, self.context_new, self.context_lookups, self.context_requested_steps);
++    }
++}
++
++thread_local! {
++    pub(crate) static ENV_TRACE: std::cell::RefCell<EnvTrace> = const {
++        std::cell::RefCell::new(EnvTrace { cons_new: 0, skips: [0; 64], frames: [0; 4], context_new: 0, context_lookups: 0, context_requested_steps: 0 })
++    };
++}
++
+ macro_rules! store_ids {
+     ($($name:ident),*) => {
+         $(
+@@ -890,6 +913,11 @@ impl Vals {
+     }
+ 
+     pub fn ctx_lookup(&self, ctx: C, mut idx: u16) -> Option<V> {
++        ENV_TRACE.with(|trace| {
++            let mut trace = trace.borrow_mut();
++            trace.context_lookups += 1;
++            trace.context_requested_steps += u64::from(idx) + 1;
++        });
+         let mut cur = ctx;
+         while cur != EMPTY_CTX {
+             let n = at(&self.ctxs, cur.index());
+@@ -1167,6 +1195,7 @@ impl Vals {
+ 
+     #[inline(never)]
+     fn env_new(&mut self, slot: (usize, u8), parent: E, v: V) -> E {
++        ENV_TRACE.with(|trace| trace.borrow_mut().cons_new += 1);
+         let p = *at(&self.envs, parent.index());
+         let id = EnvId(next_id(self.envs.len()));
+         self.envs.push(EnvNode {
+@@ -1191,6 +1220,11 @@ impl Vals {
+         rest: Option<E>,
+         lsub: Option<LsubId>,
+     ) -> (E, bool) {
++        ENV_TRACE.with(|trace| {
++            let category = if rest.is_some() { 3 } else if near == 0 { 0 } else if near == 1 { 1 }
++                else if near.is_power_of_two() { 2 } else { 3 };
++            trace.borrow_mut().frames[category] += 1;
++        });
+         let mut hash = near.wrapping_mul(GOLDEN).wrapping_add(slots_hash);
+         let (mask, cut, len) = match rest {
+             Some(r) => {
+@@ -1233,6 +1267,7 @@ impl Vals {
+     }
+ 
+     pub(crate) fn ctx_extend(&mut self, parent: C, ty: V) -> C {
++        ENV_TRACE.with(|trace| trace.borrow_mut().context_new += 1);
+         let id = CtxId(next_id(self.ctxs.len()));
+         self.ctxs.push(CtxNode { ty, parent });
+         id

@@ -1,0 +1,200 @@
+diff --git a/src/checker/cache.rs b/src/checker/cache.rs
+index 2b00112..306932a 100644
+--- a/src/checker/cache.rs
++++ b/src/checker/cache.rs
+@@ -17,6 +17,20 @@ pub(crate) const SMALL: usize = 14;
+ pub(crate) const SESSION_SMALL: usize = 1 << 12;
+ pub(crate) const SESSION: usize = 1 << 13;
+ 
++/// Observation-only counters, private to each checker and preserved across
++/// declaration sessions. They never enter a key or a semantic decision.
++pub(crate) struct EvalCostCensus(pub(crate) [u64; 48]);
++
++impl Default for EvalCostCensus {
++    fn default() -> Self { Self([0; 48]) }
++}
++
++impl Drop for EvalCostCensus {
++    fn drop(&mut self) {
++        eprintln!("EVAL_COST_CENSUS {}", serde_json::json!({"counts": self.0.as_slice()}));
++    }
++}
++
+ pub(crate) trait Reset {
+     fn with_cap(cap: usize) -> Self;
+     fn reset(&mut self);
+@@ -96,8 +110,26 @@ macro_rules! memo {
+ }
+ pub(crate) use memo;
+ 
++macro_rules! memo_observed {
++    ($map:expr, $key:expr, $compute:expr, $counts:expr, $hit:expr) => {{
++        let key = $key;
++        match $map.find(key) {
++            Ok(v) => { $counts[$hit] += 1; v }
++            Err(at) => {
++                $counts[$hit + 1] += 1;
++                let epoch = $map.epoch();
++                let v = $compute;
++                $map.insert_found(at, epoch, key, v);
++                v
++            }
++        }
++    }};
++}
++pub(crate) use memo_observed;
++
+ caches! {
+     pub struct TcCache {
++        #[keep(EvalCostCensus::default())] eval_cost_census: EvalCostCensus,
+         #[cap(SESSION_SMALL)] unfold_const_cache: PtrMap<(NameId, LevelsId), V>,
+         #[cap(SMALL)] arithmetic_delta_cache: PtrMap<V, V>,
+         #[cap(SMALL)] rec_rule_cache: PtrMap<(ExprId, LevelsId), V>,
+diff --git a/src/checker/eval.rs b/src/checker/eval.rs
+index 6c0225f..a18c7f8 100644
+--- a/src/checker/eval.rs
++++ b/src/checker/eval.rs
+@@ -1,7 +1,7 @@
+ // SPDX-FileCopyrightText: 2026 Jeremy Chen
+ // SPDX-License-Identifier: Apache-2.0
+ 
+-use crate::checker::cache::memo;
++use crate::checker::cache::{memo, memo_observed};
+ use crate::checker::env::Declar;
+ use crate::checker::tc::TypeChecker;
+ use crate::checker::value::{Closure, E, Elim, ElimView, RigidHead, S, Spine, V, Value};
+@@ -24,10 +24,21 @@ enum ConstKind {
+     Axiom,
+ }
+ 
++fn census_kind(e: Expr) -> usize {
++    match e {
++        Expr::Var { .. } => 0, Expr::Sort { .. } => 1,
++        Expr::Const { .. } => 2, Expr::App { .. } => 3,
++        Expr::Lambda { .. } => 4, Expr::Pi { .. } => 5,
++        Expr::Let { .. } => 6, Expr::Proj { .. } => 7,
++        Expr::NatLit { .. } => 8, Expr::StringLit { .. } => 9,
++    }
++}
++
+ impl TypeChecker<'_, '_> {
+     #[inline(always)]
+     pub(crate) fn eval(&mut self, depth: u32, env: E, e: ExprId) -> V {
+         let node = *self.ctx.node(e);
++        self.tc_cache.eval_cost_census.0[census_kind(node.expr)] += 1;
+         if let Expr::Var { dbj_idx } = node.expr {
+             return self
+                 .vals()
+@@ -40,16 +51,17 @@ impl TypeChecker<'_, '_> {
+     fn eval_node(&mut self, depth: u32, env: E, e: ExprId, node: ExprNode) -> V {
+         if node.loose == 0 {
+             let Some(ls) = self.vals().env_lsub(env) else {
+-                return memo!(
++                return memo_observed!(
+                     self.tc_cache.closed_eval_cache,
+                     e,
+-                    self.eval_no_cache(depth, env, e, node.expr)
++                    self.eval_no_cache(depth, env, e, node.expr),
++                    self.tc_cache.eval_cost_census.0, 20
+                 );
+             };
+-            return memo!(self.tc_cache.closed_lsub_eval_cache, (e, ls), {
++            return memo_observed!(self.tc_cache.closed_lsub_eval_cache, (e, ls), {
+                 let base = self.lsub_base(Some(ls));
+                 self.eval_no_cache(depth, base, e, node.expr)
+-            });
++            }, self.tc_cache.eval_cost_census.0, 22);
+         }
+         if matches!(
+             node.expr,
+@@ -60,16 +72,18 @@ impl TypeChecker<'_, '_> {
+                 | Expr::Lambda { .. }
+         ) {
+             let te = self.prune_env(env, node.mask);
+-            return memo!(
++            return memo_observed!(
+                 self.tc_cache.open_eval_cache,
+                 (te, e),
+-                self.eval_no_cache(depth, te, e, node.expr)
++                self.eval_no_cache(depth, te, e, node.expr),
++                self.tc_cache.eval_cost_census.0, 24
+             );
+         }
+         self.eval_no_cache(depth, env, e, node.expr)
+     }
+ 
+     fn eval_no_cache(&mut self, depth: u32, env: E, e: ExprId, first: Expr) -> V {
++        self.tc_cache.eval_cost_census.0[10 + census_kind(first)] += 1;
+         if let Expr::App { fun, arg } = first {
+             if let Expr::App { fun: f2, arg: a2 } = self.ctx.ex(arg) {
+                 let first_fun = fun;
+diff --git a/src/checker/eval/environment.rs b/src/checker/eval/environment.rs
+index 5f1a1e8..c56b6e4 100644
+--- a/src/checker/eval/environment.rs
++++ b/src/checker/eval/environment.rs
+@@ -73,18 +73,23 @@ impl TypeChecker<'_, '_> {
+ 
+     #[inline(always)]
+     pub(crate) fn prune_env(&mut self, e: E, mask: u64) -> E {
++        self.tc_cache.eval_cost_census.0[26] += 1;
+         if mask == 0 {
++            self.tc_cache.eval_cost_census.0[27] += 1;
+             let lsub = self.vals().env_lsub(e);
+             return self.lsub_base(lsub);
+         }
+         if self.vals().env_is_pruned(e, mask) {
++            self.tc_cache.eval_cost_census.0[28] += 1;
+             return e;
+         }
+         let slot = prune_slot(e, mask);
+         let (m, k, hit) = self.tc_cache.prune_dm[slot];
+         if k == e && m == mask {
++            self.tc_cache.eval_cost_census.0[29] += 1;
+             return hit;
+         }
++        self.tc_cache.eval_cost_census.0[30] += 1;
+         self.prune_env_cold(e, mask, slot)
+     }
+ 
+@@ -207,7 +212,10 @@ impl TypeChecker<'_, '_> {
+             .vals
+             .intern_frame(slots_hash, out_mask, start, NEAR, rest, lsub);
+         if !fresh {
++            self.tc_cache.eval_cost_census.0[37] += 1;
+             self.vals_mut().drop_env_slots(start);
++        } else {
++            self.tc_cache.eval_cost_census.0[36] += 1;
+         }
+         self.tc_cache.prune_dm[slot] = (mask, e, r);
+         r
+diff --git a/src/checker/infer.rs b/src/checker/infer.rs
+index 2e6bcd8..697d6e0 100644
+--- a/src/checker/infer.rs
++++ b/src/checker/infer.rs
+@@ -99,6 +99,7 @@ impl TypeChecker<'_, '_> {
+         ctx: C,
+         e: ExprId,
+     ) -> V {
++        self.tc_cache.eval_cost_census.0[31] += 1;
+         let node = *self.ctx.node(e);
+         if let Var { dbj_idx } = node.expr {
+             return self
+@@ -167,8 +168,10 @@ impl TypeChecker<'_, '_> {
+         if let Some(cached) = self.tc_cache.type_cache.get(&key)
+             && (flag == InferOnly || cached.checked_under == scope)
+         {
++            self.tc_cache.eval_cost_census.0[32] += 1;
+             return cached.result;
+         }
++        self.tc_cache.eval_cost_census.0[33] += 1;
+ 
+         let reusable = match self.declar_info {
+             Some(info)
+@@ -182,6 +185,7 @@ impl TypeChecker<'_, '_> {
+             _ => None,
+         };
+         let known = reusable.is_some_and(|u| self.ctx.checked_closed.contains(&(e, u)));
++        self.tc_cache.eval_cost_census.0[35] += u64::from(known);
+         let requested = flag;
+         let flag = if known { InferOnly } else { flag };
+ 

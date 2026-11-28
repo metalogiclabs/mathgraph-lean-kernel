@@ -1,0 +1,13 @@
+diff --git a/src/checker/cache.rs b/src/checker/cache.rs
+index 2b00112..c1bf138 100644
+--- a/src/checker/cache.rs
++++ b/src/checker/cache.rs
+@@ -10,7 +10,7 @@ use crate::term::id::{ExprId, LevelId, LevelsId, NameId};
+ pub(crate) const PRUNE_DM_LEN: usize = 1 << 14;
+ pub(crate) const PRUNE_DM_SHIFT: u32 = 64 - 14;
+ 
+-pub(crate) const SESSION_BUDGET: usize = 9 * 1024 * 1024;
++pub(crate) const SESSION_BUDGET: usize = 36 * 1024 * 1024;
+ const ARENA_KEEP: usize = 4 * SESSION_BUDGET;
+ 
+ pub(crate) const SMALL: usize = 14;

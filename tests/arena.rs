@@ -1,8 +1,7 @@
-use sokonanoda::util::Config;
+use sokonanoda::{AxiomPolicy, CheckError, Config, Rejection};
 use std::fs;
 use std::panic::{self, AssertUnwindSafe};
 use std::path::{Path, PathBuf};
-use stumpalo::Arena;
 
 const MAX_EXPORT_BYTES: u64 = 64 * 1024 * 1024;
 
@@ -64,26 +63,23 @@ fn run_case_inner(export: PathBuf) -> Outcome {
     let cfg = Config {
         export_file_path: Some(export),
         use_stdin: false,
-        permitted_axioms: None,
-
-        permit_standard_axioms: false,
-        unpermitted_axiom_hard_error: false,
+        axiom_policy: AxiomPolicy::AllowAll,
         parse_only: false,
         num_threads: 1,
         nat_extension: true,
         string_extension: true,
-        print_success_message: false,
-        print_axioms: false,
-        unsafe_permit_all_axioms: true,
+        ..Config::default()
     };
-    let global_arena = Arena::new();
-    let ef = match cfg.to_export_file(global_arena.as_arena_ref()) {
-        Ok((ef, _)) => ef,
+    let ef = match cfg.to_export_file() {
+        Ok(ef) => ef,
+        Err(e) if e.downcast_ref::<Rejection>().is_some() => return Outcome::KernelRejected(format!("{e}")),
         Err(e) => return Outcome::ParseError(format!("{e}")),
     };
     let result = panic::catch_unwind(AssertUnwindSafe(|| ef.check_all_declars()));
     match result {
-        Ok(()) => Outcome::Accepted,
+        Ok(Ok(())) => Outcome::Accepted,
+        Ok(Err(CheckError::Rejected(e))) => Outcome::KernelRejected(format!("{e}")),
+        Ok(Err(e)) => Outcome::UnexpectedPanic(format!("{e}")),
         Err(payload) => {
             let msg = if let Some(s) = payload.downcast_ref::<&str>() {
                 (*s).to_string()
@@ -97,6 +93,23 @@ fn run_case_inner(export: PathBuf) -> Outcome {
             } else {
                 Outcome::UnexpectedPanic(msg)
             }
+        }
+    }
+}
+
+#[test]
+fn retained_source_regressions() {
+    for (name, accepted) in [
+        ("Empty", true), ("LevelIndexOutOfOrder", true), ("SparseNameIndex", true),
+        ("ProofIrrelUnderBVar", true), ("KReduceDepthAlias", false),
+        ("ProjFromProp", false), ("RuleDomainMismatch", false), ("UnlistedRecursor", false),
+    ] {
+        let p = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("test_resources").join(name).join("export");
+        let outcome = run_case(p);
+        match (accepted, outcome) {
+            (true, Outcome::Accepted) | (false, Outcome::KernelRejected(_)) => {},
+            (_, Outcome::ParseError(e) | Outcome::KernelRejected(e) | Outcome::UnexpectedPanic(e)) => panic!("{name}: {e}"),
+            (false, Outcome::Accepted) => panic!("{name}: forged input accepted"),
         }
     }
 }

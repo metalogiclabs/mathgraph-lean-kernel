@@ -1,0 +1,114 @@
+# Public-data transport only: no checkout, kernel, private artifact or benchmark.
+name: Preserve nine exact public Arena inputs
+on:
+  push:
+    branches: [research/flash-upstream-reconciliation-20261126]
+    paths: [.github/workflows/flash-public-large-capsules.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: public-large-inputs-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  preserve:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include:
+          - name: "cedar"
+            size: 904722064
+            sha256: "787b0e0790186f14f79f450896650fe120cd64efcdb4ca9220667612519f0a79"
+            timeout: 640
+            id: "cedar"
+            declarations: 151772
+          - name: "con-leche"
+            size: 701947717
+            sha256: "799c9744ccb5d10bf5ffb0ea63bc11532aaaf95d7eecc678ec43175f18f66f1c"
+            timeout: 920
+            id: "con-leche"
+            declarations: 38246
+          - name: "cslib"
+            size: 2500956112
+            sha256: "09d1225013197983fe16b7078f6475707ce13da8f7e92d7c41ab1bc354522567"
+            timeout: 1600
+            id: "cslib"
+            declarations: 413186
+          - name: "init"
+            size: 347772063
+            sha256: "93b61a432ed4241b1d2184de65354e0b98333bf4403a8d63922da18e10b430ba"
+            timeout: 370
+            id: "init"
+            declarations: 59979
+          - name: "navier-stokes-euler"
+            size: 1559685706
+            sha256: "632943fca6795d48bc13e703aabfaef39931f9445f1275d2150a44f4de7b55e6"
+            timeout: 1840
+            id: "navier-stokes-euler"
+            declarations: 129845
+          - name: "perf/magma-string-n4"
+            size: 17461675
+            sha256: "b63ebfd31193fbbfc7d8aa4314971d4231c86fb2c261c31e1aea8e4feeb3d612"
+            timeout: 70
+            id: "magma-string-n4"
+            declarations: 3542
+          - name: "perf/magma-string-pair-n9"
+            size: 17463066
+            sha256: "ed9a15a45140b12a52c196cc97e8bca39d0fa98896859f564d98348e0af6b350"
+            timeout: 120
+            id: "magma-string-pair-n9"
+            declarations: 3542
+          - name: "reachability"
+            size: 19031110
+            sha256: "31d06d90f2cd6037bb03f98c771304b0530132be514ea1c63b31f3c975fda065"
+            timeout: 220
+            id: "reachability"
+            declarations: 4846
+          - name: "std"
+            size: 584315500
+            sha256: "15b659c12c14eb5c104b169ff288dcbd35baaff51412f43c9a078f79e9cf2f7d"
+            timeout: 600
+            id: "std"
+            declarations: 103885
+    env:
+      INPUT_NAME: ${{ matrix.name }}
+      INPUT_ID: ${{ matrix.id }}
+      INPUT_SHA256: ${{ matrix.sha256 }}
+      INPUT_SIZE: ${{ matrix.size }}
+      INPUT_DECLARATIONS: ${{ matrix.declarations }}
+    steps:
+      - uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/large-input/test.ndjson
+          key: flash-reconciled-current-large-${{ matrix.id }}-cb0665b7
+          fail-on-cache-miss: true
+      - name: Authenticate and compress only the pinned public input
+        run: |
+          set -euo pipefail
+          python3 - <<'PY_INPUT'
+          import gzip,hashlib,json,os
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP']);source=root/'large-input/test.ndjson'
+          out=root/'public-large-input';out.mkdir();archive=out/'test.ndjson.gz'
+          expected={'size':int(os.environ['INPUT_SIZE']),'sha256':os.environ['INPUT_SHA256']}
+          h=hashlib.sha256();size=0
+          with source.open('rb') as f,gzip.open(archive,'wb',compresslevel=1) as z:
+              for block in iter(lambda:f.read(1024*1024),b''):
+                  h.update(block);size+=len(block);z.write(block)
+          identity={'size':size,'sha256':h.hexdigest()};assert identity==expected,identity
+          h=hashlib.sha256()
+          with archive.open('rb') as f:
+              for block in iter(lambda:f.read(1024*1024),b''):h.update(block)
+          identity.update(name=os.environ['INPUT_NAME'],id=os.environ['INPUT_ID'],declarations=int(os.environ['INPUT_DECLARATIONS']),archive_sha256=h.hexdigest(),archive_size=archive.stat().st_size,transport_commit=os.environ['GITHUB_SHA'],cache_branch=os.environ['GITHUB_REF'])
+          (out/'input-identity.json').write_text(json.dumps(identity,indent=2)+'\n')
+          print(json.dumps(identity))
+          PY_INPUT
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-large-input-${{ matrix.id }}
+          path: ${{ runner.temp }}/public-large-input/
+          compression-level: 0
+          retention-days: 7

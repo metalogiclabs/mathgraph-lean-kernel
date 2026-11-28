@@ -1,0 +1,26 @@
+{
+  "source_sha256": "6d00654e55d4b2049ff3f2031383106b9658a0ddaa3a3a05db53261fb35adb34",
+  "client_sha256": "212a57d6dedc34155467d196e76d30b5d50ceb15010212c4c0f65dd6914194ce",
+  "compile_command": [
+    "gcc",
+    "-shared",
+    "-fPIC",
+    "-O3",
+    "-fno-stack-protector",
+    "-DX86_64",
+    "-DLINUX",
+    "-I/workspace/scratch/f55dc021446a/diagnostics/dynamorio/include",
+    "-I/workspace/scratch/f55dc021446a/diagnostics/dynamorio/ext/include",
+    "/workspace/scratch/f55dc021446a/flash-upstream-repair/experiments/flash-upstream-repair-20261126/instruction_counter.c",
+    "-L/workspace/scratch/f55dc021446a/diagnostics/dynamorio/lib64/release",
+    "-Wl,-rpath,/workspace/scratch/f55dc021446a/diagnostics/dynamorio/lib64/release",
+    "-L/workspace/scratch/f55dc021446a/diagnostics/dynamorio/ext/lib64/release",
+    "-Wl,-rpath,/workspace/scratch/f55dc021446a/diagnostics/dynamorio/ext/lib64/release",
+    "-ldrx",
+    "-ldrreg",
+    "-ldrmgr",
+    "-ldynamorio",
+    "-o",
+    "/workspace/scratch/f55dc021446a/diagnostics/counter-v1.so"
+  ]
+}

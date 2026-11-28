@@ -1,0 +1,24 @@
+# Prepared for review. Not submitted to the Arena and not a release promotion.
+description: |
+  MathGraph Flash is a testbed based on Jeremy Chen's
+  [sokonanoda](https://github.com/intgrah/sokonanoda), with the upstream
+  Apache-2.0 license and copyright notices retained. It is an attributed
+  upstream integration, not an independently implemented checker.
+
+  This candidate reconciles the newer upstream core while comparing imported
+  inductive, constructor and recursor records against reconstructed declarations.
+  Changed computation-rule bodies have their types checked before conversion.
+  MathGraph also retains loose-bound-variable rejection and closed/open literal
+  natural-shift repairs. The Arena receives the raw process exit status.
+
+  Independent Nucleus is a separate checker and qualification campaign.
+version: flash-2026-11-26-upstream-candidate
+language: rust
+threads: 2
+url: https://github.com/metalogiclabs/mathgraph-lean-kernel
+ref: research/flash-upstream-reconciliation-20261126
+rev: 2ba65451f90ce79b48a76cb5a33d0af3950e2fa1
+build: |
+  RUSTFLAGS="-C target-cpu=native" cargo build --release --locked
+run: |
+  target/release/sokonanoda --stdin --threads 2 --nat-extension --string-extension --axiom-allow-all < "$IN"

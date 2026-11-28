@@ -1,0 +1,20 @@
+{
+  "state": "REJECTED_PREFIX_AGREEMENT_GATE",
+  "calibration_controls_passed": 15,
+  "prefix_accepts": 4,
+  "declared_single_worker_relative_tolerance": 1e-05,
+  "observed_single_worker_ratio": 0.9999818347679261,
+  "observed_relative_difference": -1.816523207387455e-05,
+  "prefix_driver_exit": 1,
+  "prefix_counts": {
+    "('reference', 1)": 10216054452,
+    "('tls', 1)": 10215868875,
+    "('tls', 2)": 10647947262,
+    "('reference', 2)": 10663830493
+  },
+  "instrumentation_elapsed_ratios_tls_to_reference": {
+    "1": 0.4578212851303965,
+    "2": 0.3000584620927212
+  },
+  "boundary": "All calibration controls pass and all four prefix checker processes ACCEPT. The declared single-worker comparison tolerance failed. Do not promote this counter as interchangeable with the original, infer an error cause, change the active full-input experiment, or claim a kernel speedup."
+}

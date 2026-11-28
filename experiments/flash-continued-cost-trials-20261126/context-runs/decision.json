@@ -1,0 +1,16 @@
+{
+  "state": "CANDIDATE_BOUNDED_PREFIX_ONLY",
+  "decision": "NOT_PROMOTED_SMALL_PREFIX_GAIN",
+  "parent_source": "bc704eebed4e009bc66af1a849f18315c11f1926",
+  "description": "Contiguous type-context parent spans, held in a separate u16 array, preserve the original index-zero layout. Both live and retained allocation accounting include the new array.",
+  "dev_library_tests": 41,
+  "dev_retained_raw_exports": 8,
+  "release_library_suite": "UNKNOWN_SIGKILL_DURING_COMPILATION",
+  "release_source_controls": 16,
+  "release_prefix_accepts": 4,
+  "instruction_ratio": 0.9948748732798295,
+  "instruction_reduction_percent": 0.5125126720170514,
+  "recovery": "Two release-test compilation attempts and the initial baseline instrumentation were SIGKILLed. Exact cause unknown. Release binary built; dev tests passed; unchanged frozen executables then completed a fresh calibrated prefix comparison. Failed receipts are preserved and excluded from ratios.",
+  "whole_Mathlib": "UNKNOWN",
+  "Arena_rank": "UNESTABLISHED"
+}

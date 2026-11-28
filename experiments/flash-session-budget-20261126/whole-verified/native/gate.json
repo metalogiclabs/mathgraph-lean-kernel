@@ -1,0 +1,17 @@
+{
+  "mode": "native",
+  "passed": true,
+  "checks": {
+    "all_230_portable_correct": true,
+    "four_complete_accepts": true,
+    "peak_memory_within_declared_limit": true
+  },
+  "details": {
+    "peak_rss_kb": {
+      "baseline": 4927796,
+      "strict": 5032404
+    },
+    "candidate_peak_limit_kb": 5420575.600000001
+  },
+  "boundary": "Exact complete-input experiment; not an Arena score or a release qualification of the ten other large inputs."
+}

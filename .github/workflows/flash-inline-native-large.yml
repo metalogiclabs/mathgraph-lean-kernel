@@ -1,0 +1,182 @@
+name: Flash inline native comparison and nine large replays
+on:
+  push:
+    branches: [research/flash-upstream-reconciliation-20261126]
+    paths: ['.github/workflows/flash-inline-native-large.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  large:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include:
+          - id: cedar
+            test: cedar
+          - id: con-leche
+            test: con-leche
+          - id: cslib
+            test: cslib
+          - id: init
+            test: init
+          - id: magma-string-n4
+            test: perf/magma-string-n4
+          - id: magma-string-pair-n9
+            test: perf/magma-string-pair-n9
+          - id: reachability
+            test: reachability
+          - id: std
+            test: std
+          - id: navier-stokes-euler
+            test: navier-stokes-euler
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_INCREMENTAL: 0
+      RUSTFLAGS: -C target-cpu=x86-64 -C target-feature=-avx,-avx2,-avx512f,-fma
+      CASE: ${{ matrix.test }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Restore the exact previously qualified frozen inline executable
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/large-evidence"
+          mkdir -p "$OUT"
+          git diff --exit-code bc704eebed4e009bc66af1a849f18315c11f1926 -- experiments/flash-upstream-repair-20261126/official-inputs.json
+          git rev-parse HEAD > "$OUT/harness-commit.txt"
+          gh api repos/metalogiclabs/mathgraph-lean-kernel/actions/artifacts/15073369717/zip > "$OUT/original-inline-qualification.zip"
+          python3 experiments/flash-inline-native-large-20261126/run.py thaw --archive "$OUT/original-inline-qualification.zip" --out "$OUT"
+      - uses: actions/cache/restore@v4
+        id: input
+        with:
+          path: ${{ runner.temp }}/large-input/test.ndjson
+          key: flash-reconciled-current-large-${{ matrix.id }}-cb0665b7
+      - name: Regenerate pinned original export if absent
+        if: steps.input.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          A="$RUNNER_TEMP/arena-source"
+          git init "$A"
+          git -C "$A" remote add origin https://github.com/leanprover/lean-kernel-arena.git
+          git -C "$A" fetch --depth 1 origin cb0665b7b0f34d53fa8d62584535c27c86dfa982
+          git -C "$A" checkout --detach FETCH_HEAD
+          python3 -m venv "$RUNNER_TEMP/arena-venv"
+          "$RUNNER_TEMP/arena-venv/bin/pip" install jinja2 jsonschema markdown pyyaml
+          if [ "$CASE" = cedar ]; then
+            "$RUNNER_TEMP/arena-venv/bin/python" - "$A/tests/cedar.yaml" <<'PY_CEDAR'
+          import shlex,sys,yaml
+          from pathlib import Path
+          p=Path(sys.argv[1])
+          data=yaml.safe_load(p.read_text())
+          recipe=data['pre-build']
+          expected='shopt -s dotglob && find . -mindepth 1 -maxdepth 1 ! -name cedar-lean -exec rm -rf {} + && mv cedar-lean/* . && rmdir cedar-lean'
+          assert recipe.strip()==expected,'Cedar recipe changed'
+          data['pre-build']='bash -c '+shlex.quote(recipe)
+          p.write_text(yaml.safe_dump(data,sort_keys=False))
+          PY_CEDAR
+            git -C "$A" diff -- tests/cedar.yaml > "$RUNNER_TEMP/large-evidence/cedar-shell-repair.txt"
+          fi
+          curl -fsSL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none
+          export PATH="$HOME/.elan/bin:$PATH"
+          cd "$A"
+          "$RUNNER_TEMP/arena-venv/bin/python" lka.py build-test "$CASE" 2>&1 | tee "$RUNNER_TEMP/large-evidence/export.log"
+          mkdir -p "$RUNNER_TEMP/large-input"
+          mv "_build/tests/$CASE.ndjson" "$RUNNER_TEMP/large-input/test.ndjson"
+      - name: Require exact input bytes and complete ACCEPT
+        run: |
+          python3 experiments/flash-inline-native-large-20261126/run.py large \
+            --candidate "$RUNNER_TEMP/large-evidence/candidate.bin" \
+            --fixture "$RUNNER_TEMP/large-input/test.ndjson" --case "$CASE" \
+            --out "$RUNNER_TEMP/large-evidence"
+      - uses: actions/cache/save@v4
+        if: success() && steps.input.outputs.cache-hit != 'true'
+        with:
+          path: ${{ runner.temp }}/large-input/test.ndjson
+          key: flash-reconciled-current-large-${{ matrix.id }}-cb0665b7
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-inline-large-${{ matrix.id }}
+          path: ${{ runner.temp }}/large-evidence/
+          retention-days: 90
+
+  native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CARGO_BUILD_JOBS: 1
+      CARGO_INCREMENTAL: 0
+      RUSTFLAGS: -C target-cpu=native
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.99.1'
+      - name: Build and freeze source-pinned native baseline and candidate
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/inline-native"
+          BASE="$RUNNER_TEMP/inline-native-baseline-source"
+          CAND="$RUNNER_TEMP/inline-native-candidate-source"
+          mkdir -p "$OUT/builds"
+          git rev-parse HEAD > "$OUT/harness-commit.txt"
+          lscpu > "$OUT/cpu.txt"
+          rustc -Vv > "$OUT/compiler.txt"
+          printf '%s\n' "$RUSTFLAGS" > "$OUT/build-flags.txt"
+          git fetch origin bc704eebed4e009bc66af1a849f18315c11f1926 0797a21bea1b010dd915242cea2575c3edf38f35
+          git worktree add --detach "$BASE" bc704eebed4e009bc66af1a849f18315c11f1926
+          git worktree add --detach "$CAND" bc704eebed4e009bc66af1a849f18315c11f1926
+          test "$(git -C "$BASE" rev-parse HEAD:src)" = 06c257f0f2ff1f64711cfa54620b650e6dd59b7e
+          git show 0797a21bea1b010dd915242cea2575c3edf38f35:experiments/flash-eval-dispatch-inline-20261126/prototype.patch > "$OUT/candidate.patch"
+          git -C "$CAND" apply --check "$OUT/candidate.patch"
+          git -C "$CAND" apply "$OUT/candidate.patch"
+          git -C "$CAND" add src
+          INLINE_TREE=$(git -C "$CAND" write-tree)
+          git -C "$CAND" rev-parse "$INLINE_TREE:src" > "$OUT/candidate-source-tree.txt"
+          test "$(cat "$OUT/candidate-source-tree.txt")" = de6696fcecbe99e6fcab5bb68c5974e1e9a04e49
+          git -C "$CAND" diff --cached --exit-code -- Cargo.toml Cargo.lock tests test_resources
+          cargo build --release --locked --manifest-path "$BASE/Cargo.toml" --target-dir "$RUNNER_TEMP/inline-native-baseline-target" > "$OUT/baseline-build.log" 2>&1
+          cp "$RUNNER_TEMP/inline-native-baseline-target/release/sokonanoda" "$OUT/builds/baseline.bin"
+          cargo build --release --locked --manifest-path "$CAND/Cargo.toml" --target-dir "$RUNNER_TEMP/inline-native-candidate-target" > "$OUT/candidate-build.log" 2>&1
+          cp "$RUNNER_TEMP/inline-native-candidate-target/release/sokonanoda" "$OUT/builds/candidate.bin"
+          chmod 555 "$OUT/builds/"*.bin
+          sha256sum "$OUT/builds/"*.bin > "$OUT/frozen-executables.sha256"
+      - name: Verify native source tests, portable outcomes and source controls
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/inline-native"
+          BASE="$RUNNER_TEMP/inline-native-baseline-source"
+          CAND="$RUNNER_TEMP/inline-native-candidate-source"
+          (cd "$CAND" && cargo test --release --locked --target-dir "$RUNNER_TEMP/inline-native-candidate-target") > "$OUT/source-tests.log" 2>&1
+          (cd "$BASE" && python3 experiments/flash-upstream-repair-20261126/prepare_portable.py) > "$OUT/prepare-portable.log" 2>&1
+          (cd "$BASE" && python3 experiments/flash-upstream-repair-20261126/verify.py portable --binary "$OUT/builds/candidate.bin" --out "$OUT/portable" --results experiments/flash-upstream-repair-20261126/official-inputs.json --fixtures "$RUNNER_TEMP/lambda-portable-inputs/fixtures")
+          (cd "$BASE" && python3 experiments/flash-upstream-repair-20261126/metadata_controls.py --binary "$OUT/builds/candidate.bin" --out "$OUT/source-controls")
+          sha256sum --check "$OUT/frozen-executables.sha256"
+      - uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/reconciled-input/mathlib.ndjson
+          key: flash-upstream-exact-mathlib-f749dfd084fc0727d107c7aaded7d492cebfc0b517cfaa7337d8a7578a6c0dec
+          fail-on-cache-miss: true
+      - name: Compare three alternating pairs on complete original Mathlib
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/inline-native"
+          python3 experiments/flash-inline-native-large-20261126/run.py native \
+            --fixture "$RUNNER_TEMP/reconciled-input/mathlib.ndjson" \
+            --baseline "$OUT/builds/baseline.bin" --candidate "$OUT/builds/candidate.bin" --out "$OUT/comparison"
+          sha256sum --check "$OUT/frozen-executables.sha256"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flash-inline-native-comparison
+          path: ${{ runner.temp }}/inline-native/
+          retention-days: 90

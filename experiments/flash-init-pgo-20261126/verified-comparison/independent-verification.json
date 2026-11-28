@@ -1,0 +1,40 @@
+{
+  "state": "WARRANTED_BOUNDED",
+  "decision": "NOT_PROMOTED_SMALL_WHOLE_INPUT_GAIN",
+  "run_id": 45729265712,
+  "artifact_id": 15076991448,
+  "archive_size": 57038303,
+  "archive_sha256": "a58fc7871d0513b413643fff15fbb83fda1f84b056c133f31688f2f377cb2b56",
+  "crc_valid": true,
+  "verified_archive_entries": 572,
+  "source": "bc704eebed4e009bc66af1a849f18315c11f1926",
+  "source_tree": "06c257f0f2ff1f64711cfa54620b650e6dd59b7e",
+  "binary_sha256": {
+    "baseline": "e46f320704fe8069e0e4093c302fc58719e65966a4c94fd34f91b8eb4da30f18",
+    "strict": "07ee51e82469066d6ec9b77a78b7ba2f69101fbf60edd8856e54c5a3d0cee2aa"
+  },
+  "native_full_accepts": 4,
+  "instruction_full_accepts": 2,
+  "declarations_per_execution": 739167,
+  "portable_prescribed_correct": 230,
+  "additional_source_controls": 16,
+  "library_tests": 39,
+  "retained_raw_export_cases": 8,
+  "ignored_doctest_examples": 3,
+  "software_instructions": {
+    "baseline": 515628583473,
+    "strict": 508341361994
+  },
+  "software_instruction_ratio": 0.9858673050475264,
+  "software_instruction_reduction_percent": 1.4132694952473601,
+  "native_cpu_medians": {
+    "baseline": 155.76,
+    "strict": 154.63
+  },
+  "native_cpu_ratio": 0.9927452491011813,
+  "native_paired_cpu_ratios": [
+    0.9761593526299408,
+    1.0104063100682708
+  ],
+  "boundary": "Unchanged checker source; ordinary native versus Init-trained compiler PGO. One software-counted complete execution per arm; two alternating native pairs. The small median CPU difference reverses direction across pairs. Other nine large exports are not replayed for this PGO binary. No Arena hardware score, new rank, combined-optimization gain or universal soundness claim."
+}

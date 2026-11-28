@@ -1,0 +1,18 @@
+{
+  "observations": 4,
+  "strict_to_baseline_ratio": 1.0696122551320781,
+  "boundary": "Dynamic basic-block application instruction estimate, including libraries. REP-string and asynchronous interruption accounting differs from other tools. Calibration covers straight-line loops, not all x86 or hardware semantics. This is not an official Arena instruction score.",
+  "state": "REJECTED_AS_PERFORMANCE_CHANGE",
+  "source_parent": "bc704eebed4e009bc66af1a849f18315c11f1926",
+  "storage_size_before": 32,
+  "storage_size_candidate": 24,
+  "reason": "The 24-byte node uses 6.961% more dynamic instructions on the fixed prefix; it is not promoted for the instruction-count objective. Whole-workload memory effect is unmeasured.",
+  "native_library_tests": 39,
+  "retained_export_controls": 8,
+  "source_controls": 16,
+  "full_corpus": "UNEXECUTED",
+  "full_mathlib": "UNEXECUTED",
+  "patch_sha256": "53bacbbb7be3ca64f1adc3e0feecdb498b3bef05f17dcfeab573305b55978b5f",
+  "invalidated_initial_attempt": "expr24-prefix stopped at calibration before any checker run: helper binary had changed from the earlier client hash. No performance conclusion. Rebuilt from the retained source in a task-isolated directory, recalibrated and checked all binaries remained unchanged after each observation.",
+  "build_recovery": "Initial build ran out of local disk; removed only reproducible task-owned debug builds and diagnostic extras, then identical source built successfully."
+}

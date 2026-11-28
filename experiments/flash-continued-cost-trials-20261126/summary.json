@@ -1,0 +1,78 @@
+{
+  "parent_source": "bc704eebed4e009bc66af1a849f18315c11f1926",
+  "parent_source_tree": "06c257f0f2ff1f64711cfa54620b650e6dd59b7e",
+  "input_bytes": 134232002,
+  "input_sha256": "c3d1e08032bbfe2dbfc4c8a84fd711ba83296a47d7468d9ce15988efa4acfa3a",
+  "declarations": 25131,
+  "instrument": "private calibrated DynamoRIO basic-block client",
+  "counter_sha256": "212a57d6dedc34155467d196e76d30b5d50ceb15010212c4c0f65dd6914194ce",
+  "trials": [
+    {
+      "trial": "prune16",
+      "strict_to_bc704eeb_instruction_ratio": 1.0275735989286758,
+      "percent_change": 2.7573598928675835,
+      "decision": "REJECTED_AS_PREFIX_PERFORMANCE_PRIORITY",
+      "whole_Mathlib_effect": "UNKNOWN",
+      "source_controls": 16,
+      "prefix_accepts": 4,
+      "patch_sha256": "6e83b574a7971d5ebdae4d836765e341f232abb158dd1791fde94882b8007e85",
+      "native_suite_log_retained": false
+    },
+    {
+      "trial": "prune18",
+      "strict_to_bc704eeb_instruction_ratio": 1.1454874102932622,
+      "percent_change": 14.548741029326218,
+      "decision": "REJECTED_AS_PREFIX_PERFORMANCE_PRIORITY",
+      "whole_Mathlib_effect": "UNKNOWN",
+      "source_controls": 16,
+      "prefix_accepts": 4,
+      "patch_sha256": "31cc3a3f69509889bfa03366dbae9ce0a013c929090458994712d95032fbe209",
+      "native_suite_log_retained": false
+    },
+    {
+      "trial": "spine-v1",
+      "strict_to_bc704eeb_instruction_ratio": 1.0011821884497087,
+      "percent_change": 0.11821884497087431,
+      "decision": "REJECTED_AS_PREFIX_PERFORMANCE_PRIORITY",
+      "whole_Mathlib_effect": "UNKNOWN",
+      "source_controls": 16,
+      "prefix_accepts": 4,
+      "patch_sha256": "9a102f18545c4afff11a1213f5d9bc49947f85add657cfc97676efd060264251",
+      "native_suite_log_retained": false
+    },
+    {
+      "trial": "spine-v2",
+      "strict_to_bc704eeb_instruction_ratio": 0.9969184270114679,
+      "percent_change": -0.30815729885320664,
+      "decision": "NOT_PROMOTED_SMALL_PREFIX_GAIN",
+      "whole_Mathlib_effect": "UNKNOWN",
+      "source_controls": 16,
+      "prefix_accepts": 4,
+      "patch_sha256": "1a47628224551f228ed6c7077b4d822156f5c17fefaead80ada60b226351568b",
+      "native_suite_log_retained": true
+    },
+    {
+      "trial": "prune12",
+      "strict_to_bc704eeb_instruction_ratio": 0.9949801662585855,
+      "percent_change": -0.5019833741414459,
+      "decision": "NOT_PROMOTED_SMALL_PREFIX_GAIN",
+      "whole_Mathlib_effect": "UNKNOWN",
+      "source_controls": 16,
+      "prefix_accepts": 4,
+      "patch_sha256": "d3892d4436fbb44106ca60a600a18639047d97b5d0aedf9c94f13a018d0aa46d",
+      "native_suite_log_retained": true
+    },
+    {
+      "trial": "unused-argument",
+      "strict_to_bc704eeb_instruction_ratio": 1.0002781631894042,
+      "percent_change": 0.027816318940421247,
+      "decision": "REJECTED_AS_PREFIX_PERFORMANCE_PRIORITY",
+      "whole_Mathlib_effect": "UNKNOWN",
+      "source_controls": 16,
+      "prefix_accepts": 4,
+      "patch_sha256": "7194695c2923b2156e014e6625aafc4671c4cf1e0c80b22a6e4ceac73e231567",
+      "native_suite_log_retained": true
+    }
+  ],
+  "boundary": "Each trial uses two alternating pairs, one checking worker, distinct identified binaries, three exact loop calibrations and 16 actual source-record controls. These are prefix-only software estimates, not full Mathlib, native CPU, official PMU, universal soundness or rank evidence. No trial changes the qualified submission."
+}

@@ -1,0 +1,331 @@
+diff --git a/Cargo.toml b/Cargo.toml
+index adbca48..7197dbe 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -53,6 +53,8 @@ too_many_lines = "allow"
+ 
+ [features]
+ top-byte-ignore = []
++application-skip = []
++application-reuse = []
+ 
+ [[bin]]
+ name = "sokonanoda"
+diff --git a/src/checker/application_experiment.rs b/src/checker/application_experiment.rs
+new file mode 100644
+index 0000000..0f9fed5
+--- /dev/null
++++ b/src/checker/application_experiment.rs
+@@ -0,0 +1,176 @@
++//! Mechanism and scope controls; counters are absent from production builds.
++use super::env::EnvLimit;
++use super::tc::{InferFlag::{Check, InferOnly}, TypeChecker};
++use super::value::{EMPTY_CTX, EMPTY_ENV, Value, Vals};
++use crate::config::Config;
++use crate::frontend::parser::parse_export_file;
++use crate::outcome::Rejection;
++use crate::term::id::{LevelId, ZERO};
++use std::io;
++use std::panic::{AssertUnwindSafe, catch_unwind};
++
++fn with_checker(f: impl FnOnce(&mut TypeChecker<'_, '_>)) {
++    let export = parse_export_file(io::empty(), Config::default(), 0).unwrap();
++    export.with_ctx(|ctx, cache, _| ctx.with_tc(EnvLimit::ByIndex(0), cache, f));
++}
++
++fn record(name: &str, size: usize, counts: [u64; 5]) {
++    println!("APPLICATION_MECHANISM {}", serde_json::json!({
++        "skip": cfg!(feature = "application-skip"),
++        "reuse": cfg!(feature = "application-reuse"),
++        "name": name, "size": size,
++        "eval_requests": counts[0], "infer_requests": counts[1],
++        "infer_closure_calls": counts[2], "erased_evaluations": counts[3],
++        "eval_computations": counts[4],
++        "boundary": "Test-only event counts, not instruction or time shares."
++    }));
++}
++
++#[test]
++fn demand_scaling_forces_evaluation_after_validity_check() {
++    for size in [1, 16, 128] {
++        for kind in ["unused-lambda", "used-lambda", "unused-let"] {
++            with_checker(|tc| {
++                let zero = tc.ctx.zero();
++                let one = tc.ctx.succ(zero);
++                let two = tc.ctx.succ(one);
++                let value = tc.ctx.mk_sort(one);
++                let domain = tc.ctx.mk_sort(two);
++                let var = tc.ctx.mk_var(0);
++                let identity = tc.ctx.mk_lambda(domain, var);
++                let mut expensive = value;
++                for _ in 0..size { expensive = tc.ctx.mk_app(identity, expensive); }
++                let expression = match kind {
++                    "unused-let" => tc.ctx.mk_let(domain, expensive, value, false),
++                    "used-lambda" => tc.ctx.mk_app(identity, expensive),
++                    _ => {
++                        let erasing = tc.ctx.mk_lambda(domain, value);
++                        tc.ctx.mk_app(erasing, expensive)
++                    }
++                };
++                let ty = tc.infer_value(Check, 0, EMPTY_ENV, EMPTY_CTX, expression);
++                assert!(matches!(tc.val(ty), Value::Sort { level } if level == two));
++                // Separate validity from a deliberately cold evaluation. Real
++                // end-to-end measurements retain ordinary production caches.
++                tc.tc_cache.clear();
++                tc.experiment_counts = [0; 5];
++                let result = tc.eval(0, EMPTY_ENV, expression);
++                assert!(matches!(tc.val(result), Value::Sort { level } if level == one));
++                let counts = tc.experiment_counts;
++                if cfg!(feature = "application-skip") && kind != "used-lambda" {
++                    assert!(counts[0] <= 4, "erased work must not grow with payload size");
++                    assert!(counts[3] > 0);
++                } else {
++                    assert!(counts[0] >= size as u64, "the used payload must actually execute");
++                }
++                record(kind, size, counts);
++            });
++        }
++    }
++}
++
++#[test]
++fn reuse_scaling_separates_identical_and_distinct_bindings() {
++    for repetitions in [1, 16, 128] {
++        for distinct in [false, true] {
++            with_checker(|tc| {
++                let zero = tc.ctx.zero();
++                let one = tc.ctx.succ(zero);
++                let two = tc.ctx.succ(one);
++                let value = tc.ctx.mk_sort(one);
++                let domain = tc.ctx.mk_sort(two);
++                let var = tc.ctx.mk_var(0);
++                let identity = tc.ctx.mk_lambda(domain, var);
++                let mut body = var;
++                for _ in 0..16 { body = tc.ctx.mk_app(identity, body); }
++                let function = tc.ctx.mk_lambda(domain, body);
++                let fty = tc.infer_value(Check, 0, EMPTY_ENV, EMPTY_CTX, function);
++                let Value::Pi { domain: dom, body: codomain } = tc.val(fty) else { panic!("expected Pi") };
++                let mut args = Vec::new();
++                let mut expression = value;
++                for _ in 0..repetitions {
++                    if distinct { expression = tc.ctx.mk_pi(value, expression); }
++                    let aty = tc.infer_value(Check, 0, EMPTY_ENV, EMPTY_CTX, expression);
++                    assert!(matches!(tc.val(aty), Value::Sort { level } if level == two));
++                    args.push(tc.eval(0, EMPTY_ENV, expression));
++                }
++                tc.tc_cache.clear();
++                tc.experiment_counts = [0; 5];
++                for arg in args {
++                    let ty = tc.apply_closure(0, codomain, arg, Some(dom));
++                    assert!(matches!(tc.val(ty), Value::Sort { level } if level == two));
++                }
++                let counts = tc.experiment_counts;
++                if cfg!(feature = "application-reuse") {
++                    assert_eq!(counts[2], 0, "checked closed codomain must not reinfer its body");
++                } else {
++                    assert!(counts[2] >= repetitions as u64);
++                }
++                record(if distinct { "reuse-distinct-bindings" } else { "reuse-identical-binding" }, repetitions, counts);
++            });
++        }
++    }
++}
++
++#[test]
++fn unchecked_cache_does_not_authorize_ill_typed_unused_argument() {
++    with_checker(|tc| {
++        let zero = tc.ctx.zero();
++                let one = tc.ctx.succ(zero);
++        let two = tc.ctx.succ(one);
++        let value = tc.ctx.mk_sort(one);
++        let domain = tc.ctx.mk_sort(two);
++        let function = tc.ctx.mk_lambda(domain, value);
++        let invalid = tc.ctx.mk_app(function, domain);
++        tc.infer_value(InferOnly, 0, EMPTY_ENV, EMPTY_CTX, invalid);
++        let failure = catch_unwind(AssertUnwindSafe(|| {
++            tc.infer_value(Check, 0, EMPTY_ENV, EMPTY_CTX, invalid);
++        })).expect_err("cached inference must not replace argument validation");
++        assert!(failure.is::<Rejection>());
++    });
++}
++
++#[test]
++fn dependent_codomain_keeps_distinct_bound_types() {
++    with_checker(|tc| {
++        let zero = tc.ctx.zero();
++                let one = tc.ctx.succ(zero);
++        let typ = tc.ctx.mk_sort(one);
++        let [v1, v2, v3, v4] = [1, 2, 3, 4].map(|n| tc.ctx.mk_var(n));
++        let f = tc.ctx.mk_lambda(v3, v2);
++        let g = tc.ctx.mk_lambda(v3, v1);
++        let a_to_a = tc.ctx.mk_pi(v3, v4);
++        let a_to_b = tc.ctx.mk_pi(v3, v3);
++        let sort = tc.eval(0, EMPTY_ENV, typ);
++        let a = tc.mk_bvar_hc(0, sort);
++        let b = tc.mk_bvar_hc(1, sort);
++        let x = tc.mk_bvar_hc(2, a);
++        let y = tc.mk_bvar_hc(3, b);
++        let mut env = EMPTY_ENV;
++        for v in [a, b, x, y] { env = tc.env_extend(env, v); }
++        let mut context = EMPTY_CTX;
++        for ty in [sort, sort, a, b] { context = tc.ctx_extend(context, ty); }
++        let ft = tc.infer_value(Check, 4, env, context, f);
++        let gt = tc.infer_value(Check, 4, env, context, g);
++        let aa = tc.eval(4, env, a_to_a);
++        let ab = tc.eval(4, env, a_to_b);
++        assert!(tc.conv_types_at(4, ft, aa));
++        assert!(tc.conv_types_at(4, gt, ab));
++        assert!(!tc.conv_types_at(4, ft, gt));
++        let Value::Pi { body, .. } = tc.val(ft) else { panic!("expected Pi") };
++        assert!(body.ctx.is_some(), "open codomain must retain its inference context");
++    });
++}
++
++#[test]
++fn raw_level_identity_survives_namespaces_and_value_resets() {
++    let mut values = Vals::new();
++    let global = values.mk_sort(LevelId::new(1, false));
++    let local = values.mk_sort(LevelId::new(1, true));
++    assert_ne!(global, local);
++    values.reset(0);
++    let other = values.mk_sort(LevelId::from_raw(7));
++    let zero = values.mk_sort(ZERO);
++    assert_ne!(other, zero);
++    assert!(matches!(values.val(zero), Value::Sort { level: ZERO }));
++}
+diff --git a/src/checker/eval.rs b/src/checker/eval.rs
+index 6c0225f..3480b26 100644
+--- a/src/checker/eval.rs
++++ b/src/checker/eval.rs
+@@ -27,6 +27,8 @@ enum ConstKind {
+ impl TypeChecker<'_, '_> {
+     #[inline(always)]
+     pub(crate) fn eval(&mut self, depth: u32, env: E, e: ExprId) -> V {
++        #[cfg(test)]
++        { self.experiment_counts[0] += 1; }
+         let node = *self.ctx.node(e);
+         if let Expr::Var { dbj_idx } = node.expr {
+             return self
+@@ -70,7 +72,21 @@ impl TypeChecker<'_, '_> {
+     }
+ 
+     fn eval_no_cache(&mut self, depth: u32, env: E, e: ExprId, first: Expr) -> V {
++        #[cfg(test)]
++        { self.experiment_counts[4] += 1; }
+         if let Expr::App { fun, arg } = first {
++            // Preserve the existing right-spine fast path, but do not force an
++            // argument of a syntactically known erasing beta redex first.
++            if cfg!(feature = "application-skip")
++                && let Expr::Lambda { body, .. } = self.ctx.ex(fun)
++                && self.ctx.ignores_binder(body)
++            {
++                #[cfg(test)]
++                { self.experiment_counts[3] += 1; }
++                let erased = self.placeholder();
++                let body_env = self.env_extend(env, erased);
++                return self.eval(depth, body_env, body);
++            }
+             if let Expr::App { fun: f2, arg: a2 } = self.ctx.ex(arg) {
+                 let first_fun = fun;
+                 let mut all_same = fun == f2;
+@@ -187,7 +203,13 @@ impl TypeChecker<'_, '_> {
+                 let mut env = env;
+                 let mut cursor = e;
+                 while let Expr::Let { val, body, .. } = self.ctx.ex(cursor) {
+-                    let vv = self.eval(depth, env, val);
++                    let vv = if cfg!(feature = "application-skip") && self.ctx.ignores_binder(body) {
++                        #[cfg(test)]
++                        { self.experiment_counts[3] += 1; }
++                        self.placeholder()
++                    } else {
++                        self.eval(depth, env, val)
++                    };
+                     env = self.env_extend(env, vv);
+                     cursor = body;
+                 }
+@@ -239,7 +261,13 @@ impl TypeChecker<'_, '_> {
+                 let mut body = clo.body;
+                 loop {
+                     i -= 1;
+-                    let a = self.eval(depth, env, rev_args[i]);
++                    let a = if cfg!(feature = "application-skip") && self.ctx.ignores_binder(body) {
++                        #[cfg(test)]
++                        { self.experiment_counts[3] += 1; }
++                        self.placeholder()
++                    } else {
++                        self.eval(depth, env, rev_args[i])
++                    };
+                     benv = self.env_extend(benv, a);
+                     match self.ctx.ex(body) {
+                         Expr::Lambda { body: inner, .. } if i > 0 => body = inner,
+@@ -460,6 +488,8 @@ impl TypeChecker<'_, '_> {
+         match clo.ctx {
+             None => self.eval(depth, env, clo.body),
+             Some(clo_ctx) => {
++                #[cfg(test)]
++                { self.experiment_counts[2] += 1; }
+                 let ty = binder_ty.expect("apply_closure: infer closure without a binder type");
+                 let ctx = self.ctx_extend(clo_ctx, ty);
+                 self.infer_value(
+diff --git a/src/checker/infer.rs b/src/checker/infer.rs
+index 2e6bcd8..12ebd47 100644
+--- a/src/checker/infer.rs
++++ b/src/checker/infer.rs
+@@ -99,6 +99,8 @@ impl TypeChecker<'_, '_> {
+         ctx: C,
+         e: ExprId,
+     ) -> V {
++        #[cfg(test)]
++        { self.experiment_counts[1] += 1; }
+         let node = *self.ctx.node(e);
+         if let Var { dbj_idx } = node.expr {
+             return self
+@@ -205,7 +207,15 @@ impl TypeChecker<'_, '_> {
+                         && self.vals_mut().is_closed(bt)
+                         && has_deep_bvar_prefix(self.vals(), env)
+                 });
+-                let clo = if reuse {
++                let checked_codomain = if cfg!(feature = "application-reuse") {
++                    body_ty.filter(|&bt| atomic_type(self.vals(), bt) && self.vals_mut().is_closed(bt))
++                } else {
++                    None
++                };
++                let clo = if let Some(bt) = checked_codomain {
++                    let codomain = self.quote(depth + 1, bt);
++                    Closure::mk_eval(EMPTY_ENV, codomain, 0)
++                } else if reuse {
+                     Closure::mk_eval(EMPTY_ENV, binder_type, binder_loose)
+                 } else {
+                     let body_loose = self.ctx.loose(body);
+diff --git a/src/checker/mod.rs b/src/checker/mod.rs
+index 731a446..ff7bd30 100644
+--- a/src/checker/mod.rs
++++ b/src/checker/mod.rs
+@@ -17,3 +17,5 @@ pub(crate) mod quote;
+ pub(crate) mod relevance;
+ pub(crate) mod tc;
+ pub(crate) mod value;
++#[cfg(test)]
++mod application_experiment;
+diff --git a/src/checker/tc.rs b/src/checker/tc.rs
+index d6c9f40..fc6de65 100644
+--- a/src/checker/tc.rs
++++ b/src/checker/tc.rs
+@@ -46,6 +46,8 @@ pub struct TypeChecker<'x, 't> {
+     pub(crate) declar_info: Option<DeclarInfo>,
+     pub(crate) nat_extension: bool,
+     pub(crate) ordered_declaration: bool,
++    #[cfg(test)]
++    pub(crate) experiment_counts: [u64; 5],
+ }
+ 
+ impl ExportFile {
+@@ -202,6 +204,8 @@ impl<'x, 't: 'x> TypeChecker<'x, 't> {
+             declar_info,
+             nat_extension,
+             ordered_declaration: false,
++            #[cfg(test)]
++            experiment_counts: [0; 5],
+         }
+     }
+ 

@@ -1,0 +1,28 @@
+{
+  "release_url": "https://github.com/DynamoRIO/dynamorio/releases/download/cronbuild-11.92.20777/DynamoRIO-Linux-11.92.20777.tar.gz",
+  "archive_sha256": "3958421d74964ea2a30b43752560ae584d854ceb6209946dd2d9e173352d7a2c",
+  "source_sha256": "6d00654e55d4b2049ff3f2031383106b9658a0ddaa3a3a05db53261fb35adb34",
+  "client_sha256": "deeb10e057eca52930d9321c6d2f1bf148767f7ede5a5dcced7c46c818655578",
+  "compiler_command": [
+    "gcc",
+    "-shared",
+    "-fPIC",
+    "-O3",
+    "-fno-stack-protector",
+    "-DX86_64",
+    "-DLINUX",
+    "-I/home/runner/work/_temp/flash-dynamorio/DynamoRIO-Linux-11.92.20777/include",
+    "-I/home/runner/work/_temp/flash-dynamorio/DynamoRIO-Linux-11.92.20777/ext/include",
+    "/home/runner/work/mathgraph-lean-kernel/mathgraph-lean-kernel/experiments/flash-session-budget-20261126/instruction_counter.c",
+    "-L/home/runner/work/_temp/flash-dynamorio/DynamoRIO-Linux-11.92.20777/lib64/release",
+    "-Wl,-rpath,/home/runner/work/_temp/flash-dynamorio/DynamoRIO-Linux-11.92.20777/lib64/release",
+    "-L/home/runner/work/_temp/flash-dynamorio/DynamoRIO-Linux-11.92.20777/ext/lib64/release",
+    "-Wl,-rpath,/home/runner/work/_temp/flash-dynamorio/DynamoRIO-Linux-11.92.20777/ext/lib64/release",
+    "-ldrx",
+    "-ldrreg",
+    "-ldrmgr",
+    "-ldynamorio",
+    "-o",
+    "/home/runner/work/_temp/flash-dynamorio/instruction-counter.so"
+  ]
+}

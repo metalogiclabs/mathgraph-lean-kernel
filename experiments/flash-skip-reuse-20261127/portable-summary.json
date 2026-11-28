@@ -1,0 +1,47 @@
+{
+  "run_id": 45881611501,
+  "verified_arms": [
+    {
+      "arm": "baseline",
+      "artifact_id": 15147322300,
+      "archive_sha256": "29c0cf17599ee6b510921b15ade9436109ed0de1560971c1d4588daa15468752",
+      "crc_entries": 523,
+      "binary_sha256": "a3f329fbe06de856eeb954c071f68686b88f1b35d266e0ab7c7676a63d4ca695",
+      "portable_correct": 230,
+      "library_tests": 44,
+      "source_controls": 16
+    },
+    {
+      "arm": "skip",
+      "artifact_id": 15147277401,
+      "archive_sha256": "818d473c7eb2a71df570fae8c4b091dd4981b5c1c3663b002a5879660bbd173d",
+      "crc_entries": 523,
+      "binary_sha256": "ae0e2b1e6aacb254f7cf4d72af04e17736bd1ec43a698b77e781e9115aecff29",
+      "portable_correct": 230,
+      "library_tests": 44,
+      "source_controls": 16
+    },
+    {
+      "arm": "combined",
+      "artifact_id": 15147941581,
+      "archive_sha256": "4910f326bbd9a98a5292637ab039df4144301ffb8cbf57be910768ac1ce17b99",
+      "crc_entries": 523,
+      "binary_sha256": "1cd89f207b1b299deb7a2034e7ae64ac26a7624eb2d9bbff1274641e7bf26338",
+      "portable_correct": 230,
+      "library_tests": 44,
+      "source_controls": 16
+    },
+    {
+      "arm": "reuse",
+      "artifact_id": 15147666823,
+      "archive_sha256": "4d85b50ae588fead8e6726c261bd31cb321d82844dbe665dad73350f0898db88",
+      "crc_entries": 523,
+      "binary_sha256": "2821f47380a0607c07e5e5b47a9401a89f252b9f11c9ffc9ba402b89dd2c3d50",
+      "portable_correct": 230,
+      "library_tests": 44,
+      "source_controls": 16
+    }
+  ],
+  "all_four_qualified": true,
+  "boundary": "Independent archive/executable hashes and exact corpus/source records. Portable qualification only, not full 240 or Arena performance."
+}

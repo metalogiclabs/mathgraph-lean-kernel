@@ -1,0 +1,24 @@
+[
+  {
+    "arm": "baseline",
+    "raw_exit": -9,
+    "expected": 0,
+    "name": "perf/short-circuit-and",
+    "input_sha256": "ab5cb78a88611603f2f2982c5d9a02f8306bcd114cd0329493259e0816793252",
+    "binary_sha256": "09fe7ecf7421be7ad7f7c57596c214bcd6e7c0d912d6d555cb5749b17202bd5b",
+    "max_rss_kb": 857540,
+    "user_s": 1.836672,
+    "system_s": 2.750558
+  },
+  {
+    "arm": "strict",
+    "raw_exit": -9,
+    "expected": 0,
+    "name": "perf/short-circuit-and",
+    "input_sha256": "ab5cb78a88611603f2f2982c5d9a02f8306bcd114cd0329493259e0816793252",
+    "binary_sha256": "bf2c42b0ef8de1fc4d628cd4ccb901cb2725df98772326f895fc54c597d8d428",
+    "max_rss_kb": 857612,
+    "user_s": 1.213208,
+    "system_s": 0.104029
+  }
+]

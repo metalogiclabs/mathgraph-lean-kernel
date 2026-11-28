@@ -1,0 +1,378 @@
+diff --git a/src/checker/context.rs b/src/checker/context.rs
+index 7574f13..5d3676f 100644
+--- a/src/checker/context.rs
++++ b/src/checker/context.rs
+@@ -261,7 +261,7 @@ impl<'t> TcCtx<'t> {
+ 
+     #[inline(always)]
+     pub(crate) fn ex(&self, e: ExprId) -> Expr {
+-        self.node(e).expr
++        self.node(e).expr()
+     }
+ 
+     #[inline(always)]
+diff --git a/src/checker/eval.rs b/src/checker/eval.rs
+index 6c0225f..1ce9d63 100644
+--- a/src/checker/eval.rs
++++ b/src/checker/eval.rs
+@@ -28,7 +28,7 @@ impl TypeChecker<'_, '_> {
+     #[inline(always)]
+     pub(crate) fn eval(&mut self, depth: u32, env: E, e: ExprId) -> V {
+         let node = *self.ctx.node(e);
+-        if let Expr::Var { dbj_idx } = node.expr {
++        if let Expr::Var { dbj_idx } = node.expr() {
+             return self
+                 .vals()
+                 .env_lookup(env, dbj_idx)
+@@ -43,16 +43,16 @@ impl TypeChecker<'_, '_> {
+                 return memo!(
+                     self.tc_cache.closed_eval_cache,
+                     e,
+-                    self.eval_no_cache(depth, env, e, node.expr)
++                    self.eval_no_cache(depth, env, e, node.expr())
+                 );
+             };
+             return memo!(self.tc_cache.closed_lsub_eval_cache, (e, ls), {
+                 let base = self.lsub_base(Some(ls));
+-                self.eval_no_cache(depth, base, e, node.expr)
++                self.eval_no_cache(depth, base, e, node.expr())
+             });
+         }
+         if matches!(
+-            node.expr,
++            node.expr(),
+             Expr::App { .. }
+                 | Expr::Proj { .. }
+                 | Expr::Let { .. }
+@@ -63,10 +63,10 @@ impl TypeChecker<'_, '_> {
+             return memo!(
+                 self.tc_cache.open_eval_cache,
+                 (te, e),
+-                self.eval_no_cache(depth, te, e, node.expr)
++                self.eval_no_cache(depth, te, e, node.expr())
+             );
+         }
+-        self.eval_no_cache(depth, env, e, node.expr)
++        self.eval_no_cache(depth, env, e, node.expr())
+     }
+ 
+     fn eval_no_cache(&mut self, depth: u32, env: E, e: ExprId, first: Expr) -> V {
+diff --git a/src/checker/inductive/persist.rs b/src/checker/inductive/persist.rs
+index f56a2d7..8af3e56 100644
+--- a/src/checker/inductive/persist.rs
++++ b/src/checker/inductive/persist.rs
+@@ -109,8 +109,8 @@ impl<'a> Promoter<'a> {
+             return expr;
+         }
+         let mut node = self.source.exprs.items[e.index()];
+-        node.expr = node.expr.map_children(|e, _| self.expr(e));
+-        node.expr = match node.expr {
++        node.set_expr(node.expr().map_children(|e, _| self.expr(e)));
++        let remapped = match node.expr() {
+             Expr::Sort { level } => Expr::Sort {
+                 level: self.level(level),
+             },
+@@ -133,6 +133,7 @@ impl<'a> Promoter<'a> {
+             },
+             expr => expr,
+         };
++        node.set_expr(remapped);
+         let result = ExprId::new(self.target.exprs.intern(node), false);
+         self.exprs.insert(e, result);
+         result
+diff --git a/src/checker/infer.rs b/src/checker/infer.rs
+index 2e6bcd8..3d50dea 100644
+--- a/src/checker/infer.rs
++++ b/src/checker/infer.rs
+@@ -100,7 +100,7 @@ impl TypeChecker<'_, '_> {
+         e: ExprId,
+     ) -> V {
+         let node = *self.ctx.node(e);
+-        if let Var { dbj_idx } = node.expr {
++        if let Var { dbj_idx } = node.expr() {
+             return self
+                 .vals()
+                 .ctx_lookup(ctx, dbj_idx)
+@@ -119,7 +119,7 @@ impl TypeChecker<'_, '_> {
+         e: ExprId,
+         node: ExprNode,
+     ) -> V {
+-        match node.expr {
++        match node.expr() {
+             Var { dbj_idx } => {
+                 return self
+                     .vals()
+@@ -185,7 +185,7 @@ impl TypeChecker<'_, '_> {
+         let requested = flag;
+         let flag = if known { InferOnly } else { flag };
+ 
+-        let r = match node.expr {
++        let r = match node.expr() {
+             App { .. } => self.infer_app_v(flag, depth, env, ctx, e),
+             Lambda { binder_type, body } => {
+                 let dom = self.arg_value(depth, env, binder_type);
+diff --git a/src/frontend/parser.rs b/src/frontend/parser.rs
+index de4f383..3539557 100644
+--- a/src/frontend/parser.rs
++++ b/src/frontend/parser.rs
+@@ -1301,7 +1301,7 @@ impl Parser {
+             if !seen.insert(expr) {
+                 continue;
+             }
+-            let node = self.node(expr).expr;
++            let node = self.node(expr).expr();
+             if matches!(node, Expr::Const { name, .. } if name == target) {
+                 return true;
+             }
+diff --git a/src/frontend/parser/tests.rs b/src/frontend/parser/tests.rs
+index bb83942..e3df82c 100644
+--- a/src/frontend/parser/tests.rs
++++ b/src/frontend/parser/tests.rs
+@@ -68,13 +68,13 @@ fn ignore_binder_metadata_in_both_parser_paths() {
+             let slow = format!("{{ \"ie\":4, \"{kind}\":{{{fields}}} }}");
+             parser.go1_general(&slow).unwrap();
+             assert_eq!(
+-                parser.node(parsed).expr,
+-                parser.node(parser.get_expr(4)).expr
++                parser.node(parsed).expr(),
++                parser.node(parser.get_expr(4)).expr()
+             );
+             assert_eq!(parser.node(parsed).loose, 1);
+             assert_eq!(parser.node(parsed).mask, 1);
+             if let Some(reference) = reference {
+-                assert_eq!(parser.node(reference).expr, parser.node(parsed).expr);
++                assert_eq!(parser.node(reference).expr(), parser.node(parsed).expr());
+             } else {
+                 reference = Some(parsed);
+             }
+@@ -91,8 +91,8 @@ fn ignore_binder_metadata_in_both_parser_paths() {
+                 .go1_general(&format!("{{\"ie\":4,\"{kind}\":{{{fields}{metadata}}}}}"))
+                 .unwrap();
+             assert_eq!(
+-                parser.node(reference).expr,
+-                parser.node(parser.get_expr(4)).expr
++                parser.node(reference).expr(),
++                parser.node(parser.get_expr(4)).expr()
+             );
+         }
+         // Domain and body references still distinguish expressions.
+@@ -103,8 +103,8 @@ fn ignore_binder_metadata_in_both_parser_paths() {
+             )
+             .unwrap();
+         assert_ne!(
+-            parser.node(reference).expr,
+-            parser.node(parser.get_expr(4)).expr
++            parser.node(reference).expr(),
++            parser.node(parser.get_expr(4)).expr()
+         );
+         parser
+             .go1_general(
+@@ -113,8 +113,8 @@ fn ignore_binder_metadata_in_both_parser_paths() {
+             )
+             .unwrap();
+         assert_ne!(
+-            parser.node(reference).expr,
+-            parser.node(parser.get_expr(4)).expr
++            parser.node(reference).expr(),
++            parser.node(parser.get_expr(4)).expr()
+         );
+     }
+ }
+diff --git a/src/term/expr.rs b/src/term/expr.rs
+index 4b87732..1359ce9 100644
+--- a/src/term/expr.rs
++++ b/src/term/expr.rs
+@@ -8,7 +8,6 @@ use crate::term::hash::FxHashMap;
+ use crate::term::id::{BigId, ExprId, LevelId, LevelsId, NameId, StrId, ZERO};
+ use Expr::{App, Const, Lambda, Let, NatLit, Pi, Proj, Sort, StringLit, Var};
+ use num_bigint::BigUint;
+-use std::borrow::Borrow;
+ use std::hash::{Hash, Hasher};
+ use std::mem::MaybeUninit;
+ use std::slice;
+@@ -135,33 +134,78 @@ impl Expr {
+     }
+ }
+ 
++// MathGraph experiment: 24-byte storage with unchanged expression identities.
++#[derive(Debug, Clone, Copy, PartialEq, Eq)]
++#[repr(u8)]
++enum ExprTag { String, Natural, Projection, Variable, Sort, Constant, Application, Pi, Lambda, Let }
++
+ #[derive(Debug, Clone, Copy)]
++#[repr(C)]
+ pub struct ExprNode {
+-    pub(crate) expr: Expr,
+-    /// The number of "loose" bound variables, which is the number of bound variables
+-    /// in an expression which are bound by something above it.
+-    pub(crate) loose: u16,
+     pub(crate) mask: u64,
++    words: [u32; 3],
++    pub(crate) loose: u16,
++    tag: ExprTag,
++    nondep: bool,
+ }
+ 
+-const _: () = assert!(size_of::<ExprNode>() == 32);
++const _: () = assert!(size_of::<ExprNode>() == 24);
+ 
+ impl PartialEq for ExprNode {
+-    fn eq(&self, o: &Self) -> bool {
+-        self.expr == o.expr
++    fn eq(&self, other: &Self) -> bool {
++        // Every unused payload word is zero, including after persistence.
++        self.tag == other.tag && self.words == other.words && self.nondep == other.nondep
+     }
+ }
+ impl Eq for ExprNode {}
+ 
+ impl Hash for ExprNode {
+     fn hash<H: Hasher>(&self, state: &mut H) {
+-        self.expr.hash(state);
++        self.expr().hash(state);
+     }
+ }
+ 
+-impl Borrow<Expr> for ExprNode {
+-    fn borrow(&self) -> &Expr {
+-        &self.expr
++impl ExprNode {
++    #[inline(always)]
++    fn new(expr: Expr, loose: u16, mask: u64) -> Self {
++        let (tag, words, nondep) = match expr {
++            StringLit { lit } => (ExprTag::String, [lit.raw(),0,0], false),
++            NatLit { lit } => (ExprTag::Natural, [lit.raw(),0,0], false),
++            Var { dbj_idx } => (ExprTag::Variable, [u32::from(dbj_idx),0,0], false),
++            Sort { level } => (ExprTag::Sort, [level.raw(),0,0], false),
++            Const { name, levels } => (ExprTag::Constant, [name.raw(),levels.raw(),0], false),
++            App { fun, arg } => (ExprTag::Application, [fun.raw(),arg.raw(),0], false),
++            Pi { binder_type, body } => (ExprTag::Pi, [binder_type.raw(),body.raw(),0], false),
++            Lambda { binder_type, body } => (ExprTag::Lambda, [binder_type.raw(),body.raw(),0], false),
++            Let { binder_type, val, body, nondep } =>
++                (ExprTag::Let, [binder_type.raw(),val.raw(),body.raw()], nondep),
++            Proj { ty_name, idx, structure } =>
++                (ExprTag::Projection, [ty_name.raw(),u32::from(idx),structure.raw()], false),
++        };
++        Self { mask, words, loose, tag, nondep }
++    }
++
++    #[inline(always)]
++    pub(crate) fn expr(&self) -> Expr {
++        let [a,b,c] = self.words;
++        match self.tag {
++            ExprTag::String => StringLit { lit: StrId::from_raw(a) },
++            ExprTag::Natural => NatLit { lit: BigId::from_raw(a) },
++            ExprTag::Variable => Var { dbj_idx: u16::try_from(a).expect("variable payload fits u16") },
++            ExprTag::Sort => Sort { level: LevelId::from_raw(a) },
++            ExprTag::Constant => Const { name: NameId::from_raw(a), levels: LevelsId::from_raw(b) },
++            ExprTag::Application => App { fun: ExprId::from_raw(a), arg: ExprId::from_raw(b) },
++            ExprTag::Pi => Pi { binder_type: ExprId::from_raw(a), body: ExprId::from_raw(b) },
++            ExprTag::Lambda => Lambda { binder_type: ExprId::from_raw(a), body: ExprId::from_raw(b) },
++            ExprTag::Let => Let { binder_type: ExprId::from_raw(a), val: ExprId::from_raw(b),
++                body: ExprId::from_raw(c), nondep: self.nondep },
++            ExprTag::Projection => Proj { ty_name: NameId::from_raw(a),
++                idx: u16::try_from(b).expect("projection payload fits u16"), structure: ExprId::from_raw(c) },
++        }
++    }
++
++    pub(crate) fn set_expr(&mut self, expr: Expr) {
++        *self = Self::new(expr, self.loose, self.mask);
+     }
+ }
+ 
+@@ -190,84 +234,40 @@ impl ExprNode {
+     }
+ 
+     #[inline]
+-    pub(crate) fn leaf(expr: Expr) -> Self {
+-        Self {
+-            expr,
+-            loose: 0,
+-            mask: 0,
+-        }
+-    }
++    pub(crate) fn leaf(expr: Expr) -> Self { Self::new(expr, 0, 0) }
+ 
+     #[inline]
+     pub(crate) fn var(dbj_idx: u16) -> Self {
+-        Self {
+-            expr: Var { dbj_idx },
+-            loose: dbj_idx + 1,
+-            mask: var_mask(dbj_idx),
+-        }
++        Self::new(Var { dbj_idx }, dbj_idx + 1, var_mask(dbj_idx))
+     }
+ 
+     #[inline]
+     pub(crate) fn app(fun: ExprId, f: &Self, arg: ExprId, a: &Self) -> Self {
+-        Self {
+-            expr: App { fun, arg },
+-            loose: f.loose.max(a.loose),
+-            mask: f.mask | a.mask,
+-        }
++        Self::new(App { fun, arg }, f.loose.max(a.loose), f.mask | a.mask)
+     }
+ 
+     #[inline]
+     pub(crate) fn pi(binder_type: ExprId, t: &Self, body: ExprId, b: &Self) -> Self {
+-        Self {
+-            expr: Pi { binder_type, body },
+-            loose: t.loose.max(b.loose.saturating_sub(1)),
+-            mask: t.mask | b.body_mask(),
+-        }
++        Self::new(Pi { binder_type, body }, t.loose.max(b.loose.saturating_sub(1)), t.mask | b.body_mask())
+     }
+ 
+     #[inline]
+     pub(crate) fn lambda(binder_type: ExprId, t: &Self, body: ExprId, b: &Self) -> Self {
+-        Self {
+-            expr: Lambda { binder_type, body },
+-            loose: t.loose.max(b.loose.saturating_sub(1)),
+-            mask: t.mask | b.body_mask(),
+-        }
++        Self::new(Lambda { binder_type, body }, t.loose.max(b.loose.saturating_sub(1)), t.mask | b.body_mask())
+     }
+ 
+     #[inline]
+-    pub(crate) fn let_(
+-        binder_type: ExprId,
+-        t: &Self,
+-        val: ExprId,
+-        v: &Self,
+-        body: ExprId,
+-        b: &Self,
+-        nondep: bool,
+-    ) -> Self {
+-        Self {
+-            expr: Let {
+-                binder_type,
+-                val,
+-                body,
+-                nondep,
+-            },
+-            loose: t.loose.max(v.loose.max(b.loose.saturating_sub(1))),
+-            mask: t.mask | v.mask | b.body_mask(),
+-        }
++    pub(crate) fn let_(binder_type: ExprId, t: &Self, val: ExprId, v: &Self,
++        body: ExprId, b: &Self, nondep: bool) -> Self {
++        Self::new(Let { binder_type, val, body, nondep },
++            t.loose.max(v.loose.max(b.loose.saturating_sub(1))), t.mask | v.mask | b.body_mask())
+     }
+ 
+     #[inline]
+     pub(crate) fn proj(ty_name: NameId, idx: u16, structure: ExprId, s: &Self) -> Self {
+-        Self {
+-            expr: Proj {
+-                ty_name,
+-                idx,
+-                structure,
+-            },
+-            loose: s.loose,
+-            mask: s.mask,
+-        }
++        Self::new(Proj { ty_name, idx, structure }, s.loose, s.mask)
+     }
++
+ }
+ 
+ impl TcCtx<'_> {

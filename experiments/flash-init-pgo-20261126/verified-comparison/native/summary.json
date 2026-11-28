@@ -1,0 +1,18 @@
+{
+  "state": "WARRANTED_BOUNDED_FULL_MATHLIB_ACCEPT",
+  "observations": 4,
+  "medians": {
+    "baseline": {
+      "cpu_s": 155.76,
+      "wall_s": 82.685,
+      "max_rss_kib": 4822844.0
+    },
+    "strict": {
+      "cpu_s": 154.63,
+      "wall_s": 82.22,
+      "max_rss_kib": 4871618.0
+    }
+  },
+  "pgo_to_native_cpu_ratio": 0.9927452491011813,
+  "boundary": "Exact complete Mathlib, two alternating native pairs. This isolates Init-trained compiler PGO, not an Arena hardware score."
+}

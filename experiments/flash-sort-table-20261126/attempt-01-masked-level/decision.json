@@ -1,0 +1,6 @@
+{
+  "state": "REJECTED_SEMANTIC_REGRESSION",
+  "cause": "level.index() strips LOCAL bit and conflates local and exported universe levels. Protocol requires complete raw ids.",
+  "evidence": "retained_source_regressions rejects ProofIrrelUnderBVar; unit coverage lacked LOCAL ids.",
+  "cost_effect": "UNKNOWN_NOT_MEASURED"
+}

@@ -1,0 +1,14 @@
+{
+  "base_commit": "bc704eebed4e009bc66af1a849f18315c11f1926",
+  "base_source_tree": "06c257f0f2ff1f64711cfa54620b650e6dd59b7e",
+  "prototype_tree": "7887c931656b54726d0d26304590aa69c1f54b98",
+  "prototype_patch_sha256": "de3ad35c25ec5fe6294d16d92ca71d06736a60a6144a759ffbcb8239d435e150",
+  "binary_sha256": "b2cb6546881fdaac4f9e1e1e23f45a2b2e7cae7f9ea93cfdc965c2c63f60cb20",
+  "baseline_binary_sha256": "09fe7ecf7421be7ad7f7c57596c214bcd6e7c0d912d6d555cb5749b17202bd5b",
+  "compiler": "rustc 1.99.1 (58cf8f9c3 2026-10-13), LLVM 23.1.1",
+  "flags": "-C target-cpu=x86-64 -C target-feature=-avx,-avx2,-avx512f,-fma",
+  "build": "cargo build --release --locked --offline; CARGO_BUILD_JOBS=1",
+  "measurement_boundary": "Generic x86-64 software counter, exact 128 MiB Mathlib prefix; not official Arena or full-input performance.",
+  "prototype_src_tree": "d8e157116a34679c265aea653b11ca71c93e2c77",
+  "compiler_commit": "58cf8f9c35b355199727627d07ae34a4e2846d67"
+}

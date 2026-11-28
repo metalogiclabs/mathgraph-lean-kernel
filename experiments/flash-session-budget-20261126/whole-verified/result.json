@@ -1,0 +1,47 @@
+{
+  "state": "WARRANTED_BOUNDED_EXPERIMENT",
+  "run_id": 45811406828,
+  "harness_commit": "eef92be0975e106aa371d120a3d342af9f597070",
+  "archives": {
+    "instructions": {
+      "artifact_id": 15119595581,
+      "size": 1803047,
+      "sha256": "00a788179a00c60fe615d89f05d2bc151c442b1b99cbacc2af91638b0627d267",
+      "crc_verified_entries": 87
+    },
+    "native": {
+      "artifact_id": 15113847340,
+      "size": 1915134,
+      "sha256": "ca51a7c941e7fc788795232c61b77bf6069e6c2f3c04e7a89170e3f1448c02ef",
+      "crc_verified_entries": 543
+    }
+  },
+  "software_instruction_ratio": 0.9699429864447051,
+  "software_instruction_reduction": 0.030057013555294887,
+  "paired_instruction_ratios": [
+    0.9682870179132269,
+    0.9716045323227358
+  ],
+  "hosted_portable_correct": 230,
+  "native_cpu_ratio": 1.062729383566774,
+  "native_peak_rss_kib": {
+    "baseline": 4927796,
+    "strict": 5032404
+  },
+  "native_peak_rss_ratio": 1.0212281514900374,
+  "release_state": "NOT_PROMOTED: native CPU regression; nine other large prescribed cases and an independent Arena result remain unqualified.",
+  "remaining_large_cases": [
+    "cedar",
+    "con-leche",
+    "cslib",
+    "init",
+    "navier-stokes-euler",
+    "perf/magma-string-n4",
+    "perf/magma-string-pair-n9",
+    "reachability",
+    "std"
+  ],
+  "large_case_prose_correction": "Earlier protocol prose said ten other large cases. The pinned 240-case manifest has ten large cases including Mathlib; nine remain.",
+  "declared_gates": "Both original declared gates PASSED. The native CPU regression is retained as an additional release concern; no prospective gate was retroactively changed.",
+  "boundary": "Archive, checker executable and loop executable hashes were independently rechecked. Metrics were reconstructed from archived raw records. Full-input hashes and compiled counter identity are runner evidence; the full 6.3 GB input and compiled counter were not separately downloaded. Software instruction counts are not official Arena hardware counts."
+}

@@ -1,0 +1,43 @@
+diff --git a/src/checker/imported.rs b/src/checker/imported.rs
+index 59c0503..363abf1 100644
+--- a/src/checker/imported.rs
++++ b/src/checker/imported.rs
+@@ -39,6 +39,12 @@ impl ExportFile {
+                         .take_while(|(_, d)| belongs(d, &block.names)).count();
+                     ensure!(count == block.declarations.len(), "imported inductive block has missing or extra declarations");
+                     let env = self.new_env(EnvLimit::ByIndex(start + count));
++                    // The declaration environment is fixed throughout this block.
++                    // Keep checked work locally, with a fresh declaration stamp
++                    // and universe scope for every source record.
++                    let arena = bumpalo::Bump::new();
++                    let mut block_ctx = None;
++                    let mut block_cache = None;
+                     let mut seen = crate::term::hash::FxHashSet::default();
+                     for source in &block.declarations {
+                         ensure!(seen.insert(source.info().name), "duplicate imported declaration");
+@@ -77,10 +83,9 @@ impl ExportFile {
+                         };
+                         // The exact derived expression is already checked by reconstruction.
+                         if source.info().ty == derived.info().ty && !rules_differ { continue }
+-                        let arena = bumpalo::Bump::new();
+-                        let mut ctx = TcCtx::new(self, &arena);
+-                        let mut cache = TcCache::new_small();
+-                        let mut tc = TypeChecker::new(&mut ctx, &env, Some(*source.info()), &mut cache);
++                        let ctx = block_ctx.get_or_insert_with(|| TcCtx::new(self, &arena));
++                        let cache = block_cache.get_or_insert_with(TcCache::new_small);
++                        let mut tc = TypeChecker::new(ctx, &env, Some(*source.info()), cache);
+                         if source.info().ty != derived.info().ty {
+                             ensure!(tc.ctx.node(source.info().ty).loose == 0, "imported type contains a loose bound variable");
+                             tc.infer_sort_of_v(Check, 0, EMPTY_ENV, EMPTY_CTX, source.info().ty);
+@@ -100,6 +105,11 @@ impl ExportFile {
+                                 ensure!(tc.def_eq_at(0, av, bv), "imported recursor rule value differs");
+                             }
+                         }
++                        drop(tc);
++                        if cache.vals.used_bytes() > super::cache::SESSION_BUDGET {
++                            cache.clear_session();
++                            ctx.expr_cache.clear_session();
++                        }
+                     }
+                 }
+             })?.join().map_err(CheckError::from_panic)

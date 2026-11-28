@@ -1,0 +1,216 @@
+{
+  "state": "WARRANTED_BOUNDED_239_PRESCRIBED",
+  "run_id": 45737482656,
+  "harness_commit": "8f0267343dd383bd2bc70c23d3ec91f36c63437e",
+  "candidate_commit": "4816054e2331c3cd6b57cbcd51d3e265b48c68e7",
+  "candidate_source_tree": "fa9f0de20650f28f63f1d01d7dab50397e167bcf",
+  "frozen_generic_binary_sha256": "878d871f79bcf71ee1de3f131708ff31553fb130ea69b52f30be186fd414d553",
+  "library_tests": 39,
+  "retained_raw_export_cases": 8,
+  "portable_correct": 230,
+  "additional_source_controls": 16,
+  "large_cases": {
+    "cslib": {
+      "case": "cslib",
+      "raw_exit": 0,
+      "checked_declarations": 413186,
+      "binary_sha256": "878d871f79bcf71ee1de3f131708ff31553fb130ea69b52f30be186fd414d553",
+      "input": {
+        "name": "cslib",
+        "size": 2500956112,
+        "sha256": "09d1225013197983fe16b7078f6475707ce13da8f7e92d7c41ab1bc354522567"
+      },
+      "threads": 2,
+      "expected_declarations": 413186,
+      "boundary": "Frozen generic candidate, unchanged original export and timeout; no Arena score."
+    },
+    "init": {
+      "case": "init",
+      "raw_exit": 0,
+      "checked_declarations": 59979,
+      "binary_sha256": "878d871f79bcf71ee1de3f131708ff31553fb130ea69b52f30be186fd414d553",
+      "input": {
+        "name": "init",
+        "size": 347772063,
+        "sha256": "93b61a432ed4241b1d2184de65354e0b98333bf4403a8d63922da18e10b430ba"
+      },
+      "threads": 2,
+      "expected_declarations": 59979,
+      "boundary": "Frozen generic candidate, unchanged original export and timeout; no Arena score."
+    },
+    "con-leche": {
+      "case": "con-leche",
+      "raw_exit": 0,
+      "checked_declarations": 38246,
+      "binary_sha256": "878d871f79bcf71ee1de3f131708ff31553fb130ea69b52f30be186fd414d553",
+      "input": {
+        "name": "con-leche",
+        "size": 701947717,
+        "sha256": "799c9744ccb5d10bf5ffb0ea63bc11532aaaf95d7eecc678ec43175f18f66f1c"
+      },
+      "threads": 2,
+      "expected_declarations": 38246,
+      "boundary": "Frozen generic candidate, unchanged original export and timeout; no Arena score."
+    },
+    "cedar": {
+      "case": "cedar",
+      "raw_exit": 0,
+      "checked_declarations": 151772,
+      "binary_sha256": "878d871f79bcf71ee1de3f131708ff31553fb130ea69b52f30be186fd414d553",
+      "input": {
+        "name": "cedar",
+        "size": 904722064,
+        "sha256": "787b0e0790186f14f79f450896650fe120cd64efcdb4ca9220667612519f0a79"
+      },
+      "threads": 2,
+      "expected_declarations": 151772,
+      "boundary": "Frozen generic candidate, unchanged original export and timeout; no Arena score."
+    },
+    "reachability": {
+      "case": "reachability",
+      "raw_exit": 0,
+      "checked_declarations": 4846,
+      "binary_sha256": "878d871f79bcf71ee1de3f131708ff31553fb130ea69b52f30be186fd414d553",
+      "input": {
+        "name": "reachability",
+        "size": 19031110,
+        "sha256": "31d06d90f2cd6037bb03f98c771304b0530132be514ea1c63b31f3c975fda065"
+      },
+      "threads": 2,
+      "expected_declarations": 4846,
+      "boundary": "Frozen generic candidate, unchanged original export and timeout; no Arena score."
+    },
+    "navier-stokes-euler": {
+      "case": "navier-stokes-euler",
+      "raw_exit": 0,
+      "checked_declarations": 129845,
+      "binary_sha256": "878d871f79bcf71ee1de3f131708ff31553fb130ea69b52f30be186fd414d553",
+      "input": {
+        "name": "navier-stokes-euler",
+        "size": 1559685706,
+        "sha256": "632943fca6795d48bc13e703aabfaef39931f9445f1275d2150a44f4de7b55e6"
+      },
+      "threads": 2,
+      "expected_declarations": 129845,
+      "boundary": "Frozen generic candidate, unchanged original export and timeout; no Arena score."
+    },
+    "perf/magma-string-n4": {
+      "case": "perf/magma-string-n4",
+      "raw_exit": 0,
+      "checked_declarations": 3542,
+      "binary_sha256": "878d871f79bcf71ee1de3f131708ff31553fb130ea69b52f30be186fd414d553",
+      "input": {
+        "name": "perf/magma-string-n4",
+        "size": 17461675,
+        "sha256": "b63ebfd31193fbbfc7d8aa4314971d4231c86fb2c261c31e1aea8e4feeb3d612"
+      },
+      "threads": 2,
+      "expected_declarations": 3542,
+      "boundary": "Frozen generic candidate, unchanged original export and timeout; no Arena score."
+    },
+    "perf/magma-string-pair-n9": {
+      "case": "perf/magma-string-pair-n9",
+      "raw_exit": 0,
+      "checked_declarations": 3542,
+      "binary_sha256": "878d871f79bcf71ee1de3f131708ff31553fb130ea69b52f30be186fd414d553",
+      "input": {
+        "name": "perf/magma-string-pair-n9",
+        "size": 17463066,
+        "sha256": "ed9a15a45140b12a52c196cc97e8bca39d0fa98896859f564d98348e0af6b350"
+      },
+      "threads": 2,
+      "expected_declarations": 3542,
+      "boundary": "Frozen generic candidate, unchanged original export and timeout; no Arena score."
+    },
+    "std": {
+      "case": "std",
+      "raw_exit": 0,
+      "checked_declarations": 103885,
+      "binary_sha256": "878d871f79bcf71ee1de3f131708ff31553fb130ea69b52f30be186fd414d553",
+      "input": {
+        "name": "std",
+        "size": 584315500,
+        "sha256": "15b659c12c14eb5c104b169ff288dcbd35baaff51412f43c9a078f79e9cf2f7d"
+      },
+      "threads": 2,
+      "expected_declarations": 103885,
+      "boundary": "Frozen generic candidate, unchanged original export and timeout; no Arena score."
+    }
+  },
+  "archive_receipts": [
+    {
+      "id": 15080310374,
+      "name": "flash-chunk512-large-cslib",
+      "sha256": "sha256:25be0598afd3466f257bbdaf939829ac09c1356255c5f2da8f123935f5e7b146",
+      "crc_valid": true,
+      "entries": 4
+    },
+    {
+      "id": 15080175864,
+      "name": "flash-chunk512-large-init",
+      "sha256": "sha256:6b620253a30b1f0f7ae4ddbc7ade69df63ca842f45c33e7d944a7a44a159fffc",
+      "crc_valid": true,
+      "entries": 4
+    },
+    {
+      "id": 15080130708,
+      "name": "flash-chunk512-large-con-leche",
+      "sha256": "sha256:115eed89795434de0812696ae27a78674170139cd1f169708924dd446846ae48",
+      "crc_valid": true,
+      "entries": 4
+    },
+    {
+      "id": 15079657166,
+      "name": "flash-chunk512-large-cedar",
+      "sha256": "sha256:75d942180dc7c3bceb57fcac5b41712497959db6ee3781a10861f32c60d4c005",
+      "crc_valid": true,
+      "entries": 4
+    },
+    {
+      "id": 15079652782,
+      "name": "flash-chunk512-large-reachability",
+      "sha256": "sha256:03c0328d2caf1d5791c696512aa9c03ecf71aae30fe0e02c084d70ff2f4890a7",
+      "crc_valid": true,
+      "entries": 4
+    },
+    {
+      "id": 15079582963,
+      "name": "flash-chunk512-large-navier-stokes-euler",
+      "sha256": "sha256:53062401a5f7c13e04c51125f234fc74e4ff277d4b407380fe40f474d4d341ad",
+      "crc_valid": true,
+      "entries": 4
+    },
+    {
+      "id": 15079511997,
+      "name": "flash-chunk512-generic",
+      "sha256": "sha256:636eb10905014d9062d4ab5eaf1569a14c76b6d60fb5e507bebe46de401fdb17",
+      "crc_valid": true,
+      "entries": 546
+    },
+    {
+      "id": 15079297877,
+      "name": "flash-chunk512-large-magma-string-n4",
+      "sha256": "sha256:226f913967511fa1401b187ff6cc0bbeb2c1c212188556afdc6fae6e872957ce",
+      "crc_valid": true,
+      "entries": 4
+    },
+    {
+      "id": 15079273032,
+      "name": "flash-chunk512-large-magma-string-pair-n9",
+      "sha256": "sha256:8cdb753ff8ef34420f2864499fd42a5af3a2e9ba9db61c507d3bbfe2b90f945a",
+      "crc_valid": true,
+      "entries": 4
+    },
+    {
+      "id": 15079033566,
+      "name": "flash-chunk512-large-std",
+      "sha256": "sha256:6bd326abf6cb866f0e6bde2725430eaf842a0fb5fd6069e67b1a32138e43b31f",
+      "crc_valid": true,
+      "entries": 4
+    }
+  ],
+  "remaining_prescribed": "mathlib",
+  "full_Mathlib_cost": "UNKNOWN_PENDING_MEASUREMENT",
+  "Arena_rank": "UNKNOWN",
+  "boundary": "All239 non-Mathlib original prescribed input outcomes on the same frozen generic candidate, explicitly using two workers. Complete generic Mathlib, matched native costs and any official PMU score remain separate pending gates. Thirty policy cases are outside this count."
+}

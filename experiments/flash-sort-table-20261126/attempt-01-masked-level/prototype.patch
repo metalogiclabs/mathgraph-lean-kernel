@@ -1,0 +1,101 @@
+diff --git a/src/checker/value.rs b/src/checker/value.rs
+index b07f9c5..6d5edaa 100644
+--- a/src/checker/value.rs
++++ b/src/checker/value.rs
+@@ -376,6 +376,7 @@ pub enum Spine {
+ 
+ pub(crate) struct Vals {
+     nodes: Vec<VNode>,
++    sorts: Vec<V>,
+     table: PtrMap<(u64, u64, u64), V>,
+     apps: PtrMap<u64, u32>,
+     memoized: Vec<V>,
+@@ -412,6 +413,7 @@ impl Vals {
+     pub(crate) fn new() -> Self {
+         let mut vals = Vals {
+             nodes: Vec::new(),
++            sorts: Vec::new(),
+             table: Reset::with_cap(SESSION),
+             apps: Reset::with_cap(SESSION),
+             memoized: Vec::new(),
+@@ -429,6 +431,7 @@ impl Vals {
+ 
+     pub(crate) fn clear(&mut self) {
+         self.nodes.clear();
++        self.sorts.clear();
+         self.table.reset_shrink();
+         self.apps.reset_shrink();
+         self.memoized.clear();
+@@ -467,6 +470,7 @@ impl Vals {
+ 
+     pub(crate) fn reset(&mut self, keep: usize) {
+         let held = self.nodes.capacity() * size_of::<VNode>()
++            + self.sorts.capacity() * size_of::<V>()
+             + self.envs.capacity() * size_of::<EnvNode>()
+             + self.env_slots.capacity() * size_of::<V>()
+             + self.ctxs.capacity() * size_of::<CtxNode>()
+@@ -480,6 +484,7 @@ impl Vals {
+ 
+     pub(crate) fn used_bytes(&self) -> usize {
+         self.nodes.len() * size_of::<VNode>()
++            + self.sorts.len() * size_of::<V>()
+             + self.envs.len() * size_of::<EnvNode>()
+             + self.env_slots.len() * size_of::<V>()
+             + self.ctxs.len() * size_of::<CtxNode>()
+@@ -1110,11 +1115,25 @@ impl Vals {
+     }
+ 
+     pub(crate) fn mk_sort(&mut self, level: LevelId) -> V {
+-        self.intern(VNode {
++        let node = VNode {
+             kind: VT::Sort,
+             a: level.raw(),
+             ..BLANK
+-        })
++        };
++        let index = level.index();
++        if index >= 4096 {
++            return self.intern(node);
++        }
++        if index >= self.sorts.len() {
++            self.sorts.resize(index + 1, DUMMY);
++        }
++        let existing = self.sorts[index];
++        if existing != DUMMY {
++            return existing;
++        }
++        let value = self.push_node(node);
++        self.sorts[index] = value;
++        value
+     }
+ 
+     pub(crate) fn mk_natlit(&mut self, lit: BigId) -> V {
+@@ -1262,6 +1281,28 @@ mod tests {
+     use super::*;
+     use crate::term::id::ZERO;
+ 
++    #[test]
++    fn sort_table_preserves_levels_and_resets_with_values() {
++        let mut vals = Vals::new();
++        for raw in [0, 1, 4095, 4096, 8192] {
++            let level = LevelId::from_raw(raw);
++            let first = vals.mk_sort(level);
++            assert_eq!(first, vals.mk_sort(level));
++            assert!(matches!(vals.val(first), Value::Sort { level: found } if found == level));
++        }
++        assert_ne!(vals.mk_sort(ZERO), vals.mk_sort(LevelId::from_raw(1)));
++        vals.clear();
++        let other = vals.mk_sort(LevelId::from_raw(7));
++        let zero = vals.mk_sort(ZERO);
++        assert_ne!(zero, other);
++        assert!(matches!(vals.val(zero), Value::Sort { level: ZERO }));
++        vals.reset(0);
++        let other = vals.mk_sort(LevelId::from_raw(8));
++        let zero = vals.mk_sort(ZERO);
++        assert_ne!(zero, other);
++        assert!(matches!(vals.val(zero), Value::Sort { level: ZERO }));
++    }
++
+     #[test]
+     fn extending_sparse_environment_keeps_far_dependencies() {
+         let mut vals = Vals::new();

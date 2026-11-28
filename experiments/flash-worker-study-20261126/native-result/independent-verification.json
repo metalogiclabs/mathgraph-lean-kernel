@@ -1,0 +1,52 @@
+{
+  "state": "WARRANTED_BOUNDED_NATIVE_ACCEPT",
+  "instruction_state": "UNKNOWN_INSTRUMENTED_SIGILL",
+  "run_id": 45731082375,
+  "job_id": 139612944677,
+  "artifact_id": 15077182392,
+  "archive_sha256": "dab288e7db2c89e92c19e10abf2e1dde5cd8638a52ea325eb67faf230439140e",
+  "crc_valid": true,
+  "archive_entries": 563,
+  "checker_source": "bc704eebed4e009bc66af1a849f18315c11f1926",
+  "checker_source_tree": "06c257f0f2ff1f64711cfa54620b650e6dd59b7e",
+  "binary_sha256": "c21021b8ce0a857ae0c169d740cdf427405df9971638d74022086d1fa95c1379",
+  "native_medians": {
+    "1": {
+      "cpu_s": 127.075,
+      "wall_s": 126.33500000000001,
+      "max_rss_kib": 4727656.0
+    },
+    "2": {
+      "cpu_s": 131.565,
+      "wall_s": 71.55,
+      "max_rss_kib": 4900918.0
+    }
+  },
+  "one_to_two_ratios": {
+    "cpu_s": 0.9658723824725421,
+    "wall_s": 1.7656883298392734,
+    "max_rss_kib": 0.9646470314337028
+  },
+  "native_complete_accepts": 4,
+  "declarations_per_execution": 739167,
+  "portable_correct": 230,
+  "source_controls": 16,
+  "calibration_controls": 6,
+  "failed_instruction_attempt": {
+    "workers": 1,
+    "round": 0,
+    "raw_exit": -4,
+    "dynamic_instructions": null,
+    "complete_count": false,
+    "argv": [
+      "/home/runner/work/_temp/worker-study/checker.bin",
+      "--stdin",
+      "--threads",
+      "1",
+      "--nat-extension",
+      "--string-extension",
+      "--axiom-allow-all"
+    ]
+  },
+  "boundary": "Same native executable, source, input and host; two alternating worker-count pairs. One worker lowers total CPU and RSS but increases wall time. The first instrumented native process ended with SIGILL, whose cause is unresolved. All native complete executions succeeded. No full-input instruction ratio, Arena hardware score, rank or release promotion is inferred."
+}

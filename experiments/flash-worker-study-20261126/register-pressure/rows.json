@@ -1,0 +1,29 @@
+[
+  {
+    "iterations": 1,
+    "expected": 52,
+    "native_exit": 0,
+    "instrumented_exit": 0,
+    "observed": 52,
+    "source_sha256": "2d0b195019333dee86e600c3b5fe8ffbb481d0deb8e0d3b99ecd80d09dc6877d",
+    "binary_sha256": "c0d911914b8f8a6629256e19d6b28559d04d3b37bc4cf68fd4a65f58d141391c"
+  },
+  {
+    "iterations": 17,
+    "expected": 100,
+    "native_exit": 0,
+    "instrumented_exit": 0,
+    "observed": 100,
+    "source_sha256": "c090a67921d1da55ddfb1c1b8ace75bcd5791ff335447363c737c9a68fc6c5c3",
+    "binary_sha256": "6ce589b3a3665ca4c9dbf0469ad7e1b5e7b8b475e6a54c1bd674d91dbd6356c5"
+  },
+  {
+    "iterations": 1000000,
+    "expected": 3000049,
+    "native_exit": 0,
+    "instrumented_exit": 0,
+    "observed": 3000049,
+    "source_sha256": "bac74cff2e033ed9d3621b60e28fe361c9f5f1a47be203ddd998b1d5dc67d789",
+    "binary_sha256": "af00f51456dba4b513fa2c83cee1cf216a9138e937b0f772e2dda30c11bf60ba"
+  }
+]

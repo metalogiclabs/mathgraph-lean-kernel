@@ -1,0 +1,32 @@
+[
+  {
+    "initial_carry": 1,
+    "iterations": 1,
+    "expected": 52,
+    "native_exit": 0,
+    "instrumented_exit": 0,
+    "observed": 52,
+    "source_sha256": "f049aed03ae8472d5bcfd1931589412694e701384b6bd245883033fea65c3101",
+    "binary_sha256": "754487ed10f9ca953de315be1c6709d395d4a68e0273041a95735cbcb9fe4d76"
+  },
+  {
+    "initial_carry": 1,
+    "iterations": 17,
+    "expected": 100,
+    "native_exit": 0,
+    "instrumented_exit": 0,
+    "observed": 100,
+    "source_sha256": "b60817ba59f69bbb5bc4c183b4ff3781e7de56656f5d69fcbee397f17b6852f6",
+    "binary_sha256": "69b2666bd51c5e2fa4b5b7565eecc7404a3cc38395d6adec8bada095dd23b79b"
+  },
+  {
+    "initial_carry": 1,
+    "iterations": 1000000,
+    "expected": 3000049,
+    "native_exit": 0,
+    "instrumented_exit": 0,
+    "observed": 3000049,
+    "source_sha256": "82333195599da7b854fe7a4d969e241550dfe818c1d2a2b0fdab76b833095653",
+    "binary_sha256": "f7f62128678dee5f9c08ee4c31b63bcd70fb7f0a5ddd1017a9b2566d0592e759"
+  }
+]

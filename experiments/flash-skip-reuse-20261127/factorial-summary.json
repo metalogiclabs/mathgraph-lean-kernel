@@ -1,0 +1,37 @@
+{
+  "state": "BOUNDED_PREFIX_FACTORIAL",
+  "minimum_reduction": 0.01,
+  "results": {
+    "skip": {
+      "paired_instruction_ratios": [
+        1.008709941248817,
+        1.003952544408305
+      ],
+      "aggregate_instruction_ratio": 1.0063355551557651,
+      "cpu_ratio_same_build": 0.9483929269245799,
+      "peak_rss_ratio_same_build": 1.0272571724165374,
+      "cost_gate_passed": false
+    },
+    "reuse": {
+      "paired_instruction_ratios": [
+        0.995409256673024,
+        0.9891607943929649
+      ],
+      "aggregate_instruction_ratio": 0.9922906894317142,
+      "cpu_ratio_same_build": 0.9888599168323222,
+      "peak_rss_ratio_same_build": 0.9593198307535182,
+      "cost_gate_passed": false
+    },
+    "combined": {
+      "paired_instruction_ratios": [
+        0.9981784821251563,
+        1.0037932529740434
+      ],
+      "aggregate_instruction_ratio": 1.0009807780584583,
+      "cpu_ratio_same_build": 0.9776340855803046,
+      "peak_rss_ratio_same_build": 0.9796798111230486,
+      "cost_gate_passed": false
+    }
+  },
+  "boundary": "Exact prefix only, two workers, generic build. Calibrated basic-block instruction estimate and matched-build CPU/RSS; not native-target hardware counts, full Mathlib or Arena scores."
+}

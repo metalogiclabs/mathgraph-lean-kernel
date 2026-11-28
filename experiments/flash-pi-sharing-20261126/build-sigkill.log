@@ -1,0 +1,49 @@
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.26
+   Compiling syn v3.0.6
+   Compiling shlex v2.0.1
+   Compiling serde_core v1.0.229
+   Compiling find-msvc-tools v0.1.14
+   Compiling autocfg v1.5.1
+   Compiling num-traits v0.2.19
+   Compiling cc v1.5.1
+   Compiling utf8parse v0.2.2
+   Compiling anstyle-parse v1.0.0
+   Compiling libmimalloc-sys v0.1.49
+   Compiling libc v0.2.189
+   Compiling is_terminal_polyfill v1.70.2
+   Compiling colorchoice v1.0.5
+   Compiling anstyle-query v1.1.5
+   Compiling anstyle v1.0.14
+   Compiling serde v1.0.229
+   Compiling zmij v1.0.23
+   Compiling anstream v1.0.0
+   Compiling serde_derive v1.0.229
+   Compiling serde_json v1.0.151
+   Compiling heck v0.5.0
+   Compiling strsim v0.11.1
+   Compiling clap_lex v1.1.1
+   Compiling foldhash v0.2.0
+   Compiling equivalent v1.0.2
+   Compiling allocator-api2 v0.2.21
+   Compiling hashbrown v0.17.1
+   Compiling clap_builder v4.6.7
+   Compiling clap_derive v4.6.7
+   Compiling num-integer v0.1.47
+   Compiling itoa v1.0.18
+   Compiling memchr v2.8.3
+   Compiling memmap2 v0.9.11
+   Compiling num-bigint v0.5.1
+   Compiling mimalloc v0.1.52
+   Compiling clap v4.6.7
+   Compiling indexmap v2.14.2
+   Compiling rustc-hash v2.1.3
+   Compiling smallvec v1.16.2
+   Compiling bumpalo v3.20.3
+   Compiling semver v1.0.28
+   Compiling sokonanoda v0.5.0 (/workspace/scratch/66f541013946/flash-pi-sharing)
+error: could not compile `sokonanoda` (lib)
+
+Caused by:
+  process didn't exit successfully: `/tmp/flash-rustup/toolchains/1.99.1-x86_64-unknown-linux-gnu/bin/rustc --crate-name sokonanoda --edition=2024 src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C opt-level=3 -C linker-plugin-lto -C codegen-units=1 '--warn=clippy::pedantic' '--allow=clippy::too_many_lines' '--allow=clippy::too_many_arguments' '--allow=clippy::similar_names' '--allow=clippy::must_use_candidate' '--allow=clippy::missing_panics_doc' '--allow=clippy::missing_errors_doc' '--allow=clippy::many_single_char_names' '--allow=clippy::inline_always' '--deny=clippy::cast_possible_truncation' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("top-byte-ignore"))' -C metadata=da7b534f2612d5d1 -C extra-filename=-dc39bd12a6332159 --out-dir /dev/shm/flash-pi-interner-census-target/release/deps -C strip=debuginfo -L dependency=/dev/shm/flash-pi-interner-census-target/release/deps --extern bumpalo=/dev/shm/flash-pi-interner-census-target/release/deps/libbumpalo-d52b81afbd23de2b.rmeta --extern clap=/dev/shm/flash-pi-interner-census-target/release/deps/libclap-4d40b45167073e07.rmeta --extern hashbrown=/dev/shm/flash-pi-interner-census-target/release/deps/libhashbrown-8fc950028d94c2cb.rmeta --extern indexmap=/dev/shm/flash-pi-interner-census-target/release/deps/libindexmap-447c15135c1e3737.rmeta --extern libc=/dev/shm/flash-pi-interner-census-target/release/deps/liblibc-8c41e675fe03f35d.rmeta --extern memmap2=/dev/shm/flash-pi-interner-census-target/release/deps/libmemmap2-9fcea1e6785167ea.rmeta --extern mimalloc=/dev/shm/flash-pi-interner-census-target/release/deps/libmimalloc-70d3f9cca981d581.rmeta --extern num_bigint=/dev/shm/flash-pi-interner-census-target/release/deps/libnum_bigint-20d5344b46c52c73.rmeta --extern num_integer=/dev/shm/flash-pi-interner-census-target/release/deps/libnum_integer-3a94bce80c0b2da0.rmeta --extern num_traits=/dev/shm/flash-pi-interner-census-target/release/deps/libnum_traits-fafd99eca0e28c4e.rmeta --extern rustc_hash=/dev/shm/flash-pi-interner-census-target/release/deps/librustc_hash-2a7677ced9d7df0e.rmeta --extern semver=/dev/shm/flash-pi-interner-census-target/release/deps/libsemver-0c4aaa7623b18c60.rmeta --extern serde=/dev/shm/flash-pi-interner-census-target/release/deps/libserde-933024c5a8cbba02.rmeta --extern serde_json=/dev/shm/flash-pi-interner-census-target/release/deps/libserde_json-be0e2dc37815ece8.rmeta --extern smallvec=/dev/shm/flash-pi-interner-census-target/release/deps/libsmallvec-e5979f7987d848ef.rmeta -C target-cpu=native -L native=/dev/shm/flash-pi-interner-census-target/release/build/libmimalloc-sys-ae63ca761a352984/out` (signal: 9, SIGKILL: kill)
